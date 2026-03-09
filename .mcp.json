@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "claude-in-chrome": {
+      "type": "extension",
+      "note": "Provided by the Claude in Chrome browser extension (already active). No extra install needed.",
+      "tools": [
+        "navigate",
+        "computer",
+        "find",
+        "read_page",
+        "form_input",
+        "file_upload",
+        "get_page_text",
+        "read_network_requests",
+        "read_console_messages",
+        "javascript_tool"
+      ],
+      "downloadsFolder": "downloads/"
+    },
+    "playwright-mcp": {
+      "type": "npm",
+      "package": "@playwright/mcp",
+      "note": "OPTIONAL – requires Node.js. Install with: brew install node && npm install -g @playwright/mcp",
+      "enabled": false
+    }
+  },
+  "browserAutomation": {
+    "active": "claude-in-chrome",
+    "downloadsPath": "downloads/",
+    "headless": false
+  }
+}

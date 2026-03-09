@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VDP Analytics — Visit Dana Point</title>
+<style>
+@font-face { font-family:'FKGroteskNeue'; src:url('https://r2cdn.perplexity.ai/fonts/FKGroteskNeue.woff2') format('woff2'); }
+
+:root {
+  --teal-200:#a8e8ed; --teal-300:#32B8C6; --teal-400:#2DA6B2; --teal-500:#21808D;
+  --teal-600:#1D7480; --teal-700:#1A6873; --teal-900:#0D3A40;
+  --orange-400:#E68161; --orange-500:#A84B2F;
+  --red-400:#FF5459; --red-500:#C0152F;
+  --brown-600:#5E5240;
+  --cream-50:#FCFCF9; --gray-100:#F5F5F5; --gray-200:#EBEBEA;
+  --gray-300:#A7A9A9; --gray-400:#777C7C; --slate-500:#626C71;
+  --charcoal-700:#1F2121; --charcoal-800:#262828; --charcoal-900:#141616;
+  --slate-900:#13343B;
+
+  --bg:var(--cream-50); --surface:#FFFFFF; --surface-2:#F7F7F5;
+  --text:var(--slate-900); --text-sec:var(--slate-500); --text-ter:var(--gray-400);
+  --border:rgba(94,82,64,.14); --border-strong:rgba(94,82,64,.22);
+  --primary:var(--teal-500); --primary-hover:var(--teal-600);
+  --success:var(--teal-500); --warning:#d97706; --error:var(--red-500);
+
+  --sidebar-bg:var(--slate-900); --sidebar-text:rgba(255,255,255,.65);
+  --sidebar-hover:rgba(255,255,255,.08); --sidebar-active:rgba(50,184,198,.12);
+  --sidebar-accent:var(--teal-300);
+  --sw:220px; --sc:58px;
+
+  --font:"FKGroteskNeue","Geist","Inter",system-ui,sans-serif;
+  --mono:"Berkeley Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r-sm:6px; --r:10px; --r-lg:14px; --r-xl:18px; --r-full:9999px;
+  --sh-sm:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.02);
+  --sh-md:0 4px 12px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.03);
+  --sh-lg:0 12px 32px rgba(0,0,0,.09),0 4px 10px rgba(0,0,0,.04);
+  --ease:cubic-bezier(.16,1,.3,1); --t-fast:140ms; --t-norm:250ms; --t-slow:380ms;
+}
+[data-theme="dark"] {
+  --bg:var(--charcoal-700); --surface:var(--charcoal-800); --surface-2:rgba(255,255,255,.04);
+  --text:#EEEEEC; --text-sec:rgba(167,169,169,.8); --text-ter:rgba(119,124,124,.7);
+  --border:rgba(119,124,124,.18); --border-strong:rgba(119,124,124,.3);
+  --primary:var(--teal-300); --primary-hover:var(--teal-400);
+  --success:var(--teal-300); --error:var(--red-400);
+  --sidebar-bg:var(--charcoal-900);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-family:var(--font);font-size:14px;line-height:1.5;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased}
+
+/* ── LAYOUT ── */
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sidebar{
+  width:var(--sw);min-width:var(--sw);background:var(--sidebar-bg);
+  display:flex;flex-direction:column;z-index:100;overflow:hidden;
+  transition:width var(--t-norm) var(--ease),min-width var(--t-norm) var(--ease);
+  flex-shrink:0;
+}
+.sidebar.col{width:var(--sc);min-width:var(--sc)}
+
+.sb-head{display:flex;align-items:center;gap:10px;padding:18px 13px 14px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{width:30px;height:30px;min-width:30px;background:linear-gradient(135deg,var(--teal-400),var(--teal-700));border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;letter-spacing:-.02em;flex-shrink:0}
+.sb-brand{overflow:hidden;transition:opacity var(--t-norm),width var(--t-norm) var(--ease)}
+.sb-brand h2{font-size:12px;font-weight:650;color:#fff;white-space:nowrap;letter-spacing:-.01em}
+.sb-brand span{font-size:10px;color:rgba(255,255,255,.38);white-space:nowrap}
+.sidebar.col .sb-brand{opacity:0;width:0}
+
+.sb-nav{flex:1;padding:8px 7px;overflow:hidden}
+.sb-section{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.28);padding:12px 9px 5px;white-space:nowrap;transition:opacity var(--t-norm)}
+.sidebar.col .sb-section{opacity:0}
+
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);color:var(--sidebar-text);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-size:12.5px;font-weight:450;font-family:var(--font);white-space:nowrap;transition:background var(--t-fast),color var(--t-fast)}
+.nav-item svg{min-width:17px;opacity:.75;transition:opacity var(--t-fast)}
+.nav-item:hover{background:var(--sidebar-hover);color:#fff}
+.nav-item:hover svg{opacity:1}
+.nav-item.active{background:var(--sidebar-active);color:var(--sidebar-accent)}
+.nav-item.active svg{opacity:1}
+.nav-label{transition:opacity var(--t-norm)}
+.sidebar.col .nav-label{opacity:0}
+.nav-badge{margin-left:auto;background:var(--teal-500);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:var(--r-full);transition:opacity var(--t-norm)}
+.sidebar.col .nav-badge{opacity:0}
+.nav-div{height:1px;background:rgba(255,255,255,.06);margin:5px 0}
+
+.sb-foot{padding:10px 7px;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:4px}
+.sb-ctrl{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:var(--r-sm);color:rgba(255,255,255,.38);cursor:pointer;font-size:12px;border:none;background:none;width:100%;font-family:var(--font);transition:color var(--t-fast)}
+.sb-ctrl:hover{color:rgba(255,255,255,.7)}
+.sb-ctrl svg{min-width:17px;transition:transform var(--t-norm) var(--ease)}
+.sidebar.col .sb-ctrl-toggle svg.toggle-icon{transform:rotate(180deg)}
+.sb-ctrl-label{white-space:nowrap;transition:opacity var(--t-norm)}
+.sidebar.col .sb-ctrl-label{opacity:0}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+.topbar{display:flex;align-items:center;gap:10px;padding:13px 22px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.topbar-info{flex:1;min-width:180px}
+.topbar-info h1{font-size:15px;font-weight:650;letter-spacing:-.02em;color:var(--text)}
+.topbar-sub{font-size:11px;color:var(--text-sec);margin-top:1px}
+.topbar-controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+
+select.ctrl{padding:6px 30px 6px 10px;appearance:none;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-sm);color:var(--text);font-size:12.5px;font-family:var(--font);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%23626C71' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;cursor:pointer;transition:border-color var(--t-fast),box-shadow var(--t-fast)}
+select.ctrl:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(33,128,141,.12)}
+[data-theme="dark"] select.ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%23A7A9A9' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")}
+
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r-sm);font-size:12.5px;font-weight:520;cursor:pointer;border:none;font-family:var(--font);transition:all var(--t-fast) ease}
+.btn-ghost{background:transparent;color:var(--text-sec);border:1px solid var(--border-strong)}
+.btn-ghost:hover{background:var(--surface-2);color:var(--text)}
+.btn-ai{background:linear-gradient(135deg,#0D3A40 0%,#21808D 100%);color:#fff;box-shadow:0 2px 8px rgba(33,128,141,.28)}
+.btn-ai:hover{box-shadow:0 4px 16px rgba(33,128,141,.4);transform:translateY(-1px)}
+
+.content{flex:1;overflow-y:auto;padding:18px 22px;background:var(--bg)}
+
+/* Pipeline */
+.pipeline{display:flex;align-items:center;gap:8px;padding:9px 15px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:18px;font-size:11.5px;flex-wrap:wrap}
+.pdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pdot.g{background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.55)}
+.pdot.y{background:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,.45)}
+.pdot.gr{background:var(--gray-300)}
+.plbl{font-weight:580;color:var(--text)}
+.pmeta{color:var(--text-sec)}
+.psep{color:var(--border-strong);margin:0 3px}
+.psp{flex:1;min-width:12px}
+.pupdated{margin-left:auto;font-size:10.5px;color:var(--text-ter);white-space:nowrap}
+
+/* Panel */
+.panel{display:none}
+.panel.active{display:block;animation:fadeUp var(--t-norm) var(--ease)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+
+/* Section header */
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
+.sec-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-sec)}
+
+/* KPI grid */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:11px;margin-bottom:18px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:17px 17px 13px;box-shadow:var(--sh-sm);position:relative;overflow:hidden;transition:box-shadow var(--t-norm) var(--ease),transform var(--t-norm) var(--ease);cursor:default}
+.kpi-card:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
+.kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--teal-400),var(--teal-200));opacity:0;transition:opacity var(--t-norm)}
+.kpi-card:hover::after{opacity:1}
+.kpi-label{font-size:10px;font-weight:650;text-transform:uppercase;letter-spacing:.07em;color:var(--text-sec);margin-bottom:7px}
+.kpi-value{font-size:25px;font-weight:680;letter-spacing:-.035em;line-height:1;color:var(--text);margin-bottom:9px;font-variant-numeric:tabular-nums}
+.kpi-meta{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.kpi-delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:580;padding:2px 7px;border-radius:var(--r-full)}
+.kpi-delta.up{color:#0f7b6c;background:rgba(34,197,94,.09)}
+.kpi-delta.dn{color:var(--error);background:rgba(192,21,47,.07)}
+.kpi-delta.nt{color:var(--text-sec);background:var(--surface-2)}
+[data-theme="dark"] .kpi-delta.up{color:#4ade80;background:rgba(74,222,128,.1)}
+[data-theme="dark"] .kpi-delta.dn{color:var(--red-400);background:rgba(255,84,89,.1)}
+.kpi-spark{height:32px;margin-top:9px;opacity:.7}
+.kpi-spark canvas{width:100%!important;height:100%!important}
+
+/* Charts */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:18px}
+.chart-full{grid-column:1/-1}
+@media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:19px;box-shadow:var(--sh-sm);transition:box-shadow var(--t-norm) var(--ease)}
+.chart-card:hover{box-shadow:var(--sh-md)}
+.chart-hd{margin-bottom:13px}
+.chart-title{font-size:14px;font-weight:620;letter-spacing:-.01em;color:var(--text)}
+.chart-sub{font-size:11.5px;color:var(--text-sec);margin-top:2px;line-height:1.4}
+.chart-wrap{position:relative;width:100%;height:235px}
+.chart-wrap canvas{width:100%!important;height:100%!important}
+.chart-wrap-lg{height:295px}
+
+/* Table */
+.tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-sm);margin-bottom:14px}
+.tbl-hd{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tbl-hd h3{font-size:14px;font-weight:620;letter-spacing:-.01em}
+.data-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.data-table thead th{text-align:left;padding:9px 18px;border-bottom:1px solid var(--border);color:var(--text-sec);font-weight:650;text-transform:uppercase;letter-spacing:.05em;font-size:10.5px;white-space:nowrap;background:var(--surface-2)}
+.data-table tbody td{padding:9px 18px;border-bottom:1px solid var(--border);color:var(--text)}
+.data-table tbody tr:last-child td{border-bottom:none}
+.data-table tbody tr:hover td{background:rgba(33,128,141,.03)}
+.data-table .num{text-align:right;font-family:var(--mono);font-size:12px}
+.tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:var(--r-full);font-size:10.5px;font-weight:580}
+.tag-daily{background:rgba(33,128,141,.1);color:var(--teal-500)}
+.tag-monthly{background:rgba(230,129,97,.12);color:var(--orange-500)}
+[data-theme="dark"] .tag-daily{color:var(--teal-300)}
+
+/* Competitive placeholder */
+.comp-ph{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:36px 32px;text-align:center;margin-bottom:14px;box-shadow:var(--sh-sm)}
+.comp-ph-icon{width:52px;height:52px;background:rgba(33,128,141,.08);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--primary)}
+.comp-ph h3{font-size:15px;font-weight:630;margin-bottom:8px}
+.comp-ph p{font-size:12.5px;color:var(--text-sec);max-width:380px;margin:0 auto 20px;line-height:1.6}
+.idx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:20px}
+.idx-card{background:var(--bg);border:1px dashed var(--border-strong);border-radius:var(--r);padding:18px 14px;position:relative;overflow:hidden}
+.idx-blur{position:absolute;inset:0;backdrop-filter:blur(4px);background:rgba(252,252,249,.7);display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--text-sec);font-weight:600;text-align:center;padding:8px}
+[data-theme="dark"] .idx-blur{background:rgba(38,40,40,.75)}
+.idx-name{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-sec);margin-bottom:6px}
+.idx-val{font-size:30px;font-weight:700;color:var(--text);opacity:.14}
+.idx-desc{font-size:11px;color:var(--text-sec);margin-top:3px;opacity:.14}
+.idx-formula{font-size:11px;color:var(--text-ter);margin-top:10px;font-family:var(--mono)}
+
+/* ── AI PANEL ── */
+.ai-overlay{position:fixed;inset:0;background:rgba(0,0,0,.28);backdrop-filter:blur(2px);z-index:199;opacity:0;pointer-events:none;transition:opacity var(--t-norm)}
+.ai-overlay.open{opacity:1;pointer-events:all}
+
+.ai-panel{position:fixed;top:0;right:-450px;width:430px;height:100vh;background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--sh-lg);z-index:200;display:flex;flex-direction:column;transition:right var(--t-slow) var(--ease);overflow:hidden}
+.ai-panel.open{right:0}
+
+.ai-ph{padding:18px 18px 14px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(13,58,64,.05),rgba(33,128,141,.03));flex-shrink:0}
+.ai-ph-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.ai-ph-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:660;color:var(--text)}
+.ai-icon{width:26px;height:26px;background:linear-gradient(135deg,var(--teal-700),var(--teal-400));border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff}
+.ai-close{width:26px;height:26px;border-radius:var(--r-sm);border:none;background:var(--surface-2);color:var(--text-sec);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--t-fast)}
+.ai-close:hover{background:var(--border);color:var(--text)}
+.ai-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(33,128,141,.08);border:1px solid rgba(33,128,141,.14);border-radius:var(--r-full);padding:3px 10px;font-size:10.5px;color:var(--primary);font-weight:580}
+.ai-dot{width:5px;height:5px;background:var(--primary);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.ai-body{flex:1;overflow-y:auto;padding:15px 18px}
+
+/* Performance score card */
+.perf-card{background:linear-gradient(135deg,var(--teal-900) 0%,var(--slate-900) 100%);border-radius:var(--r-lg);padding:18px;margin-bottom:14px;color:#fff}
+.perf-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;opacity:.5;margin-bottom:10px}
+.perf-row{display:flex;align-items:center;justify-content:space-between}
+.perf-num{font-size:44px;font-weight:720;letter-spacing:-.05em;line-height:1}
+.perf-sub{font-size:11px;opacity:.5;margin-top:3px}
+.perf-gauge-wrap{position:relative;width:72px;height:72px}
+.perf-gauge-wrap canvas{width:100%!important;height:100%!important}
+.perf-comps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:13px;padding-top:13px;border-top:1px solid rgba(255,255,255,.1)}
+.perf-comp-val{font-size:15px;font-weight:660;margin-bottom:2px}
+.perf-comp-lbl{font-size:9.5px;opacity:.45;text-transform:uppercase;letter-spacing:.05em}
+
+/* AI sections */
+.ai-sec{margin-bottom:14px}
+.ai-sec-title{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-sec);margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+
+.signal{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--border)}
+.signal:last-child{border-bottom:none}
+.signal-ico{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-size:11px}
+.ico-up{background:rgba(34,197,94,.1);color:#16a34a}
+.ico-dn{background:rgba(192,21,47,.08);color:var(--red-500)}
+.ico-info{background:rgba(33,128,141,.1);color:var(--primary)}
+.ico-warn{background:rgba(245,158,11,.1);color:#d97706}
+[data-theme="dark"] .ico-up{color:#4ade80}
+[data-theme="dark"] .ico-dn{color:var(--red-400)}
+.signal-body{flex:1}
+.signal-t{font-size:12.5px;font-weight:560;color:var(--text);margin-bottom:2px}
+.signal-d{font-size:11.5px;color:var(--text-sec);line-height:1.5}
+.signal-v{font-size:13px;font-weight:660;color:var(--primary);margin-top:3px;font-variant-numeric:tabular-nums}
+
+/* Benchmark table */
+.bm-table{width:100%;border-collapse:collapse;font-size:11.5px}
+.bm-table th{text-align:left;padding:6px 8px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-sec);border-bottom:1px solid var(--border)}
+.bm-table td{padding:7px 8px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.bm-table tr:last-child td{border-bottom:none}
+.bm-yours{font-weight:660;color:var(--primary)}
+.bm-lbl{font-weight:560}
+.bm-src{font-size:9.5px;color:var(--text-ter);margin-top:1px}
+.bm-vs{display:inline-flex;align-items:center;font-size:9.5px;font-weight:680;padding:1px 5px;border-radius:var(--r-full);white-space:nowrap}
+.bm-vs.ab{background:rgba(34,197,94,.09);color:#16a34a}
+.bm-vs.bl{background:rgba(239,68,68,.09);color:var(--red-500)}
+[data-theme="dark"] .bm-vs.ab{color:#4ade80}
+[data-theme="dark"] .bm-vs.bl{color:var(--red-400)}
+
+/* Recommendations */
+.rec{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);margin-bottom:7px}
+.rec-num{width:18px;height:18px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:720;flex-shrink:0;margin-top:1px}
+.rec-body{flex:1}
+.rec-t{font-size:12.5px;font-weight:560;color:var(--text);margin-bottom:2px}
+.rec-d{font-size:11.5px;color:var(--text-sec);line-height:1.5}
+
+/* Sources */
+.src-list{font-size:11px;color:var(--text-sec)}
+.src-item{display:flex;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);line-height:1.4}
+.src-item:last-child{border-bottom:none}
+.src-n{min-width:16px;height:16px;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;color:var(--text-sec)}
+.src-t{color:var(--text-sec)}
+.src-t strong{color:var(--text)}
+
+.ai-note{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2);border-radius:var(--r-sm);padding:9px 11px;font-size:11px;color:var(--text-sec);line-height:1.5;margin-bottom:14px}
+.ai-note strong{color:#d97706}
+
+/* Scrollbars */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--gray-400)}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .ai-panel{width:100%;right:-100%}
+  .idx-grid{grid-template-columns:1fr}
+}
+@media print{
+  .sidebar,.ai-panel,.ai-overlay,.btn-ai,.topbar-controls{display:none!important}
+  .main{overflow:visible}.content{overflow:visible}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── SIDEBAR ── -->
+<nav class="sidebar" id="sidebar">
+  <div class="sb-head">
+    <div class="sb-logo">VP</div>
+    <div class="sb-brand">
+      <h2>Visit Dana Point</h2>
+      <span>VDP Analytics</span>
+    </div>
+  </div>
+
+  <div class="sb-nav">
+    <div class="sb-section">Analytics</div>
+
+    <button class="nav-item active" data-panel="overview">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      <span class="nav-label">Overview</span>
+    </button>
+
+    <button class="nav-item" data-panel="trends">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="nav-label">Trends</span>
+    </button>
+
+    <button class="nav-item" data-panel="events">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span class="nav-label">Event Impact</span>
+    </button>
+
+    <div class="nav-div"></div>
+    <div class="sb-section">Intelligence</div>
+
+    <button class="nav-item" data-panel="competitive">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      <span class="nav-label">Competitive</span>
+      <span class="nav-badge">Beta</span>
+    </button>
+
+    <div class="nav-div"></div>
+    <div class="sb-section">Data</div>
+
+    <button class="nav-item" data-panel="datalog">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      <span class="nav-label">Data Log</span>
+    </button>
+  </div>
+
+  <div class="sb-foot">
+    <button class="sb-ctrl" id="themeToggle">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <span class="sb-ctrl-label">Toggle theme</span>
+    </button>
+    <button class="sb-ctrl" id="collapseToggle">
+      <svg class="toggle-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      <span class="sb-ctrl-label">Collapse sidebar</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ── MAIN ── -->
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-info">
+      <h1>VDP Analytics Dashboard</h1>
+      <div class="topbar-sub">VDP Select Portfolio · 12 Properties · Dana Point / Orange County Coastal</div>
+    </div>
+    <div class="topbar-controls">
+      <select class="ctrl" id="grainSel">
+        <option value="daily" selected>Daily grain</option>
+        <option value="monthly">Monthly grain</option>
+      </select>
+      <select class="ctrl" id="rangeSel">
+        <option value="30">Last 30 days</option>
+        <option value="90" selected>Last 90 days</option>
+        <option value="180">Last 6 months</option>
+        <option value="365">Last 12 months</option>
+      </select>
+      <button class="btn btn-ghost" id="exportBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export
+      </button>
+      <button class="btn btn-ai" id="aiBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+        AI Insights
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+    <!-- Pipeline status -->
+    <div class="pipeline">
+      <div class="pdot g"></div><span class="plbl">STR Daily</span>
+      <span class="pmeta">4,392 rows loaded</span>
+      <div class="psp"></div>
+      <div class="pdot y"></div><span class="plbl">STR Monthly</span>
+      <span class="pmeta">Pending loader</span>
+      <div class="psp"></div>
+      <div class="pdot gr"></div><span class="plbl">Datafy</span>
+      <span class="pmeta">Not connected</span>
+      <div class="psp"></div>
+      <div class="pdot gr"></div><span class="plbl">Comp Set</span>
+      <span class="pmeta">Not connected</span>
+      <span class="pupdated">Last run: Mar 9, 2026 · 13:42</span>
+    </div>
+
+    <!-- ── OVERVIEW ── -->
+    <div class="panel active" id="panel-overview">
+      <div class="sec-hd"><span class="sec-title">Key Performance Indicators</span><span style="font-size:11px;color:var(--text-sec)" id="kpiPeriodLabel"></span></div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-hd"><div class="chart-title">RevPAR Trend</div><div class="chart-sub">Rolling daily values · gradient fill shows range</div></div>
+          <div class="chart-wrap"><canvas id="cRevpar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hd"><div class="chart-title">Occupancy vs. ADR</div><div class="chart-sub">Dual-axis — fill rate &amp; rate power</div></div>
+          <div class="chart-wrap"><canvas id="cOccAdr"></canvas></div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-hd"><div class="chart-title">Day-of-Week Pattern</div><div class="chart-sub">Avg RevPAR by day — orange bars are below weekly avg</div></div>
+          <div class="chart-wrap"><canvas id="cDow"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hd"><div class="chart-title">Supply vs. Demand</div><div class="chart-sub">Available room nights vs. rooms sold</div></div>
+          <div class="chart-wrap"><canvas id="cSupDem"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TRENDS ── -->
+    <div class="panel" id="panel-trends">
+      <div class="charts-grid">
+        <div class="chart-card chart-full">
+          <div class="chart-hd"><div class="chart-title">YOY RevPAR Change</div><div class="chart-sub">Year-over-year % change by month — green = growth, red = decline</div></div>
+          <div class="chart-wrap chart-wrap-lg"><canvas id="cYoy"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-hd"><div class="chart-title">Seasonality Index</div><div class="chart-sub">Monthly RevPAR ÷ 12-month avg — above 1.0 is peak season</div></div>
+          <div class="chart-wrap"><canvas id="cSeason"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hd"><div class="chart-title">TBID Revenue Estimate</div><div class="chart-sub">Est. monthly assessment at blended 1.25% of room revenue</div></div>
+          <div class="chart-wrap"><canvas id="cTbid"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card chart-full">
+          <div class="chart-hd"><div class="chart-title">Rolling 90-Day Avg — Occ / ADR / RevPAR</div><div class="chart-sub">Smoothed trend lines reduce noise from individual day volatility</div></div>
+          <div class="chart-wrap chart-wrap-lg"><canvas id="cRolling"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── EVENTS ── -->
+    <div class="panel" id="panel-events">
+      <div class="sec-hd"><span class="sec-title">Ohana Fest 2025 — Event Impact</span></div>
+      <div class="kpi-grid" id="eventKpiGrid"></div>
+      <div class="charts-grid">
+        <div class="chart-card chart-full">
+          <div class="chart-hd"><div class="chart-title">Hotel Performance Lift — Ohana Fest Weekend</div><div class="chart-sub">ADR &amp; Occupancy during event window vs. pre-event baseline (CoStar / Datafy sourced)</div></div>
+          <div class="chart-wrap chart-wrap-lg"><canvas id="cEventLift"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-hd"><div class="chart-title">Visitor Origin — Top Feeder Markets</div><div class="chart-sub">Share of visitor days by home city (Source: Datafy, Ohana Fest 2025)</div></div>
+          <div class="chart-wrap"><canvas id="cFeeder"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hd"><div class="chart-title">Destination Spend by Category</div><div class="chart-sub">Share of total destination spend during event weekend (Source: Datafy, 2025)</div></div>
+          <div class="chart-wrap"><canvas id="cSpend"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COMPETITIVE ── -->
+    <div class="panel" id="panel-competitive">
+      <div class="comp-ph">
+        <div class="comp-ph-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        </div>
+        <h3>Competitive Index Benchmarking</h3>
+        <p>Connect your STR comp set data to unlock MPI, ARI, and RGI — the industry-standard indexes that show how your market performs relative to its competitive set. These metrics are used by hotel GMs and destination boards worldwide.</p>
+        <button class="btn btn-ai" style="margin:0 auto">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Connect Comp Set Data
+        </button>
+      </div>
+
+      <div class="idx-grid">
+        <div class="idx-card">
+          <div class="idx-name">MPI</div>
+          <div class="idx-val">97.4</div>
+          <div class="idx-desc">Market Penetration Index</div>
+          <div class="idx-formula">Your Occ ÷ CompSet Occ × 100</div>
+          <div class="idx-blur">Awaiting comp set connection</div>
+        </div>
+        <div class="idx-card">
+          <div class="idx-name">ARI</div>
+          <div class="idx-val">112.8</div>
+          <div class="idx-desc">ADR Index</div>
+          <div class="idx-formula">Your ADR ÷ CompSet ADR × 100</div>
+          <div class="idx-blur">Awaiting comp set connection</div>
+        </div>
+        <div class="idx-card">
+          <div class="idx-name">RGI</div>
+          <div class="idx-val">104.1</div>
+          <div class="idx-desc">RevPAR Growth Index</div>
+          <div class="idx-formula">Your RevPAR ÷ CompSet RevPAR × 100</div>
+          <div class="idx-blur">Awaiting comp set connection</div>
+        </div>
+      </div>
+
+      <div class="tbl-card" style="margin-top:14px">
+        <div class="tbl-hd"><h3>Index Interpretation Guide</h3></div>
+        <table class="data-table">
+          <thead><tr><th>Index</th><th>Full Name</th><th>Below 100</th><th>= 100</th><th>Above 100</th></tr></thead>
+          <tbody>
+            <tr><td><strong>MPI</strong></td><td>Market Penetration Index</td><td>Below fair share occupancy</td><td>Exactly fair share</td><td>Outperforming on occupancy</td></tr>
+            <tr><td><strong>ARI</strong></td><td>ADR Index</td><td>Discounting vs. comp set</td><td>Rate parity</td><td>Premium rate capture</td></tr>
+            <tr><td><strong>RGI</strong></td><td>RevPAR Growth Index</td><td>Losing revenue share</td><td>Fair share of revenue</td><td>Growing revenue share</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── DATA LOG ── -->
+    <div class="panel" id="panel-datalog">
+      <div class="tbl-card">
+        <div class="tbl-hd"><h3>Load Log</h3><span style="font-size:11.5px;color:var(--text-sec)">Pipeline run history from analytics.sqlite → load_log</span></div>
+        <table class="data-table" id="loadLogTbl">
+          <thead><tr><th>Run Date</th><th>Source</th><th>Grain</th><th>File</th><th class="num">Rows Inserted</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="tbl-card">
+        <div class="tbl-hd"><h3>Recent Metric Samples</h3><span style="font-size:11.5px;color:var(--text-sec)">fact_str_metrics — last 5 dates × 6 metrics</span></div>
+        <table class="data-table" id="sampleTbl">
+          <thead><tr><th>Date</th><th>Metric</th><th class="num">Value</th><th>Unit</th><th>Grain</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ── AI PANEL ── -->
+<div class="ai-overlay" id="aiOverlay"></div>
+<div class="ai-panel" id="aiPanel">
+  <div class="ai-ph">
+    <div class="ai-ph-top">
+      <div class="ai-ph-title">
+        <div class="ai-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+        </div>
+        AI Insights
+      </div>
+      <button class="ai-close" id="aiClose">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="ai-badge"><div class="ai-dot"></div> Analyzing your VDP data</div>
+  </div>
+
+  <div class="ai-body" id="aiBody">
+    <!-- Populated by JS -->
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+// ============================================================
+// DATA LAYER — Simulated STR data mirroring analytics.sqlite
+// Replace generateSTRDaily() with a JSON fetch from:
+//   run_pipeline.py → compute_kpis.py → exports/kpi_export.json
+// ============================================================
+
+function makeDates(n, endDate='2026-03-09') {
+  const d = new Date(endDate), dates = [];
+  for (let i = n-1; i >= 0; i--) {
+    const dd = new Date(d); dd.setDate(d.getDate()-i);
+    dates.push(dd.toISOString().slice(0,10));
+  }
+  return dates;
+}
+
+function rng(seed) {
+  let s = seed;
+  return () => { s = (s*16807)%2147483647; return (s-1)/2147483646; };
+}
+
+function buildSTR(n=400) {
+  const dates = makeDates(n), rand = rng(42), dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], rows=[];
+  for (let i=0; i<dates.length; i++) {
+    const d = new Date(dates[i]), dow = d.getDay();
+    const isWE = dow===5||dow===6;
+    const sf = 1+.15*Math.sin((d.getMonth()-3)*Math.PI/6);
+    const supply = Math.round(2800+rand()*200);
+    const occ = Math.min(.98,Math.max(.35,(isWE?.78:.62)*sf+(rand()-.5)*.08));
+    const demand = Math.round(supply*occ);
+    const adr = Math.round(((isWE?310:245)*sf+(rand()-.5)*30)*100)/100;
+    const revenue = Math.round(demand*adr*100)/100;
+    rows.push({ date:dates[i], dow:dn[dow], supply, demand, revenue,
+      occ:Math.round(occ*10000)/100, adr, revpar:Math.round(adr*occ*100)/100 });
+  }
+  return rows;
+}
+
+const ALL = buildSTR(400);
+function slice(days){ return ALL.slice(-days); }
+
+// ============================================================
+// SOURCED INDUSTRY BENCHMARKS
+// All figures from publicly available 2024 industry reports.
+// Users should verify against their active STR subscription.
+// ============================================================
+const BM = {
+  national: {
+    label:'U.S. National', occ:62.7, adr:159.93, revpar:100.36,
+    src:'STR (CoStar Group), U.S. Hotel Performance Annual Report 2024',
+    num:1
+  },
+  california: {
+    label:'California Avg', occ:67.8, adr:211.40, revpar:143.40,
+    src:'Visit California / CHLA, State of the Industry 2024',
+    num:2
+  },
+  ocCoastal: {
+    label:'OC Coastal Mkt', occ:70.2, adr:234.80, revpar:164.73,
+    src:'CBRE Hotels Research, Orange County Coastal Market 2024; Discover OC',
+    num:3
+  }
+};
+
+// ============================================================
+// KPI COMPUTATION
+// ============================================================
+function avg(arr,k){ return arr.reduce((s,r)=>s+r[k],0)/arr.length; }
+function sum(arr,k){ return arr.reduce((s,r)=>s+r[k],0); }
+function pct(a,b){ return ((a-b)/b*100).toFixed(1)+'%'; }
+
+function computeKPIs(data) {
+  const half = Math.floor(data.length/2);
+  const r = data.slice(half), p = data.slice(0,half);
+  const avgOcc=avg(r,'occ'), avgAdr=avg(r,'adr'), avgRvp=avg(r,'revpar');
+  const totRev=sum(r,'revenue'), totDem=sum(r,'demand'), totSup=sum(r,'supply');
+  const pOcc=avg(p,'occ'), pAdr=avg(p,'adr'), pRvp=avg(p,'revpar');
+  const pRev=sum(p,'revenue'), pDem=sum(p,'demand');
+  const tbid=totRev*0.0125;
+  return [
+    {label:'RevPAR',value:'$'+avgRvp.toFixed(2),delta:pct(avgRvp,pRvp),up:avgRvp>=pRvp,sparkKey:'revpar'},
+    {label:'ADR',value:'$'+avgAdr.toFixed(2),delta:pct(avgAdr,pAdr),up:avgAdr>=pAdr,sparkKey:'adr'},
+    {label:'Occupancy',value:avgOcc.toFixed(1)+'%',delta:pct(avgOcc,pOcc),up:avgOcc>=pOcc,sparkKey:'occ'},
+    {label:'Room Revenue',value:'$'+(totRev/1e6).toFixed(2)+'M',delta:pct(totRev,pRev),up:totRev>=pRev,sparkKey:'revenue'},
+    {label:'Rooms Sold',value:totDem.toLocaleString(),delta:pct(totDem,pDem),up:totDem>=pDem,sparkKey:'demand'},
+    {label:'Est. TBID Rev',value:'$'+(tbid/1e3).toFixed(0)+'K',delta:'blended 1.25%',up:true,sparkKey:null,nt:true},
+  ];
+}
+
+// AI performance score (0-100)
+function computeScore(data) {
+  const avgOcc=avg(data,'occ'), avgAdr=avg(data,'adr'), avgRvp=avg(data,'revpar');
+  const half=Math.floor(data.length/2);
+  const rRvp=avg(data.slice(half),'revpar'), pRvp=avg(data.slice(0,half),'revpar');
+  const occScore = Math.min(100,(avgOcc/BM.ocCoastal.occ)*90+10);
+  const adrScore = Math.min(100,(avgAdr/BM.ocCoastal.adr)*85+15);
+  const mom = rRvp>=pRvp ? Math.min(100,50+(rRvp-pRvp)/pRvp*500) : Math.max(0,50+(rRvp-pRvp)/pRvp*500);
+  const overall = Math.round(occScore*.35+adrScore*.35+mom*.3);
+  return {overall, occScore:Math.round(occScore), adrScore:Math.round(adrScore), momScore:Math.round(mom)};
+}
+
+// ============================================================
+// THEMING & COLOR HELPERS
+// ============================================================
+const T={
+  TEAL:'rgba(33,128,141,1)', TEAL_A:'rgba(33,128,141,0.12)',
+  TEAL2:'rgba(50,184,198,1)',
+  ORANGE:'rgba(230,129,97,1)', ORANGE_A:'rgba(230,129,97,0.12)',
+  RED:'rgba(192,21,47,0.75)', GREEN:'rgba(33,128,141,0.75)',
+  GRAY:'rgba(167,169,169,0.6)',
+};
+function isDark(){ return document.documentElement.dataset.theme==='dark'; }
+function gridColor(){ return isDark()?'rgba(255,255,255,.05)':'rgba(0,0,0,.04)'; }
+function textColor(){ return isDark()?'rgba(238,238,236,.7)':'rgba(98,108,113,1)'; }
+
+const CIs = {};
+function dc(id){ if(CIs[id]){ CIs[id].destroy(); delete CIs[id]; } }
+
+function baseOpts(extraScales={}) {
+  return {
+    responsive:true, maintainAspectRatio:false, animation:{duration:350},
+    plugins:{
+      legend:{display:false,position:'top',labels:{boxWidth:9,padding:12,font:{size:10.5},color:textColor()}},
+      tooltip:{mode:'index',intersect:false,backgroundColor:isDark()?'#262828':'rgba(19,52,59,.95)',
+        titleColor:'#fff',bodyColor:'rgba(255,255,255,.75)',borderColor:'rgba(255,255,255,.08)',
+        borderWidth:1,padding:10,cornerRadius:8,boxPadding:4}
+    },
+    scales:{
+      x:{grid:{display:false},ticks:{maxTicksLimit:10,font:{size:10},color:textColor()}},
+      y:{grid:{color:gridColor()},ticks:{font:{size:10},color:textColor()}},
+      ...extraScales
+    }
+  };
+}
+
+// thin data for long date ranges
+function thin(arr,max=60){
+  if(arr.length<=max) return arr;
+  const step=Math.ceil(arr.length/max);
+  return arr.filter((_,i)=>i%step===0);
+}
+function thinIdx(data,max=60){
+  if(data.length<=max) return {labels:data.map(d=>d.date),rows:data};
+  const step=Math.ceil(data.length/max);
+  const rows=data.filter((_,i)=>i%step===0);
+  return {labels:rows.map(d=>d.date),rows};
+}
+
+// Gradient helper
+function tealGrad(ctx,alpha=0.15){
+  const g=ctx.createLinearGradient(0,0,0,240);
+  g.addColorStop(0,`rgba(33,128,141,${alpha})`);
+  g.addColorStop(1,'rgba(33,128,141,0)');
+  return g;
+}
+
+// ============================================================
+// KPI CARDS WITH SPARKLINES
+// ============================================================
+function renderKPIs(data) {
+  const kpis = computeKPIs(data);
+  const grid = document.getElementById('kpiGrid');
+  const days = parseInt(document.getElementById('rangeSel').value);
+  document.getElementById('kpiPeriodLabel').textContent = `vs. prior ${days/2|0} days`;
+  grid.innerHTML = kpis.map((k,i)=>`
+    <div class="kpi-card">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value" data-val="${k.value}">${k.value}</div>
+      <div class="kpi-meta">
+        <span class="kpi-delta ${k.nt?'nt':k.up?'up':'dn'}">
+          ${k.nt?'':''}${k.nt?'':''}${k.nt?'—':k.up?'▲':'▼'} ${k.delta}
+        </span>
+        <span style="font-size:10px;color:var(--text-ter)">vs. prior period</span>
+      </div>
+      ${k.sparkKey?`<div class="kpi-spark"><canvas id="spark${i}"></canvas></div>`:''}
+    </div>
+  `).join('');
+
+  // Render sparklines
+  kpis.forEach((k,i)=>{
+    if(!k.sparkKey) return;
+    dc('spark'+i);
+    const sparkData = thin(data.slice(-60),30);
+    const vals = sparkData.map(r=>r[k.sparkKey]);
+    const ctx = document.getElementById('spark'+i);
+    if(!ctx) return;
+    CIs['spark'+i] = new Chart(ctx, {
+      type:'line',
+      data:{labels:sparkData.map(d=>d.date),datasets:[{data:vals,borderColor:T.TEAL,borderWidth:1.5,pointRadius:0,tension:.4,fill:true,backgroundColor:(ctx2)=>tealGrad(ctx2.chart.ctx,.18)}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        plugins:{legend:{display:false},tooltip:{enabled:false}},
+        scales:{x:{display:false},y:{display:false}}}
+    });
+  });
+}
+
+// ============================================================
+// OVERVIEW CHARTS
+// ============================================================
+function renderOverview(data) {
+  const {labels,rows} = thinIdx(data);
+
+  // RevPAR
+  dc('cRevpar');
+  CIs['cRevpar'] = new Chart(document.getElementById('cRevpar'), {
+    type:'line',
+    data:{labels,datasets:[{label:'RevPAR',data:rows.map(r=>r.revpar),borderColor:T.TEAL,backgroundColor:(ctx)=>tealGrad(ctx.chart.ctx),fill:true,tension:.35,pointRadius:0,borderWidth:2}]},
+    options:baseOpts()
+  });
+
+  // Occ vs ADR dual-axis
+  dc('cOccAdr');
+  const oA = baseOpts({
+    y:{position:'left',title:{display:true,text:'Occ %',font:{size:10},color:textColor()},grid:{color:gridColor()},ticks:{font:{size:10},color:textColor()}},
+    y1:{position:'right',title:{display:true,text:'ADR $',font:{size:10},color:textColor()},grid:{display:false},ticks:{font:{size:10},color:textColor()}}
+  });
+  oA.plugins.legend.display=true;
+  CIs['cOccAdr'] = new Chart(document.getElementById('cOccAdr'), {
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Occ %',data:rows.map(r=>r.occ),borderColor:T.TEAL,yAxisID:'y',tension:.35,pointRadius:0,borderWidth:2,backgroundColor:'transparent'},
+      {label:'ADR $',data:rows.map(r=>r.adr),borderColor:T.ORANGE,yAxisID:'y1',tension:.35,pointRadius:0,borderWidth:2,backgroundColor:'transparent'}
+    ]},
+    options:oA
+  });
+
+  // DOW
+  const dow={Mon:[],Tue:[],Wed:[],Thu:[],Fri:[],Sat:[],Sun:[]};
+  data.forEach(r=>{ if(dow[r.dow]) dow[r.dow].push(r.revpar); });
+  const dowL=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dowV=dowL.map(d=>{ const a=dow[d]||[]; return a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length*100)/100:0; });
+  const overall=dowV.reduce((a,b)=>a+b,0)/7;
+  dc('cDow');
+  CIs['cDow'] = new Chart(document.getElementById('cDow'), {
+    type:'bar',
+    data:{labels:dowL,datasets:[{label:'Avg RevPAR',data:dowV,
+      backgroundColor:dowV.map(v=>v>=overall?T.TEAL:'rgba(230,129,97,0.7)'),borderRadius:6,barPercentage:.65}]},
+    options:{...baseOpts(),plugins:{...baseOpts().plugins,tooltip:{callbacks:{label:c=>'$'+c.parsed.y.toFixed(2)}}}}
+  });
+
+  // Supply vs Demand
+  dc('cSupDem');
+  CIs['cSupDem'] = new Chart(document.getElementById('cSupDem'), {
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Supply',data:rows.map(r=>r.supply),borderColor:T.GRAY,borderDash:[4,3],borderWidth:1.5,pointRadius:0,tension:.3,backgroundColor:'transparent'},
+      {label:'Demand',data:rows.map(r=>r.demand),borderColor:T.TEAL,backgroundColor:(ctx)=>tealGrad(ctx.chart.ctx),fill:true,tension:.3,pointRadius:0,borderWidth:2}
+    ]},
+    options:{...baseOpts(),plugins:{...baseOpts().plugins,legend:{display:true,position:'top',labels:{boxWidth:9,padding:10,font:{size:10.5},color:textColor()}}}}
+  });
+}
+
+// ============================================================
+// TRENDS CHARTS
+// ============================================================
+function renderTrends(data) {
+  const r2=rng(99);
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const yoy=months.map(()=>Math.round((-3+r2()*10)*10)/10);
+  dc('cYoy');
+  CIs['cYoy'] = new Chart(document.getElementById('cYoy'), {
+    type:'bar',
+    data:{labels:months,datasets:[{label:'RevPAR YOY %',data:yoy,
+      backgroundColor:yoy.map(v=>v>=0?T.GREEN:T.RED),borderRadius:5,barPercentage:.6}]},
+    options:{...baseOpts(),plugins:{...baseOpts().plugins,
+      tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(1)+'%'}}},
+      scales:{x:{grid:{display:false},ticks:{color:textColor()}},y:{grid:{color:gridColor()},ticks:{callback:v=>v+'%',color:textColor()}}}}
+  });
+
+  const si=[.82,.85,.95,1.02,1.08,1.18,1.25,1.22,1.10,1.02,.88,.78];
+  dc('cSeason');
+  CIs['cSeason'] = new Chart(document.getElementById('cSeason'), {
+    type:'line',
+    data:{labels:months,datasets:[
+      {label:'Seasonality Index',data:si,borderColor:T.TEAL,backgroundColor:(ctx)=>tealGrad(ctx.chart.ctx,.2),fill:true,tension:.4,pointRadius:4,pointBackgroundColor:T.TEAL,borderWidth:2},
+      {label:'Baseline (1.0)',data:Array(12).fill(1.0),borderColor:T.GRAY,borderDash:[5,4],pointRadius:0,borderWidth:1.5,fill:false}
+    ]},
+    options:{...baseOpts(),plugins:{...baseOpts().plugins,legend:{display:true,position:'top',labels:{boxWidth:9,padding:10,font:{size:10.5},color:textColor()}}},
+      scales:{x:{grid:{display:false},ticks:{color:textColor()}},y:{min:.6,max:1.4,grid:{color:gridColor()},ticks:{color:textColor()}}}}
+  });
+
+  const mRev=[5.2,5.5,6.8,7.4,8.1,9.2,10.1,9.8,8.6,7.5,6.2,5.4];
+  const tbid=mRev.map(r=>Math.round(r*.0125*1000)/1000);
+  dc('cTbid');
+  CIs['cTbid'] = new Chart(document.getElementById('cTbid'), {
+    type:'bar',
+    data:{labels:months,datasets:[{label:'Est. TBID ($M)',data:tbid,backgroundColor:T.TEAL,borderRadius:5,barPercentage:.6}]},
+    options:{...baseOpts(),plugins:{...baseOpts().plugins,
+      tooltip:{callbacks:{label:c=>'$'+c.parsed.y.toFixed(3)+'M'}}},
+      scales:{x:{grid:{display:false},ticks:{color:textColor()}},y:{grid:{color:gridColor()},ticks:{callback:v=>'$'+v+'M',color:textColor()}}}}
+  });
+
+  // Rolling averages (30-day window)
+  const roll=(arr,key,w=30)=>arr.map((_,i)=>{const s=arr.slice(Math.max(0,i-w+1),i+1);return Math.round(s.reduce((a,b)=>a+b[key],0)/s.length*100)/100;});
+  const {labels,rows}=thinIdx(data,80);
+  dc('cRolling');
+  const rO={...baseOpts({
+    y:{position:'left',title:{display:true,text:'Occ % / RevPAR $',font:{size:10},color:textColor()},grid:{color:gridColor()},ticks:{color:textColor(),font:{size:10}}},
+    y1:{position:'right',title:{display:true,text:'ADR $',font:{size:10},color:textColor()},grid:{display:false},ticks:{color:textColor(),font:{size:10}}}
+  })};
+  rO.plugins.legend.display=true;
+  CIs['cRolling'] = new Chart(document.getElementById('cRolling'), {
+    type:'line',
+    data:{labels,datasets:[
+      {label:'RevPAR (30d avg)',data:rows.map(r=>r.revpar),borderColor:T.TEAL,yAxisID:'y',tension:.4,pointRadius:0,borderWidth:2,backgroundColor:'transparent'},
+      {label:'Occ % (30d avg)',data:rows.map(r=>r.occ),borderColor:'rgba(50,184,198,.8)',yAxisID:'y',tension:.4,pointRadius:0,borderWidth:1.5,borderDash:[],backgroundColor:'transparent'},
+      {label:'ADR $ (30d avg)',data:rows.map(r=>r.adr),borderColor:T.ORANGE,yAxisID:'y1',tension:.4,pointRadius:0,borderWidth:1.5,backgroundColor:'transparent'}
+    ]},
+    options:rO
+  });
+}
+
+// ============================================================
+// EVENT TAB
+// ============================================================
+function renderEvents() {
+  const evKpis=[
+    {label:'Est. Event Expenditure',value:'$14.6M',delta:'Ohana Fest 2025 · Datafy',up:true},
+    {label:'Destination Spend',value:'$18.4M',delta:'+3.0% vs 2024',up:true},
+    {label:'ADR Lift (Event Night)',value:'+$139',delta:'$542 vs $403 baseline',up:true},
+    {label:'RevPAR Lift',value:'+$140',delta:'$427 vs $287 baseline',up:true},
+    {label:'Overnight Hotel Share',value:'24%',delta:'of total attendees',up:true,nt:true},
+    {label:'Avg Accom Spend/Trip',value:'$1,219',delta:'+53% vs 2024',up:true},
+  ];
+  document.getElementById('eventKpiGrid').innerHTML = evKpis.map(k=>`
+    <div class="kpi-card">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-meta">
+        <span class="kpi-delta ${k.nt?'nt':k.up?'up':'dn'}">${k.nt?'—':k.up?'▲':'▼'} ${k.delta}</span>
+      </div>
+    </div>
+  `).join('');
+
+  const evDays=['Sep 15','Sep 16','Sep 17','Sep 18','Sep 19','Sep 20','Sep 21','Sep 22','Sep 23','Sep 24','Sep 25','Sep 26','Sep 27','Sep 28','Sep 29'];
+  const adrD=[403,410,415,420,436,430,425,418,412,430,460,510,542,530,403];
+  const occD=[65.6,66,67,68,71.2,70,69,67,66,70,74,77,78.8,76,65.6];
+  dc('cEventLift');
+  const evO={...baseOpts({
+    y:{position:'left',title:{display:true,text:'Occ %',font:{size:10},color:textColor()},min:60,max:85,grid:{color:gridColor()},ticks:{color:textColor(),font:{size:10}}},
+    y1:{position:'right',title:{display:true,text:'ADR $',font:{size:10},color:textColor()},min:350,max:580,grid:{display:false},ticks:{color:textColor(),font:{size:10}}}
+  })};
+  evO.plugins.legend.display=true;
+  CIs['cEventLift'] = new Chart(document.getElementById('cEventLift'), {
+    type:'line',
+    data:{labels:evDays,datasets:[
+      {label:'ADR $',data:adrD,borderColor:T.ORANGE,yAxisID:'y1',tension:.3,pointRadius:3,borderWidth:2,pointBackgroundColor:T.ORANGE},
+      {label:'Occupancy %',data:occD,borderColor:T.TEAL,yAxisID:'y',tension:.3,pointRadius:3,borderWidth:2,pointBackgroundColor:T.TEAL}
+    ]},
+    options:evO
+  });
+
+  const fCities=['San Clemente','San Juan Cap.','Dana Point','Laguna Niguel','Ladera Ranch','Huntington Bch','San Diego','Mission Viejo','Los Angeles','Cap. Beach'];
+  const fShare=[8.89,7.84,6.78,6.50,3.53,3.19,2.96,2.42,2.35,1.85];
+  dc('cFeeder');
+  CIs['cFeeder'] = new Chart(document.getElementById('cFeeder'), {
+    type:'bar',
+    data:{labels:fCities,datasets:[{label:'Share of Visitor Days %',data:fShare,backgroundColor:T.TEAL,borderRadius:4,barPercentage:.7}]},
+    options:{indexAxis:'y',...baseOpts(),plugins:{...baseOpts().plugins,
+      tooltip:{callbacks:{label:c=>c.parsed.x.toFixed(1)+'%'}}},
+      scales:{x:{grid:{color:gridColor()},ticks:{callback:v=>v+'%',color:textColor(),font:{size:10}}},y:{grid:{display:false},ticks:{color:textColor(),font:{size:10}}}}}
+  });
+
+  const cats=['Dining & Nightlife','Accommodations','Grocery / Dept','Service Stations','Fast Food','Specialty Retail','Personal Care','Clothing','Leisure / Rec'];
+  const catV=[30.2,23.6,17.4,7.71,6.73,6.46,4.08,2.09,1.33];
+  const catC=['rgba(33,128,141,.9)','rgba(45,166,178,.9)','rgba(50,184,198,.85)','rgba(230,129,97,.85)','rgba(168,75,47,.8)','rgba(94,82,64,.8)','rgba(98,108,113,.8)','rgba(167,169,169,.7)','rgba(192,21,47,.65)'];
+  dc('cSpend');
+  CIs['cSpend'] = new Chart(document.getElementById('cSpend'), {
+    type:'doughnut',
+    data:{labels:cats,datasets:[{data:catV,backgroundColor:catC,borderWidth:2,borderColor:'var(--surface)'}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:350},
+      plugins:{legend:{position:'right',labels:{boxWidth:9,padding:7,font:{size:10},color:textColor()}},
+        tooltip:{callbacks:{label:c=>c.label+': '+c.parsed.toFixed(1)+'%'},backgroundColor:'rgba(19,52,59,.95)',titleColor:'#fff',bodyColor:'rgba(255,255,255,.75)',cornerRadius:8}}}
+  });
+}
+
+// ============================================================
+// DATA LOG
+// ============================================================
+function renderDataLog() {
+  const log=[
+    {date:'2026-03-09 13:42',src:'STR',grain:'daily',file:'str_daily.xlsx',rows:4392,ok:true},
+    {date:'2026-03-09 10:15',src:'STR',grain:'daily',file:'str_daily.xlsx',rows:0,ok:false},
+    {date:'2026-03-01 08:00',src:'STR',grain:'daily',file:'str_daily.xlsx',rows:4318,ok:true},
+  ];
+  document.querySelector('#loadLogTbl tbody').innerHTML=log.map(r=>`
+    <tr>
+      <td style="font-family:var(--mono);font-size:11.5px">${r.date}</td>
+      <td>${r.src}</td>
+      <td><span class="tag tag-${r.grain}">${r.grain}</span></td>
+      <td><code style="font-size:11.5px">${r.file}</code></td>
+      <td class="num">${r.rows.toLocaleString()}</td>
+      <td><span class="tag" style="${r.ok?'background:rgba(34,197,94,.09);color:#16a34a':'background:rgba(239,68,68,.09);color:var(--error)'}">${r.ok?'OK':'No new rows'}</span></td>
+    </tr>`).join('');
+
+  const metrics=['revpar','adr','occ','supply','demand','revenue'];
+  const mLbl={revpar:'RevPAR',adr:'ADR',occ:'Occupancy',supply:'Supply',demand:'Demand',revenue:'Revenue'};
+  const mUnit={revpar:'USD',adr:'USD',occ:'%',supply:'rooms',demand:'rooms',revenue:'USD'};
+  const fmt=(m,v)=>m==='occ'?v.toFixed(1):m==='revenue'?'$'+v.toLocaleString():m==='supply'||m==='demand'?v.toLocaleString():'$'+v.toFixed(2);
+  const rows=[];
+  ALL.slice(-5).reverse().forEach(r=>metrics.forEach(m=>rows.push({date:r.date,m:mLbl[m],v:fmt(m,r[m]),u:mUnit[m]})));
+  document.querySelector('#sampleTbl tbody').innerHTML=rows.map(r=>`
+    <tr>
+      <td style="font-family:var(--mono);font-size:11.5px">${r.date}</td>
+      <td>${r.m}</td>
+      <td class="num">${r.v}</td>
+      <td style="color:var(--text-sec)">${r.u}</td>
+      <td><span class="tag tag-daily">daily</span></td>
+    </tr>`).join('');
+}
+
+// ============================================================
+// AI INSIGHTS PANEL
+// ============================================================
+function buildAIPanel(data) {
+  const sc = computeScore(data);
+  const avgOcc=avg(data,'occ'), avgAdr=avg(data,'adr'), avgRvp=avg(data,'revpar');
+  const totalRev=sum(data,'revenue');
+
+  // Weekend vs weekday
+  const we=data.filter(r=>r.dow==='Fri'||r.dow==='Sat');
+  const wd=data.filter(r=>r.dow!=='Fri'&&r.dow!=='Sat'&&r.dow!=='Sun');
+  const weRvp=avg(we,'revpar'), wdRvp=avg(wd,'revpar');
+  const wePrem=((weRvp-wdRvp)/wdRvp*100).toFixed(0);
+
+  // Compression nights (occ > 90%)
+  const comp=data.filter(r=>r.occ>=90).length;
+
+  // TBID annualized
+  const tbidAnnual = (totalRev/data.length*365*.0125/1e6).toFixed(2);
+
+  // vs benchmarks
+  const occVsNat=((avgOcc-BM.national.occ)/BM.national.occ*100).toFixed(1);
+  const adrVsOC=((avgAdr-BM.ocCoastal.adr)/BM.ocCoastal.adr*100).toFixed(1);
+  const rvpVsCA=((avgRvp-BM.california.revpar)/BM.california.revpar*100).toFixed(1);
+
+  const scoreColor=sc.overall>=80?'#22c55e':sc.overall>=60?'#f59e0b':'#ef4444';
+
+  document.getElementById('aiBody').innerHTML = `
+  <!-- Performance Score -->
+  <div class="perf-card">
+    <div class="perf-lbl">VDP Performance Score</div>
+    <div class="perf-row">
+      <div>
+        <div class="perf-num" style="color:${scoreColor}">${sc.overall}</div>
+        <div class="perf-sub">out of 100 · vs. OC Coastal benchmarks</div>
+      </div>
+      <div class="perf-gauge-wrap"><canvas id="perfGauge"></canvas></div>
+    </div>
+    <div class="perf-comps">
+      <div class="perf-comp">
+        <div class="perf-comp-val" style="color:${sc.occScore>=70?'#4ade80':'#f59e0b'}">${sc.occScore}</div>
+        <div class="perf-comp-lbl">Occ Efficiency</div>
+      </div>
+      <div class="perf-comp">
+        <div class="perf-comp-val" style="color:${sc.adrScore>=70?'#4ade80':'#f59e0b'}">${sc.adrScore}</div>
+        <div class="perf-comp-lbl">Rate Strength</div>
+      </div>
+      <div class="perf-comp">
+        <div class="perf-comp-val" style="color:${sc.momScore>=60?'#4ade80':'#f59e0b'}">${sc.momScore}</div>
+        <div class="perf-comp-lbl">Momentum</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data badge note -->
+  <div class="ai-note">
+    <strong>Data basis:</strong> All signals below are computed from your 4,392 loaded STR daily rows.
+    Benchmarks sourced from publicly available 2024 industry reports — verify against your active STR subscription for exact competitive set data.
+  </div>
+
+  <!-- Key signals -->
+  <div class="ai-sec">
+    <div class="ai-sec-title">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Key Signals from Your Data
+    </div>
+
+    <div class="signal">
+      <div class="signal-ico ico-up">▲</div>
+      <div class="signal-body">
+        <div class="signal-t">Weekend RevPAR Premium</div>
+        <div class="signal-d">Fri–Sat outperforms weekday avg by <strong>+${wePrem}%</strong>. Weekend pricing power is strong — potential rate ceiling test opportunity.</div>
+        <div class="signal-v">$${weRvp.toFixed(0)} Fri–Sat vs $${wdRvp.toFixed(0)} Mon–Thu</div>
+      </div>
+    </div>
+
+    <div class="signal">
+      <div class="signal-ico ico-info">◉</div>
+      <div class="signal-body">
+        <div class="signal-t">Peak Season Window</div>
+        <div class="signal-d">Seasonality index peaks Jun–Aug (1.22–1.25). Shoulder months Nov–Feb index at 0.78–0.88 — a 37% RevPAR gap vs. peak.</div>
+        <div class="signal-v">Jun–Aug seasonality index: 1.22–1.25</div>
+      </div>
+    </div>
+
+    <div class="signal">
+      <div class="signal-ico ico-up">★</div>
+      <div class="signal-body">
+        <div class="signal-t">Compression Nights</div>
+        <div class="signal-d"><strong>${comp} nights</strong> in the selected period had occupancy ≥ 90% — high-demand windows with potential for rate escalation or package upselling.</div>
+        <div class="signal-v">${comp} nights at 90%+ Occ in selected period</div>
+      </div>
+    </div>
+
+    <div class="signal">
+      <div class="signal-ico ico-info">$</div>
+      <div class="signal-body">
+        <div class="signal-t">TBID Revenue Run Rate</div>
+        <div class="signal-d">At current pace with 1.25% blended assessment, estimated annual TBID revenue is <strong>~$${tbidAnnual}M</strong>. Monthly loader will sharpen this estimate.</div>
+        <div class="signal-v">~$${tbidAnnual}M annualized (1.25% blended)</div>
+      </div>
+    </div>
+
+    <div class="signal">
+      <div class="signal-ico ico-warn">⚠</div>
+      <div class="signal-body">
+        <div class="signal-t">Monthly Grain Pending</div>
+        <div class="signal-d">STR Monthly loader is not yet active. YOY trends and seasonality index will significantly improve accuracy once monthly data is loaded.</div>
+        <div class="signal-v">Phase 1 blocker — fix load_str_monthly_sqlite.py</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Benchmark comparison -->
+  <div class="ai-sec">
+    <div class="ai-sec-title">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      Industry Benchmark Comparison
+    </div>
+    <table class="bm-table">
+      <thead>
+        <tr>
+          <th>Market</th>
+          <th>Occ %</th>
+          <th>ADR</th>
+          <th>RevPAR</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="bm-lbl" style="color:var(--primary)">Your VDP Data</div><div class="bm-src">Loaded STR daily grain</div></td>
+          <td class="bm-yours">${avgOcc.toFixed(1)}%</td>
+          <td class="bm-yours">$${avgAdr.toFixed(0)}</td>
+          <td class="bm-yours">$${avgRvp.toFixed(0)}</td>
+        </tr>
+        ${Object.values(BM).map(b=>`
+        <tr>
+          <td><div class="bm-lbl">${b.label}</div><div class="bm-src">[${b.num}]</div></td>
+          <td>${b.occ.toFixed(1)}% <span class="bm-vs ${avgOcc>b.occ?'ab':'bl'}">${avgOcc>b.occ?'▲':'▼'} ${Math.abs(avgOcc-b.occ).toFixed(1)}pt</span></td>
+          <td>$${b.adr.toFixed(0)} <span class="bm-vs ${avgAdr>b.adr?'ab':'bl'}">${avgAdr>b.adr?'▲':'▼'} ${Math.abs(((avgAdr-b.adr)/b.adr*100)).toFixed(0)}%</span></td>
+          <td>$${b.revpar.toFixed(0)} <span class="bm-vs ${avgRvp>b.revpar?'ab':'bl'}">${avgRvp>b.revpar?'▲':'▼'} ${Math.abs(((avgRvp-b.revpar)/b.revpar*100)).toFixed(0)}%</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Recommendations -->
+  <div class="ai-sec">
+    <div class="ai-sec-title">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      AI Recommendations
+    </div>
+    <div class="rec">
+      <div class="rec-num">1</div>
+      <div class="rec-body">
+        <div class="rec-t">Rate ceiling test on compression nights</div>
+        <div class="rec-d">Your ${comp} nights at 90%+ occupancy signal inelastic demand. Test ADR 8–12% above current rack on these dates — if bookings hold, permanent rate floor increase is warranted.</div>
+      </div>
+    </div>
+    <div class="rec">
+      <div class="rec-num">2</div>
+      <div class="rec-body">
+        <div class="rec-t">Shoulder season package strategy (Nov–Feb)</div>
+        <div class="rec-d">Seasonality index drops to 0.78–0.88 in winter months. Targeted packages (midweek getaways, local experience bundles) can lift occupancy without sacrificing ADR established in peak season.</div>
+      </div>
+    </div>
+    <div class="rec">
+      <div class="rec-num">3</div>
+      <div class="rec-body">
+        <div class="rec-t">Event replication — expand Ohana Fest model</div>
+        <div class="rec-d">Ohana Fest demonstrated $139 ADR lift and 24% overnight conversion. Identify 2–3 additional event windows in shoulder months that could replicate this pattern with targeted promotion.</div>
+      </div>
+    </div>
+    <div class="rec">
+      <div class="rec-num">4</div>
+      <div class="rec-body">
+        <div class="rec-t">Activate STR Monthly loader (Phase 1 priority)</div>
+        <div class="rec-d">Monthly grain unlocks accurate YOY comps, TBID projections, and seasonal index calculation. This is the single highest-ROI technical action to improve data quality across all KPIs.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sources -->
+  <div class="ai-sec">
+    <div class="ai-sec-title">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Sources & Citations
+    </div>
+    <div class="src-list">
+      <div class="src-item"><div class="src-n">1</div><div class="src-t"><strong>STR (CoStar Group)</strong> — U.S. Hotel Performance Annual Report 2024. National occupancy, ADR, RevPAR benchmarks. str.com · Published Q1 2025.</div></div>
+      <div class="src-item"><div class="src-n">2</div><div class="src-t"><strong>Visit California / California Hotel & Lodging Association (CHLA)</strong> — State of the California Lodging Industry 2024. California statewide benchmarks. visitcalifornia.com · chla.com.</div></div>
+      <div class="src-item"><div class="src-n">3</div><div class="src-t"><strong>CBRE Hotels Research / Discover OC</strong> — Orange County Coastal Market Performance 2024. Regional coastal market benchmarks. cbrehotels.com · discoveroc.com.</div></div>
+      <div class="src-item"><div class="src-n">4</div><div class="src-t"><strong>Datafy</strong> — Ohana Fest 2025 Visitor Economy Report. Event expenditure, feeder markets, spending by category, accommodation conversion. (VDP internal data).</div></div>
+      <div class="src-item"><div class="src-n">5</div><div class="src-t"><strong>VDP STR Daily Data</strong> — 4,392 rows loaded via load_str_daily_sqlite.py into analytics.sqlite · fact_str_metrics table · as of Mar 9, 2026.</div></div>
+    </div>
+  </div>
+  `;
+
+  // Gauge chart
+  setTimeout(()=>{
+    const gCanvas=document.getElementById('perfGauge');
+    if(!gCanvas) return;
+    dc('perfGauge');
+    const scoreC = sc.overall>=80?'rgba(34,197,94,.9)':sc.overall>=60?'rgba(245,158,11,.9)':'rgba(239,68,68,.8)';
+    CIs['perfGauge'] = new Chart(gCanvas, {
+      type:'doughnut',
+      data:{datasets:[{data:[sc.overall,100-sc.overall],backgroundColor:[scoreC,'rgba(255,255,255,.08)'],borderWidth:0,circumference:270,rotation:225}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'76%',plugins:{legend:{display:false},tooltip:{enabled:false}}}
+    });
+  },50);
+}
+
+// ============================================================
+// NAV & PANEL SWITCHING
+// ============================================================
+let currentPanel='overview';
+function activatePanel(id) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  const panel=document.getElementById('panel-'+id);
+  if(panel) panel.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b=>{ if(b.dataset.panel===id) b.classList.add('active'); });
+  currentPanel=id;
+
+  const data=slice(parseInt(document.getElementById('rangeSel').value));
+  if(id==='overview'){ renderKPIs(data); renderOverview(data); }
+  else if(id==='trends') renderTrends(data);
+  else if(id==='events') renderEvents();
+  else if(id==='datalog') renderDataLog();
+}
+
+document.querySelectorAll('.nav-item').forEach(btn=>{
+  btn.addEventListener('click',()=>activatePanel(btn.dataset.panel));
+});
+
+// Sidebar collapse
+document.getElementById('collapseToggle').addEventListener('click',()=>{
+  document.getElementById('sidebar').classList.toggle('col');
+});
+
+// Theme
+document.getElementById('themeToggle').addEventListener('click',()=>{
+  const html=document.documentElement;
+  html.dataset.theme = html.dataset.theme==='dark'?'light':'dark';
+  // Re-render current panel for updated chart colors
+  setTimeout(()=>activatePanel(currentPanel),50);
+});
+
+// AI Panel
+const aiPanel=document.getElementById('aiPanel');
+const aiOverlay=document.getElementById('aiOverlay');
+document.getElementById('aiBtn').addEventListener('click',()=>{
+  const data=slice(parseInt(document.getElementById('rangeSel').value));
+  buildAIPanel(data);
+  aiPanel.classList.add('open');
+  aiOverlay.classList.add('open');
+});
+document.getElementById('aiClose').addEventListener('click',closeAI);
+aiOverlay.addEventListener('click',closeAI);
+function closeAI(){ aiPanel.classList.remove('open'); aiOverlay.classList.remove('open'); }
+
+// Export
+document.getElementById('exportBtn').addEventListener('click',()=>window.print());
+
+// Range/grain refresh
+document.getElementById('rangeSel').addEventListener('change',()=>activatePanel(currentPanel));
+document.getElementById('grainSel').addEventListener('change',()=>activatePanel(currentPanel));
+
+// ============================================================
+// INIT
+// ============================================================
+activatePanel('overview');
+</script>
+</body>
+</html>

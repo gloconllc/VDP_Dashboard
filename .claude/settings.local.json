@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx playwright --version)",
+      "Bash(node --version)",
+      "Bash(brew list)",
+      "Bash(pip3 list)",
+      "Bash(pip3 show mcp)",
+      "Bash(sqlite3 /Users/johnpicou/Documents/dmo-analytics/data/analytics.sqlite \".schema fact_str_metrics\")",
+      "Bash(python scripts/compute_kpis.py)",
+      "Bash(python3 scripts/compute_kpis.py)",
+      "Bash(python3 scripts/run_pipeline.py)",
+      "Bash(python3 scripts/load_str_daily_sqlite.py)",
+      "Bash(pip3 install openpyxl --quiet)",
+      "Bash(sqlite3 /Users/johnpicou/Documents/dmo-analytics/data/analytics.sqlite \":*)",
+      "Bash(sqlite3 --version)",
+      "Bash(sqlite3 /Users/johnpicou/Documents/dmo-analytics/data/analytics.sqlite \".tables\")",
+      "Bash(sqlite3 /Users/johnpicou/Documents/dmo-analytics/data/analytics.sqlite \"SELECT name, sql FROM sqlite_master WHERE type=''table'';\")",
+      "Bash(sqlite3 /Users/johnpicou/Documents/dmo-analytics/data/analytics.sqlite \"SELECT ''fact_str_metrics'' as table_name, COUNT\\(*\\) as row_count FROM fact_str_metrics UNION ALL SELECT ''kpi_daily_summary'', COUNT\\(*\\) FROM kpi_daily_summary UNION ALL SELECT ''kpi_compression_quarterly'', COUNT\\(*\\) FROM kpi_compression_quarterly UNION ALL SELECT ''load_log'', COUNT\\(*\\) FROM load_log;\")",
+      "Bash(source venv/bin/activate)",
+      "Bash(pip install streamlit plotly --quiet)",
+      "Bash(python3 -c \":*)",
+      "Bash(python3 -m py_compile dashboard/app.py)"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+# Downloaded reports – do not commit raw data files
+downloads/
+
+# Logs
+logs/*.png
+logs/*.log
+
+# Python
+__pycache__/
+*.pyc
+.env
+.env
+venv/
+__pycache__/
+.streamlit/
