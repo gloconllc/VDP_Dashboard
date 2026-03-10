@@ -233,10 +233,19 @@ def load_str_monthly() -> pd.DataFrame:
     wide.columns.name = None
     wide.columns = [c.lower().replace(" ", "_") for c in wide.columns]
     wide["as_of_date"] = pd.to_datetime(wide["as_of_date"])
+    # Rename occ → occupancy if present (STR sometimes stores as 'occ')
     if "occ" in wide.columns and "occupancy" not in wide.columns:
         wide = wide.rename(columns={"occ": "occupancy"})
+    # Normalise occ from decimal if needed
     if "occupancy" in wide.columns and wide["occupancy"].max() <= 1.0:
         wide["occupancy"] = wide["occupancy"] * 100
+    # Monthly STR exports don't include an occ column — derive from demand/supply
+    if "occupancy" not in wide.columns or wide["occupancy"].isna().all():
+        if "supply" in wide.columns and "demand" in wide.columns:
+            wide["occupancy"] = (
+                (wide["demand"] / wide["supply"] * 100)
+                .where(wide["supply"] > 0)
+            )
     for col in ["supply", "demand", "revenue", "occupancy", "adr", "revpar"]:
         if col not in wide.columns:
             wide[col] = np.nan
@@ -276,6 +285,15 @@ def get_table_counts() -> dict:
             counts[t] = row[0] if row else 0
         except Exception:
             counts[t] = "—"
+    # Per-grain breakdowns for the pipeline status display
+    for grain_val, key in [("daily", "str_daily_rows"), ("monthly", "str_monthly_rows")]:
+        try:
+            row = conn.execute(
+                "SELECT COUNT(*) FROM fact_str_metrics WHERE grain=?", (grain_val,)
+            ).fetchone()
+            counts[key] = row[0] if row else 0
+        except Exception:
+            counts[key] = "—"
     return counts
 
 # ─── Metric context builder ───────────────────────────────────────────────────
@@ -738,13 +756,20 @@ with st.sidebar:
     st.divider()
 
     # ── Pipeline status ────────────────────────────────────────────────────────
-    counts   = get_table_counts()
-    str_rows = counts.get("fact_str_metrics", 0)
+    counts          = get_table_counts()
+    str_daily_rows  = counts.get("str_daily_rows",   0)
+    str_monthly_rows= counts.get("str_monthly_rows", 0)
     last_log = df_log.iloc[0]["run_at"][:10] if not df_log.empty else "—"
 
+    _d_dot = "🟢" if isinstance(str_daily_rows,   int) and str_daily_rows   > 0 else "⚫"
+    _m_dot = "🟢" if isinstance(str_monthly_rows, int) and str_monthly_rows > 0 else "🟡"
+    _m_lbl = (f"{str_monthly_rows:,} rows"
+              if isinstance(str_monthly_rows, int) and str_monthly_rows > 0
+              else "Not loaded")
+
     st.markdown("**Pipeline Status**")
-    st.markdown(f"🟢 STR Daily &nbsp;·&nbsp; {str_rows:,} rows")
-    st.markdown(f"🟡 STR Monthly &nbsp;·&nbsp; Pending loader")
+    st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {str_daily_rows:,} rows")
+    st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_lbl}")
     st.markdown(f"⚫ Datafy &nbsp;·&nbsp; Not connected")
     st.caption(f"Last ETL run: {last_log}")
 
@@ -1098,22 +1123,47 @@ with tab_ov:
 # TAB 2 — TRENDS
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_tr:
-    if df_kpi.empty:
-        st.markdown(empty_state(
-            "📊", "KPI Table Is Empty",
-            "The <code>kpi_daily_summary</code> table has no rows yet.<br>"
-            "Click <b>🔄 Run Pipeline</b> in the sidebar to compute KPIs from your STR data.",
-        ), unsafe_allow_html=True)
+    # Decide the monthly series to drive Trends — grain-aware
+    _trends_empty = (grain == "Daily" and df_kpi.empty) or \
+                    (grain == "Monthly" and df_monthly.empty)
+
+    if _trends_empty:
+        if grain == "Monthly":
+            st.markdown(empty_state(
+                "🗓️", "No Monthly Data Loaded",
+                "Monthly STR data hasn't been loaded yet.<br>"
+                "Drop a monthly export in <code>downloads/</code> and click "
+                "<b>🔄 Run Pipeline</b>.",
+            ), unsafe_allow_html=True)
+        else:
+            st.markdown(empty_state(
+                "📊", "KPI Table Is Empty",
+                "The <code>kpi_daily_summary</code> table has no rows yet.<br>"
+                "Click <b>🔄 Run Pipeline</b> in the sidebar to compute KPIs from your STR data.",
+            ), unsafe_allow_html=True)
     else:
-        df_kpi_all = df_kpi.copy()
-        df_kpi_all["month"] = df_kpi_all["as_of_date"].dt.to_period("M")
-        monthly = (
-            df_kpi_all.groupby("month")
-            .agg(revpar=("revpar","mean"), adr=("adr","mean"),
-                 occ_pct=("occ_pct","mean"), revpar_yoy=("revpar_yoy","mean"))
-            .reset_index()
-        )
-        monthly["month_label"] = monthly["month"].dt.strftime("%b %Y")
+        # ── Build monthly series ───────────────────────────────────────────────
+        if grain == "Monthly" and not df_monthly.empty:
+            # Use pre-aggregated monthly STR source directly (up to 469 months)
+            monthly = df_monthly.sort_values("as_of_date").copy()
+            monthly["month"] = monthly["as_of_date"].dt.to_period("M")
+            monthly["month_label"] = monthly["as_of_date"].dt.strftime("%b %Y")
+            monthly = monthly.rename(columns={"occupancy": "occ_pct"})
+            # Compute YOY by comparing to the same month one year prior
+            monthly["revpar_yoy"] = (
+                monthly["revpar"] / monthly["revpar"].shift(12) - 1
+            ) * 100
+        else:
+            # Daily grain → aggregate kpi_daily_summary to monthly
+            df_kpi_all = df_kpi.copy()
+            df_kpi_all["month"] = df_kpi_all["as_of_date"].dt.to_period("M")
+            monthly = (
+                df_kpi_all.groupby("month")
+                .agg(revpar=("revpar", "mean"), adr=("adr", "mean"),
+                     occ_pct=("occ_pct", "mean"), revpar_yoy=("revpar_yoy", "mean"))
+                .reset_index()
+            )
+            monthly["month_label"] = monthly["month"].dt.strftime("%b %Y")
 
         # ── YOY RevPAR bar (full width) ────────────────────────────────────────
         st.markdown("**YOY RevPAR Change**")
@@ -1369,12 +1419,16 @@ with tab_dl:
             f"{_daily_rows:,} rows" if isinstance(_daily_rows, int) else "—",
         ), unsafe_allow_html=True)
 
+        _str_mon_rows = counts.get("str_monthly_rows", 0)
+        _mon_rows_lbl = (f"{_str_mon_rows:,} rows · {_mon_cnt} months"
+                         if isinstance(_str_mon_rows, int) and _str_mon_rows > 0
+                         else "0 rows")
         st.markdown(source_card(
             "🟢" if not df_monthly.empty else "🟡",
             "STR Monthly",
             (f"{_mon_min} → {_mon_max}" if _mon_min else
              "No monthly data — save <code>downloads/str_monthly.xlsx</code> and run pipeline"),
-            f"{_mon_cnt} months" if _mon_cnt else "0 months",
+            _mon_rows_lbl,
         ), unsafe_allow_html=True)
 
     with hc2:
