@@ -120,6 +120,36 @@ st.markdown("""
   #MainMenu { visibility:hidden; }
   footer    { visibility:hidden; }
 
+  /* Empty-state cards */
+  .empty-card {
+    background: var(--secondary-background-color);
+    border-radius: 10px; padding: 32px 24px; text-align: center;
+    border: 1px dashed rgba(94,82,64,0.25); margin: 6px 0 12px 0;
+  }
+  .empty-icon  { font-size: 30px; margin-bottom: 10px; }
+  .empty-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .empty-body  { font-size: 12px; opacity: 0.65; line-height: 1.55; }
+
+  /* Data-source health cards */
+  .src-card {
+    background: var(--secondary-background-color); border-radius: 10px;
+    padding: 13px 16px; border: 1px solid rgba(94,82,64,0.12);
+    margin-bottom: 8px; display: flex; align-items: center; gap: 12px;
+  }
+  .src-dot   { font-size: 15px; flex-shrink: 0; }
+  .src-name  { font-size: 13px; font-weight: 600; }
+  .src-meta  { font-size: 11px; opacity: 0.6; margin-top: 2px; line-height: 1.4; }
+  .src-count { font-size: 13px; font-weight: 700; color: #21808D;
+               margin-left: auto; text-align: right; white-space: nowrap; }
+
+  /* Grain badge */
+  .grain-badge {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px;
+    border-radius: 99px; background: rgba(230,129,97,.13);
+    color: #E68161; margin-left: 8px; vertical-align: middle;
+  }
+
   /* Home button title */
   .home-title a {
     text-decoration: none;
@@ -130,44 +160,6 @@ st.markdown("""
     line-height: 1.2;
   }
   .home-title a:hover { opacity: 0.75; }
-
-  /* Empty-state cards */
-  .empty-card {
-    background: var(--secondary-background-color);
-    border-radius: 10px;
-    padding: 32px 24px;
-    text-align: center;
-    border: 1px dashed rgba(94,82,64,0.25);
-    margin: 6px 0 12px 0;
-  }
-  .empty-icon  { font-size: 30px; margin-bottom: 10px; }
-  .empty-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
-  .empty-body  { font-size: 12px; opacity: 0.65; line-height: 1.55; }
-
-  /* Data-source health cards */
-  .src-card {
-    background: var(--secondary-background-color);
-    border-radius: 10px;
-    padding: 13px 16px;
-    border: 1px solid rgba(94,82,64,0.12);
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .src-dot   { font-size: 15px; flex-shrink: 0; }
-  .src-name  { font-size: 13px; font-weight: 600; }
-  .src-meta  { font-size: 11px; opacity: 0.6; margin-top: 2px; line-height: 1.4; }
-  .src-count { font-size: 13px; font-weight: 700; color: #21808D;
-               margin-left: auto; text-align: right; white-space: nowrap; }
-
-  /* Grain badge in chart titles */
-  .grain-badge {
-    display: inline-block; font-size: 10px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px;
-    border-radius: 99px; background: rgba(230,129,97,.13);
-    color: #E68161; margin-left: 8px; vertical-align: middle;
-  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -186,11 +178,13 @@ def get_connection():
 
 @st.cache_data(ttl=300)
 def load_str_daily() -> pd.DataFrame:
-    """Pivot fact_str_metrics (grain=daily) → one row per date."""
+    """Pivot fact_str_metrics (source='STR', grain='daily') → one row per date."""
     conn = get_connection()
     df = pd.read_sql_query(
         "SELECT as_of_date, metric_name, metric_value "
-        "FROM fact_str_metrics WHERE grain='daily' ORDER BY as_of_date",
+        "FROM fact_str_metrics "
+        "WHERE source='STR' AND grain='daily' "
+        "ORDER BY as_of_date",
         conn,
     )
     if df.empty:
@@ -208,44 +202,6 @@ def load_str_daily() -> pd.DataFrame:
         wide = wide.rename(columns={"occ": "occupancy"})
     if "occupancy" in wide.columns:
         wide["occupancy"] = wide["occupancy"] * 100
-    for col in ["supply", "demand", "revenue", "occupancy", "adr", "revpar"]:
-        if col not in wide.columns:
-            wide[col] = np.nan
-    return wide.sort_values("as_of_date").reset_index(drop=True)
-
-
-@st.cache_data(ttl=300)
-def load_str_monthly() -> pd.DataFrame:
-    """Pivot fact_str_metrics (grain=monthly) → one row per month."""
-    conn = get_connection()
-    df = pd.read_sql_query(
-        "SELECT as_of_date, metric_name, metric_value "
-        "FROM fact_str_metrics WHERE grain='monthly' ORDER BY as_of_date",
-        conn,
-    )
-    if df.empty:
-        return pd.DataFrame()
-    wide = (
-        df.pivot_table(index="as_of_date", columns="metric_name",
-                       values="metric_value", aggfunc="mean")
-        .reset_index()
-    )
-    wide.columns.name = None
-    wide.columns = [c.lower().replace(" ", "_") for c in wide.columns]
-    wide["as_of_date"] = pd.to_datetime(wide["as_of_date"])
-    # Rename occ → occupancy if present (STR sometimes stores as 'occ')
-    if "occ" in wide.columns and "occupancy" not in wide.columns:
-        wide = wide.rename(columns={"occ": "occupancy"})
-    # Normalise occ from decimal if needed
-    if "occupancy" in wide.columns and wide["occupancy"].max() <= 1.0:
-        wide["occupancy"] = wide["occupancy"] * 100
-    # Monthly STR exports don't include an occ column — derive from demand/supply
-    if "occupancy" not in wide.columns or wide["occupancy"].isna().all():
-        if "supply" in wide.columns and "demand" in wide.columns:
-            wide["occupancy"] = (
-                (wide["demand"] / wide["supply"] * 100)
-                .where(wide["supply"] > 0)
-            )
     for col in ["supply", "demand", "revenue", "occupancy", "adr", "revpar"]:
         if col not in wide.columns:
             wide[col] = np.nan
@@ -275,6 +231,51 @@ def load_load_log() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=300)
+def load_str_monthly() -> pd.DataFrame:
+    """Pivot fact_str_metrics (source='STR', grain='monthly') → one row per month.
+
+    Monthly STR exports do not include an occ column.
+    Occupancy is derived as demand / supply * 100.
+    """
+    conn = get_connection()
+    df = pd.read_sql_query(
+        "SELECT as_of_date, metric_name, metric_value "
+        "FROM fact_str_metrics "
+        "WHERE source='STR' AND grain='monthly' "
+        "ORDER BY as_of_date",
+        conn,
+    )
+    if df.empty:
+        return pd.DataFrame()
+    wide = (
+        df.pivot_table(
+            index="as_of_date", columns="metric_name",
+            values="metric_value", aggfunc="mean",
+        )
+        .reset_index()
+    )
+    wide.columns.name = None
+    wide.columns = [c.lower().replace(" ", "_") for c in wide.columns]
+    wide["as_of_date"] = pd.to_datetime(wide["as_of_date"])
+    # Normalise 'occ' → 'occupancy' if the column exists (decimal → percent)
+    if "occ" in wide.columns and "occupancy" not in wide.columns:
+        wide = wide.rename(columns={"occ": "occupancy"})
+    if "occupancy" in wide.columns and wide["occupancy"].max() <= 1.0:
+        wide["occupancy"] = wide["occupancy"] * 100
+    # Monthly STR exports carry supply + demand but no occ; derive it
+    if "occupancy" not in wide.columns or wide["occupancy"].isna().all():
+        if "supply" in wide.columns and "demand" in wide.columns:
+            wide["occupancy"] = (
+                (wide["demand"] / wide["supply"] * 100)
+                .where(wide["supply"] > 0)
+            )
+    for col in ["supply", "demand", "revenue", "occupancy", "adr", "revpar"]:
+        if col not in wide.columns:
+            wide[col] = np.nan
+    return wide.sort_values("as_of_date").reset_index(drop=True)
+
+
+@st.cache_data(ttl=300)
 def get_table_counts() -> dict:
     conn = get_connection()
     counts = {}
@@ -285,11 +286,12 @@ def get_table_counts() -> dict:
             counts[t] = row[0] if row else 0
         except Exception:
             counts[t] = "—"
-    # Per-grain breakdowns for the pipeline status display
+    # Per-grain breakdowns (used by sidebar status and Data Source Health cards)
     for grain_val, key in [("daily", "str_daily_rows"), ("monthly", "str_monthly_rows")]:
         try:
             row = conn.execute(
-                "SELECT COUNT(*) FROM fact_str_metrics WHERE grain=?", (grain_val,)
+                "SELECT COUNT(*) FROM fact_str_metrics "
+                "WHERE source='STR' AND grain=?", (grain_val,)
             ).fetchone()
             counts[key] = row[0] if row else 0
         except Exception:
@@ -671,10 +673,10 @@ def generate_ai_insights(df: pd.DataFrame, df_comp: pd.DataFrame, m: dict) -> li
 
     return cards[:4]
 
-# ─── UI helper: empty-state card ─────────────────────────────────────────────
+# ─── UI helpers: data cards ───────────────────────────────────────────────────
 
 def empty_state(icon: str, title: str, body: str) -> str:
-    """Return an HTML empty-state card (pass to st.markdown unsafe_allow_html=True)."""
+    """Styled empty-state card — pass to st.markdown(unsafe_allow_html=True)."""
     return (
         f'<div class="empty-card">'
         f'<div class="empty-icon">{icon}</div>'
@@ -685,7 +687,7 @@ def empty_state(icon: str, title: str, body: str) -> str:
 
 
 def source_card(dot: str, name: str, meta: str, count: str) -> str:
-    """Return an HTML data-source health card."""
+    """Styled data-source health card."""
     return (
         f'<div class="src-card">'
         f'<span class="src-dot">{dot}</span>'
@@ -701,8 +703,8 @@ def grain_badge(g: str) -> str:
 
 
 # ─── Load data ────────────────────────────────────────────────────────────────
-df_daily   = load_str_daily()
-df_monthly = load_str_monthly()
+df_daily   = load_str_daily()    # source='STR', grain='daily'
+df_monthly = load_str_monthly()  # source='STR', grain='monthly'
 df_kpi     = load_kpi_daily()
 df_comp    = load_compression()
 df_log     = load_load_log()
@@ -722,10 +724,8 @@ with st.sidebar:
     range_label = st.selectbox("Date Range", list(RANGE_OPTIONS.keys()), index=1)
     days = RANGE_OPTIONS[range_label]
     grain = st.selectbox(
-        "Data Grain",
-        ["Daily", "Monthly"],
-        index=0,
-        help="Daily = STR daily exports · Monthly = pre-aggregated monthly STR data",
+        "Data Grain", ["Daily", "Monthly"], index=0,
+        help="Daily: STR daily metrics · Monthly: pre-aggregated monthly STR exports",
     )
 
     st.divider()
@@ -756,27 +756,29 @@ with st.sidebar:
     st.divider()
 
     # ── Pipeline status ────────────────────────────────────────────────────────
-    counts          = get_table_counts()
-    str_daily_rows  = counts.get("str_daily_rows",   0)
-    str_monthly_rows= counts.get("str_monthly_rows", 0)
+    counts           = get_table_counts()
+    str_daily_rows   = counts.get("str_daily_rows",   0)
+    str_monthly_rows = counts.get("str_monthly_rows", 0)
     last_log = df_log.iloc[0]["run_at"][:10] if not df_log.empty else "—"
 
     _d_dot = "🟢" if isinstance(str_daily_rows,   int) and str_daily_rows   > 0 else "⚫"
-    _m_dot = "🟢" if isinstance(str_monthly_rows, int) and str_monthly_rows > 0 else "🟡"
-    _m_lbl = (f"{str_monthly_rows:,} rows"
-              if isinstance(str_monthly_rows, int) and str_monthly_rows > 0
-              else "Not loaded")
-
     st.markdown("**Pipeline Status**")
     st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {str_daily_rows:,} rows")
-    st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_lbl}")
+    # Keep the Pending loader label as a WIP indicator — also show row count when present
+    st.markdown("🟡 STR Monthly &nbsp;·&nbsp; Pending loader")
+    if isinstance(str_monthly_rows, int) and str_monthly_rows > 0:
+        st.caption(f"  ↳ {str_monthly_rows:,} rows loaded (grain=monthly)")
     st.markdown(f"⚫ Datafy &nbsp;·&nbsp; Not connected")
     st.caption(f"Last ETL run: {last_log}")
 
     if not df_daily.empty:
         min_d = df_daily["as_of_date"].min().strftime("%b %d, %Y")
         max_d = df_daily["as_of_date"].max().strftime("%b %d, %Y")
-        st.caption(f"Data: {min_d} → {max_d}")
+        st.caption(f"Daily data: {min_d} → {max_d}")
+    if not df_monthly.empty:
+        mon_min = df_monthly["as_of_date"].min().strftime("%b %Y")
+        mon_max = df_monthly["as_of_date"].max().strftime("%b %Y")
+        st.caption(f"Monthly data: {mon_min} → {mon_max}")
 
     st.divider()
 
@@ -829,13 +831,16 @@ with st.sidebar:
             st.code(err_text[-800:], language="text")
 
 # ─── Active dataset (grain-aware) + filtered selection ────────────────────────
+# grain='Daily'   → df_active uses df_daily   (explicit grain='daily'  query)
+# grain='Monthly' → df_active uses df_monthly  (explicit grain='monthly' query)
 df_active = df_daily if grain == "Daily" else df_monthly
 
 if not df_active.empty:
     max_date   = df_active["as_of_date"].max()
     cutoff     = max_date - timedelta(days=days)
     df_sel     = df_active[df_active["as_of_date"] > cutoff].copy()
-    df_kpi_sel = df_kpi[df_kpi["as_of_date"] > cutoff].copy() if not df_kpi.empty else pd.DataFrame()
+    df_kpi_sel = (df_kpi[df_kpi["as_of_date"] > cutoff].copy()
+                  if not df_kpi.empty else pd.DataFrame())
 else:
     df_sel = df_kpi_sel = pd.DataFrame()
 
@@ -954,19 +959,11 @@ with tab_ov:
     # ── KPI Cards ──────────────────────────────────────────────────────────────
     kpis = compute_overview_kpis(df_sel)
     if not kpis:
-        if grain == "Monthly" and df_monthly.empty:
-            st.markdown(empty_state(
-                "🗓️", "No Monthly Data Loaded",
-                "Monthly STR exports haven't been loaded yet.<br>"
-                "Save a monthly Excel file to <code>downloads/</code> and click "
-                "<b>🔄 Run Pipeline</b> in the sidebar.",
-            ), unsafe_allow_html=True)
-        else:
-            st.markdown(empty_state(
-                "📭", "No Data in Selected Range",
-                f"No {grain.lower()} records found for the selected window.<br>"
-                "Try expanding the date range or run the pipeline to load new data.",
-            ), unsafe_allow_html=True)
+        st.markdown(empty_state(
+            "📊",
+            f"No {grain.lower()} data in the selected range.",
+            "Adjust the date range or run the pipeline to load data.",
+        ), unsafe_allow_html=True)
     else:
         st.markdown("**Key Performance Indicators**")
         cols = st.columns(3)
@@ -1059,7 +1056,7 @@ with tab_ov:
         with c3:
             if grain == "Daily":
                 st.markdown("**Day-of-Week Performance**")
-                st.caption("Avg RevPAR by weekday · orange = below overall avg")
+                st.caption("Average RevPAR · orange = opportunity nights below overall avg")
                 dow_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
                 tmp = df_sel.copy()
                 tmp["dow"] = tmp["as_of_date"].dt.strftime("%a")
@@ -1079,17 +1076,19 @@ with tab_ov:
                 fig.update_layout(yaxis_tickprefix="$", showlegend=False)
                 st.plotly_chart(style_fig(fig), use_container_width=True)
             else:
-                # Monthly grain → Month-of-Year seasonality
+                # Monthly grain → show calendar-month seasonality using all monthly history
                 st.markdown("**Month-of-Year Seasonality**")
-                st.caption("Avg RevPAR by calendar month across all loaded data · orange = below avg")
-                mon_order = ["Jan","Feb","Mar","Apr","May","Jun",
-                             "Jul","Aug","Sep","Oct","Nov","Dec"]
-                tmp = df_active.copy()
+                st.caption("Average RevPAR by calendar month · all available monthly history")
+                month_order = ["Jan","Feb","Mar","Apr","May","Jun",
+                               "Jul","Aug","Sep","Oct","Nov","Dec"]
+                tmp = df_monthly.copy()
                 tmp["mon"] = tmp["as_of_date"].dt.strftime("%b")
-                mon_avg = tmp.groupby("mon")["revpar"].mean().reindex(mon_order)
+                mon_avg = tmp.groupby("mon")["revpar"].mean().reindex(month_order)
                 ov_avg  = mon_avg.mean()
-                colors  = [TEAL if (v >= ov_avg if pd.notna(v) else False) else ORANGE
-                           for v in mon_avg]
+                colors  = [
+                    TEAL if (pd.notna(v) and v >= ov_avg) else ORANGE
+                    for v in mon_avg
+                ]
                 fig = go.Figure(go.Bar(
                     x=mon_avg.index, y=mon_avg.values,
                     marker=dict(color=colors, line_width=0),
@@ -1123,58 +1122,63 @@ with tab_ov:
 # TAB 2 — TRENDS
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_tr:
-    # Decide the monthly series to drive Trends — grain-aware
-    _trends_empty = (grain == "Daily" and df_kpi.empty) or \
-                    (grain == "Monthly" and df_monthly.empty)
+    # ── Build grain-aware monthly aggregation ─────────────────────────────────
+    # Monthly grain  → use df_monthly directly (up to 30+ years of STR history)
+    # Daily grain    → aggregate kpi_daily_summary by month (YOY pre-computed)
+    if grain == "Monthly" and not df_monthly.empty:
+        _tmp_tr = df_monthly.copy()
+        _tmp_tr["month"] = _tmp_tr["as_of_date"].dt.to_period("M")
+        monthly = (
+            _tmp_tr.groupby("month")
+            .agg(
+                revpar  =("revpar",     "mean"),
+                adr     =("adr",        "mean"),
+                occ_pct =("occupancy",  "mean"),
+            )
+            .reset_index()
+            .sort_values("month")
+        )
+        # Compute YOY from the monthly series (shift 12)
+        monthly["revpar_yoy"] = (
+            (monthly["revpar"] / monthly["revpar"].shift(12) - 1) * 100
+        )
+        monthly["month_label"] = monthly["month"].dt.strftime("%b %Y")
+        _trends_ok = True
+    elif grain == "Daily" and not df_kpi.empty:
+        df_kpi_all = df_kpi.copy()
+        df_kpi_all["month"] = df_kpi_all["as_of_date"].dt.to_period("M")
+        monthly = (
+            df_kpi_all.groupby("month")
+            .agg(revpar=("revpar","mean"), adr=("adr","mean"),
+                 occ_pct=("occ_pct","mean"), revpar_yoy=("revpar_yoy","mean"))
+            .reset_index()
+        )
+        monthly["month_label"] = monthly["month"].dt.strftime("%b %Y")
+        _trends_ok = True
+    else:
+        monthly    = pd.DataFrame()
+        _trends_ok = False
 
-    if _trends_empty:
+    if not _trends_ok:
         if grain == "Monthly":
             st.markdown(empty_state(
-                "🗓️", "No Monthly Data Loaded",
-                "Monthly STR data hasn't been loaded yet.<br>"
-                "Drop a monthly export in <code>downloads/</code> and click "
-                "<b>🔄 Run Pipeline</b>.",
+                "📈", "No monthly STR data loaded.",
+                "Run the pipeline to load STR monthly exports into fact_str_metrics.",
             ), unsafe_allow_html=True)
         else:
             st.markdown(empty_state(
-                "📊", "KPI Table Is Empty",
-                "The <code>kpi_daily_summary</code> table has no rows yet.<br>"
-                "Click <b>🔄 Run Pipeline</b> in the sidebar to compute KPIs from your STR data.",
+                "📈", "KPI summary is empty.",
+                "kpi_daily_summary has no rows — run compute_kpis.py first.",
             ), unsafe_allow_html=True)
     else:
-        # ── Build monthly series ───────────────────────────────────────────────
-        if grain == "Monthly" and not df_monthly.empty:
-            # Use pre-aggregated monthly STR source directly (up to 469 months)
-            monthly = df_monthly.sort_values("as_of_date").copy()
-            monthly["month"] = monthly["as_of_date"].dt.to_period("M")
-            monthly["month_label"] = monthly["as_of_date"].dt.strftime("%b %Y")
-            monthly = monthly.rename(columns={"occupancy": "occ_pct"})
-            # Compute YOY by comparing to the same month one year prior
-            monthly["revpar_yoy"] = (
-                monthly["revpar"] / monthly["revpar"].shift(12) - 1
-            ) * 100
-        else:
-            # Daily grain → aggregate kpi_daily_summary to monthly
-            df_kpi_all = df_kpi.copy()
-            df_kpi_all["month"] = df_kpi_all["as_of_date"].dt.to_period("M")
-            monthly = (
-                df_kpi_all.groupby("month")
-                .agg(revpar=("revpar", "mean"), adr=("adr", "mean"),
-                     occ_pct=("occ_pct", "mean"), revpar_yoy=("revpar_yoy", "mean"))
-                .reset_index()
-            )
-            monthly["month_label"] = monthly["month"].dt.strftime("%b %Y")
-
         # ── YOY RevPAR bar (full width) ────────────────────────────────────────
         st.markdown("**YOY RevPAR Change**")
         st.caption("Year-over-year % change by month · teal = growth, red = decline")
         yoy = monthly.dropna(subset=["revpar_yoy"])
         if yoy.empty:
             st.markdown(empty_state(
-                "📅", "More History Needed for YOY",
-                f"Year-over-year comparison requires 12+ months of data.<br>"
-                f"Currently {len(monthly)} month(s) are available in "
-                f"<code>kpi_daily_summary</code>.",
+                "📊", "YOY requires 12+ months of history.",
+                "Load more data and re-run compute_kpis.py to unlock year-over-year charts.",
             ), unsafe_allow_html=True)
         else:
             bar_colors = [GREEN if v >= 0 else RED for v in yoy["revpar_yoy"]]
@@ -1216,17 +1220,15 @@ with tab_tr:
                 st.plotly_chart(style_fig(fig), use_container_width=True)
             else:
                 st.markdown(empty_state(
-                    "🌊", "Building Seasonality Curve",
-                    f"Seasonality index needs 6+ months of data.<br>"
-                    f"Currently {len(monthly)} month(s) available — keep loading STR exports.",
+                    "📊", "Need 6+ months of data.",
+                    "Load more history to compute the seasonality index.",
                 ), unsafe_allow_html=True)
 
         with c2:
             st.markdown("**TBID Revenue Estimate**")
             st.caption("Monthly at blended 1.25% · hover to compare periods")
-            _tbid_src = df_active if not df_active.empty else df_daily
-            if not _tbid_src.empty:
-                tmp = _tbid_src.copy()
+            if not df_active.empty:
+                tmp = df_active.copy()
                 tmp["month"] = tmp["as_of_date"].dt.to_period("M")
                 mrev = tmp.groupby("month")["revenue"].sum().reset_index()
                 mrev["month_label"] = mrev["month"].dt.strftime("%b %Y")
@@ -1238,6 +1240,11 @@ with tab_tr:
                 ))
                 fig.update_layout(yaxis_tickprefix="$", yaxis_ticksuffix="M", showlegend=False)
                 st.plotly_chart(style_fig(fig), use_container_width=True)
+            else:
+                st.markdown(empty_state(
+                    "💰", "No revenue data loaded.",
+                    "Run the pipeline to populate TBID estimates.",
+                ), unsafe_allow_html=True)
 
         st.markdown("---")
 
@@ -1263,16 +1270,16 @@ with tab_tr:
             st.plotly_chart(style_fig(fig, height=260), use_container_width=True)
         else:
             st.markdown(empty_state(
-                "📉", "No Compression Data Yet",
-                "Quarterly compression counts haven't been computed.<br>"
-                "Click <b>🔄 Run Pipeline</b> to populate <code>kpi_compression_quarterly</code>.",
+                "📦", "No compression data.",
+                "Run compute_kpis.py to populate kpi_compression_quarterly.",
             ), unsafe_allow_html=True)
 
         st.markdown("---")
 
         # ── Full history line chart ─────────────────────────────────────────────
         st.markdown("**RevPAR / ADR / Occupancy — Full History**")
-        st.caption("Monthly averages · all available data")
+        src_label = "monthly STR exports" if grain == "Monthly" else "kpi_daily_summary"
+        st.caption(f"Monthly averages · all available data · source: {src_label}")
         fig = make_subplots(specs=[[{"secondary_y": True}]])
         fig.add_trace(go.Scatter(
             x=monthly["month_label"], y=monthly["revpar"],
@@ -1385,87 +1392,6 @@ with tab_ev:
 # TAB 4 — DATA LOG
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_dl:
-
-    # ── Data Source Health ─────────────────────────────────────────────────────
-    st.markdown("### 📡 Data Source Health")
-    st.caption("Live status of every data source connected to the analytics database")
-
-    counts = get_table_counts()
-
-    # Build metadata for each source
-    _daily_min  = df_daily["as_of_date"].min().strftime("%b %d, %Y") if not df_daily.empty else None
-    _daily_max  = df_daily["as_of_date"].max().strftime("%b %d, %Y") if not df_daily.empty else None
-    _daily_rows = counts.get("fact_str_metrics", 0)
-
-    _mon_min = df_monthly["as_of_date"].min().strftime("%b %Y") if not df_monthly.empty else None
-    _mon_max = df_monthly["as_of_date"].max().strftime("%b %Y") if not df_monthly.empty else None
-    _mon_cnt = len(df_monthly)
-
-    _kpi_min = df_kpi["as_of_date"].min().strftime("%b %d, %Y") if not df_kpi.empty else None
-    _kpi_max = df_kpi["as_of_date"].max().strftime("%b %d, %Y") if not df_kpi.empty else None
-    _kpi_rows = counts.get("kpi_daily_summary", 0)
-
-    _comp_rows = counts.get("kpi_compression_quarterly", 0)
-    _last_log  = df_log.iloc[0]["run_at"][:16] if not df_log.empty else "Never"
-
-    hc1, hc2 = st.columns(2)
-
-    with hc1:
-        st.markdown(source_card(
-            "🟢" if not df_daily.empty else "⚫",
-            "STR Daily",
-            (f"{_daily_min} → {_daily_max}" if _daily_min else "No data loaded") +
-            f"<br>Last pipeline run: {_last_log}",
-            f"{_daily_rows:,} rows" if isinstance(_daily_rows, int) else "—",
-        ), unsafe_allow_html=True)
-
-        _str_mon_rows = counts.get("str_monthly_rows", 0)
-        _mon_rows_lbl = (f"{_str_mon_rows:,} rows · {_mon_cnt} months"
-                         if isinstance(_str_mon_rows, int) and _str_mon_rows > 0
-                         else "0 rows")
-        st.markdown(source_card(
-            "🟢" if not df_monthly.empty else "🟡",
-            "STR Monthly",
-            (f"{_mon_min} → {_mon_max}" if _mon_min else
-             "No monthly data — save <code>downloads/str_monthly.xlsx</code> and run pipeline"),
-            _mon_rows_lbl,
-        ), unsafe_allow_html=True)
-
-    with hc2:
-        st.markdown(source_card(
-            "🟢" if not df_kpi.empty else "🟡",
-            "KPI Daily Summary",
-            (f"{_kpi_min} → {_kpi_max}" if _kpi_min else
-             "Empty — click 🔄 Run Pipeline to compute"),
-            f"{_kpi_rows:,} rows" if isinstance(_kpi_rows, int) else "—",
-        ), unsafe_allow_html=True)
-
-        st.markdown(source_card(
-            "🟢" if _comp_rows and _comp_rows > 0 else "🟡",
-            "Compression Quarters",
-            f"{_comp_rows} quarter(s) computed" if _comp_rows else
-            "Empty — run pipeline to compute",
-            f"{_comp_rows} qtrs",
-        ), unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # CoStar / external row
-    st.markdown(source_card(
-        "⚫", "CoStar",
-        "Awaiting export — save <code>downloads/costar_*.xlsx</code>, then click "
-        "<b>📡 Fetch External Data</b>",
-        "0 rows",
-    ), unsafe_allow_html=True)
-    st.markdown(source_card(
-        "⚫", "FRED · CA TOT · JWA",
-        "Fetch scripts pending implementation",
-        "—",
-    ), unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # ── Load Log + Row Counts ──────────────────────────────────────────────────
     col_a, col_b = st.columns([3, 1])
 
     with col_a:
@@ -1475,22 +1401,77 @@ with tab_dl:
             st.dataframe(df_log, use_container_width=True, hide_index=True)
         else:
             st.markdown(empty_state(
-                "🪵", "No Pipeline Runs Logged Yet",
-                "Run the pipeline with <b>🔄 Run Pipeline</b> in the sidebar<br>"
-                "or <code>python scripts/run_pipeline.py</code> from the terminal.",
+                "📋", "No load log entries found.",
+                "Run the pipeline to populate the load_log table.",
             ), unsafe_allow_html=True)
 
     with col_b:
         st.markdown("### Row Counts")
-        for table, count in counts.items():
-            label = table.replace("_", " ").title()
-            st.metric(label, f"{count:,}" if isinstance(count, int) else count)
+        # Only display DB table counts; exclude internal per-grain helper keys
+        _TABLE_LABELS = {
+            "fact_str_metrics":          "STR Metrics",
+            "kpi_daily_summary":         "KPI Daily",
+            "kpi_compression_quarterly": "Compression Qtrs",
+            "load_log":                  "Load Log",
+        }
+        for _key, _label in _TABLE_LABELS.items():
+            _val = counts.get(_key, "—")
+            st.metric(_label, f"{_val:,}" if isinstance(_val, int) else _val)
 
     st.markdown("---")
 
-    # ── Recent Metric Samples ──────────────────────────────────────────────────
-    st.markdown(f"### Recent Metric Samples {grain_badge(grain)}", unsafe_allow_html=True)
-    st.caption(f"Last 10 dates in selected window · {grain.lower()} grain · from fact_str_metrics")
+    # ── Data Source Health ─────────────────────────────────────────────────────
+    st.markdown("### Data Source Health")
+    st.caption("Live row counts and date coverage from analytics.sqlite")
+    _sc1, _sc2 = st.columns(2)
+
+    with _sc1:
+        _d_dot   = "🟢" if isinstance(str_daily_rows,   int) and str_daily_rows   > 0 else "⚫"
+        _m_dot   = "🟡" if isinstance(str_monthly_rows, int) and str_monthly_rows > 0 else "⚫"
+        _d_range = (
+            f"{df_daily['as_of_date'].min().strftime('%b %d %Y')} – "
+            f"{df_daily['as_of_date'].max().strftime('%b %d %Y')}"
+            if not df_daily.empty else "no data loaded"
+        )
+        _m_range = (
+            f"{df_monthly['as_of_date'].min().strftime('%b %Y')} – "
+            f"{df_monthly['as_of_date'].max().strftime('%b %Y')}"
+            if not df_monthly.empty else "no data loaded"
+        )
+        st.markdown(source_card(
+            _d_dot, "STR Daily", f"grain=daily · {_d_range}",
+            f"{str_daily_rows:,}" if isinstance(str_daily_rows, int) else str_daily_rows,
+        ), unsafe_allow_html=True)
+        st.markdown(source_card(
+            _m_dot, "STR Monthly (Pending loader)",
+            f"grain=monthly · {_m_range}",
+            f"{str_monthly_rows:,}" if isinstance(str_monthly_rows, int) else str_monthly_rows,
+        ), unsafe_allow_html=True)
+
+    with _sc2:
+        _kpi_ct  = counts.get("kpi_daily_summary", 0)
+        _cmp_ct  = counts.get("kpi_compression_quarterly", 0)
+        _kpi_dot = "🟢" if isinstance(_kpi_ct, int) and _kpi_ct > 0 else "⚫"
+        _cmp_dot = "🟢" if isinstance(_cmp_ct, int) and _cmp_ct > 0 else "⚫"
+        st.markdown(source_card(
+            _kpi_dot, "KPI Daily Summary", "kpi_daily_summary",
+            f"{_kpi_ct:,}" if isinstance(_kpi_ct, int) else _kpi_ct,
+        ), unsafe_allow_html=True)
+        st.markdown(source_card(
+            _cmp_dot, "Compression Quarters", "kpi_compression_quarterly",
+            f"{_cmp_ct:,}" if isinstance(_cmp_ct, int) else _cmp_ct,
+        ), unsafe_allow_html=True)
+        st.markdown(source_card(
+            "⚫", "CoStar", "source=costar · pending export", "—",
+        ), unsafe_allow_html=True)
+        st.markdown(source_card(
+            "⚫", "FRED / CA TOT / JWA", "external context · not yet loaded", "—",
+        ), unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    st.markdown("### Recent Metric Samples")
+    st.caption(f"Last 10 dates in selected window · grain={grain.lower()}")
     if not df_sel.empty:
         sample = df_sel.tail(10).sort_values("as_of_date", ascending=False)
         dcols  = [c for c in
@@ -1505,20 +1486,17 @@ with tab_dl:
                      use_container_width=True, hide_index=True)
     else:
         st.markdown(empty_state(
-            "📭", "No Records in Selected Range",
-            f"No {grain.lower()} data found for the current date window.<br>"
-            "Try expanding the range or switching grain.",
+            "📭", "No data in the selected range.",
+            "Adjust the date range or switch grain to see available data.",
         ), unsafe_allow_html=True)
 
     st.markdown("---")
-
-    # ── Compression Quarters ───────────────────────────────────────────────────
     st.markdown("### Compression Quarters")
     st.caption("Days per quarter above 80% / 90% occupancy from kpi_compression_quarterly")
     if not df_comp.empty:
         st.dataframe(df_comp, use_container_width=True, hide_index=True)
     else:
         st.markdown(empty_state(
-            "📉", "No Compression Data",
-            "Click <b>🔄 Run Pipeline</b> to populate <code>kpi_compression_quarterly</code>.",
+            "📊", "No compression data.",
+            "Run compute_kpis.py to populate kpi_compression_quarterly.",
         ), unsafe_allow_html=True)
