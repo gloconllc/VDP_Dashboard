@@ -1,8 +1,6 @@
-import os
-import sqlite3
-
 import pandas as pd
 
+# Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
@@ -16,16 +14,22 @@ def get_connection() -> sqlite3.Connection:
 
 def normalize_str_monthly(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Normalize STR monthly export (downloads/str_monthly.xlsx) into fact_str_metrics long format.
+    Convert STR MONTHLY wide format to long format for fact_str_metrics.
+    Assumptions (adjust if needed once we see real headers):
+      - 'Period' is the date column (month-end or similar)
+      - Metric columns include: Supply, Demand, Revenue, Occ, ADR, RevPAR
+      - No property/market columns in file: treat as portfolio-level series
     """
     date_col = "Period"
+    property_name_value = "VDP Select Portfolio"
+    market_value = "Anaheim Area"
 
     # Map file columns -> (metric_name_in_db, unit)
     metric_columns = {
         "Supply": ("supply", "rooms"),
         "Demand": ("demand", "rooms"),
         "Revenue": ("revenue", "USD"),
-        "Occ": ("occ", "percent"),
+        "Occ": ("occ", "percent"),      # Occ or Occ %
         "Occ %": ("occ", "percent"),
         "ADR": ("adr", "USD"),
         "RevPAR": ("revpar", "USD"),
@@ -36,16 +40,18 @@ def normalize_str_monthly(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.copy()
 
-    # Parse Period to YYYY-MM-DD
-    df[date_col] = pd.to_datetime(df[date_col], errors="coerce").dt.strftime("%Y-%m-%d")
+    # Normalize date
+    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+    df[date_col] = df[date_col].dt.strftime("%Y-%m-%d")
 
-    # Clean metrics: trim, treat "-" as missing, coerce to numeric
-    for col_name in metric_columns.keys():
+    # Clean metric columns: trim, treat "-" as missing, coerce to numeric
+    for col_name, (metric_name, unit) in metric_columns.items():
         if col_name in df.columns:
-            s = df[col_name].astype(str).str.strip().replace("-", None)
+            s = df[col_name]
+            s = s.astype(str).str.strip().replace("-", None)
             df[col_name] = pd.to_numeric(s, errors="coerce")
 
-    frames = []
+    long_frames = []
 
     for col_name, (metric_name, unit) in metric_columns.items():
         if col_name not in df.columns:
@@ -57,19 +63,20 @@ def normalize_str_monthly(df: pd.DataFrame) -> pd.DataFrame:
         tmp["unit"] = unit
         tmp["grain"] = "monthly"
         tmp["source"] = "STR"
-        tmp["property_name"] = "VDP Select Portfolio"
-        tmp["market"] = "Anaheim Area"
+        tmp["property_name"] = property_name_value
+        tmp["market"] = market_value
         tmp["submarket"] = None
         tmp.rename(columns={date_col: "as_of_date"}, inplace=True)
-        frames.append(tmp)
 
-    if not frames:
+        long_frames.append(tmp)
+
+    if not long_frames:
         raise ValueError("No known metric columns found in STR monthly export")
 
-    out = pd.concat(frames, ignore_index=True)
+    long_df = pd.concat(long_frames, ignore_index=True)
 
     # Final column order expected by fact_str_metrics
-    out = out[
+    long_df = long_df[
         [
             "source",
             "grain",
@@ -83,7 +90,7 @@ def normalize_str_monthly(df: pd.DataFrame) -> pd.DataFrame:
         ]
     ]
 
-    return out
+    return long_df
 
 
 def safe_float(v):
@@ -102,12 +109,12 @@ def load_str_monthly(path: str, conn: sqlite3.Connection) -> int:
     df = pd.read_excel(path, engine="openpyxl")
     norm_df = normalize_str_monthly(df)
 
-    cur = conn.cursor()
+    cursor = conn.cursor()
     rows_inserted = 0
 
     for _, row in norm_df.iterrows():
         # Dedup key includes grain so daily/monthly never collide
-        cur.execute(
+        cursor.execute(
             """
             SELECT COUNT(*) FROM fact_str_metrics
             WHERE source = ?
@@ -126,10 +133,12 @@ def load_str_monthly(path: str, conn: sqlite3.Connection) -> int:
                 row["metric_name"],
             ),
         )
-        if cur.fetchone()[0]:
+        exists = cursor.fetchone()[0]
+
+        if exists:
             continue
 
-        cur.execute(
+        cursor.execute(
             """
             INSERT INTO fact_str_metrics (
                 source, grain, property_name, market, submarket,
@@ -144,7 +153,7 @@ def load_str_monthly(path: str, conn: sqlite3.Connection) -> int:
                 row["submarket"],
                 row["as_of_date"],
                 row["metric_name"],
-                max(safe_float(row["metric_value"]) or 0.0, 0.0),
+                safe_float(row["metric_value"]),
                 row["unit"],
             ),
         )
@@ -152,18 +161,55 @@ def load_str_monthly(path: str, conn: sqlite3.Connection) -> int:
 
     conn.commit()
 
+    cursor.execute(
+        """
+        INSERT INTO load_log (source, grain, filename, rows_inserted)
+        VALUES (?, ?, ?, ?)
+        """,
+        ("STR", "monthly", os.path.basename(path), rows_inserted),
+    )
+    conn.commit()
+
     print(f"Inserted {rows_inserted} new monthly rows from {os.path.basename(path)}")
     return rows_inserted
 
 
-def main() -> None:
     conn = get_connection()
     try:
-        rows = load_str_monthly(MONTHLY_FILE, conn)
-        print(f"Done. Monthly rows inserted: {rows}")
+        monthly_rows = load_str_monthly(MONTHLY_FILE, conn)
+        print(f"Done. Monthly rows inserted: {monthly_rows}")
     finally:
         conn.close()
 
+
+if __name__ == "__main__":
+    main()
+def main() -> None:
+    conn = get_connection()
+    try:
+        monthly_rows = load_str_monthly(MONTHLY_FILE, conn)
+        print(f"Done. Monthly rows inserted: {monthly_rows}")
+    finally:
+        conn.close()
+
+
+if __name__ == "__main__":
+    main()
+        """,
+        ("STR", "monthly", os.path.basename(path), rows_inserted),
+    )
+    conn.commit()
+
+    print(f"Inserted {rows_inserted} new monthly rows from {os.path.basename(path)}")
+    return rows_inserted
+
+def main():
+    conn = get_connection()
+    try:
+        monthly_rows = load_str_monthly(MONTHLY_FILE, conn)
+        print(f"Done. Monthly rows inserted: {monthly_rows}")
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     main()

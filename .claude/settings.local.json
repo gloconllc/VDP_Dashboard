@@ -23,7 +23,20 @@
       "Bash(python3 -m py_compile dashboard/app.py)",
       "Bash(pip install anthropic --quiet)",
       "Bash(python3 -c \"import anthropic; print\\(''anthropic'', anthropic.__version__\\)\")",
-      "Bash(python3 -:*)"
+      "Bash(python3 -:*)",
+      "Bash(git push origin main)",
+      "Bash(git pull origin main --no-rebase)",
+      "Bash(python scripts/run_pipeline.py)",
+      "Bash(timeout 12 streamlit run dashboard/app.py --server.headless true)",
+      "Bash(python -m py_compile dashboard/app.py)",
+      "Bash(python -m py_compile scripts/fetch_costar_data.py)",
+      "Bash(python -m py_compile scripts/fetch_external_all.py)",
+      "Bash(python scripts/fetch_external_all.py)",
+      "Bash(git add dashboard/app.py scripts/fetch_costar_data.py scripts/fetch_external_all.py)",
+      "Bash(git commit:*)",
+      "Bash(sqlite3 /Users/johnpicou/Documents/dmo-analytics/data/analytics.sqlite \".schema\")",
+      "Bash(sqlite3 /Users/johnpicou/Documents/dmo-analytics/data/analytics.sqlite \"SELECT name FROM sqlite_master WHERE type=''table'';\")",
+      "Bash(sqlite3 /Users/johnpicou/Documents/dmo-analytics/data/analytics.sqlite:*)"
     ]
   }
 }
