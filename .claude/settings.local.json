@@ -20,7 +20,10 @@
       "Bash(source venv/bin/activate)",
       "Bash(pip install streamlit plotly --quiet)",
       "Bash(python3 -c \":*)",
-      "Bash(python3 -m py_compile dashboard/app.py)"
+      "Bash(python3 -m py_compile dashboard/app.py)",
+      "Bash(pip install anthropic --quiet)",
+      "Bash(python3 -c \"import anthropic; print\\(''anthropic'', anthropic.__version__\\)\")",
+      "Bash(python3 -:*)"
     ]
   }
 }
