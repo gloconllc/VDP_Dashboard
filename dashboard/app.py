@@ -12,6 +12,8 @@ from plotly.subplots import make_subplots
 from datetime import timedelta
 
 import os
+import sys
+import subprocess
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -131,8 +133,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─── DB connection (read-only, per-session singleton) ─────────────────────────
-DB_PATH = Path(__file__).parent.parent / "data" / "analytics.sqlite"
+# ─── Paths ────────────────────────────────────────────────────────────────────
+ROOT    = Path(__file__).parent.parent                          # ~/Documents/dmo-analytics
+DB_PATH = ROOT / "data" / "analytics.sqlite"
 
 @st.cache_resource
 def get_connection():
@@ -648,6 +651,56 @@ with st.sidebar:
         min_d = df_daily["as_of_date"].min().strftime("%b %d, %Y")
         max_d = df_daily["as_of_date"].max().strftime("%b %d, %Y")
         st.caption(f"Data: {min_d} → {max_d}")
+
+    st.divider()
+
+    # ── Pipeline Controls ──────────────────────────────────────────────────────
+    st.markdown("**⚙️ Pipeline Controls**")
+
+    run_btn   = st.button(
+        "🔄 Run Pipeline",
+        use_container_width=True,
+        help="Load STR exports → compute KPIs → refresh dashboard",
+    )
+    fetch_btn = st.button(
+        "📡 Fetch External Data",
+        use_container_width=True,
+        help="CoStar · FRED · CA TOT · JWA passenger stats",
+    )
+
+    if run_btn:
+        with st.spinner("Running pipeline…"):
+            proc = subprocess.run(
+                [sys.executable, str(ROOT / "scripts" / "run_pipeline.py")],
+                capture_output=True,
+                text=True,
+                cwd=str(ROOT),
+            )
+        if proc.returncode == 0:
+            st.success("Pipeline complete ✓")
+            st.cache_data.clear()
+            st.rerun()
+        else:
+            st.error("Pipeline failed — see detail below")
+            err_text = (proc.stderr or proc.stdout or "No output captured").strip()
+            st.code(err_text[-800:], language="text")
+
+    if fetch_btn:
+        with st.spinner("Fetching external sources…"):
+            proc = subprocess.run(
+                [sys.executable, str(ROOT / "scripts" / "fetch_external_all.py")],
+                capture_output=True,
+                text=True,
+                cwd=str(ROOT),
+            )
+        if proc.returncode == 0:
+            st.success("External fetch complete ✓")
+            st.cache_data.clear()
+            st.rerun()
+        else:
+            st.error("Fetch failed — see detail below")
+            err_text = (proc.stderr or proc.stdout or "No output captured").strip()
+            st.code(err_text[-800:], language="text")
 
 # ─── Filter data to selected range ────────────────────────────────────────────
 if not df_daily.empty:
