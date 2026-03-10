@@ -715,18 +715,35 @@ with st.sidebar:
     st.markdown("VDP Select Portfolio · 12 Properties · Anaheim Area")
     st.divider()
 
-    RANGE_OPTIONS = {
-        "Last 30 Days":   30,
-        "Last 90 Days":   90,
-        "Last 6 Months":  180,
-        "Last 12 Months": 365,
-    }
-    range_label = st.selectbox("Date Range", list(RANGE_OPTIONS.keys()), index=1)
-    days = RANGE_OPTIONS[range_label]
+    # Grain must be chosen FIRST so the range options below can adapt
     grain = st.selectbox(
         "Data Grain", ["Daily", "Monthly"], index=0,
         help="Daily: STR daily metrics · Monthly: pre-aggregated monthly STR exports",
     )
+
+    # Range options are grain-aware:
+    #   Daily   → "days" window applied to df_daily (max 365 d is fine)
+    #   Monthly → "days" window applied to df_monthly; monthly data spans
+    #             30+ years so we offer year/decade-scale windows
+    if grain == "Monthly":
+        RANGE_OPTIONS = {
+            "Last 12 Months": 365,
+            "Last 3 Years":   1095,
+            "Last 5 Years":   1825,
+            "All History":    36500,
+        }
+        _range_default = 1          # default: Last 3 Years
+    else:
+        RANGE_OPTIONS = {
+            "Last 30 Days":   30,
+            "Last 90 Days":   90,
+            "Last 6 Months":  180,
+            "Last 12 Months": 365,
+        }
+        _range_default = 1          # default: Last 90 Days
+
+    range_label = st.selectbox("Date Range", list(RANGE_OPTIONS.keys()), index=_range_default)
+    days = RANGE_OPTIONS[range_label]
 
     st.divider()
 
@@ -851,7 +868,14 @@ st.markdown(
     '<div class="home-title"><a href="?" title="Reset to Overview">Visit Dana Point — Analytics</a></div>',
     unsafe_allow_html=True,
 )
-last_upd = df_daily["as_of_date"].max().strftime("%b %d, %Y") if not df_daily.empty else "N/A"
+if not df_active.empty:
+    last_upd = df_active["as_of_date"].max().strftime(
+        "%b %Y" if grain == "Monthly" else "%b %d, %Y"
+    )
+elif not df_daily.empty:
+    last_upd = df_daily["as_of_date"].max().strftime("%b %d, %Y")
+else:
+    last_upd = "N/A"
 st.caption(f"VDP Select Portfolio · {range_label} · Last updated {last_upd}")
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
