@@ -84,13 +84,19 @@ st.markdown("""
     background: var(--secondary-background-color);
     border-radius: 10px; padding: 18px 20px;
     border: 1px solid rgba(94,82,64,0.15); margin-bottom: 12px;
+    position: relative; overflow: hidden;
   }
+  .kpi-header { display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 4px; }
   .kpi-label { font-size:11px; font-weight:600; text-transform:uppercase;
-    letter-spacing:.05em; opacity:.55; margin-bottom:6px; }
-  .kpi-value { font-size:26px; font-weight:700; letter-spacing:-.02em; line-height:1.1; }
+    letter-spacing:.05em; opacity:.55; }
+  .kpi-icon { font-size:22px; opacity:0.75; flex-shrink:0; }
+  .kpi-value { font-size:26px; font-weight:700; letter-spacing:-.02em; line-height:1.1;
+    margin: 4px 0; }
   .kpi-delta-pos     { color:#21808D; font-size:12px; font-weight:500; margin-top:6px; }
   .kpi-delta-neg     { color:#C0152F; font-size:12px; font-weight:500; margin-top:6px; }
   .kpi-delta-neutral { color:gray;    font-size:12px; font-weight:500; margin-top:6px; }
+  .kpi-date { font-size:10px; opacity:0.45; margin-top:5px; letter-spacing:.01em; }
 
   /* Insight cards */
   .insight-card { border-radius:10px; padding:14px 16px; margin-bottom:4px;
@@ -114,8 +120,10 @@ st.markdown("""
   .event-stat { background:var(--secondary-background-color);
     border:1px solid rgba(94,82,64,.12); border-radius:10px;
     padding:16px; text-align:center; margin-bottom:8px; }
+  .event-icon  { font-size:24px; margin-bottom:6px; }
   .event-val   { font-size:28px; font-weight:700; color:#21808D; letter-spacing:-.02em; }
   .event-label { font-size:12px; opacity:.6; margin-top:4px; }
+  .event-date  { font-size:10px; opacity:.4; margin-top:3px; }
 
   #MainMenu { visibility:hidden; }
   footer    { visibility:hidden; }
@@ -551,32 +559,48 @@ def stream_claude_response(prompt: str, api_key: str):
 
 # ─── UI helpers ───────────────────────────────────────────────────────────────
 
-def kpi_card(label, value, delta, positive=True, neutral=False) -> str:
+def kpi_card(label, value, delta, positive=True, neutral=False,
+             icon: str = "", date_label: str = "") -> str:
     css   = "kpi-delta-neutral" if neutral else ("kpi-delta-pos" if positive else "kpi-delta-neg")
     arrow = "" if neutral else ("▲ " if positive else "▼ ")
+    date_html = f'<div class="kpi-date">📅 {date_label}</div>' if date_label else ""
     return (
         f'<div class="kpi-card">'
+        f'<div class="kpi-header">'
         f'<div class="kpi-label">{label}</div>'
+        f'<div class="kpi-icon">{icon}</div>'
+        f'</div>'
         f'<div class="kpi-value">{value}</div>'
         f'<div class="{css}">{arrow}{delta}</div>'
+        f'{date_html}'
         f'</div>'
     )
 
 
-def insight_card(title, body, kind="info") -> str:
+def insight_card(title, body, kind="info", icon: str = "", date_label: str = "") -> str:
+    icon_prefix = f"{icon} " if icon else ""
+    date_html   = (
+        f'<div style="font-size:10px;opacity:.4;margin-top:6px;">📅 {date_label}</div>'
+        if date_label else ""
+    )
     return (
         f'<div class="insight-card insight-{kind}">'
-        f'<div class="insight-title">{title}</div>'
+        f'<div class="insight-title">{icon_prefix}{title}</div>'
         f'<p class="insight-body">{body}</p>'
+        f'{date_html}'
         f'</div>'
     )
 
 
-def event_stat(val, label) -> str:
+def event_stat(val, label, icon: str = "", date: str = "") -> str:
+    icon_html = f'<div class="event-icon">{icon}</div>' if icon else ""
+    date_html = f'<div class="event-date">📅 {date}</div>' if date else ""
     return (
         f'<div class="event-stat">'
+        f'{icon_html}'
         f'<div class="event-val">{val}</div>'
         f'<div class="event-label">{label}</div>'
+        f'{date_html}'
         f'</div>'
     )
 
@@ -607,13 +631,23 @@ def compute_overview_kpis(df: pd.DataFrame) -> list[dict]:
     r_rev, p_rev = tot(rec,"revenue"),    tot(pri,"revenue")
     r_dem, p_dem = tot(rec,"demand"),     tot(pri,"demand")
     tbid = r_rev * 0.0125
+    # Date label for the "recent" half of the selection window
+    rec_start = rec["as_of_date"].min().strftime("%b %d, %Y")
+    rec_end   = rec["as_of_date"].max().strftime("%b %d, %Y")
+    date_lbl  = f"{rec_start} – {rec_end}"
     return [
-        {"label":"RevPAR",       "value":f"${r_rvp:.2f}",      "delta":f"{pct_delta(r_rvp,p_rvp):+.1f}% vs. prior", "positive":r_rvp>=p_rvp},
-        {"label":"ADR",          "value":f"${r_adr:.2f}",      "delta":f"{pct_delta(r_adr,p_adr):+.1f}% vs. prior", "positive":r_adr>=p_adr},
-        {"label":"Occupancy",    "value":f"{r_occ:.1f}%",      "delta":f"{pct_delta(r_occ,p_occ):+.1f}pp vs. prior", "positive":r_occ>=p_occ},
-        {"label":"Room Revenue", "value":f"${r_rev/1e6:.2f}M", "delta":f"{pct_delta(r_rev,p_rev):+.1f}% vs. prior", "positive":r_rev>=p_rev},
-        {"label":"Rooms Sold",   "value":f"{r_dem:,.0f}",      "delta":f"{pct_delta(r_dem,p_dem):+.1f}% vs. prior", "positive":r_dem>=p_dem},
-        {"label":"Est. TBID Rev","value":f"${tbid/1e3:.0f}K",  "delta":"blended 1.25%",                              "positive":True,"neutral":True},
+        {"label":"RevPAR",        "icon":"💹", "value":f"${r_rvp:.2f}",
+         "delta":f"{pct_delta(r_rvp,p_rvp):+.1f}% vs. prior",  "positive":r_rvp>=p_rvp, "date_label":date_lbl},
+        {"label":"ADR",           "icon":"🏷️", "value":f"${r_adr:.2f}",
+         "delta":f"{pct_delta(r_adr,p_adr):+.1f}% vs. prior",  "positive":r_adr>=p_adr, "date_label":date_lbl},
+        {"label":"Occupancy",     "icon":"🛏️", "value":f"{r_occ:.1f}%",
+         "delta":f"{pct_delta(r_occ,p_occ):+.1f}pp vs. prior", "positive":r_occ>=p_occ, "date_label":date_lbl},
+        {"label":"Room Revenue",  "icon":"💰", "value":f"${r_rev/1e6:.2f}M",
+         "delta":f"{pct_delta(r_rev,p_rev):+.1f}% vs. prior",  "positive":r_rev>=p_rev, "date_label":date_lbl},
+        {"label":"Rooms Sold",    "icon":"🗓️", "value":f"{r_dem:,.0f}",
+         "delta":f"{pct_delta(r_dem,p_dem):+.1f}% vs. prior",  "positive":r_dem>=p_dem, "date_label":date_lbl},
+        {"label":"Est. TBID Rev", "icon":"🏛️", "value":f"${tbid/1e3:.0f}K",
+         "delta":"blended 1.25%", "positive":True, "neutral":True, "date_label":date_lbl},
     ]
 
 
@@ -621,18 +655,27 @@ def generate_ai_insights(df: pd.DataFrame, df_comp: pd.DataFrame, m: dict) -> li
     """Rule-based insight cards — always available, no API key required."""
     cards = []
 
+    # Date label from the active selection
+    if not df.empty:
+        date_lbl = (
+            f"{df['as_of_date'].min().strftime('%b %d, %Y')} – "
+            f"{df['as_of_date'].max().strftime('%b %d, %Y')}"
+        )
+    else:
+        date_lbl = ""
+
     # 1 — RevPAR momentum
     d = m.get("revpar_delta", 0)
     if d > 3:
-        cards.append({"kind":"positive","title":"RevPAR Momentum",
+        cards.append({"kind":"positive","icon":"💹","title":"RevPAR Momentum","date_label":date_lbl,
             "body":f"RevPAR up {d:.1f}% vs. prior period — ADR strength is the primary driver. "
                    f"Current pricing is working; lock in rate gains on compression nights."})
     elif d < -3:
-        cards.append({"kind":"negative","title":"RevPAR Pressure",
+        cards.append({"kind":"negative","icon":"📉","title":"RevPAR Pressure","date_label":date_lbl,
             "body":f"RevPAR down {abs(d):.1f}% vs. prior period. Determine whether softness is "
                    f"demand-driven (occ decline) or pricing-driven (ADR compression) before acting."})
     else:
-        cards.append({"kind":"info","title":"RevPAR Holding Steady",
+        cards.append({"kind":"info","icon":"📊","title":"RevPAR Holding Steady","date_label":date_lbl,
             "body":f"RevPAR {d:+.1f}% vs. prior period — within normal variance. "
                    f"Midweek gap remains the highest-leverage growth lever."})
 
@@ -642,11 +685,11 @@ def generate_ai_insights(df: pd.DataFrame, df_comp: pd.DataFrame, m: dict) -> li
     if wknd > 0 and midwk > 0:
         gap = (wknd / midwk - 1) * 100
         if gap > 25:
-            cards.append({"kind":"warning","title":"Midweek Softness",
+            cards.append({"kind":"warning","icon":"🌙","title":"Midweek Softness","date_label":date_lbl,
                 "body":f"Weekend RevPAR (${wknd:.0f}) is {gap:.0f}% above midweek (${midwk:.0f}). "
                        f"Tue–Thu packages and local partnerships are the fastest path to closing this gap."})
         else:
-            cards.append({"kind":"positive","title":"Balanced Demand Mix",
+            cards.append({"kind":"positive","icon":"⚖️","title":"Balanced Demand Mix","date_label":date_lbl,
                 "body":f"Weekend/midweek RevPAR spread is only {gap:.0f}% — healthy for a leisure "
                        f"destination. Midweek demand is holding relatively well."})
 
@@ -655,11 +698,11 @@ def generate_ai_insights(df: pd.DataFrame, df_comp: pd.DataFrame, m: dict) -> li
     cpri = m.get("comp_prior_q", 0)
     if crec > 0:
         if crec > cpri:
-            cards.append({"kind":"positive","title":"Compression Building",
+            cards.append({"kind":"positive","icon":"🔥","title":"Compression Building","date_label":date_lbl,
                 "body":f"{crec} days above 90% occupancy last quarter (vs. {cpri} prior) — "
                        f"a clear signal that rate increases are justified on your highest-demand nights."})
         else:
-            cards.append({"kind":"info","title":"Compression Watch",
+            cards.append({"kind":"info","icon":"👀","title":"Compression Watch","date_label":date_lbl,
                 "body":f"{crec} days above 90% occ last quarter (vs. {cpri} prior). "
                        f"Monitor as we move into peak season."})
 
@@ -667,7 +710,7 @@ def generate_ai_insights(df: pd.DataFrame, df_comp: pd.DataFrame, m: dict) -> li
     ns = m.get("n_spikes", 0)
     nd = m.get("n_drops", 0)
     if ns > 0 or nd > 0:
-        cards.append({"kind":"info","title":f"{ns + nd} Anomalies Detected",
+        cards.append({"kind":"info","icon":"🔍","title":f"{ns + nd} Anomalies Detected","date_label":date_lbl,
             "body":f"{ns} revenue spikes (>2σ) and {nd} drops (<1.5σ) in the selected period. "
                    f"Green/red markers on the RevPAR chart identify each event — hover for context."})
 
@@ -973,7 +1016,8 @@ with tab_ov:
             for i, ins in enumerate(insights):
                 with ic[i]:
                     st.markdown(
-                        insight_card(ins["title"], ins["body"], ins["kind"]),
+                        insight_card(ins["title"], ins["body"], ins["kind"],
+                                     ins.get("icon", ""), ins.get("date_label", "")),
                         unsafe_allow_html=True,
                     )
         st.markdown("<br>", unsafe_allow_html=True)
@@ -995,7 +1039,8 @@ with tab_ov:
             with cols[i % 3]:
                 st.markdown(
                     kpi_card(k["label"], k["value"], k["delta"],
-                             k.get("positive", True), k.get("neutral", False)),
+                             k.get("positive", True), k.get("neutral", False),
+                             k.get("icon", ""), k.get("date_label", "")),
                     unsafe_allow_html=True,
                 )
 
@@ -1331,17 +1376,17 @@ with tab_ev:
 
     # Hero stats grid
     hero_stats = [
-        ("$14.6M", "Event Expenditure"),
-        ("$18.4M", "Destination Spend"),
-        ("+$139",  "ADR Lift vs. Baseline"),
-        ("$1,219", "Avg Accom. Spend / Trip"),
-        ("68%",    "Out-of-State Visitors"),
-        ("3.2×",   "Spend Multiplier"),
+        ("$14.6M", "Event Expenditure",      "💵", "Sep 26–28, 2025"),
+        ("$18.4M", "Destination Spend",      "🗺️", "Sep 26–28, 2025"),
+        ("+$139",  "ADR Lift vs. Baseline",  "🏷️", "Event nights vs. baseline"),
+        ("$1,219", "Avg Accom. Spend / Trip","🛏️", "Per overnight visitor"),
+        ("68%",    "Out-of-State Visitors",  "✈️", "Share of total attendees"),
+        ("3.2×",   "Spend Multiplier",       "📈", "Economic impact ratio"),
     ]
     ec = st.columns(3)
-    for i, (val, lbl) in enumerate(hero_stats):
+    for i, (val, lbl, ico, dt) in enumerate(hero_stats):
         with ec[i % 3]:
-            st.markdown(event_stat(val, lbl), unsafe_allow_html=True)
+            st.markdown(event_stat(val, lbl, ico, dt), unsafe_allow_html=True)
 
     st.markdown("---")
 
