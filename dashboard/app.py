@@ -90,7 +90,7 @@ st.markdown("""
     margin-bottom: 4px; }
   .kpi-label { font-size:11px; font-weight:600; text-transform:uppercase;
     letter-spacing:.05em; opacity:.55; }
-  .kpi-icon { font-size:22px; opacity:0.75; flex-shrink:0; }
+  .kpi-icon-svg { flex-shrink:0; line-height:0; }
   .kpi-value { font-size:26px; font-weight:700; letter-spacing:-.02em; line-height:1.1;
     margin: 4px 0; }
   .kpi-delta-pos     { color:#21808D; font-size:12px; font-weight:500; margin-top:6px; }
@@ -120,10 +120,13 @@ st.markdown("""
   .event-stat { background:var(--secondary-background-color);
     border:1px solid rgba(94,82,64,.12); border-radius:10px;
     padding:16px; text-align:center; margin-bottom:8px; }
-  .event-icon  { font-size:24px; margin-bottom:6px; }
+  .event-icon  { line-height:0; display:flex; justify-content:center; margin-bottom:8px; }
   .event-val   { font-size:28px; font-weight:700; color:#21808D; letter-spacing:-.02em; }
   .event-label { font-size:12px; opacity:.6; margin-top:4px; }
   .event-date  { font-size:10px; opacity:.4; margin-top:3px; }
+
+  /* Insight card icon */
+  .insight-icon { display:inline-block; vertical-align:middle; margin-right:6px; line-height:0; }
 
   #MainMenu { visibility:hidden; }
   footer    { visibility:hidden; }
@@ -557,18 +560,317 @@ def stream_claude_response(prompt: str, api_key: str):
         else:
             yield f"⚠️ **API Error:** {err[:200]}"
 
+# ─── SVG Icon Library ─────────────────────────────────────────────────────────
+
+def kpi_metric_svg(label: str, positive: bool = True, raw_value: float = 0.0) -> str:
+    """Return SMIL-animated SVG infographic for each KPI card."""
+    c  = "#21808D" if positive else "#C0152F"
+    bg = "rgba(33,128,141,0.10)" if positive else "rgba(192,21,47,0.08)"
+
+    def wrap(inner: str) -> str:
+        return (
+            f'<svg width="42" height="42" viewBox="0 0 42 42" fill="none" '
+            f'xmlns="http://www.w3.org/2000/svg">'
+            f'<rect width="42" height="42" rx="9" fill="{bg}"/>'
+            f'{inner}</svg>'
+        )
+
+    if label == "RevPAR":
+        pts = "5,32 11,24 17,27 23,17 29,12 37,7" if positive else "5,10 11,18 17,15 23,25 29,30 37,35"
+        tip_y = "7" if positive else "35"
+        return wrap(
+            f'<polyline points="{pts}" stroke="{c}" stroke-width="2.3" fill="none"'
+            f' stroke-linecap="round" stroke-linejoin="round"'
+            f' stroke-dasharray="72" stroke-dashoffset="72">'
+            f'<animate attributeName="stroke-dashoffset" from="72" to="0"'
+            f' dur="1.0s" fill="freeze" begin="0.1s" calcMode="spline"'
+            f' keySplines="0.25,0.46,0.45,0.94"/></polyline>'
+            f'<circle cx="37" cy="{tip_y}" r="3.2" fill="{c}" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.15s" fill="freeze" begin="1.0s"/>'
+            f'<animate attributeName="r" values="3.2;4.8;3.2" dur="2.4s" repeatCount="indefinite" begin="1.2s"/>'
+            f'</circle>'
+        )
+
+    if label == "ADR":
+        return wrap(
+            f'<path d="M8,34 L8,10 L28,10 L35,21 L28,34 Z" stroke="{c}" stroke-width="2.1" fill="none"'
+            f' stroke-linejoin="round" stroke-dasharray="92" stroke-dashoffset="92">'
+            f'<animate attributeName="stroke-dashoffset" from="92" to="0" dur="0.9s" fill="freeze" begin="0.1s"/></path>'
+            f'<circle cx="13" cy="16" r="2.2" fill="{c}" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="0.9s"/></circle>'
+            f'<line x1="22" y1="15" x2="22" y2="29" stroke="{c}" stroke-width="1.9" stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="1.0s"/></line>'
+            f'<line x1="17" y1="19" x2="27" y2="19" stroke="{c}" stroke-width="1.6" stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="1.1s"/></line>'
+            f'<line x1="17" y1="25" x2="27" y2="25" stroke="{c}" stroke-width="1.6" stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="1.1s"/></line>'
+        )
+
+    if label == "Occupancy":
+        circ   = 100.53   # 2π × 16
+        pct    = max(0.0, min(100.0, raw_value))
+        offset = round(circ * (1.0 - pct / 100.0), 2)
+        return wrap(
+            f'<circle cx="21" cy="21" r="16" stroke="rgba(0,0,0,0.07)" stroke-width="4" fill="none"/>'
+            f'<circle cx="21" cy="21" r="16" stroke="{c}" stroke-width="4" fill="none"'
+            f' stroke-linecap="round" stroke-dasharray="{circ}" stroke-dashoffset="{circ}"'
+            f' transform="rotate(-90 21 21)">'
+            f'<animate attributeName="stroke-dashoffset" from="{circ}" to="{offset}"'
+            f' dur="1.4s" fill="freeze" begin="0.2s" calcMode="spline" keySplines="0.25,0.46,0.45,0.94"/>'
+            f'</circle>'
+            f'<text x="21" y="25" text-anchor="middle" font-size="10" font-weight="700"'
+            f' fill="{c}" font-family="system-ui,sans-serif" opacity="0">{pct:.0f}%'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.4s" fill="freeze" begin="0.9s"/>'
+            f'</text>'
+        )
+
+    if label == "Room Revenue":
+        heights = [14, 22, 18, 28] if positive else [28, 18, 22, 14]
+        xs      = [5, 13, 21, 29]
+        bars    = ""
+        for i, (x, h) in enumerate(zip(xs, heights)):
+            y     = 36 - h
+            op    = round(0.45 + i * 0.14, 2)
+            delay = round(0.08 + i * 0.13, 2)
+            bars += (
+                f'<rect x="{x}" y="36" width="9" height="0" rx="2.5" fill="{c}" opacity="{op}">'
+                f'<animate attributeName="height" from="0" to="{h}" dur="0.7s" fill="freeze" begin="{delay}s"'
+                f' calcMode="spline" keySplines="0.25,0.46,0.45,0.94"/>'
+                f'<animate attributeName="y" from="36" to="{y}" dur="0.7s" fill="freeze" begin="{delay}s"'
+                f' calcMode="spline" keySplines="0.25,0.46,0.45,0.94"/>'
+                f'</rect>'
+            )
+        return wrap(bars)
+
+    if label == "Rooms Sold":
+        return wrap(
+            f'<rect x="10" y="7" width="22" height="28" rx="3" stroke="{c}" stroke-width="2.1" fill="none"'
+            f' stroke-dasharray="82" stroke-dashoffset="82">'
+            f'<animate attributeName="stroke-dashoffset" from="82" to="0" dur="0.8s" fill="freeze" begin="0.1s"/></rect>'
+            f'<line x1="16" y1="7" x2="16" y2="3" stroke="{c}" stroke-width="2.2" stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="0.8s"/></line>'
+            f'<line x1="26" y1="7" x2="26" y2="3" stroke="{c}" stroke-width="2.2" stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="0.8s"/></line>'
+            f'<line x1="14" y1="17" x2="28" y2="17" stroke="{c}" stroke-width="1.3" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="0.3" dur="0.2s" fill="freeze" begin="0.9s"/></line>'
+            f'<line x1="14" y1="23" x2="28" y2="23" stroke="{c}" stroke-width="1.3" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="0.3" dur="0.2s" fill="freeze" begin="1.0s"/></line>'
+            f'<path d="M15,21 L19,25 L27,15" stroke="{c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"'
+            f' stroke-dasharray="22" stroke-dashoffset="22" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.1s" fill="freeze" begin="1.1s"/>'
+            f'<animate attributeName="stroke-dashoffset" from="22" to="0" dur="0.45s" fill="freeze" begin="1.1s"/>'
+            f'</path>'
+        )
+
+    if label in ("Est. TBID Rev", "TBID"):
+        col_data = [(5, 18), (13, 26), (21, 22), (29, 32)]
+        cols = ""
+        for i, (x, h) in enumerate(col_data):
+            y     = 37 - h
+            delay = round(0.05 + i * 0.10, 2)
+            op    = round(0.48 + i * 0.14, 2)
+            cols += (
+                f'<rect x="{x}" y="37" width="9" height="0" rx="2" fill="{c}" opacity="{op}">'
+                f'<animate attributeName="height" from="0" to="{h}" dur="0.6s" fill="freeze" begin="{delay}s"'
+                f' calcMode="spline" keySplines="0.3,0.6,0.5,1.0"/>'
+                f'<animate attributeName="y" from="37" to="{y}" dur="0.6s" fill="freeze" begin="{delay}s"'
+                f' calcMode="spline" keySplines="0.3,0.6,0.5,1.0"/>'
+                f'</rect>'
+            )
+        cols += f'<rect x="3" y="36" width="36" height="2.5" rx="1.2" fill="{c}" opacity="0.3"/>'
+        return wrap(cols)
+
+    return '<svg width="42" height="42" viewBox="0 0 42 42"></svg>'
+
+
+def insight_icon_svg(kind: str, icon_key: str) -> str:
+    """Animated SVG icon for insight cards (20px)."""
+    color_map = {"positive": "#21808D", "negative": "#C0152F", "warning": "#E68161", "info": "#21808D"}
+    c = color_map.get(kind, "#21808D")
+
+    icons: dict[str, str] = {
+        "trend_up": (
+            f'<svg width="20" height="20" viewBox="0 0 20 20" fill="none">'
+            f'<polyline points="2,16 6,10 10,12 14,6 18,3" stroke="{c}" stroke-width="2.1"'
+            f' stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="32" stroke-dashoffset="32">'
+            f'<animate attributeName="stroke-dashoffset" from="32" to="0" dur="0.8s" fill="freeze" begin="0.1s"/></polyline>'
+            f'<circle cx="18" cy="3" r="2.2" fill="{c}" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.15s" fill="freeze" begin="0.85s"/>'
+            f'<animate attributeName="r" values="2.2;3.4;2.2" dur="2.2s" repeatCount="indefinite" begin="1.1s"/>'
+            f'</circle></svg>'
+        ),
+        "trend_down": (
+            f'<svg width="20" height="20" viewBox="0 0 20 20" fill="none">'
+            f'<polyline points="2,4 6,10 10,8 14,14 18,17" stroke="{c}" stroke-width="2.1"'
+            f' stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="32" stroke-dashoffset="32">'
+            f'<animate attributeName="stroke-dashoffset" from="32" to="0" dur="0.8s" fill="freeze" begin="0.1s"/></polyline>'
+            f'<circle cx="18" cy="17" r="2.2" fill="{c}" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.15s" fill="freeze" begin="0.85s"/>'
+            f'</circle></svg>'
+        ),
+        "trend_flat": (
+            f'<svg width="20" height="20" viewBox="0 0 20 20" fill="none">'
+            f'<line x1="2" y1="10" x2="18" y2="10" stroke="{c}" stroke-width="2.1"'
+            f' stroke-linecap="round" stroke-dasharray="20" stroke-dashoffset="20">'
+            f'<animate attributeName="stroke-dashoffset" from="20" to="0" dur="0.5s" fill="freeze" begin="0.1s"/></line>'
+            f'<circle cx="18" cy="10" r="2.4" fill="{c}" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="0.55s"/>'
+            f'<animate attributeName="r" values="2.4;3.4;2.4" dur="2.5s" repeatCount="indefinite" begin="0.8s"/>'
+            f'</circle></svg>'
+        ),
+        "moon": (
+            f'<svg width="20" height="20" viewBox="0 0 20 20" fill="none">'
+            f'<path d="M14,3 A8,8,0,1,0,14,17 A6,6,0,1,1,14,3 Z" stroke="{c}" stroke-width="1.9"'
+            f' fill="none" stroke-dasharray="44" stroke-dashoffset="44">'
+            f'<animate attributeName="stroke-dashoffset" from="44" to="0" dur="0.9s" fill="freeze" begin="0.1s"/>'
+            f'</path></svg>'
+        ),
+        "scale": (
+            f'<svg width="20" height="20" viewBox="0 0 20 20" fill="none">'
+            f'<line x1="10" y1="4" x2="10" y2="17" stroke="{c}" stroke-width="1.9" stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="0.1s"/></line>'
+            f'<line x1="4" y1="7" x2="16" y2="7" stroke="{c}" stroke-width="1.9" stroke-linecap="round"'
+            f' stroke-dasharray="14" stroke-dashoffset="14">'
+            f'<animate attributeName="stroke-dashoffset" from="14" to="0" dur="0.4s" fill="freeze" begin="0.2s"/></line>'
+            f'<circle cx="6" cy="12" r="3" stroke="{c}" stroke-width="1.7" fill="none" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.25s" fill="freeze" begin="0.55s"/>'
+            f'</circle><circle cx="14" cy="12" r="3" stroke="{c}" stroke-width="1.7" fill="none" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.25s" fill="freeze" begin="0.55s"/>'
+            f'</circle></svg>'
+        ),
+        "fire": (
+            f'<svg width="20" height="20" viewBox="0 0 20 20" fill="none">'
+            f'<path d="M10,18 C10,18 4,15 4,9 C4,6 7,4 10,4 C10,4 9,7 11,8 C11,8 14,5 13,3'
+            f' C16,5 17,9 17,11 C17,15 14,18 10,18 Z" stroke="{c}" stroke-width="1.8" fill="none"'
+            f' stroke-linejoin="round" stroke-dasharray="52" stroke-dashoffset="52">'
+            f'<animate attributeName="stroke-dashoffset" from="52" to="0" dur="0.9s" fill="freeze" begin="0.1s"/>'
+            f'</path><path d="M10,16 C10,16 8,14 8,12 C8,11 9,10 10,11 C11,10 12,11 12,12 C12,14 10,16 10,16 Z"'
+            f' fill="{c}" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="0.85" dur="0.3s" fill="freeze" begin="0.9s"/>'
+            f'</path></svg>'
+        ),
+        "eye": (
+            f'<svg width="20" height="20" viewBox="0 0 20 20" fill="none">'
+            f'<path d="M2,10 C2,10 5,4 10,4 C15,4 18,10 18,10 C18,10 15,16 10,16 C5,16 2,10 2,10 Z"'
+            f' stroke="{c}" stroke-width="1.8" fill="none" stroke-dasharray="46" stroke-dashoffset="46">'
+            f'<animate attributeName="stroke-dashoffset" from="46" to="0" dur="0.7s" fill="freeze" begin="0.1s"/>'
+            f'</path><circle cx="10" cy="10" r="3" stroke="{c}" stroke-width="1.8" fill="none" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.25s" fill="freeze" begin="0.7s"/>'
+            f'<animate attributeName="r" values="3;3.8;3" dur="2.2s" repeatCount="indefinite" begin="1.0s"/>'
+            f'</circle></svg>'
+        ),
+        "search": (
+            f'<svg width="20" height="20" viewBox="0 0 20 20" fill="none">'
+            f'<circle cx="9" cy="9" r="6" stroke="{c}" stroke-width="2" fill="none"'
+            f' stroke-dasharray="40" stroke-dashoffset="40">'
+            f'<animate attributeName="stroke-dashoffset" from="40" to="0" dur="0.7s" fill="freeze" begin="0.1s"/>'
+            f'</circle><line x1="13.5" y1="13.5" x2="18" y2="18" stroke="{c}" stroke-width="2"'
+            f' stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="0.7s"/>'
+            f'</line></svg>'
+        ),
+    }
+    return icons.get(icon_key, "")
+
+
+def event_icon_svg(icon_key: str) -> str:
+    """Animated SVG icon for event stat cards (32px)."""
+    c = "#21808D"
+    icons: dict[str, str] = {
+        "money": (
+            f'<svg width="32" height="32" viewBox="0 0 32 32" fill="none">'
+            f'<circle cx="16" cy="16" r="13" stroke="{c}" stroke-width="2" fill="none"'
+            f' stroke-dasharray="82" stroke-dashoffset="82">'
+            f'<animate attributeName="stroke-dashoffset" from="82" to="0" dur="1.0s" fill="freeze" begin="0.1s"/>'
+            f'</circle><line x1="16" y1="9" x2="16" y2="23" stroke="{c}" stroke-width="2" stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="1.0s"/></line>'
+            f'<path d="M12,12 Q12,10 16,10 Q20,10 20,13 Q20,16 16,16 Q20,16 20,19 Q20,22 16,22 Q12,22 12,20"'
+            f' stroke="{c}" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.3s" fill="freeze" begin="1.1s"/>'
+            f'</path></svg>'
+        ),
+        "globe": (
+            f'<svg width="32" height="32" viewBox="0 0 32 32" fill="none">'
+            f'<circle cx="16" cy="16" r="13" stroke="{c}" stroke-width="2" fill="none"'
+            f' stroke-dasharray="82" stroke-dashoffset="82">'
+            f'<animate attributeName="stroke-dashoffset" from="82" to="0" dur="1.0s" fill="freeze" begin="0.1s"/>'
+            f'</circle><ellipse cx="16" cy="16" rx="5.5" ry="13" stroke="{c}" stroke-width="1.6" fill="none"'
+            f' stroke-dasharray="40" stroke-dashoffset="40">'
+            f'<animate attributeName="stroke-dashoffset" from="40" to="0" dur="0.8s" fill="freeze" begin="0.9s"/>'
+            f'</ellipse><line x1="3" y1="16" x2="29" y2="16" stroke="{c}" stroke-width="1.6"'
+            f' stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.25s" fill="freeze" begin="1.0s"/></line>'
+            f'<line x1="5" y1="11" x2="27" y2="11" stroke="{c}" stroke-width="1.4"'
+            f' stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="0.55" dur="0.25s" fill="freeze" begin="1.1s"/></line>'
+            f'<line x1="5" y1="21" x2="27" y2="21" stroke="{c}" stroke-width="1.4"'
+            f' stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="0.55" dur="0.25s" fill="freeze" begin="1.1s"/></line>'
+            f'</svg>'
+        ),
+        "tag": (
+            f'<svg width="32" height="32" viewBox="0 0 32 32" fill="none">'
+            f'<path d="M6,6 L6,18 L17,29 L27,19 L16,8 Z" stroke="{c}" stroke-width="2" fill="none"'
+            f' stroke-linejoin="round" stroke-dasharray="80" stroke-dashoffset="80">'
+            f'<animate attributeName="stroke-dashoffset" from="80" to="0" dur="0.9s" fill="freeze" begin="0.1s"/>'
+            f'</path><circle cx="12" cy="12" r="2.5" fill="{c}" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="0.9s"/>'
+            f'<animate attributeName="r" values="2.5;3.5;2.5" dur="2.2s" repeatCount="indefinite" begin="1.2s"/>'
+            f'</circle></svg>'
+        ),
+        "bed": (
+            f'<svg width="32" height="32" viewBox="0 0 32 32" fill="none">'
+            f'<path d="M4,22 L4,14 L28,14 L28,22" stroke="{c}" stroke-width="2" fill="none"'
+            f' stroke-linecap="round" stroke-dasharray="52" stroke-dashoffset="52">'
+            f'<animate attributeName="stroke-dashoffset" from="52" to="0" dur="0.8s" fill="freeze" begin="0.1s"/>'
+            f'</path><rect x="4" y="22" width="24" height="6" rx="2" stroke="{c}" stroke-width="2" fill="none"'
+            f' stroke-dasharray="62" stroke-dashoffset="62">'
+            f'<animate attributeName="stroke-dashoffset" from="62" to="0" dur="0.6s" fill="freeze" begin="0.8s"/>'
+            f'</rect><rect x="6" y="10" width="8" height="4" rx="1.5" stroke="{c}" stroke-width="1.6" fill="none" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="1.3s"/>'
+            f'</rect><rect x="18" y="10" width="8" height="4" rx="1.5" stroke="{c}" stroke-width="1.6" fill="none" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="1.3s"/>'
+            f'</rect></svg>'
+        ),
+        "plane": (
+            f'<svg width="32" height="32" viewBox="0 0 32 32" fill="none">'
+            f'<path d="M5,20 L27,10 L22,28 L16,22 L5,20 Z" stroke="{c}" stroke-width="2" fill="none"'
+            f' stroke-linejoin="round" stroke-dasharray="70" stroke-dashoffset="70">'
+            f'<animate attributeName="stroke-dashoffset" from="70" to="0" dur="0.9s" fill="freeze" begin="0.1s"/>'
+            f'</path><line x1="16" y1="22" x2="21" y2="14" stroke="{c}" stroke-width="1.8"'
+            f' stroke-linecap="round" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.25s" fill="freeze" begin="0.95s"/>'
+            f'</line></svg>'
+        ),
+        "chart_up": (
+            f'<svg width="32" height="32" viewBox="0 0 32 32" fill="none">'
+            f'<polyline points="4,26 10,18 16,20 22,12 28,7" stroke="{c}" stroke-width="2.2"'
+            f' stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="55" stroke-dashoffset="55">'
+            f'<animate attributeName="stroke-dashoffset" from="55" to="0" dur="1.0s" fill="freeze" begin="0.1s"/>'
+            f'</polyline><circle cx="28" cy="7" r="3" fill="{c}" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.15s" fill="freeze" begin="1.0s"/>'
+            f'<animate attributeName="r" values="3;4.5;3" dur="2.4s" repeatCount="indefinite" begin="1.2s"/>'
+            f'</circle><line x1="4" y1="28" x2="28" y2="28" stroke="{c}" stroke-width="1.5"'
+            f' stroke-linecap="round" opacity="0.35"/>'
+            f'</svg>'
+        ),
+    }
+    return icons.get(icon_key, "")
+
+
 # ─── UI helpers ───────────────────────────────────────────────────────────────
 
 def kpi_card(label, value, delta, positive=True, neutral=False,
-             icon: str = "", date_label: str = "") -> str:
-    css   = "kpi-delta-neutral" if neutral else ("kpi-delta-pos" if positive else "kpi-delta-neg")
-    arrow = "" if neutral else ("▲ " if positive else "▼ ")
+             icon: str = "", date_label: str = "", raw_value: float = 0.0) -> str:
+    css      = "kpi-delta-neutral" if neutral else ("kpi-delta-pos" if positive else "kpi-delta-neg")
+    arrow    = "" if neutral else ("▲ " if positive else "▼ ")
     date_html = f'<div class="kpi-date">📅 {date_label}</div>' if date_label else ""
+    svg      = kpi_metric_svg(label, positive, raw_value)
     return (
         f'<div class="kpi-card">'
         f'<div class="kpi-header">'
         f'<div class="kpi-label">{label}</div>'
-        f'<div class="kpi-icon">{icon}</div>'
+        f'<div class="kpi-icon-svg">{svg}</div>'
         f'</div>'
         f'<div class="kpi-value">{value}</div>'
         f'<div class="{css}">{arrow}{delta}</div>'
@@ -578,14 +880,15 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
 
 
 def insight_card(title, body, kind="info", icon: str = "", date_label: str = "") -> str:
-    icon_prefix = f"{icon} " if icon else ""
-    date_html   = (
+    svg_icon  = insight_icon_svg(kind, icon) if icon else ""
+    icon_html = f'<span class="insight-icon">{svg_icon}</span>' if svg_icon else ""
+    date_html = (
         f'<div style="font-size:10px;opacity:.4;margin-top:6px;">📅 {date_label}</div>'
         if date_label else ""
     )
     return (
         f'<div class="insight-card insight-{kind}">'
-        f'<div class="insight-title">{icon_prefix}{title}</div>'
+        f'<div class="insight-title">{icon_html}{title}</div>'
         f'<p class="insight-body">{body}</p>'
         f'{date_html}'
         f'</div>'
@@ -593,7 +896,8 @@ def insight_card(title, body, kind="info", icon: str = "", date_label: str = "")
 
 
 def event_stat(val, label, icon: str = "", date: str = "") -> str:
-    icon_html = f'<div class="event-icon">{icon}</div>' if icon else ""
+    svg       = event_icon_svg(icon) if icon else ""
+    icon_html = f'<div class="event-icon">{svg}</div>' if svg else ""
     date_html = f'<div class="event-date">📅 {date}</div>' if date else ""
     return (
         f'<div class="event-stat">'
@@ -636,18 +940,18 @@ def compute_overview_kpis(df: pd.DataFrame) -> list[dict]:
     rec_end   = rec["as_of_date"].max().strftime("%b %d, %Y")
     date_lbl  = f"{rec_start} – {rec_end}"
     return [
-        {"label":"RevPAR",        "icon":"💹", "value":f"${r_rvp:.2f}",
-         "delta":f"{pct_delta(r_rvp,p_rvp):+.1f}% vs. prior",  "positive":r_rvp>=p_rvp, "date_label":date_lbl},
-        {"label":"ADR",           "icon":"🏷️", "value":f"${r_adr:.2f}",
-         "delta":f"{pct_delta(r_adr,p_adr):+.1f}% vs. prior",  "positive":r_adr>=p_adr, "date_label":date_lbl},
-        {"label":"Occupancy",     "icon":"🛏️", "value":f"{r_occ:.1f}%",
-         "delta":f"{pct_delta(r_occ,p_occ):+.1f}pp vs. prior", "positive":r_occ>=p_occ, "date_label":date_lbl},
-        {"label":"Room Revenue",  "icon":"💰", "value":f"${r_rev/1e6:.2f}M",
-         "delta":f"{pct_delta(r_rev,p_rev):+.1f}% vs. prior",  "positive":r_rev>=p_rev, "date_label":date_lbl},
-        {"label":"Rooms Sold",    "icon":"🗓️", "value":f"{r_dem:,.0f}",
-         "delta":f"{pct_delta(r_dem,p_dem):+.1f}% vs. prior",  "positive":r_dem>=p_dem, "date_label":date_lbl},
-        {"label":"Est. TBID Rev", "icon":"🏛️", "value":f"${tbid/1e3:.0f}K",
-         "delta":"blended 1.25%", "positive":True, "neutral":True, "date_label":date_lbl},
+        {"label":"RevPAR",        "value":f"${r_rvp:.2f}",
+         "delta":f"{pct_delta(r_rvp,p_rvp):+.1f}% vs. prior",  "positive":r_rvp>=p_rvp, "date_label":date_lbl, "raw_value":r_rvp},
+        {"label":"ADR",           "value":f"${r_adr:.2f}",
+         "delta":f"{pct_delta(r_adr,p_adr):+.1f}% vs. prior",  "positive":r_adr>=p_adr, "date_label":date_lbl, "raw_value":r_adr},
+        {"label":"Occupancy",     "value":f"{r_occ:.1f}%",
+         "delta":f"{pct_delta(r_occ,p_occ):+.1f}pp vs. prior", "positive":r_occ>=p_occ, "date_label":date_lbl, "raw_value":r_occ},
+        {"label":"Room Revenue",  "value":f"${r_rev/1e6:.2f}M",
+         "delta":f"{pct_delta(r_rev,p_rev):+.1f}% vs. prior",  "positive":r_rev>=p_rev, "date_label":date_lbl, "raw_value":r_rev},
+        {"label":"Rooms Sold",    "value":f"{r_dem:,.0f}",
+         "delta":f"{pct_delta(r_dem,p_dem):+.1f}% vs. prior",  "positive":r_dem>=p_dem, "date_label":date_lbl, "raw_value":r_dem},
+        {"label":"Est. TBID Rev", "value":f"${tbid/1e3:.0f}K",
+         "delta":"blended 1.25%", "positive":True, "neutral":True, "date_label":date_lbl, "raw_value":tbid},
     ]
 
 
@@ -667,15 +971,15 @@ def generate_ai_insights(df: pd.DataFrame, df_comp: pd.DataFrame, m: dict) -> li
     # 1 — RevPAR momentum
     d = m.get("revpar_delta", 0)
     if d > 3:
-        cards.append({"kind":"positive","icon":"💹","title":"RevPAR Momentum","date_label":date_lbl,
+        cards.append({"kind":"positive","icon":"trend_up","title":"RevPAR Momentum","date_label":date_lbl,
             "body":f"RevPAR up {d:.1f}% vs. prior period — ADR strength is the primary driver. "
                    f"Current pricing is working; lock in rate gains on compression nights."})
     elif d < -3:
-        cards.append({"kind":"negative","icon":"📉","title":"RevPAR Pressure","date_label":date_lbl,
+        cards.append({"kind":"negative","icon":"trend_down","title":"RevPAR Pressure","date_label":date_lbl,
             "body":f"RevPAR down {abs(d):.1f}% vs. prior period. Determine whether softness is "
                    f"demand-driven (occ decline) or pricing-driven (ADR compression) before acting."})
     else:
-        cards.append({"kind":"info","icon":"📊","title":"RevPAR Holding Steady","date_label":date_lbl,
+        cards.append({"kind":"info","icon":"trend_flat","title":"RevPAR Holding Steady","date_label":date_lbl,
             "body":f"RevPAR {d:+.1f}% vs. prior period — within normal variance. "
                    f"Midweek gap remains the highest-leverage growth lever."})
 
@@ -685,11 +989,11 @@ def generate_ai_insights(df: pd.DataFrame, df_comp: pd.DataFrame, m: dict) -> li
     if wknd > 0 and midwk > 0:
         gap = (wknd / midwk - 1) * 100
         if gap > 25:
-            cards.append({"kind":"warning","icon":"🌙","title":"Midweek Softness","date_label":date_lbl,
+            cards.append({"kind":"warning","icon":"moon","title":"Midweek Softness","date_label":date_lbl,
                 "body":f"Weekend RevPAR (${wknd:.0f}) is {gap:.0f}% above midweek (${midwk:.0f}). "
                        f"Tue–Thu packages and local partnerships are the fastest path to closing this gap."})
         else:
-            cards.append({"kind":"positive","icon":"⚖️","title":"Balanced Demand Mix","date_label":date_lbl,
+            cards.append({"kind":"positive","icon":"scale","title":"Balanced Demand Mix","date_label":date_lbl,
                 "body":f"Weekend/midweek RevPAR spread is only {gap:.0f}% — healthy for a leisure "
                        f"destination. Midweek demand is holding relatively well."})
 
@@ -698,11 +1002,11 @@ def generate_ai_insights(df: pd.DataFrame, df_comp: pd.DataFrame, m: dict) -> li
     cpri = m.get("comp_prior_q", 0)
     if crec > 0:
         if crec > cpri:
-            cards.append({"kind":"positive","icon":"🔥","title":"Compression Building","date_label":date_lbl,
+            cards.append({"kind":"positive","icon":"fire","title":"Compression Building","date_label":date_lbl,
                 "body":f"{crec} days above 90% occupancy last quarter (vs. {cpri} prior) — "
                        f"a clear signal that rate increases are justified on your highest-demand nights."})
         else:
-            cards.append({"kind":"info","icon":"👀","title":"Compression Watch","date_label":date_lbl,
+            cards.append({"kind":"info","icon":"eye","title":"Compression Watch","date_label":date_lbl,
                 "body":f"{crec} days above 90% occ last quarter (vs. {cpri} prior). "
                        f"Monitor as we move into peak season."})
 
@@ -710,7 +1014,7 @@ def generate_ai_insights(df: pd.DataFrame, df_comp: pd.DataFrame, m: dict) -> li
     ns = m.get("n_spikes", 0)
     nd = m.get("n_drops", 0)
     if ns > 0 or nd > 0:
-        cards.append({"kind":"info","icon":"🔍","title":f"{ns + nd} Anomalies Detected","date_label":date_lbl,
+        cards.append({"kind":"info","icon":"search","title":f"{ns + nd} Anomalies Detected","date_label":date_lbl,
             "body":f"{ns} revenue spikes (>2σ) and {nd} drops (<1.5σ) in the selected period. "
                    f"Green/red markers on the RevPAR chart identify each event — hover for context."})
 
@@ -1040,7 +1344,7 @@ with tab_ov:
                 st.markdown(
                     kpi_card(k["label"], k["value"], k["delta"],
                              k.get("positive", True), k.get("neutral", False),
-                             k.get("icon", ""), k.get("date_label", "")),
+                             "", k.get("date_label", ""), k.get("raw_value", 0.0)),
                     unsafe_allow_html=True,
                 )
 
@@ -1376,12 +1680,12 @@ with tab_ev:
 
     # Hero stats grid
     hero_stats = [
-        ("$14.6M", "Event Expenditure",      "💵", "Sep 26–28, 2025"),
-        ("$18.4M", "Destination Spend",      "🗺️", "Sep 26–28, 2025"),
-        ("+$139",  "ADR Lift vs. Baseline",  "🏷️", "Event nights vs. baseline"),
-        ("$1,219", "Avg Accom. Spend / Trip","🛏️", "Per overnight visitor"),
-        ("68%",    "Out-of-State Visitors",  "✈️", "Share of total attendees"),
-        ("3.2×",   "Spend Multiplier",       "📈", "Economic impact ratio"),
+        ("$14.6M", "Event Expenditure",      "money",    "Sep 26–28, 2025"),
+        ("$18.4M", "Destination Spend",      "globe",    "Sep 26–28, 2025"),
+        ("+$139",  "ADR Lift vs. Baseline",  "tag",      "Event nights vs. baseline"),
+        ("$1,219", "Avg Accom. Spend / Trip","bed",      "Per overnight visitor"),
+        ("68%",    "Out-of-State Visitors",  "plane",    "Share of total attendees"),
+        ("3.2×",   "Spend Multiplier",       "chart_up", "Economic impact ratio"),
     ]
     ec = st.columns(3)
     for i, (val, lbl, ico, dt) in enumerate(hero_stats):
