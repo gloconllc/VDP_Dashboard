@@ -12,8 +12,8 @@ __pycache__/
 venv/
 .streamlit/
 
-# Database (never commit)
-*.sqlite
+# Database — analytics.sqlite is committed intentionally (STR market data, no PII)
+# Raw/temp DBs excluded
 *.db
 
 # macOS metadata

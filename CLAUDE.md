@@ -162,7 +162,8 @@ git add . && git commit -m "description" && git push
 
 ## Important Rules
 
-- NEVER commit `.env`, `venv/`, `*.sqlite`, or API keys to git
+- NEVER commit `.env`, `venv/`, or API keys to git
+- `data/analytics.sqlite` IS committed intentionally — it contains STR market data (no PII). Commit after every pipeline run that inserts new rows.
 - NEVER override Layer 1 data with Layer 2/3 sources
 - ALWAYS run `python scripts/run_pipeline.py` after schema changes
 - ALWAYS reference this CLAUDE.md before making changes
