@@ -217,6 +217,16 @@ st.markdown("""
     border-radius: 10px; padding: 18px 20px;
     border: 1px solid rgba(94,82,64,0.15); margin-bottom: 12px;
     position: relative; overflow: hidden;
+    transition: box-shadow 0.18s ease, transform 0.18s ease;
+  }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 3px; border-radius: 10px 10px 0 0;
+    background: linear-gradient(90deg, #21808D, #32B8C6);
+  }
+  .kpi-card:hover {
+    box-shadow: 0 4px 18px rgba(33,128,141,0.14);
+    transform: translateY(-1px);
   }
   .kpi-header { display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 4px; }
@@ -228,7 +238,9 @@ st.markdown("""
   .kpi-delta-pos     { color:#21808D; font-size:12px; font-weight:500; margin-top:6px; }
   .kpi-delta-neg     { color:#C0152F; font-size:12px; font-weight:500; margin-top:6px; }
   .kpi-delta-neutral { color:gray;    font-size:12px; font-weight:500; margin-top:6px; }
-  .kpi-date { font-size:10px; opacity:0.45; margin-top:5px; letter-spacing:.01em; }
+  .kpi-date { font-size:10px; opacity:0.50; margin-top:6px; letter-spacing:.01em;
+    background: rgba(33,128,141,0.07); border-radius:4px; padding:2px 6px;
+    display:inline-block; }
 
   /* Insight cards */
   .insight-card { border-radius:10px; padding:14px 16px; margin-bottom:4px;
@@ -303,6 +315,36 @@ st.markdown("""
     line-height: 1.2;
   }
   .home-title a:hover { opacity: 0.75; }
+
+  /* Source card hover */
+  .src-card { transition: box-shadow 0.15s ease; cursor: default; }
+  .src-card:hover { box-shadow: 0 2px 10px rgba(33,128,141,0.10); }
+
+  /* Filter active badge */
+  .filter-badge {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px;
+    border-radius: 99px; background: rgba(230,129,97,.18);
+    color: #E68161; margin-left: 6px; vertical-align: middle;
+  }
+
+  /* Load-log source badges */
+  .log-badge-str { display:inline-block; padding:1px 7px; border-radius:99px;
+    font-size:10px; font-weight:700; background:rgba(33,128,141,.12); color:#21808D; }
+  .log-badge-kpi { display:inline-block; padding:1px 7px; border-radius:99px;
+    font-size:10px; font-weight:700; background:rgba(230,129,97,.13); color:#E68161; }
+  .log-badge-other { display:inline-block; padding:1px 7px; border-radius:99px;
+    font-size:10px; font-weight:700; background:rgba(0,0,0,.07); color:#626C71; }
+
+  /* Trend table strip */
+  .trend-row-pos { color:#21808D; font-weight:600; }
+  .trend-row-neg { color:#C0152F; font-weight:600; }
+
+  /* Section sub-header */
+  .section-label {
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+    opacity:.45; margin-bottom:6px; margin-top:2px;
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1065,7 +1107,7 @@ def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
     return fig
 
 
-def compute_overview_kpis(df: pd.DataFrame) -> list[dict]:
+def compute_overview_kpis(df: pd.DataFrame, grain: str = "Daily") -> list[dict]:
     n = len(df)
     if n < 4:
         return []
@@ -1079,9 +1121,10 @@ def compute_overview_kpis(df: pd.DataFrame) -> list[dict]:
     r_rev, p_rev = tot(rec,"revenue"),    tot(pri,"revenue")
     r_dem, p_dem = tot(rec,"demand"),     tot(pri,"demand")
     tbid = r_rev * 0.0125
-    # Date label for the "recent" half of the selection window
-    rec_start = rec["as_of_date"].min().strftime("%b %d, %Y")
-    rec_end   = rec["as_of_date"].max().strftime("%b %d, %Y")
+    # Date label — grain-aware formatting
+    _fmt = "%b %Y" if grain == "Monthly" else "%b %d, %Y"
+    rec_start = rec["as_of_date"].min().strftime(_fmt)
+    rec_end   = rec["as_of_date"].max().strftime(_fmt)
     date_lbl  = f"{rec_start} – {rec_end}"
     return [
         {"label":"RevPAR",        "value":f"${r_rvp:.2f}",
@@ -1236,6 +1279,31 @@ with st.sidebar:
     range_label = st.selectbox("Date Range", list(RANGE_OPTIONS.keys()), index=_range_default)
     days = RANGE_OPTIONS[range_label]
 
+    # ── Advanced Filters ──────────────────────────────────────────────────────
+    with st.expander("🔬 Advanced Filters", expanded=False):
+        if grain == "Monthly" and not df_monthly.empty:
+            _all_years = sorted(df_monthly["as_of_date"].dt.year.unique().tolist())
+            _def_years = _all_years[-10:] if len(_all_years) > 10 else _all_years
+            _sel_years = st.multiselect(
+                "Filter by Year", _all_years, default=_def_years,
+                help="Limit analysis to selected years",
+            )
+            st.session_state["adv_filter_years"] = _sel_years or _all_years
+            _active_filter = len(_sel_years) < len(_all_years) and bool(_sel_years)
+        elif grain == "Daily" and not df_daily.empty:
+            _dow_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            _sel_dow = st.multiselect(
+                "Filter by Day of Week", _dow_names, default=_dow_names,
+                help="Include only selected days in analysis",
+            )
+            st.session_state["adv_filter_dow"] = _sel_dow or _dow_names
+            _active_filter = len(_sel_dow) < 7 and bool(_sel_dow)
+        else:
+            st.caption("No filter options available for current grain + data.")
+            _active_filter = False
+        if _active_filter:
+            st.caption("✅ Filter active — charts reflect filtered subset")
+
     st.divider()
 
     # ── AI Analyst config ──────────────────────────────────────────────────────
@@ -1351,6 +1419,18 @@ if not df_active.empty:
                   if not df_kpi.empty else pd.DataFrame())
 else:
     df_sel = df_kpi_sel = pd.DataFrame()
+
+# Apply advanced filters (from sidebar expander) to df_sel
+if grain == "Monthly" and not df_sel.empty:
+    _yr_filter = st.session_state.get("adv_filter_years", [])
+    if _yr_filter:
+        df_sel = df_sel[df_sel["as_of_date"].dt.year.isin(_yr_filter)]
+elif grain == "Daily" and not df_sel.empty:
+    _dow_map    = {"Mon": 0, "Tue": 1, "Wed": 2, "Thu": 3, "Fri": 4, "Sat": 5, "Sun": 6}
+    _dow_filter = st.session_state.get("adv_filter_dow", list(_dow_map.keys()))
+    _dow_nums   = [_dow_map[d] for d in _dow_filter if d in _dow_map]
+    if _dow_nums and len(_dow_nums) < 7:
+        df_sel = df_sel[df_sel["as_of_date"].dt.dayofweek.isin(_dow_nums)]
 
 m = build_metrics_context(df_sel, df_comp)
 
@@ -1473,7 +1553,7 @@ with tab_ov:
     st.markdown("---")
 
     # ── KPI Cards ──────────────────────────────────────────────────────────────
-    kpis = compute_overview_kpis(df_sel)
+    kpis = compute_overview_kpis(df_sel, grain)
     if not kpis:
         st.markdown(empty_state(
             "📊",
@@ -1915,7 +1995,25 @@ with tab_dl:
         st.markdown("### Load Log")
         st.caption("ETL pipeline audit trail from load_log")
         if not df_log.empty:
-            st.dataframe(df_log, use_container_width=True, hide_index=True)
+            # Format for display: rename columns, add row count formatting
+            _log_display = df_log.copy()
+            _log_display.columns = [c.replace("_", " ").title() for c in _log_display.columns]
+            if "Rows Inserted" in _log_display.columns:
+                _log_display["Rows Inserted"] = _log_display["Rows Inserted"].apply(
+                    lambda v: f"{int(v):,}" if pd.notna(v) else "—"
+                )
+            if "Run At" in _log_display.columns:
+                _log_display["Run At"] = pd.to_datetime(
+                    _log_display["Run At"], errors="coerce"
+                ).dt.strftime("%b %d, %Y %H:%M")
+            st.dataframe(_log_display, use_container_width=True, hide_index=True)
+            # Download button
+            _csv_bytes = df_log.to_csv(index=False).encode()
+            st.download_button(
+                "⬇️ Download Load Log CSV", _csv_bytes,
+                file_name="load_log.csv", mime="text/csv",
+                use_container_width=True,
+            )
         else:
             st.markdown(empty_state(
                 "📋", "No load log entries found.",
@@ -1987,10 +2085,24 @@ with tab_dl:
 
     st.markdown("---")
 
+    _adv_label = ""
+    if grain == "Monthly":
+        _yr_f = st.session_state.get("adv_filter_years", [])
+        if _yr_f and not df_monthly.empty:
+            _all_y = df_monthly["as_of_date"].dt.year.unique().tolist()
+            if len(_yr_f) < len(_all_y):
+                _adv_label = f" · years {min(_yr_f)}–{max(_yr_f)}"
+    elif grain == "Daily":
+        _dow_f = st.session_state.get("adv_filter_dow", [])
+        if _dow_f and len(_dow_f) < 7:
+            _adv_label = f" · {', '.join(_dow_f)}"
+
     st.markdown("### Recent Metric Samples")
-    st.caption(f"Last 10 dates in selected window · grain={grain.lower()}")
+    st.caption(f"Last 10 dates in selected window · grain={grain.lower()}{_adv_label}")
     if not df_sel.empty:
-        sample = df_sel.tail(10).sort_values("as_of_date", ascending=False)
+        sample = df_sel.tail(10).sort_values("as_of_date", ascending=False).copy()
+        _date_fmt = "%b %Y" if grain == "Monthly" else "%b %d, %Y"
+        sample["as_of_date"] = sample["as_of_date"].dt.strftime(_date_fmt)
         dcols  = [c for c in
                   ["as_of_date","revpar","adr","occupancy","supply","demand","revenue"]
                   if c in sample.columns]
@@ -2001,6 +2113,15 @@ with tab_dl:
         }
         st.dataframe(sample[dcols].rename(columns=rename),
                      use_container_width=True, hide_index=True)
+        # Full selection download
+        _dl_cols = [c for c in ["as_of_date","revpar","adr","occupancy","supply","demand","revenue"]
+                    if c in df_sel.columns]
+        _dl_csv = df_sel[_dl_cols].rename(columns=rename).to_csv(index=False).encode()
+        st.download_button(
+            f"⬇️ Download Full Selection CSV ({len(df_sel):,} rows)",
+            _dl_csv, file_name=f"vdp_{grain.lower()}_{range_label.replace(' ','_')}.csv",
+            mime="text/csv", use_container_width=True,
+        )
     else:
         st.markdown(empty_state(
             "📭", "No data in the selected range.",
@@ -2011,7 +2132,15 @@ with tab_dl:
     st.markdown("### Compression Quarters")
     st.caption("Days per quarter above 80% / 90% occupancy from kpi_compression_quarterly")
     if not df_comp.empty:
-        st.dataframe(df_comp, use_container_width=True, hide_index=True)
+        _comp_display = df_comp.copy()
+        _comp_display.columns = [c.replace("_", " ").title() for c in _comp_display.columns]
+        st.dataframe(_comp_display, use_container_width=True, hide_index=True)
+        _comp_csv = df_comp.to_csv(index=False).encode()
+        st.download_button(
+            "⬇️ Download Compression Data CSV", _comp_csv,
+            file_name="compression_quarters.csv", mime="text/csv",
+            use_container_width=True,
+        )
     else:
         st.markdown(empty_state(
             "📊", "No compression data.",

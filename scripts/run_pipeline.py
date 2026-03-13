@@ -29,8 +29,9 @@ PROJECT_ROOT = os.path.dirname(BASE_DIR)
 LOG_PATH     = os.path.join(PROJECT_ROOT, "logs", "pipeline.log")
 
 STEPS = [
-    ("load_str_daily",  os.path.join(BASE_DIR, "load_str_daily_sqlite.py")),
-    ("compute_kpis",    os.path.join(BASE_DIR, "compute_kpis.py")),
+    ("load_str_daily",   os.path.join(BASE_DIR, "load_str_daily_sqlite.py")),
+    ("load_str_monthly", os.path.join(BASE_DIR, "load_str_monthly_sqlite.py")),
+    ("compute_kpis",     os.path.join(BASE_DIR, "compute_kpis.py")),
 ]
 
 
