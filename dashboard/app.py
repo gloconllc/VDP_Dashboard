@@ -1,6 +1,19 @@
 import os
 import sqlite3
 import streamlit as st
+import os
+import sqlite3
+import streamlit as st
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))          # /mount/src/vdp_dashboard/dashboard
+PROJECT_ROOT = os.path.dirname(BASE_DIR)                       # /mount/src/vdp_dashboard
+DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")  # change name if your DB is different
+
+@st.cache_resource
+def get_connection():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    return conn
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))          # /mount/src/vdp_dashboard/dashboard
 PROJECT_ROOT = os.path.dirname(BASE_DIR)                       # /mount/src/vdp_dashboard
@@ -362,14 +375,72 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
-ROOT    = Path(__file__).parent.parent                          # ~/Documents/dmo-analytics
+ROOT    = Path(__file__).parent.parent                          # project root
 DB_PATH = ROOT / "data" / "analytics.sqlite"
 
+
+def _init_db(conn: sqlite3.Connection) -> None:
+    """Create tables if this is a fresh (empty) database — e.g. on Streamlit Cloud."""
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS fact_str_metrics (
+            source        TEXT,
+            grain         TEXT,
+            property_name TEXT,
+            market        TEXT,
+            submarket     TEXT,
+            as_of_date    TEXT,
+            metric_name   TEXT,
+            metric_value  REAL,
+            unit          TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS kpi_daily_summary (
+            as_of_date      TEXT PRIMARY KEY,
+            occ_pct         REAL,
+            adr             REAL,
+            revpar          REAL,
+            occ_pct_yoy_pp  REAL,
+            adr_yoy_pct     REAL,
+            revpar_yoy_pct  REAL,
+            occ_yoy         REAL,
+            adr_yoy         REAL,
+            revpar_yoy      REAL,
+            is_occ_80       INTEGER,
+            is_occ_90       INTEGER,
+            created_at      TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS kpi_compression_quarterly (
+            quarter           TEXT PRIMARY KEY,
+            days_above_80_occ INTEGER,
+            days_above_90_occ INTEGER,
+            created_at        TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS load_log (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            source        TEXT,
+            grain         TEXT,
+            file_name     TEXT,
+            rows_inserted INTEGER,
+            run_at        TEXT
+        );
+    """)
+    conn.commit()
+
+
 @st.cache_resource
-def get_connection():
-    uri = f"file:{DB_PATH}?mode=ro"
-    conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
+def get_connection() -> sqlite3.Connection:
+    """Return a persistent SQLite connection.
+
+    Creates the database file and schema automatically if it does not exist
+    (e.g. on Streamlit Cloud where *.sqlite is excluded from git).
+    Dashboard code never writes data — all writes go through ETL scripts.
+    """
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    _init_db(conn)
     return conn
 
 # ─── Data loaders (5-minute cache) ───────────────────────────────────────────
