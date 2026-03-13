@@ -292,6 +292,20 @@ def main() -> None:
 
         conn.commit()
 
+        # ── Log both KPI compute runs to load_log ──────────────────────────────
+        print("\n── load_log ────────────────────────────────────────────")
+        for _src, _grain, _fn, _rows in [
+            ("KPI", "daily",     "compute_kpis.py", daily_rows),
+            ("KPI", "quarterly", "compute_kpis.py", comp_rows),
+        ]:
+            cur.execute(
+                "INSERT INTO load_log (source, grain, file_name, rows_inserted) "
+                "VALUES (?, ?, ?, ?)",
+                (_src, _grain, _fn, _rows),
+            )
+            print(f"  logged: source={_src} grain={_grain} rows={_rows}")
+        conn.commit()
+
         print(f"\nDone.  daily={daily_rows} rows  compression={comp_rows} quarters\n")
 
         print("Daily preview (most recent 5 rows):")

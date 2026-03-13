@@ -152,6 +152,12 @@ def load_str_monthly(path: str, conn: sqlite3.Connection) -> int:
 
     conn.commit()
 
+    cur.execute(
+        "INSERT INTO load_log (source, grain, file_name, rows_inserted) VALUES (?, ?, ?, ?)",
+        ("STR", "monthly", os.path.basename(path), rows_inserted),
+    )
+    conn.commit()
+
     print(f"Inserted {rows_inserted} new monthly rows from {os.path.basename(path)}")
     return rows_inserted
 

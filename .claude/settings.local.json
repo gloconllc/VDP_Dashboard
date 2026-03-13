@@ -42,7 +42,10 @@
       "mcp__Claude_Preview__preview_start",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8501/healthz)",
       "Bash(git rm:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git status:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(pip install:*)"
     ]
   }
 }
