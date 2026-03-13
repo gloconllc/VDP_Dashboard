@@ -1,3 +1,16 @@
+import os
+import sqlite3
+import streamlit as st
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))          # /mount/src/vdp_dashboard/dashboard
+PROJECT_ROOT = os.path.dirname(BASE_DIR)                       # /mount/src/vdp_dashboard
+DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")  # change name if your DB is different
+
+@st.cache_resource
+def get_connection():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    return conn
 """
 Visit Dana Point — Analytics Dashboard
 Streamlit app with Claude AI Analyst · Read-only connection to data/analytics.sqlite
