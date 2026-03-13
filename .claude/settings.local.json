@@ -36,7 +36,13 @@
       "Bash(git commit:*)",
       "Bash(sqlite3 /Users/johnpicou/Documents/dmo-analytics/data/analytics.sqlite \".schema\")",
       "Bash(sqlite3 /Users/johnpicou/Documents/dmo-analytics/data/analytics.sqlite \"SELECT name FROM sqlite_master WHERE type=''table'';\")",
-      "Bash(sqlite3 /Users/johnpicou/Documents/dmo-analytics/data/analytics.sqlite:*)"
+      "Bash(sqlite3 /Users/johnpicou/Documents/dmo-analytics/data/analytics.sqlite:*)",
+      "Bash(python -c \":*)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''dashboard/app.py''\\).read\\(\\)\\); print\\(''Syntax OK''\\)\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8501/healthz)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)"
     ]
   }
 }

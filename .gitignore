@@ -9,7 +9,13 @@ logs/*.log
 __pycache__/
 *.pyc
 .env
-.env
 venv/
-__pycache__/
 .streamlit/
+
+# Database (never commit)
+*.sqlite
+*.db
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
