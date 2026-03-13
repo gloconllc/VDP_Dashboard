@@ -1419,7 +1419,8 @@ with st.sidebar:
     counts           = get_table_counts()
     str_daily_rows   = counts.get("str_daily_rows",   0)
     str_monthly_rows = counts.get("str_monthly_rows", 0)
-    last_log = df_log.iloc[0]["run_at"][:10] if not df_log.empty else "—"
+    _run_at  = df_log.iloc[0]["run_at"] if not df_log.empty else None
+    last_log = str(_run_at)[:10] if pd.notna(_run_at) else "—"
 
     _d_dot = "🟢" if isinstance(str_daily_rows,   int) and str_daily_rows   > 0 else "⚫"
     st.markdown("**Pipeline Status**")
