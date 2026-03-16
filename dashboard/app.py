@@ -676,8 +676,12 @@ def pct_delta(a: float, b: float) -> float:
     return (a - b) / b * 100 if b else 0.0
 
 
-def build_metrics_context(df: pd.DataFrame, df_comp: pd.DataFrame) -> dict:
-    """Compute key stats from the filtered daily data for AI prompt injection."""
+def build_metrics_context(
+    df: pd.DataFrame,
+    df_comp: pd.DataFrame,
+    df_mon: pd.DataFrame | None = None,
+) -> dict:
+    """Compute key stats from the active selection + monthly history for AI prompt injection."""
     if df.empty:
         return {}
     n    = len(df)
@@ -692,7 +696,7 @@ def build_metrics_context(df: pd.DataFrame, df_comp: pd.DataFrame) -> dict:
     rvp_mean = float(df["revpar"].mean())
     rvp_std  = float(df["revpar"].std())
 
-    return {
+    ctx = {
         "revpar_30":      float(r30["revpar"].mean()),
         "revpar_90":      float(r90["revpar"].mean()),
         "adr_30":         float(r30["adr"].mean()),
@@ -714,22 +718,65 @@ def build_metrics_context(df: pd.DataFrame, df_comp: pd.DataFrame) -> dict:
         "comp_recent_q":  int(df_comp.iloc[-1]["days_above_90_occ"]) if not df_comp.empty else 0,
         "comp_prior_q":   int(df_comp.iloc[-2]["days_above_90_occ"]) if len(df_comp) >= 2 else 0,
         "comp_total_90":  int(df_comp["days_above_90_occ"].sum())    if not df_comp.empty else 0,
+        # Monthly placeholders (filled below if data available)
+        "revpar_12m": 0.0, "adr_12m": 0.0, "occ_12m": 0.0,
+        "rev_12m_total": 0.0, "tbid_12m": 0.0,
+        "revpar_yoy_12m": 0.0, "adr_yoy_12m": 0.0, "occ_yoy_12m": 0.0,
+        "revpar_best_month": "", "revpar_best_val": 0.0,
+        "monthly_data_available": False,
     }
+
+    # ── Monthly context (12-month vs prior-12-month YOY) ──────────────────────
+    if df_mon is not None and not df_mon.empty and len(df_mon) >= 12:
+        m12   = df_mon.tail(12)
+        m_pri = df_mon.iloc[-24:-12] if len(df_mon) >= 24 else pd.DataFrame()
+        _occ_col = "occupancy" if "occupancy" in df_mon.columns else None
+
+        ctx["revpar_12m"]     = float(m12["revpar"].mean())
+        ctx["adr_12m"]        = float(m12["adr"].mean())
+        ctx["occ_12m"]        = float(m12[_occ_col].mean()) if _occ_col else 0.0
+        ctx["rev_12m_total"]  = float(m12["revenue"].sum())
+        ctx["tbid_12m"]       = ctx["rev_12m_total"] * 0.0125
+        ctx["monthly_data_available"] = True
+
+        if not m_pri.empty:
+            ctx["revpar_yoy_12m"] = pct_delta(ctx["revpar_12m"], float(m_pri["revpar"].mean()))
+            ctx["adr_yoy_12m"]    = pct_delta(ctx["adr_12m"],    float(m_pri["adr"].mean()))
+            if _occ_col:
+                ctx["occ_yoy_12m"] = pct_delta(ctx["occ_12m"], float(m_pri[_occ_col].mean()))
+
+        # Best month by RevPAR in the last 12 months
+        best_idx = m12["revpar"].idxmax()
+        ctx["revpar_best_month"] = m12.loc[best_idx, "as_of_date"].strftime("%b %Y")
+        ctx["revpar_best_val"]   = float(m12.loc[best_idx, "revpar"])
+
+    return ctx
 
 # ─── AI prompt builders ───────────────────────────────────────────────────────
 
 def _base(m: dict) -> str:
-    return (
-        f"VDP Select Portfolio — current data snapshot:\n"
-        f"• 30-day RevPAR: ${m.get('revpar_30',0):.0f} ({m.get('revpar_delta',0):+.1f}% vs. prior period)\n"
-        f"• 30-day ADR: ${m.get('adr_30',0):.0f} ({m.get('adr_delta',0):+.1f}% vs. prior period)\n"
-        f"• 30-day Occupancy: {m.get('occ_30',0):.1f}% ({m.get('occ_delta',0):+.1f}pp vs. prior period)\n"
-        f"• Room Revenue (30d): ${m.get('rev_30_total',0):,.0f}\n"
-        f"• Weekend RevPAR: ${m.get('weekend_revpar',0):.0f}  |  Midweek RevPAR: ${m.get('midweek_revpar',0):.0f}\n"
-        f"• Weekend Occ: {m.get('weekend_occ',0):.1f}%  |  Midweek Occ: {m.get('midweek_occ',0):.1f}%\n"
+    lines = [
+        "VDP Select Portfolio — current data snapshot:",
+        f"• 30-day RevPAR: ${m.get('revpar_30',0):.0f} ({m.get('revpar_delta',0):+.1f}% vs. prior period)",
+        f"• 30-day ADR: ${m.get('adr_30',0):.0f} ({m.get('adr_delta',0):+.1f}% vs. prior period)",
+        f"• 30-day Occupancy: {m.get('occ_30',0):.1f}% ({m.get('occ_delta',0):+.1f}pp vs. prior period)",
+        f"• Room Revenue (30d): ${m.get('rev_30_total',0):,.0f}",
+        f"• Weekend RevPAR: ${m.get('weekend_revpar',0):.0f}  |  Midweek RevPAR: ${m.get('midweek_revpar',0):.0f}",
+        f"• Weekend Occ: {m.get('weekend_occ',0):.1f}%  |  Midweek Occ: {m.get('midweek_occ',0):.1f}%",
         f"• Most recent quarter — days above 90% occ: {m.get('comp_recent_q',0)} "
-        f"(prior quarter: {m.get('comp_prior_q',0)})"
-    )
+        f"(prior quarter: {m.get('comp_prior_q',0)})",
+    ]
+    if m.get("monthly_data_available"):
+        lines += [
+            "",
+            "12-Month Trend (monthly STR exports — Layer 1 data):",
+            f"• 12-month avg RevPAR: ${m.get('revpar_12m',0):.0f} ({m.get('revpar_yoy_12m',0):+.1f}% YOY)",
+            f"• 12-month avg ADR: ${m.get('adr_12m',0):.0f} ({m.get('adr_yoy_12m',0):+.1f}% YOY)",
+            f"• 12-month avg Occupancy: {m.get('occ_12m',0):.1f}% ({m.get('occ_yoy_12m',0):+.1f}pp YOY)",
+            f"• 12-month Room Revenue: ${m.get('rev_12m_total',0):,.0f}  |  Est. TBID: ${m.get('tbid_12m',0):,.0f}",
+            f"• Peak month (last 12): {m.get('revpar_best_month','')} at ${m.get('revpar_best_val',0):.0f} RevPAR",
+        ]
+    return "\n".join(lines)
 
 
 def build_prompt(key: str, m: dict) -> str:
@@ -1651,7 +1698,7 @@ elif grain == "Daily" and not df_sel.empty:
     if _dow_nums and len(_dow_nums) < 7:
         df_sel = df_sel[df_sel["as_of_date"].dt.dayofweek.isin(_dow_nums)]
 
-m = build_metrics_context(df_sel, df_comp)
+m = build_metrics_context(df_sel, df_comp, df_monthly)
 
 # ─── Header ───────────────────────────────────────────────────────────────────
 if not df_active.empty:
@@ -1808,6 +1855,72 @@ with tab_ov:
                     unsafe_allow_html=True,
                 )
 
+        # ── Monthly Performance Strip ──────────────────────────────────────────
+        if m.get("monthly_data_available") and not df_monthly.empty:
+            _m12 = df_monthly.tail(12)
+            _m_pri = df_monthly.iloc[-24:-12] if len(df_monthly) >= 24 else pd.DataFrame()
+            _occ_col = "occupancy" if "occupancy" in df_monthly.columns else None
+
+            _m12_rvp = float(_m12["revpar"].mean())
+            _m12_adr = float(_m12["adr"].mean())
+            _m12_occ = float(_m12[_occ_col].mean()) if _occ_col else 0.0
+            _m12_rev = float(_m12["revenue"].sum())
+            _m12_dem = float(_m12["demand"].sum())
+            _m12_tbd = _m12_rev * 0.0125
+
+            _mp_rvp = float(_m_pri["revpar"].mean()) if not _m_pri.empty else _m12_rvp
+            _mp_adr = float(_m_pri["adr"].mean())    if not _m_pri.empty else _m12_adr
+            _mp_occ = float(_m_pri[_occ_col].mean()) if (not _m_pri.empty and _occ_col) else _m12_occ
+            _mp_rev = float(_m_pri["revenue"].sum())  if not _m_pri.empty else _m12_rev
+            _mp_dem = float(_m_pri["demand"].sum())   if not _m_pri.empty else _m12_dem
+
+            _min_mo = _m12["as_of_date"].min().strftime("%b %Y")
+            _max_mo = _m12["as_of_date"].max().strftime("%b %Y")
+            _mo_lbl = f"{_min_mo} – {_max_mo}"
+
+            st.markdown(
+                '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:14px;'
+                'font-weight:700;letter-spacing:-0.01em;margin-bottom:2px;margin-top:4px;">'
+                '12-Month Performance — Monthly STR</div>'
+                f'<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:8px;">'
+                f'Layer 1 verified data &nbsp;·&nbsp; {_mo_lbl} &nbsp;·&nbsp; vs. prior 12 months</div>',
+                unsafe_allow_html=True,
+            )
+            _m_kpis = [
+                {"label": "RevPAR",       "value": f"${_m12_rvp:.2f}",
+                 "delta": f"{pct_delta(_m12_rvp,_mp_rvp):+.1f}% YOY",
+                 "positive": _m12_rvp >= _mp_rvp, "neutral": False,
+                 "date_label": _mo_lbl, "raw_value": _m12_rvp},
+                {"label": "ADR",          "value": f"${_m12_adr:.2f}",
+                 "delta": f"{pct_delta(_m12_adr,_mp_adr):+.1f}% YOY",
+                 "positive": _m12_adr >= _mp_adr, "neutral": False,
+                 "date_label": _mo_lbl, "raw_value": _m12_adr},
+                {"label": "Occupancy",    "value": f"{_m12_occ:.1f}%",
+                 "delta": f"{pct_delta(_m12_occ,_mp_occ):+.1f}pp YOY",
+                 "positive": _m12_occ >= _mp_occ, "neutral": False,
+                 "date_label": _mo_lbl, "raw_value": _m12_occ},
+                {"label": "Room Revenue", "value": f"${_m12_rev/1e6:.2f}M",
+                 "delta": f"{pct_delta(_m12_rev,_mp_rev):+.1f}% YOY",
+                 "positive": _m12_rev >= _mp_rev, "neutral": False,
+                 "date_label": _mo_lbl, "raw_value": _m12_rev},
+                {"label": "Rooms Sold",   "value": f"{_m12_dem:,.0f}",
+                 "delta": f"{pct_delta(_m12_dem,_mp_dem):+.1f}% YOY",
+                 "positive": _m12_dem >= _mp_dem, "neutral": False,
+                 "date_label": _mo_lbl, "raw_value": _m12_dem},
+                {"label": "Est. TBID Rev","value": f"${_m12_tbd/1e3:.0f}K",
+                 "delta": "blended 1.25%", "positive": True, "neutral": True,
+                 "date_label": _mo_lbl, "raw_value": _m12_tbd},
+            ]
+            _m_cols = st.columns(3)
+            for i, k in enumerate(_m_kpis):
+                with _m_cols[i % 3]:
+                    st.markdown(
+                        kpi_card(k["label"], k["value"], k["delta"],
+                                 k.get("positive", True), k.get("neutral", False),
+                                 "", k.get("date_label", ""), k.get("raw_value", 0.0)),
+                        unsafe_allow_html=True,
+                    )
+
         st.markdown("---")
 
         # ── Row 1: RevPAR with anomaly detection  |  Occ vs ADR ───────────────
@@ -1955,33 +2068,81 @@ with tab_ov:
             ))
             st.plotly_chart(style_fig(fig), use_container_width=True)
 
+        # ── Row 3: Monthly RevPAR & ADR trend (always-on from monthly STR) ────
+        if not df_monthly.empty and len(df_monthly) >= 6:
+            st.markdown("---")
+            _mo24 = df_monthly.tail(24).copy()
+            _mo24["month_label"] = _mo24["as_of_date"].dt.strftime("%b %Y")
+            _occ_col = "occupancy" if "occupancy" in _mo24.columns else None
+
+            ca, cb = st.columns(2)
+            with ca:
+                st.markdown('<div class="chart-header">Monthly RevPAR — Last 24 Months</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">Layer 1 verified · monthly STR exports &nbsp;·&nbsp; color = above/below 24-month avg</div>', unsafe_allow_html=True)
+                _avg24 = _mo24["revpar"].mean()
+                _colors24 = [TEAL if v >= _avg24 else ORANGE for v in _mo24["revpar"]]
+                fig = go.Figure(go.Bar(
+                    x=_mo24["month_label"], y=_mo24["revpar"],
+                    marker=dict(color=_colors24, line_width=0, cornerradius=5),
+                    hovertemplate="<b>%{x}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
+                ))
+                fig.add_hline(y=_avg24, line_dash="dash", line_color="rgba(167,169,169,0.45)",
+                              annotation_text=f"24-mo avg ${_avg24:.0f}",
+                              annotation_position="top right",
+                              annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
+                fig.update_layout(yaxis_tickprefix="$", showlegend=False)
+                st.plotly_chart(style_fig(fig, height=260), use_container_width=True)
+
+            with cb:
+                st.markdown('<div class="chart-header">Monthly ADR vs. Occupancy — Last 24 Months</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">Dual-axis &nbsp;·&nbsp; pricing power vs. fill rate trend</div>', unsafe_allow_html=True)
+                fig2 = make_subplots(specs=[[{"secondary_y": True}]])
+                fig2.add_trace(go.Scatter(
+                    x=_mo24["month_label"], y=_mo24["adr"],
+                    name="ADR $", line=dict(color=ORANGE, width=2.2),
+                    mode="lines+markers", marker=dict(size=4, color=ORANGE),
+                    hovertemplate="<b>%{x}</b><br>ADR: $%{y:.0f}<extra></extra>",
+                ), secondary_y=False)
+                if _occ_col:
+                    fig2.add_trace(go.Scatter(
+                        x=_mo24["month_label"], y=_mo24[_occ_col],
+                        name="Occ %", line=dict(color=TEAL, width=2.2),
+                        mode="lines+markers", marker=dict(size=4, color=TEAL),
+                        hovertemplate="<b>%{x}</b><br>Occ: %{y:.1f}%<extra></extra>",
+                    ), secondary_y=True)
+                fig2.update_yaxes(title_text="ADR ($)", tickprefix="$", secondary_y=False)
+                if _occ_col:
+                    fig2.update_yaxes(title_text="Occ %", ticksuffix="%",
+                                      secondary_y=True, showgrid=False)
+                st.plotly_chart(style_fig(fig2, height=260), use_container_width=True)
+
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — TRENDS
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_tr:
-    # ── Build grain-aware monthly aggregation ─────────────────────────────────
-    # Monthly grain  → use df_monthly directly (up to 30+ years of STR history)
-    # Daily grain    → aggregate kpi_daily_summary by month (YOY pre-computed)
-    if grain == "Monthly" and not df_monthly.empty:
+    # ── Build monthly aggregation for Trends tab ───────────────────────────────
+    # Priority: df_monthly (monthly STR exports) → fallback to kpi_daily_summary
+    # df_monthly is now always preferred since monthly loader is live.
+    if not df_monthly.empty:
         _tmp_tr = df_monthly.copy()
         _tmp_tr["month"] = _tmp_tr["as_of_date"].dt.to_period("M")
+        _occ_agg = "occupancy" if "occupancy" in _tmp_tr.columns else None
+        _agg_spec = {"revpar": ("revpar", "mean"), "adr": ("adr", "mean")}
+        if _occ_agg:
+            _agg_spec["occ_pct"] = (_occ_agg, "mean")
         monthly = (
             _tmp_tr.groupby("month")
-            .agg(
-                revpar  =("revpar",     "mean"),
-                adr     =("adr",        "mean"),
-                occ_pct =("occupancy",  "mean"),
-            )
+            .agg(**_agg_spec)
             .reset_index()
             .sort_values("month")
         )
-        # Compute YOY from the monthly series (shift 12)
-        monthly["revpar_yoy"] = (
-            (monthly["revpar"] / monthly["revpar"].shift(12) - 1) * 100
-        )
+        if "occ_pct" not in monthly.columns:
+            monthly["occ_pct"] = np.nan
+        # YOY from monthly series (shift 12)
+        monthly["revpar_yoy"] = (monthly["revpar"] / monthly["revpar"].shift(12) - 1) * 100
         monthly["month_label"] = monthly["month"].dt.strftime("%b %Y")
         _trends_ok = True
-    elif grain == "Daily" and not df_kpi.empty:
+    elif not df_kpi.empty:
         df_kpi_all = df_kpi.copy()
         df_kpi_all["month"] = df_kpi_all["as_of_date"].dt.to_period("M")
         monthly = (
