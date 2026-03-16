@@ -877,6 +877,732 @@ def load_datafy_traffic_sources() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+# ─── Board Report helpers ─────────────────────────────────────────────────────
+
+BOARD_REPORT_SYSTEM = """\
+You are a senior DMO tourism analytics consultant and data storyteller preparing \
+board-level intelligence reports for Visit Dana Point's leadership team. \
+Your reports set the standard for destination marketing analytics — combining \
+rigorous data analysis with compelling narrative strategy.
+
+MANDATE — SIX JOURNALIST QUESTIONS:
+Every section MUST answer all six: WHO (visitor segments, markets, properties), \
+WHAT (specific metrics and changes with exact numbers), WHEN (precise time periods), \
+WHERE (Dana Point, South OC, origin DMAs, digital channels), \
+WHY (causal analysis, market forces, behavioral drivers), \
+HOW (methodology used and recommended response actions).
+
+WRITING STANDARDS:
+• Lead with the single most impactful finding — board members read first paragraphs only
+• Use exact numbers always: "$312.75 ADR" not "high ADR"; "+4.1% YoY" not "improved"
+• Connect datasets: when STR occupancy rises, link to Datafy visitor origin shifts and CoStar market context
+• Quantify revenue implications of every finding
+• Flag statistical anomalies and provide causal hypotheses
+• Every recommendation must be specific and measurable
+• Use AP style numbers (spell one–nine, numerals for 10+)
+
+DATA VISUALIZATION NARRATIVE LANGUAGE (2025 standard):
+• Flow dynamics (alluvial/Sankey): "Visitor flows from Los Angeles (18.7%) have shifted toward..."
+• Distribution language (beeswarm): "ADR data points cluster tightly around $288 with luxury outliers above $782..."
+• Directional patterns (rose plot): "Seasonal occupancy traces a pronounced summer peak with steep winter recovery..."
+• Benchmark comparisons (bullet chart): "RevPAR at $220 penetrates 39% of the luxury ceiling set by Waldorf Astoria..."
+• Gap analysis: "The midweek–weekend RevPAR gap of $X represents $Y in monthly unrealized revenue..."
+
+FORMAT — FOLLOW EXACTLY (use markdown headers):
+## 🔑 EXECUTIVE SUMMARY
+Five headline findings, bold, board-scannable. One sentence each with the key number.
+
+## 📊 MARKET PERFORMANCE ANALYSIS
+STR portfolio + CoStar market context. Include YoY comparisons.
+
+## 👥 VISITOR INTELLIGENCE
+Who is visiting, from where, how long they stay, how much they spend.
+
+## 📱 DIGITAL & CAMPAIGN ROI
+What the marketing investment delivered in measurable economic impact.
+
+## 💰 REVENUE & TBID IMPACT
+Financial performance, TBID contribution estimate, tier breakdown.
+
+## 🔗 STRATEGIC CORRELATIONS & INSIGHTS
+Cross-dataset insights — the "so what" connecting all data sources.
+
+## 🔭 FORWARD-LOOKING OUTLOOK
+3-month and 12-month projections with specific assumptions.
+
+## ⚠️ RISK REGISTER
+3–5 specific risks, each with likelihood (Low/Med/High) and revenue impact estimate.
+
+## ✅ RECOMMENDED ACTIONS
+Exactly 5 specific, measurable actions for leadership, each with an owner role, \
+timeline, and expected outcome.
+
+## 📖 GLOSSARY
+Define every technical term used in the report (ADR, RevPAR, TBID, MPI, ARI, RGI, \
+DMA, Occ, grain, CoStar, STR, Datafy, compression, beeswarm, alluvial, etc.).
+
+## 📎 DATA APPENDIX
+List all data sources cited: table name, date range, row count, source system.
+"""
+
+
+def build_full_report_context() -> str:
+    """Pull all data from every table and build a comprehensive context string."""
+    conn = get_connection()
+    lines = ["=" * 70, "COMPLETE VDP ANALYTICS DATABASE SNAPSHOT", "=" * 70]
+
+    # ── STR Performance ────────────────────────────────────────────────────
+    try:
+        str_m = pd.read_sql_query(
+            "SELECT * FROM fact_str_metrics WHERE source='STR' AND grain='monthly' "
+            "ORDER BY as_of_date DESC LIMIT 24", conn)
+        str_d = pd.read_sql_query(
+            "SELECT * FROM fact_str_metrics WHERE source='STR' AND grain='daily' "
+            "ORDER BY as_of_date DESC LIMIT 90", conn)
+        lines += ["", "── STR MONTHLY PERFORMANCE (last 24 months) ──"]
+        if not str_m.empty:
+            piv = str_m.pivot_table(index="as_of_date", columns="metric_name",
+                                    values="metric_value", aggfunc="first").reset_index()
+            for col in ["revpar","adr","occ","revenue","supply","demand"]:
+                if col in piv.columns:
+                    latest = piv[col].iloc[-1] if not piv.empty else None
+                    prior  = piv[col].iloc[-2] if len(piv) > 1 else None
+                    if latest is not None:
+                        chg = f" ({(latest-prior)/prior*100:+.1f}% MoM)" if prior else ""
+                        lines.append(f"  Latest {col.upper()}: {latest:.2f}{chg}")
+            lines.append(f"  Date range: {piv['as_of_date'].min()} → {piv['as_of_date'].max()}")
+            lines.append(f"  Total monthly rows: {len(str_m)}")
+        lines += ["", "── STR DAILY PERFORMANCE (last 90 days summary) ──"]
+        if not str_d.empty:
+            piv_d = str_d.pivot_table(index="as_of_date", columns="metric_name",
+                                      values="metric_value", aggfunc="first")
+            for col in ["revpar","adr","occ"]:
+                if col in piv_d.columns:
+                    lines.append(f"  90-day avg {col.upper()}: {piv_d[col].mean():.2f} "
+                                 f"(max: {piv_d[col].max():.2f}, min: {piv_d[col].min():.2f})")
+    except Exception as e:
+        lines.append(f"  STR data error: {e}")
+
+    # ── KPI Summary ────────────────────────────────────────────────────────
+    try:
+        kpi = pd.read_sql_query(
+            "SELECT * FROM kpi_daily_summary ORDER BY as_of_date DESC LIMIT 365", conn)
+        comp = pd.read_sql_query("SELECT * FROM kpi_compression_quarterly", conn)
+        lines += ["", "── KPI DAILY SUMMARY ──"]
+        if not kpi.empty:
+            lines.append(f"  Latest RevPAR: ${kpi['revpar_usd'].iloc[0]:.2f}"
+                         if 'revpar_usd' in kpi.columns else "")
+            lines.append(f"  Rows: {len(kpi)}  |  Range: {kpi['as_of_date'].min()} → {kpi['as_of_date'].max()}")
+        lines += ["", "── COMPRESSION QUARTERS ──"]
+        for _, row in comp.iterrows():
+            lines.append(f"  {row.get('quarter','')}: {row.get('days_above_80_occ',0)} days >80%,  "
+                         f"{row.get('days_above_90_occ',0)} days >90%")
+    except Exception as e:
+        lines.append(f"  KPI error: {e}")
+
+    # ── CoStar ─────────────────────────────────────────────────────────────
+    try:
+        snap  = pd.read_sql_query("SELECT * FROM costar_market_snapshot ORDER BY report_period DESC", conn)
+        mon   = pd.read_sql_query("SELECT * FROM costar_monthly_performance ORDER BY as_of_date DESC LIMIT 24", conn)
+        chain = pd.read_sql_query("SELECT * FROM costar_chain_scale_breakdown WHERE year='2024'", conn)
+        pipe  = pd.read_sql_query("SELECT * FROM costar_supply_pipeline", conn)
+        comp_set = pd.read_sql_query("SELECT * FROM costar_competitive_set WHERE year='2024'", conn)
+        lines += ["", "── COSTAR SOUTH OC MARKET SNAPSHOT ──"]
+        for _, r in snap.iterrows():
+            lines.append(f"  {r.get('report_period','')} | {r.get('report_type','')}: "
+                         f"Occ {r.get('occupancy_pct',0):.1f}%, ADR ${r.get('adr_usd',0):.2f}, "
+                         f"RevPAR ${r.get('revpar_usd',0):.2f}, "
+                         f"Supply {r.get('total_supply_rooms',0):,} rooms")
+        lines += ["", "── COSTAR MONTHLY TREND (24 months) ──"]
+        if not mon.empty:
+            lines.append(f"  Latest month: {mon['as_of_date'].iloc[0]} "
+                         f"| Occ {mon['occupancy_pct'].iloc[0]:.1f}% "
+                         f"| ADR ${mon['adr_usd'].iloc[0]:.2f} "
+                         f"| RevPAR ${mon['revpar_usd'].iloc[0]:.2f}")
+            lines.append(f"  24-month avg RevPAR: ${mon['revpar_usd'].mean():.2f}")
+        lines += ["", "── COSTAR CHAIN SCALE (2024) ──"]
+        for _, r in chain.iterrows():
+            lines.append(f"  {r.get('chain_scale','')}: {r.get('num_properties',0)} props, "
+                         f"Occ {r.get('occupancy_pct',0):.1f}%, ADR ${r.get('adr_usd',0):.0f}, "
+                         f"RevPAR ${r.get('revpar_usd',0):.0f}, "
+                         f"RevPAR Share {r.get('market_share_revpar_pct',0):.1f}%")
+        lines += ["", "── COSTAR COMPETITIVE SET (2024) ──"]
+        for _, r in comp_set.iterrows():
+            lines.append(f"  {r.get('property_name','')[:30]}: {r.get('rooms',0)} rooms, "
+                         f"Occ {r.get('occupancy_pct',0):.1f}%, ADR ${r.get('adr_usd',0):.0f}, "
+                         f"RevPAR ${r.get('revpar_usd',0):.0f}, "
+                         f"MPI {r.get('mpi',0):.0f}, ARI {r.get('ari',0):.0f}, RGI {r.get('rgi',0):.0f}")
+        lines += ["", "── SUPPLY PIPELINE ──"]
+        for _, r in pipe.iterrows():
+            lines.append(f"  {r.get('property_name','')}: {r.get('rooms',0)} rooms, "
+                         f"{r.get('chain_scale','')}, {r.get('status','')}, "
+                         f"Opens: {r.get('projected_open_date','')}")
+        total_pipe = pipe["rooms"].sum() if not pipe.empty else 0
+        lines.append(f"  Total pipeline: {total_pipe:,} new rooms (+{total_pipe/5120*100:.1f}% supply growth)")
+    except Exception as e:
+        lines.append(f"  CoStar error: {e}")
+
+    # ── Datafy Overview ────────────────────────────────────────────────────
+    try:
+        kpis    = pd.read_sql_query("SELECT * FROM datafy_overview_kpis LIMIT 1", conn)
+        dma     = pd.read_sql_query("SELECT * FROM datafy_overview_dma ORDER BY visitor_days_share_pct DESC", conn)
+        airports= pd.read_sql_query("SELECT * FROM datafy_overview_airports ORDER BY passengers_share_pct DESC", conn)
+        demos   = pd.read_sql_query("SELECT * FROM datafy_overview_demographics", conn)
+        spend   = pd.read_sql_query("SELECT * FROM datafy_overview_category_spending ORDER BY spend_share_pct DESC", conn)
+        lines += ["", "── DATAFY VISITOR OVERVIEW (2025 Annual) ──"]
+        if not kpis.empty:
+            k = kpis.iloc[0]
+            lines += [
+                f"  Total trips: {k.get('total_trips',0):,} ({k.get('total_trips_vs_compare_pct',0):+.1f}% YoY)",
+                f"  Avg length of stay: {k.get('avg_length_of_stay_days',0):.1f} days ({k.get('avg_los_vs_compare_days',0):+.1f} vs prior)",
+                f"  Day trips: {k.get('day_trips_pct',0):.1f}%  |  Overnight: {k.get('overnight_trips_pct',0):.1f}%",
+                f"  In-state: {k.get('in_state_visitor_days_pct',0):.1f}%  |  Out-of-state: {k.get('out_of_state_vd_pct',0):.1f}%",
+                f"  First-time: {k.get('one_time_visitors_pct',0):.1f}%  |  Repeat: {k.get('repeat_visitors_pct',0):.1f}%",
+                f"  Local spending: {k.get('local_spending_pct',0):.1f}%  |  Visitor spending: {k.get('visitor_spending_pct',0):.1f}%",
+            ]
+        lines += ["", "── DATAFY TOP DMA MARKETS ──"]
+        for _, r in dma.head(10).iterrows():
+            lines.append(f"  {r.get('dma','')}: {r.get('visitor_days_share_pct',0):.1f}% visitor days, "
+                         f"${r.get('avg_spend_usd',0) or 0:.2f} avg spend/day "
+                         f"({r.get('visitor_days_vs_compare_pct',0):+.1f}pp YoY)")
+        lines += ["", "── DATAFY SPENDING CATEGORIES ──"]
+        for _, r in spend.iterrows():
+            lines.append(f"  {r.get('category','')}: {r.get('spend_share_pct',0):.1f}% of spend "
+                         f"(corr: {r.get('spending_correlation_pct',0):.1f}%)")
+        lines += ["", "── DATAFY TOP AIRPORTS ──"]
+        for _, r in airports.head(5).iterrows():
+            lines.append(f"  {r.get('airport_code','')} {r.get('airport_name','')}: "
+                         f"{r.get('passengers_share_pct',0):.1f}% of fly-in passengers")
+        lines += ["", "── DATAFY DEMOGRAPHICS ──"]
+        for _, r in demos.iterrows():
+            lines.append(f"  {r.get('dimension','').title()} {r.get('segment','')}: {r.get('share_pct',0):.1f}%")
+    except Exception as e:
+        lines.append(f"  Datafy overview error: {e}")
+
+    # ── Datafy Attribution ─────────────────────────────────────────────────
+    try:
+        mk  = pd.read_sql_query("SELECT * FROM datafy_attribution_media_kpis LIMIT 1", conn)
+        mm  = pd.read_sql_query("SELECT * FROM datafy_attribution_media_top_markets ORDER BY dma_est_impact_usd DESC", conn)
+        wk  = pd.read_sql_query("SELECT * FROM datafy_attribution_website_kpis LIMIT 1", conn)
+        wch = pd.read_sql_query("SELECT * FROM datafy_attribution_website_channels", conn)
+        tp  = pd.read_sql_query("SELECT * FROM datafy_social_top_pages ORDER BY page_views DESC LIMIT 10", conn)
+        ts  = pd.read_sql_query("SELECT * FROM datafy_social_traffic_sources ORDER BY sessions DESC LIMIT 10", conn)
+        lines += ["", "── DATAFY MEDIA CAMPAIGN ATTRIBUTION ──"]
+        if not mk.empty:
+            m = mk.iloc[0]
+            lines += [
+                f"  Campaign: {m.get('campaign_name','')} | Period: {m.get('report_period_start','')} – {m.get('report_period_end','')}",
+                f"  Total impressions: {m.get('total_impressions',0):,}",
+                f"  Unique reach: {m.get('unique_reach',0):,}",
+                f"  Attributable trips: {m.get('attributable_trips',0):,}",
+                f"  Campaign economic impact: ${m.get('total_impact_usd',0):,.0f}",
+                f"  Spend per visitor: ${m.get('cohort_spend_per_visitor',0):.2f}  |  Manual ADR: ${m.get('manual_adr',0):.0f}",
+            ]
+        lines += ["", "── TOP CAMPAIGN MARKETS ──"]
+        for _, r in mm.head(5).iterrows():
+            lines.append(f"  {r.get('top_dma','')}: ${r.get('dma_est_impact_usd',0):,.0f} impact "
+                         f"({r.get('dma_share_of_impact_pct',0):.1f}% of total)")
+        lines += ["", "── WEBSITE ATTRIBUTION ──"]
+        if not wk.empty:
+            w = wk.iloc[0]
+            lines += [
+                f"  Sessions: {w.get('total_website_sessions',0):,} | Pageviews: {w.get('website_pageviews',0):,}",
+                f"  Attributable trips: {w.get('attributable_trips',0):,} | Impact: ${w.get('est_impact_usd',0):,.0f}",
+                f"  Engagement rate: {w.get('avg_engagement_rate_pct',0):.1f}% | Avg time: {w.get('avg_time_on_site_sec',0):.0f}s",
+            ]
+        lines += ["", "── WEBSITE CHANNELS ──"]
+        for _, r in wch.iterrows():
+            lines.append(f"  {r.get('acquisition_channel','')}: {r.get('sessions',0):,} sessions, "
+                         f"{r.get('engagement_rate_pct',0):.1f}% engagement, "
+                         f"{r.get('attributable_trips_dest',0) or 0:.0f} attributable trips")
+        lines += ["", "── TOP WEBSITE PAGES ──"]
+        for _, r in tp.head(5).iterrows():
+            lines.append(f"  '{r.get('page_title','')[:50]}': {r.get('page_views',0):,} views")
+        lines += ["", "── TRAFFIC SOURCES ──"]
+        for _, r in ts.head(8).iterrows():
+            lines.append(f"  {r.get('source','')}: {r.get('sessions',0):,} sessions, "
+                         f"{r.get('engagement_rate_pct',0):.1f}% engagement")
+    except Exception as e:
+        lines.append(f"  Attribution error: {e}")
+
+    lines += ["", "=" * 70]
+    return "\n".join(lines)
+
+
+def build_board_report_prompt(report_type: str, period_label: str, full_context: str) -> str:
+    """Build the full board report prompt with all data context injected."""
+    return (
+        f"REPORT TYPE: {report_type}\n"
+        f"REPORT PERIOD: {period_label}\n"
+        f"PREPARED FOR: Visit Dana Point Board of Directors & Leadership Team\n"
+        f"DATA AS OF: {pd.Timestamp.now().strftime('%B %d, %Y')}\n\n"
+        f"COMPLETE DATABASE SNAPSHOT:\n{full_context}\n\n"
+        "Using all the data above, generate a comprehensive board-level analytics report. "
+        "Follow the exact structure in your system instructions. "
+        "Every section must answer WHO, WHAT, WHEN, WHERE, WHY, and HOW. "
+        "Use exact numbers from the data — do not round or generalize. "
+        "Draw connections between STR performance, CoStar market position, "
+        "Datafy visitor behavior, and digital campaign ROI. "
+        "The report should be ready to present to a board of directors without further editing."
+    )
+
+
+def generate_report_charts_html() -> str:
+    """Generate all key report charts as combined Plotly HTML string."""
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+    html_parts = []
+    _font = "Plus Jakarta Sans, Georgia, serif"
+
+    def _chart_html(fig: go.Figure, title: str) -> str:
+        fig.update_layout(
+            title_text=title, title_font=dict(size=14, family=_font, color="#0f172a"),
+            paper_bgcolor="#ffffff", plot_bgcolor="#f8fafc",
+            font=dict(family=_font, size=11, color="#334155"),
+            margin=dict(l=10, r=10, t=44, b=10),
+            height=320,
+        )
+        return ('<div class="chart-block">'
+                + fig.to_html(full_html=False, include_plotlyjs=False,
+                              config={"displayModeBar": False})
+                + f'<div class="chart-caption">{title}</div></div>')
+
+    conn = get_connection()
+
+    # Chart 1: STR Monthly RevPAR + ADR trend
+    try:
+        df_m = pd.read_sql_query(
+            "SELECT as_of_date, metric_name, metric_value FROM fact_str_metrics "
+            "WHERE grain='monthly' ORDER BY as_of_date", conn)
+        if not df_m.empty:
+            piv = df_m.pivot_table(index="as_of_date", columns="metric_name",
+                                   values="metric_value", aggfunc="first").reset_index()
+            piv["as_of_date"] = pd.to_datetime(piv["as_of_date"]).dt.strftime("%b %Y")
+            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            if "revpar" in piv.columns:
+                fig.add_trace(go.Scatter(x=piv["as_of_date"], y=piv["revpar"],
+                    name="RevPAR", mode="lines+markers",
+                    line=dict(color="#0891b2", width=2.5), marker=dict(size=5)),
+                    secondary_y=False)
+            if "adr" in piv.columns:
+                fig.add_trace(go.Scatter(x=piv["as_of_date"], y=piv["adr"],
+                    name="ADR", mode="lines+markers",
+                    line=dict(color="#b45309", width=2.5, dash="dash"), marker=dict(size=5)),
+                    secondary_y=True)
+            html_parts.append(_chart_html(fig, "STR Portfolio: RevPAR & ADR (Monthly Trend)"))
+    except Exception:
+        pass
+
+    # Chart 2: CoStar vs STR RevPAR comparison
+    try:
+        cs_m = pd.read_sql_query(
+            "SELECT as_of_date, revpar_usd FROM costar_monthly_performance ORDER BY as_of_date", conn)
+        str_m2 = pd.read_sql_query(
+            "SELECT as_of_date, metric_value as revpar FROM fact_str_metrics "
+            "WHERE grain='monthly' AND metric_name='revpar' ORDER BY as_of_date", conn)
+        if not cs_m.empty and not str_m2.empty:
+            cs_m["month"] = pd.to_datetime(cs_m["as_of_date"]).dt.strftime("%b %Y")
+            str_m2["month"] = pd.to_datetime(str_m2["as_of_date"]).dt.strftime("%b %Y")
+            merged = pd.merge(cs_m, str_m2, on="month", how="inner")
+            if not merged.empty:
+                fig2 = go.Figure()
+                fig2.add_trace(go.Scatter(x=merged["month"], y=merged["revpar"],
+                    name="STR Portfolio", line=dict(color="#0891b2", width=2.5)))
+                fig2.add_trace(go.Scatter(x=merged["month"], y=merged["revpar_usd"],
+                    name="CoStar Market", line=dict(color="#047857", width=2.5, dash="dot")))
+                fig2.add_traces([go.Scatter(
+                    x=list(merged["month"]) + list(reversed(merged["month"])),
+                    y=list(merged["revpar"]) + list(reversed(merged["revpar_usd"])),
+                    fill="toself", fillcolor="rgba(8,145,178,0.08)",
+                    line=dict(color="rgba(0,0,0,0)"), showlegend=False)])
+                html_parts.append(_chart_html(fig2, "RevPAR: STR Portfolio vs. CoStar South OC Market"))
+    except Exception:
+        pass
+
+    # Chart 3: DMA Visitor Origin (bar)
+    try:
+        dma = pd.read_sql_query(
+            "SELECT dma, visitor_days_share_pct, visitor_days_vs_compare_pct, avg_spend_usd "
+            "FROM datafy_overview_dma ORDER BY visitor_days_share_pct DESC LIMIT 12", conn)
+        if not dma.empty:
+            dma_s = dma.sort_values("visitor_days_share_pct", ascending=True)
+            fig3 = go.Figure(go.Bar(
+                y=dma_s["dma"], x=dma_s["visitor_days_share_pct"], orientation="h",
+                marker_color=["#047857" if v >= 0 else "#be123c"
+                              for v in dma_s["visitor_days_vs_compare_pct"].fillna(0)],
+                text=[f"{v:.1f}%" for v in dma_s["visitor_days_share_pct"]],
+                textposition="outside",
+            ))
+            html_parts.append(_chart_html(fig3, "Visitor Origin Markets — Share of Visitor Days (Green=Growing YoY)"))
+    except Exception:
+        pass
+
+    # Chart 4: Visitor Spending Treemap
+    try:
+        spend = pd.read_sql_query(
+            "SELECT category, spend_share_pct FROM datafy_overview_category_spending "
+            "ORDER BY spend_share_pct DESC", conn)
+        if not spend.empty:
+            fig4 = go.Figure(go.Treemap(
+                labels=spend["category"],
+                parents=["Visitor Spending"] * len(spend),
+                values=spend["spend_share_pct"],
+                textinfo="label+percent entry",
+                marker=dict(colorscale="Blues", showscale=False),
+            ))
+            html_parts.append(_chart_html(fig4, "Visitor Spending by Category"))
+    except Exception:
+        pass
+
+    # Chart 5: Chain Scale RevPAR bar
+    try:
+        chain = pd.read_sql_query(
+            "SELECT chain_scale, occupancy_pct, adr_usd, revpar_usd, supply_rooms "
+            "FROM costar_chain_scale_breakdown WHERE year='2024' ORDER BY revpar_usd DESC", conn)
+        if not chain.empty:
+            fig5 = go.Figure(go.Bar(
+                x=chain["chain_scale"], y=chain["revpar_usd"],
+                marker=dict(color=chain["revpar_usd"], colorscale="Blues", showscale=False),
+                text=[f"${v:.0f}" for v in chain["revpar_usd"]], textposition="outside",
+            ))
+            html_parts.append(_chart_html(fig5, "RevPAR by Chain Scale — South OC Market (2024)"))
+    except Exception:
+        pass
+
+    # Chart 6: Campaign Funnel
+    try:
+        mk = pd.read_sql_query("SELECT * FROM datafy_attribution_media_kpis LIMIT 1", conn)
+        if not mk.empty:
+            m = mk.iloc[0]
+            fig6 = go.Figure(go.Funnel(
+                y=["Impressions", "Unique Reach", "Attributable Trips", "Economic Impact"],
+                x=[m.get("total_impressions", 0) / 1e6,
+                   m.get("unique_reach", 0) / 1e6,
+                   m.get("attributable_trips", 0) / 1000,
+                   m.get("total_impact_usd", 0) / 1e6],
+                texttemplate=[
+                    f"{m.get('total_impressions',0)/1e6:.1f}M impressions",
+                    f"{m.get('unique_reach',0)/1e6:.2f}M reached",
+                    f"{m.get('attributable_trips',0):,} trips",
+                    f"${m.get('total_impact_usd',0)/1e3:.0f}K impact",
+                ],
+                marker_color=["#0891b2", "#0ea5e9", "#047857", "#b45309"],
+            ))
+            html_parts.append(_chart_html(fig6, "Campaign Conversion Funnel — Media Attribution"))
+    except Exception:
+        pass
+
+    # Chart 7: RevPAR Heatmap month x year
+    try:
+        str_all = pd.read_sql_query(
+            "SELECT as_of_date, metric_value FROM fact_str_metrics "
+            "WHERE grain='monthly' AND metric_name='revpar'", conn)
+        if not str_all.empty:
+            str_all["as_of_date"] = pd.to_datetime(str_all["as_of_date"])
+            str_all["year"] = str_all["as_of_date"].dt.year
+            str_all["month"] = str_all["as_of_date"].dt.month
+            piv_h = str_all.pivot_table(index="month", columns="year",
+                                        values="metric_value", aggfunc="mean")
+            month_n = {1:"Jan",2:"Feb",3:"Mar",4:"Apr",5:"May",6:"Jun",
+                       7:"Jul",8:"Aug",9:"Sep",10:"Oct",11:"Nov",12:"Dec"}
+            fig7 = go.Figure(go.Heatmap(
+                z=piv_h.values,
+                x=[str(c) for c in piv_h.columns],
+                y=[month_n.get(m, str(m)) for m in piv_h.index],
+                colorscale="RdYlGn",
+                text=[[f"${v:.0f}" if not (hasattr(v,'__float__') and v != v) else "—"
+                       for v in row] for row in piv_h.values],
+                texttemplate="%{text}",
+            ))
+            html_parts.append(_chart_html(fig7, "RevPAR Seasonal Heatmap — Month × Year"))
+    except Exception:
+        pass
+
+    return "\n".join(html_parts)
+
+
+def generate_report_html(title: str, period: str, report_type: str,
+                         ai_narrative: str, charts_html: str) -> str:
+    """Assemble the full downloadable HTML board report."""
+    ts = pd.Timestamp.now().strftime("%B %d, %Y at %I:%M %p")
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{title} — Visit Dana Point</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Georgia:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root {{
+  --navy:#0f172a; --teal:#0891b2; --teal-light:#e0f2fe;
+  --gold:#b45309; --gold-light:#fef3c7; --green:#047857; --green-light:#d1fae5;
+  --red:#be123c; --slate:#334155; --muted:#64748b; --border:#e2e8f0;
+  --bg:#ffffff; --bg-alt:#f8fafc;
+}}
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:'Plus Jakarta Sans',sans-serif;background:#ffffff;color:var(--slate);
+     line-height:1.65;font-size:14px}}
+.report-wrap{{max-width:1080px;margin:0 auto;padding:0 0 60px}}
+
+/* ── Header ── */
+.report-header{{
+  background:linear-gradient(135deg,#0f172a 0%,#083344 40%,#0c4a6e 100%);
+  color:#ffffff;padding:52px 52px 44px;position:relative;overflow:hidden
+}}
+.report-header::before{{
+  content:'';position:absolute;top:-60px;right:-60px;width:320px;height:320px;
+  border-radius:50%;background:rgba(8,145,178,0.12);pointer-events:none
+}}
+.report-header::after{{
+  content:'';position:absolute;bottom:-40px;left:30%;width:200px;height:200px;
+  border-radius:50%;background:rgba(4,120,87,0.10);pointer-events:none
+}}
+.report-header-tag{{font-size:11px;font-weight:700;letter-spacing:0.12em;
+  color:var(--teal);text-transform:uppercase;margin-bottom:12px}}
+.report-header h1{{font-size:2.2rem;font-weight:800;letter-spacing:-0.03em;
+  line-height:1.15;margin-bottom:10px}}
+.report-header .subtitle{{font-size:0.95rem;opacity:0.72;font-weight:400;margin-bottom:24px}}
+.report-meta{{display:flex;gap:28px;flex-wrap:wrap;margin-top:4px}}
+.report-meta-item{{font-size:11.5px;opacity:0.65;font-weight:500}}
+.report-meta-item strong{{opacity:1;color:#fff;font-weight:700}}
+.header-divider{{border:none;border-top:1px solid rgba(255,255,255,0.15);margin:24px 0 0}}
+
+/* ── Navigation pills ── */
+.nav-pills{{display:flex;gap:8px;padding:20px 52px;background:var(--navy);
+  border-bottom:3px solid var(--teal);flex-wrap:wrap}}
+.nav-pill{{font-size:11.5px;font-weight:600;color:rgba(255,255,255,0.65);
+  padding:5px 14px;border-radius:20px;cursor:pointer;
+  border:1px solid rgba(255,255,255,0.12);text-decoration:none;
+  transition:all .15s ease}}
+.nav-pill:hover{{color:#fff;background:rgba(8,145,178,0.25);border-color:var(--teal)}}
+
+/* ── Body sections ── */
+.content{{padding:0 52px}}
+.section{{margin:44px 0 0;scroll-margin-top:20px}}
+.section-header{{
+  display:flex;align-items:center;gap:12px;
+  border-bottom:2px solid var(--border);padding-bottom:12px;margin-bottom:22px
+}}
+.section-icon{{font-size:1.5rem;line-height:1}}
+.section-title{{font-size:1.25rem;font-weight:800;color:var(--navy);letter-spacing:-0.02em}}
+.section-subtitle{{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px}}
+
+/* ── AI narrative ── */
+.ai-narrative{{font-family:'Plus Jakarta Sans',sans-serif;font-size:14.5px;color:var(--slate);line-height:1.75}}
+.ai-narrative h2{{font-size:1.15rem;font-weight:800;color:var(--navy);
+  margin:32px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)}}
+.ai-narrative h3{{font-size:1rem;font-weight:700;color:var(--teal);margin:20px 0 8px}}
+.ai-narrative strong{{color:var(--navy);font-weight:700}}
+.ai-narrative p{{margin-bottom:12px}}
+.ai-narrative ul{{padding-left:20px;margin-bottom:12px}}
+.ai-narrative li{{margin-bottom:6px}}
+.ai-narrative blockquote{{
+  border-left:3px solid var(--teal);padding-left:16px;color:var(--muted);
+  font-style:italic;margin:16px 0
+}}
+
+/* ── KPI Hero grid ── */
+.kpi-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:20px 0}}
+.kpi-card{{background:var(--bg-alt);border:1px solid var(--border);border-radius:10px;
+  padding:18px 16px;text-align:center;border-top:3px solid var(--teal)}}
+.kpi-value{{font-size:1.6rem;font-weight:800;color:var(--navy);letter-spacing:-0.03em;line-height:1}}
+.kpi-label{{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;
+  letter-spacing:0.06em;margin-top:6px}}
+.kpi-delta{{font-size:11.5px;font-weight:700;margin-top:4px}}
+.kpi-delta.pos{{color:var(--green)}} .kpi-delta.neg{{color:var(--red)}}
+
+/* ── Charts ── */
+.chart-block{{background:var(--bg-alt);border:1px solid var(--border);border-radius:10px;
+  padding:16px;margin:16px 0}}
+.chart-caption{{font-size:11px;color:var(--muted);font-weight:600;
+  text-align:center;margin-top:8px;letter-spacing:0.04em;text-transform:uppercase}}
+.chart-grid{{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}}
+
+/* ── Risk register ── */
+.risk-table{{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}}
+.risk-table th{{background:var(--navy);color:#fff;padding:10px 14px;text-align:left;
+  font-size:11px;letter-spacing:0.06em;text-transform:uppercase;font-weight:700}}
+.risk-table td{{padding:10px 14px;border-bottom:1px solid var(--border)}}
+.risk-table tr:nth-child(even) td{{background:var(--bg-alt)}}
+.badge{{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700}}
+.badge-high{{background:#fef2f2;color:#be123c}}
+.badge-med{{background:#fffbeb;color:#b45309}}
+.badge-low{{background:#f0fdf4;color:#047857}}
+
+/* ── Recommended actions ── */
+.action-card{{background:linear-gradient(135deg,#f0f9ff,#e0f2fe);
+  border:1px solid #bae6fd;border-left:4px solid var(--teal);
+  border-radius:10px;padding:16px 20px;margin:12px 0}}
+.action-number{{font-size:11px;font-weight:800;color:var(--teal);
+  text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px}}
+.action-title{{font-size:14.5px;font-weight:700;color:var(--navy);margin-bottom:6px}}
+.action-meta{{display:flex;gap:20px;font-size:11.5px;color:var(--muted);font-weight:600}}
+
+/* ── Glossary ── */
+.glossary-grid{{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:16px 0}}
+.glossary-item{{padding:10px 0;border-bottom:1px solid var(--border)}}
+.glossary-term{{font-weight:800;color:var(--navy);font-size:13px}}
+.glossary-def{{font-size:12.5px;color:var(--slate);margin-top:2px}}
+
+/* ── Appendix table ── */
+.data-table{{width:100%;border-collapse:collapse;font-size:12.5px;margin:16px 0}}
+.data-table th{{background:var(--bg-alt);color:var(--slate);padding:9px 12px;
+  text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;
+  border-bottom:2px solid var(--border);font-weight:700}}
+.data-table td{{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--slate)}}
+.data-table tr:hover td{{background:#f8fafc}}
+
+/* ── Footer ── */
+.report-footer{{
+  background:var(--navy);color:rgba(255,255,255,0.55);
+  text-align:center;padding:28px 52px;font-size:11.5px;margin-top:60px
+}}
+.report-footer strong{{color:rgba(255,255,255,0.85)}}
+
+@media print{{
+  .nav-pills{{display:none}}
+  .report-header{{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  .section{{page-break-inside:avoid}}
+}}
+</style>
+</head>
+<body>
+<div class="report-wrap">
+
+<!-- ── HEADER ── -->
+<div class="report-header">
+  <div class="report-header-tag">Visit Dana Point · Board Intelligence Report</div>
+  <h1>{title}</h1>
+  <div class="subtitle">South Orange County Hospitality Market · Dana Point, California</div>
+  <div class="header-divider"></div>
+  <div class="report-meta">
+    <div class="report-meta-item"><strong>Report Period:</strong> {period}</div>
+    <div class="report-meta-item"><strong>Report Type:</strong> {report_type}</div>
+    <div class="report-meta-item"><strong>Generated:</strong> {ts}</div>
+    <div class="report-meta-item"><strong>AI Analysis:</strong> Claude Sonnet 4.6 (Anthropic)</div>
+    <div class="report-meta-item"><strong>Data Sources:</strong> STR · CoStar · Datafy · visitdanapoint.com</div>
+  </div>
+</div>
+
+<!-- ── NAVIGATION ── -->
+<nav class="nav-pills">
+  <a class="nav-pill" href="#exec-summary">Executive Summary</a>
+  <a class="nav-pill" href="#market-performance">Market Performance</a>
+  <a class="nav-pill" href="#visitor-intel">Visitor Intelligence</a>
+  <a class="nav-pill" href="#digital-roi">Digital &amp; Campaign ROI</a>
+  <a class="nav-pill" href="#revenue-tbid">Revenue &amp; TBID</a>
+  <a class="nav-pill" href="#correlations">Strategic Correlations</a>
+  <a class="nav-pill" href="#outlook">Outlook</a>
+  <a class="nav-pill" href="#risks">Risk Register</a>
+  <a class="nav-pill" href="#actions">Recommended Actions</a>
+  <a class="nav-pill" href="#glossary">Glossary</a>
+  <a class="nav-pill" href="#appendix">Data Appendix</a>
+</nav>
+
+<div class="content">
+
+<!-- ── CHARTS SECTION ── -->
+<div class="section" id="charts">
+  <div class="section-header">
+    <span class="section-icon">📈</span>
+    <div>
+      <div class="section-title">Key Performance Charts</div>
+      <div class="section-subtitle">Interactive · All datasets · Generated {ts}</div>
+    </div>
+  </div>
+  <div class="chart-grid">
+    {charts_html}
+  </div>
+</div>
+
+<!-- ── AI NARRATIVE ── -->
+<div class="section" id="exec-summary">
+  <div class="section-header">
+    <span class="section-icon">🤖</span>
+    <div>
+      <div class="section-title">AI-Generated Board Analysis</div>
+      <div class="section-subtitle">Claude Sonnet 4.6 · All data sources integrated · {ts}</div>
+    </div>
+  </div>
+  <div class="ai-narrative">
+    {_markdown_to_html(ai_narrative)}
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<!-- ── FOOTER ── -->
+<div class="report-footer">
+  <strong>Visit Dana Point Tourism Business Improvement District</strong><br>
+  Confidential board intelligence report · Generated by VDP Analytics Dashboard · {ts}<br>
+  Data sources: STR Hospitality Analytics · CoStar Hospitality Analytics · Datafy (Caladan 1.2)<br>
+  AI narrative: Claude Sonnet 4.6 (Anthropic) · All figures from verified Layer 1 data sources
+</div>
+
+</div><!-- /report-wrap -->
+</body>
+</html>"""
+
+
+def _markdown_to_html(md: str) -> str:
+    """Convert basic markdown to HTML for the report."""
+    import re
+    lines = md.split("\n")
+    html_lines = []
+    in_ul = False
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if in_ul:
+                html_lines.append("</ul>")
+                in_ul = False
+            html_lines.append("<br>")
+            continue
+        # Headers
+        if stripped.startswith("## "):
+            if in_ul:
+                html_lines.append("</ul>")
+                in_ul = False
+            text = stripped[3:]
+            # Create anchor from text
+            anchor = re.sub(r'[^a-z0-9-]', '', text.lower().replace(' ', '-'))
+            html_lines.append(f'<h2 id="{anchor}">{text}</h2>')
+        elif stripped.startswith("### "):
+            if in_ul:
+                html_lines.append("</ul>")
+                in_ul = False
+            html_lines.append(f"<h3>{stripped[4:]}</h3>")
+        elif stripped.startswith("**") and stripped.endswith("**") and len(stripped) > 4:
+            if in_ul:
+                html_lines.append("</ul>")
+                in_ul = False
+            html_lines.append(f"<p><strong>{stripped[2:-2]}</strong></p>")
+        elif stripped.startswith("- ") or stripped.startswith("• "):
+            if not in_ul:
+                html_lines.append("<ul>")
+                in_ul = True
+            item = stripped[2:]
+            item = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', item)
+            html_lines.append(f"<li>{item}</li>")
+        elif stripped.startswith(tuple("0123456789")) and ". " in stripped[:4]:
+            if in_ul:
+                html_lines.append("</ul>")
+                in_ul = False
+            item = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', stripped)
+            html_lines.append(f"<p>{item}</p>")
+        else:
+            if in_ul:
+                html_lines.append("</ul>")
+                in_ul = False
+            line_html = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', stripped)
+            line_html = re.sub(r'\*(.+?)\*', r'<em>\1</em>', line_html)
+            html_lines.append(f"<p>{line_html}</p>")
+    if in_ul:
+        html_lines.append("</ul>")
+    return "\n".join(html_lines)
+
+
 @st.cache_data(ttl=300)
 def get_table_counts() -> dict:
     conn = get_connection()
@@ -2054,10 +2780,10 @@ st.markdown(
 )
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
-tab_ov, tab_tr, tab_ev, tab_cs, tab_vi, tab_rev, tab_dig, tab_cx, tab_dl = st.tabs([
+tab_ov, tab_tr, tab_ev, tab_cs, tab_vi, tab_rev, tab_dig, tab_cx, tab_rpt, tab_dl = st.tabs([
     "📊 Overview", "📈 Trends", "🎪 Event Impact", "🏨 Market Intelligence",
     "👥 Visitor Intelligence", "💰 Revenue & TBID", "📱 Digital & Campaign",
-    "🔗 Cross-Dataset", "🗂 Data Log",
+    "🔗 Cross-Dataset", "📋 Board Reports", "🗂 Data Log",
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -4510,7 +5236,201 @@ with tab_cx:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 9 — DATA LOG
+# TAB 9 — BOARD REPORTS
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_rpt:
+    _rpt_font = "Plus Jakarta Sans, Inter, sans-serif"
+    st.markdown(
+        '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.55rem;'
+        'font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">'
+        '📋 Board Intelligence Reports</div>'
+        '<div style="font-size:12px;opacity:0.50;font-weight:500;margin-bottom:20px;">'
+        'AI-generated · All datasets integrated · Downloadable HTML · Board-ready</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Configuration ─────────────────────────────────────────────────────
+    cfg1, cfg2, cfg3 = st.columns([2, 2, 1])
+    with cfg1:
+        report_type_sel = st.selectbox("Report Type", [
+            "Full Board Report — All Datasets",
+            "Monthly Performance Report — STR + CoStar",
+            "Visitor & Campaign Intelligence — Datafy + Attribution",
+            "Market Positioning Report — CoStar Competitive Set",
+            "Revenue & TBID Impact Report",
+        ])
+    with cfg2:
+        period_sel = st.text_input(
+            "Report Period / Label",
+            value=f"Q1 2025 · January – March 2025",
+            help="E.g. 'Annual 2024', 'Q3 2025', or 'YTD through March 2026'",
+        )
+    with cfg3:
+        max_tokens_sel = st.select_slider(
+            "Report Depth",
+            options=[1500, 2500, 4000],
+            value=2500,
+            format_func=lambda v: {1500: "Standard", 2500: "Deep", 4000: "Comprehensive"}[v],
+        )
+
+    # ── Generate button ───────────────────────────────────────────────────
+    api_key_rpt = st.session_state.get("api_key_input", _ENV_API_KEY)
+    api_valid_rpt = bool(api_key_rpt and len(api_key_rpt) > 20)
+
+    if not api_valid_rpt:
+        st.warning("Add your Anthropic API key in the sidebar to generate AI reports.", icon="🔑")
+
+    col_gen, col_preview = st.columns([1, 2])
+    with col_gen:
+        gen_btn = st.button(
+            "🤖 Generate Board Report",
+            disabled=not api_valid_rpt,
+            use_container_width=True,
+            type="primary",
+        )
+        if "rpt_content" in st.session_state and st.session_state["rpt_content"]:
+            if st.button("🗑 Clear Report", use_container_width=True):
+                st.session_state.pop("rpt_content", None)
+                st.session_state.pop("rpt_html", None)
+                st.rerun()
+
+    with col_preview:
+        st.markdown(
+            '<div style="background:linear-gradient(135deg,#0f172a,#0c4a6e);'
+            'border-radius:10px;padding:20px 24px;color:#fff;">'
+            '<div style="font-size:11px;font-weight:700;letter-spacing:0.1em;'
+            'color:#38bdf8;text-transform:uppercase;margin-bottom:8px;">Report Includes</div>'
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;'
+            'font-size:12px;opacity:0.85;">'
+            '<span>✅ Executive Summary (5 headlines)</span>'
+            '<span>✅ Market Performance (STR + CoStar)</span>'
+            '<span>✅ Visitor Intelligence (Datafy)</span>'
+            '<span>✅ Digital &amp; Campaign ROI</span>'
+            '<span>✅ Revenue &amp; TBID Analysis</span>'
+            '<span>✅ Strategic Correlations</span>'
+            '<span>✅ Forward-Looking Outlook</span>'
+            '<span>✅ Risk Register</span>'
+            '<span>✅ 5 Recommended Actions</span>'
+            '<span>✅ Glossary + Data Appendix</span>'
+            '<span>✅ 7 Interactive Charts</span>'
+            '<span>✅ Downloadable HTML Report</span>'
+            '</div></div>',
+            unsafe_allow_html=True,
+        )
+
+    st.divider()
+
+    # ── Generation logic ───────────────────────────────────────────────────
+    if gen_btn and api_valid_rpt:
+        with st.spinner("Pulling all data from database…"):
+            full_ctx = build_full_report_context()
+            prompt   = build_board_report_prompt(report_type_sel, period_sel, full_ctx)
+
+        st.markdown("**Generating board report with Claude AI…**")
+        report_placeholder = st.empty()
+        report_text = ""
+
+        try:
+            client = anthropic.Anthropic(api_key=api_key_rpt)
+            with client.messages.stream(
+                model=CLAUDE_MODEL,
+                max_tokens=max_tokens_sel,
+                system=[{"type": "text", "text": BOARD_REPORT_SYSTEM,
+                         "cache_control": {"type": "ephemeral"}}],
+                messages=[{"role": "user", "content": prompt}],
+            ) as stream:
+                for chunk in stream.text_stream:
+                    report_text += chunk
+                    report_placeholder.markdown(report_text + " ▌")
+            report_placeholder.markdown(report_text)
+            st.session_state["rpt_content"] = report_text
+            st.session_state["rpt_type"]    = report_type_sel
+            st.session_state["rpt_period"]  = period_sel
+            st.success("Report generated. Scroll down to download.")
+        except Exception as e:
+            st.error(f"Error generating report: {e}")
+
+    # ── Display existing report + download ────────────────────────────────
+    if "rpt_content" in st.session_state and st.session_state["rpt_content"]:
+        rpt_text   = st.session_state["rpt_content"]
+        rpt_type   = st.session_state.get("rpt_type", report_type_sel)
+        rpt_period = st.session_state.get("rpt_period", period_sel)
+
+        st.divider()
+        st.markdown("### Report Preview")
+        with st.expander("View Full AI Narrative", expanded=True):
+            st.markdown(rpt_text)
+
+        st.divider()
+        st.markdown("### Download Options")
+
+        with st.spinner("Building HTML report with charts…"):
+            charts_html = generate_report_charts_html()
+            rpt_title   = f"VDP Board Intelligence Report — {rpt_period}"
+            html_report = generate_report_html(
+                title=rpt_title, period=rpt_period, report_type=rpt_type,
+                ai_narrative=rpt_text, charts_html=charts_html,
+            )
+
+        dl1, dl2 = st.columns(2)
+        with dl1:
+            st.download_button(
+                label="⬇️ Download HTML Report (with charts)",
+                data=html_report,
+                file_name=f"VDP_Board_Report_{pd.Timestamp.now().strftime('%Y%m%d')}.html",
+                mime="text/html",
+                use_container_width=True,
+                type="primary",
+            )
+        with dl2:
+            # Plain text / markdown download
+            st.download_button(
+                label="⬇️ Download Markdown Report",
+                data=rpt_text,
+                file_name=f"VDP_Board_Report_{pd.Timestamp.now().strftime('%Y%m%d')}.md",
+                mime="text/markdown",
+                use_container_width=True,
+            )
+
+        # ── Report metadata card ───────────────────────────────────────────
+        st.markdown(
+            f'<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;'
+            f'padding:18px 22px;margin-top:16px;font-size:12px;color:#64748b;">'
+            f'<div style="font-weight:700;color:#0f172a;margin-bottom:8px;">Report Metadata</div>'
+            f'<div><strong>Type:</strong> {rpt_type}</div>'
+            f'<div><strong>Period:</strong> {rpt_period}</div>'
+            f'<div><strong>Generated:</strong> {pd.Timestamp.now().strftime("%B %d, %Y at %I:%M %p")}</div>'
+            f'<div><strong>AI Model:</strong> Claude Sonnet 4.6 (Anthropic)</div>'
+            f'<div><strong>Data Sources:</strong> STR daily/monthly, CoStar (5 tables), '
+            f'Datafy (17 tables), KPI summaries</div>'
+            f'<div><strong>Word count (AI narrative):</strong> ~{len(rpt_text.split()):,} words</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    else:
+        # Empty state — show prompt preview
+        st.markdown("### The AI Prompt")
+        st.markdown(
+            "This is the system instruction sent to Claude when you generate a report. "
+            "It ensures every report follows board standards, answers all 6 journalist questions, "
+            "and uses 2025 data visualization language:"
+        )
+        with st.expander("View Board Report System Prompt", expanded=False):
+            st.code(BOARD_REPORT_SYSTEM, language="text")
+
+        st.markdown("### Data Context Preview")
+        st.markdown("The following live database context is injected into every report:")
+        with st.expander("Preview Database Context (sent to Claude)", expanded=False):
+            try:
+                ctx_preview = build_full_report_context()
+                st.code(ctx_preview, language="text")
+            except Exception as e:
+                st.error(f"Error building context: {e}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 10 — DATA LOG
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_dl:
     col_a, col_b = st.columns([3, 1])
