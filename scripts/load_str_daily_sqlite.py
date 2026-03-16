@@ -6,8 +6,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
-DOWNLOADS_DIR = os.path.join(PROJECT_ROOT, "downloads")
-DAILY_FILE = os.path.join(DOWNLOADS_DIR, "str_daily.xlsx")
+# STR raw exports live in data/str/  (legacy path: downloads/str_daily.xlsx)
+STR_DIR = os.path.join(PROJECT_ROOT, "data", "str")
+DAILY_FILE = os.path.join(STR_DIR, "str_daily.xlsx")
 
 
 def get_connection():
