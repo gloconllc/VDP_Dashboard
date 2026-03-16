@@ -2394,10 +2394,11 @@ with tab_fo:
 
     # ── Audience tabs ────────────────────────────────────────────────────────
     AUDIENCE_CONFIG = {
-        "dmo":      ("🏢 DMO / TBID Board",    TEAL,       "Destination Marketing & Revenue Strategy"),
-        "city":     ("🏛 City of Dana Point",   "#4A6FA5",  "TOT Revenue, Infrastructure & Economic Policy"),
-        "visitor":  ("✈️ Visitors",              ORANGE,     "Trip Planning, Rates & Events"),
-        "resident": ("🏡 Residents",             "#6A4F8A",  "Community Impact & Local Access"),
+        "dmo":      ("🏢 DMO / TBID Board",       TEAL,       "Destination Marketing & Revenue Strategy"),
+        "city":     ("🏛 City of Dana Point",      "#4A6FA5",  "TOT Revenue, Infrastructure & Economic Policy"),
+        "visitor":  ("✈️ Visitors",                ORANGE,     "Trip Planning, Rates & Events"),
+        "resident": ("🏡 Residents",               "#6A4F8A",  "Community Impact & Local Access"),
+        "cross":    ("🔀 Cross-Dataset Signals",   RED,        "Hidden insights only visible by joining STR + Datafy data"),
     }
 
     aud_tabs = st.tabs([cfg[0] for cfg in AUDIENCE_CONFIG.values()])

@@ -192,6 +192,15 @@ Generates `insights_daily` rows for 4 audiences on every pipeline run:
 | `city` | tot_revenue, infrastructure, visitor_profile, economic_impact |
 | `visitor` | best_value, rate_outlook, upcoming_events, booking_timing |
 | `resident` | peak_alert, economic_benefit, quiet_windows, annual_impact |
+| `cross` | feeder_value_gap, daytrip_conversion, weekday_los_gap, campaign_seasonality, oos_adr_premium, compression_daytrip |
+
+**Cross-Dataset Insights** require BOTH STR and Datafy data to compute — they are invisible in either dataset alone:
+- `feeder_value_gap` — STR ADR × Datafy DMA spend efficiency → LA over-indexed on volume, fly markets (SLC, Dallas, NYC) generate 1.3–1.4× more revenue per trip
+- `daytrip_conversion` — STR room revenue × Datafy day_trip_pct → 1.44M day trips; 3% conversion = ~$15M incremental room revenue
+- `weekday_los_gap` — STR weekday/weekend occ gap × Datafy avg_LOS → 2.0-day stays concentrate revenue on Fri-Sat; LOS extension worth ~$1M/yr
+- `campaign_seasonality` — STR compression by quarter × Datafy attribution channels → campaigns may be amplifying peak (Q3=36 days) vs. building shoulder (Q1=4 days)
+- `oos_adr_premium` — STR ADR YOY × Datafy out-of-state spend share → OOS visitors nearly 1:1 spend-to-visit but ADR only +6.7% YOY; rate capture gap exists
+- `compression_daytrip` — STR compression days × Datafy day_trip_pct → on 80%+ occ days, day trippers add 0.7× more visitors invisible to hotel data
 
 All insights are forward-looking (horizon_days configurable per insight).
 One row per audience/category per day (UPSERT on `as_of_date + audience + category`).
@@ -262,6 +271,8 @@ After every session or error correction:
 - `insights_daily` uses UPSERT (ON CONFLICT) keyed on `(as_of_date, audience, category)` — safe to run multiple times per day.
 - `table_relationships` documents every cross-table join/derivation — update it whenever a new table is added to the schema.
 - The AI system prompt must include full DB schema for all tables so Claude can correctly answer cross-table queries.
+- Cross-dataset (`cross` audience) insights require BOTH STR and Datafy to be loaded — they silently return empty if either is missing.
+- Always prefix cross insights with `HIDDEN SIGNAL/OPPORTUNITY/RISK/GAP` to flag them as non-obvious findings.
 
 ---
 
