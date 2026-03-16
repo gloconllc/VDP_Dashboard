@@ -1,8 +1,14 @@
 # Datafy Source Files
 
-This folder holds all raw Datafy & GA4 CSV exports before they are normalized
-into `data/analytics.sqlite`.  It is committed to git alongside the database so
-the source of every number is always traceable.
+This folder holds **normalized CSV intake files** that feed `data/analytics.sqlite`.
+Raw source files (Datafy PDFs, GA4 CSV exports) live in `data/downloads/` — that
+folder is gitignored so large/proprietary files don't end up in the repo.
+
+**Two-folder model:**
+```
+data/downloads/    ← drop raw PDFs and GA4 exports here (gitignored)
+data/datafy/       ← manually transcribed / cleaned CSVs (committed to git)
+```
 
 ---
 
@@ -151,11 +157,13 @@ avg_session_duration_mmss, engagement_rate_pct, conversions`
 
 ## Monthly Workflow
 
-1. **Export** the new Datafy report PDF → manually extract values into a CSV
-   using the appropriate template above.
-2. **Name** the file using the period label convention (e.g., `kpis_2026-Q1.csv`).
-3. **Save** it to the correct subfolder under `data/datafy/`.
-4. **Run** the pipeline:
+1. **Download** the new Datafy PDF or GA4 CSV export → save to `data/downloads/`
+   (gitignored, so the file stays local).
+2. **Transcribe** the values into the matching CSV template in `data/datafy/`
+   (for Datafy PDFs) or copy the GA4 export directly (for social/ files).
+3. **Name** the file using the period label convention (e.g., `kpis_2026-Q1.csv`).
+4. **Save** it to the correct subfolder under `data/datafy/`.
+5. **Run** the pipeline:
    ```bash
    python scripts/run_pipeline.py
    ```

@@ -21,8 +21,9 @@ VDP_Dashboard/                      (project root)
 ├── dashboard/
 │   └── app.py                      ← Streamlit entry point (tabs: Overview, Trends, Forward Outlook, Event Impact, Data Log)
 ├── data/
-│   └── analytics.sqlite            ← Single source-of-truth database (25+ tables)
-├── downloads/                      ← Raw STR/Datafy Excel exports
+│   ├── analytics.sqlite            ← Single source-of-truth database (25+ tables)
+│   ├── downloads/                  ← Raw source files: Datafy PDFs, GA4 exports (gitignored)
+│   └── datafy/                     ← Normalized CSV intake files, committed to git
 ├── scripts/
 │   ├── run_pipeline.py             ← Orchestrator: ETL → KPIs → Insights → log
 │   ├── load_str_daily_sqlite.py    ← Daily STR → fact_str_metrics
