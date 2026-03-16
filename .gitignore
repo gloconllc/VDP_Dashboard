@@ -1,6 +1,5 @@
-# Downloaded reports – do not commit raw source files (PDFs, GA4 exports)
-data/downloads/*
-!data/downloads/.gitkeep
+# Downloaded reports – do not commit raw source files (STR exports, Datafy PDFs, GA4 exports)
+downloads/
 
 # Logs
 logs/*.png

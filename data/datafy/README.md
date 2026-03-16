@@ -1,12 +1,13 @@
 # Datafy Source Files
 
 This folder holds **normalized CSV intake files** that feed `data/analytics.sqlite`.
-Raw source files (Datafy PDFs, GA4 CSV exports) live in `data/downloads/` — that
-folder is gitignored so large/proprietary files don't end up in the repo.
+Raw source files (STR exports, Datafy PDFs, GA4 CSV exports) live in `downloads/`
+at the project root — that folder is gitignored so large/proprietary files don't
+end up in the repo.
 
 **Two-folder model:**
 ```
-data/downloads/    ← drop raw PDFs and GA4 exports here (gitignored)
+downloads/         ← drop raw STR exports, Datafy PDFs, GA4 exports here (gitignored)
 data/datafy/       ← manually transcribed / cleaned CSVs (committed to git)
 ```
 
@@ -157,7 +158,7 @@ avg_session_duration_mmss, engagement_rate_pct, conversions`
 
 ## Monthly Workflow
 
-1. **Download** the new Datafy PDF or GA4 CSV export → save to `data/downloads/`
+1. **Download** the new Datafy PDF or GA4 CSV export → save to `downloads/`
    (gitignored, so the file stays local).
 2. **Transcribe** the values into the matching CSV template in `data/datafy/`
    (for Datafy PDFs) or copy the GA4 export directly (for social/ files).
