@@ -1,0 +1,26 @@
+report_period_start,report_period_end,cluster_type,dimension,segment,share_pct
+2025-07-10,2025-08-27,destination,age,16-24,12.85
+2025-07-10,2025-08-27,destination,age,25-44,11.96
+2025-07-10,2025-08-27,destination,age,45-64,21.07
+2025-07-10,2025-08-27,destination,age,65+,54.11
+2025-07-10,2025-08-27,destination,income,Under $50K,10.96
+2025-07-10,2025-08-27,destination,income,$50K-$75K,0.00
+2025-07-10,2025-08-27,destination,income,$75K-$100K,23.73
+2025-07-10,2025-08-27,destination,income,$100K-$150K,11.29
+2025-07-10,2025-08-27,destination,income,$150K+,54.01
+2025-07-10,2025-08-27,destination,household_size,1-2 HH,43.10
+2025-07-10,2025-08-27,destination,household_size,3-5 HH,47.25
+2025-07-10,2025-08-27,destination,household_size,6+ HH,9.66
+2025-07-10,2025-08-27,resorts,age,16-24,4.69
+2025-07-10,2025-08-27,resorts,age,25-44,0.94
+2025-07-10,2025-08-27,resorts,age,45-64,1.89
+2025-07-10,2025-08-27,resorts,age,65+,92.48
+2025-07-10,2025-08-27,resorts,income,$150K+,100.00
+2025-07-10,2025-08-27,resorts,household_size,1-2 HH,32.31
+2025-07-10,2025-08-27,resorts,household_size,3-5 HH,67.69
+2025-07-10,2025-08-27,hotels,age,16-24,50.20
+2025-07-10,2025-08-27,hotels,age,25-44,16.47
+2025-07-10,2025-08-27,hotels,age,45-64,33.33
+2025-07-10,2025-08-27,hotels,age,65+,0.00
+2025-07-10,2025-08-27,hotels,income,$150K+,100.00
+2025-07-10,2025-08-27,hotels,household_size,3-5 HH,100.00

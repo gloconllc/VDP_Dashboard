@@ -1,0 +1,11 @@
+report_period_start,report_period_end,airport_name,airport_code,passengers_share_pct
+2025-01-01,2025-09-01,Denver International Airport,DEN,32.63
+2025-01-01,2025-09-01,Dallas/Fort Worth International Airport,DFW,16.50
+2025-01-01,2025-09-01,Phoenix Sky Harbor International Airport,PHX,8.88
+2025-01-01,2025-09-01,Dallas Love Field Airport,DAL,7.90
+2025-01-01,2025-09-01,Harry Reid International Airport,LAS,7.25
+2025-01-01,2025-09-01,Hartsfield-Jackson Atlanta International Airport,ATL,5.50
+2025-01-01,2025-09-01,Chicago O'Hare International Airport,ORD,4.55
+2025-01-01,2025-09-01,George Bush Intercontinental/Houston Airport,IAH,3.70
+2025-01-01,2025-09-01,Chicago Midway International Airport,MDW,3.29
+2025-01-01,2025-09-01,Baltimore/Washington International Thurgood Marshall Airport,BWI,2.97

@@ -1,0 +1,10 @@
+report_period_start,report_period_end,dma,total_trips,avg_los_destination_days,vs_overall_destination_days
+2025-07-10,2025-08-27,Los Angeles,80,1.5,-0.3
+2025-07-10,2025-08-27,Phoenix -Prescott,18,2.1,-0.4
+2025-07-10,2025-08-27,Bakersfield,16,2.5,0.3
+2025-07-10,2025-08-27,Houston,16,3.0,0.4
+2025-07-10,2025-08-27,San Diego,12,1.8,0.0
+2025-07-10,2025-08-27,Oklahoma City,9,1.7,-0.8
+2025-07-10,2025-08-27,Minneapolis-St. Paul,8,2.3,-0.3
+2025-07-10,2025-08-27,Columbia-Jefferson City,8,3.7,0.8
+2025-07-10,2025-08-27,Denver,7,1.0,-1.7

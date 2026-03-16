@@ -1,0 +1,15 @@
+report_period_start,report_period_end,dma,visitor_days_share_pct,visitor_days_vs_compare_pct,spending_share_pct,avg_spend_usd,avg_length_of_stay_days,trips_share_pct
+2025-01-01,2025-12-31,Los Angeles,18.73,-0.2,15.79,205.14,,
+2025-01-01,2025-12-31,San Diego,8.12,0.2,6.49,185.60,,
+2025-01-01,2025-12-31,Phoenix -Prescott,7.29,0.0,6.10,298.06,2.3,6.80
+2025-01-01,2025-12-31,San Francisco-Oak-San Jose,4.67,0.0,5.18,288.86,,
+2025-01-01,2025-12-31,Las Vegas,3.62,0.1,4.45,378.10,2.2,3.48
+2025-01-01,2025-12-31,Dallas-Ft. Worth,3.11,0.0,4.03,386.94,2.6,2.49
+2025-01-01,2025-12-31,New York,2.90,0.0,3.83,300.62,2.5,2.47
+2025-01-01,2025-12-31,Sacramento-Stkton-Modesto,2.80,0.0,,,,
+2025-01-01,2025-12-31,Denver,2.62,0.0,2.37,292.05,2.4,2.26
+2025-01-01,2025-12-31,Salt Lake City,2.61,,3.56,293.55,2.4,2.33
+2025-01-01,2025-12-31,Chicago,,,,,2.5,1.59
+2025-01-01,2025-12-31,Seattle-Tacoma,,,,,2.5,1.65
+2025-01-01,2025-12-31,Houston,,,,,2.4,1.35
+2025-01-01,2025-12-31,Palm Springs,,,2.00,189.15,,

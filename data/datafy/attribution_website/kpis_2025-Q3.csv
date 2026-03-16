@@ -1,0 +1,2 @@
+report_period_start,report_period_end,visitation_window_start,visitation_window_end,report_title,market_radius_miles,website_url,cohort_spend_per_visitor,manual_adr,attributable_trips,unique_reach,est_impact_usd,total_website_sessions,website_pageviews,avg_time_on_site_sec,avg_engagement_rate_pct
+2025-07-10,2025-08-27,2025-07-17,2026-02-21,Attribution Website Report,50-3361,https://visitdanapoint.com/,148.97,413.00,209,42525,31135.00,56117,91600,182,55.62

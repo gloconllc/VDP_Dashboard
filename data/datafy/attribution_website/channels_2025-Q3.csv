@@ -1,0 +1,4 @@
+report_period_start,report_period_end,acquisition_channel,attribution_rate_pct,sessions,avg_time_on_site_mmss,engagement_rate_pct,attributable_trips_dest,attributable_trips_hotels,attributable_trips_resorts
+2025-07-10,2025-08-27,email,5.88,86,01:53,69.77,5,,
+2025-07-10,2025-08-27,redirect,4.20,2510,03:33,28.76,79,15,11
+2025-07-10,2025-08-27,search,0.61,42047,03:04,63.51,204,22,22

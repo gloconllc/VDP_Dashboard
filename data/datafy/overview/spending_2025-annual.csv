@@ -1,0 +1,11 @@
+report_period_start,report_period_end,category,spend_share_pct,spending_correlation_pct
+2025-01-01,2025-12-31,Accommodations,41.08,100.00
+2025-01-01,2025-12-31,Dining and Nightlife,24.01,27.40
+2025-01-01,2025-12-31,Grocery and Dept Stores,11.86,6.57
+2025-01-01,2025-12-31,Specialty Retail,7.09,2.70
+2025-01-01,2025-12-31,Service Stations,4.25,4.69
+2025-01-01,2025-12-31,Clothing and Accessories,3.43,1.71
+2025-01-01,2025-12-31,Leisure Recreation and Entertainment,3.20,1.84
+2025-01-01,2025-12-31,Fast Food Restaurants,2.65,7.58
+2025-01-01,2025-12-31,Personal Care and Services,2.15,
+2025-01-01,2025-12-31,Transportation,0.21,

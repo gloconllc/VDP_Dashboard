@@ -1,0 +1,21 @@
+report_period_start,report_period_end,area,pct_of_total_destination_trips,area_type
+2025-07-10,2025-08-27,City,100.00,cluster
+2025-07-10,2025-08-27,City Council Districts,100.00,cluster
+2025-07-10,2025-08-27,Harbor,15.79,cluster
+2025-07-10,2025-08-27,Lantern District,13.16,cluster
+2025-07-10,2025-08-27,Hotels,7.89,cluster
+2025-07-10,2025-08-27,Resorts,7.89,cluster
+2025-07-10,2025-08-27,Beaches,5.26,cluster
+2025-07-10,2025-08-27,Trails & Parks,2.63,cluster
+2025-07-10,2025-08-27,External Locations,2.63,cluster
+2025-07-10,2025-08-27,Monarch Beach Golf Links,2.63,cluster
+2025-07-10,2025-08-27,Dana Point City,100.00,poi
+2025-07-10,2025-08-27,District 4,39.47,poi
+2025-07-10,2025-08-27,District 2,35.53,poi
+2025-07-10,2025-08-27,District 1,32.89,poi
+2025-07-10,2025-08-27,Harbor,15.79,poi
+2025-07-10,2025-08-27,Lantern District,13.16,poi
+2025-07-10,2025-08-27,District 3,7.89,poi
+2025-07-10,2025-08-27,District 5,6.58,poi
+2025-07-10,2025-08-27,Doheny State Beach,5.26,poi
+2025-07-10,2025-08-27,The Ritz Carlton Laguna Niguel,5.26,poi

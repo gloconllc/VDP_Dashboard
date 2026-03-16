@@ -1,0 +1,13 @@
+report_period_start,report_period_end,cluster_type,total_trips,visitor_days_observed,est_room_nights,est_avg_length_of_stay_days,est_impact_usd,top_dma,dma_share_of_impact_pct,dma_est_impact_usd
+2025-07-10,2025-08-27,destination,209,402,,1.9,31134.73,Los Angeles,34.69,25216.80
+2025-07-10,2025-08-27,destination,209,402,,1.9,31134.73,Wichita-Hutchinson Plus,8.80,6395.10
+2025-07-10,2025-08-27,destination,209,402,,1.9,31134.73,Houston,8.44,6134.40
+2025-07-10,2025-08-27,destination,209,402,,1.9,31134.73,Phoenix - Prescott,8.19,5956.20
+2025-07-10,2025-08-27,destination,209,402,,1.9,31134.73,San Diego,8.17,5939.16
+2025-07-10,2025-08-27,resorts,22,,60,2.7,24780.00,Phoenix - Prescott,38.33,9499.00
+2025-07-10,2025-08-27,resorts,22,,60,2.7,24780.00,Los Angeles,26.67,6608.00
+2025-07-10,2025-08-27,resorts,22,,60,2.7,24780.00,Minneapolis-St. Paul,5.00,1239.00
+2025-07-10,2025-08-27,hotels,22,,55,2.5,22715.00,Minneapolis-St. Paul,29.09,6608.00
+2025-07-10,2025-08-27,hotels,22,,55,2.5,22715.00,Harrisburg-Lncstr-Leb-York,18.18,4130.00
+2025-07-10,2025-08-27,hotels,22,,55,2.5,22715.00,Phoenix - Prescott,14.55,3304.00
+2025-07-10,2025-08-27,hotels,22,,55,2.5,22715.00,New York,9.09,2065.00

@@ -1,0 +1,15 @@
+report_period_start,report_period_end,cluster_type,total_trips,visitor_days_observed,est_room_nights,est_avg_length_of_stay_days,est_impact_usd,top_dma,dma_share_of_impact_pct,dma_est_impact_usd
+2025-08-01,2026-03-16,destination,2093,4584,,2.2,190693.23,Los Angeles,103.06,196535.56
+2025-08-01,2026-03-16,destination,2093,4584,,2.2,190693.23,San Diego,76.21,145327.39
+2025-08-01,2026-03-16,destination,2093,4584,,2.2,190693.23,Ft. Myers-Naples,39.63,75578.88
+2025-08-01,2026-03-16,destination,2093,4584,,2.2,190693.23,Portland- OR,21.58,41142.64
+2025-08-01,2026-03-16,destination,2093,4584,,2.2,190693.23,Chicago,16.89,32207.04
+2025-08-01,2026-03-16,resorts,168,,447,2.7,184611.00,Austin,27.29,50386.00
+2025-08-01,2026-03-16,resorts,168,,447,2.7,184611.00,San Diego,19.91,36757.00
+2025-08-01,2026-03-16,resorts,168,,447,2.7,184611.00,Los Angeles,13.65,25193.00
+2025-08-01,2026-03-16,resorts,168,,447,2.7,184611.00,Eugene,12.75,23541.00
+2025-08-01,2026-03-16,resorts,168,,447,2.7,184611.00,Rockford,4.03,7434.00
+2025-08-01,2026-03-16,hotels,109,,349,3.2,144137.00,San Diego,21.49,30975.00
+2025-08-01,2026-03-16,hotels,109,,349,3.2,144137.00,Greensboro-H.Point-W.Salem,21.49,30975.00
+2025-08-01,2026-03-16,hotels,109,,349,3.2,144137.00,Portland- OR,12.89,18585.00
+2025-08-01,2026-03-16,hotels,109,,349,3.2,144137.00,Phoenix - Prescott,11.75,16933.00
