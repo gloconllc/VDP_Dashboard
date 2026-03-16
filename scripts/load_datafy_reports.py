@@ -1004,9 +1004,6 @@ def main():
     conn = get_conn()
     cur = conn.cursor()
 
-    # WAL mode — safe for concurrent Streamlit reads
-    cur.execute("PRAGMA journal_mode=WAL")
-
     try:
         load_overview(cur)
         load_attribution_website(cur)
