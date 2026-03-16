@@ -1,29 +1,3 @@
-import os
-import sqlite3
-import streamlit as st
-import os
-import sqlite3
-import streamlit as st
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))          # /mount/src/vdp_dashboard/dashboard
-PROJECT_ROOT = os.path.dirname(BASE_DIR)                       # /mount/src/vdp_dashboard
-DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")  # change name if your DB is different
-
-@st.cache_resource
-def get_connection():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    return conn
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))          # /mount/src/vdp_dashboard/dashboard
-PROJECT_ROOT = os.path.dirname(BASE_DIR)                       # /mount/src/vdp_dashboard
-DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")  # change name if your DB is different
-
-@st.cache_resource
-def get_connection():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    return conn
 """
 Visit Dana Point — Analytics Dashboard
 Streamlit app with Claude AI Analyst · Read-only connection to data/analytics.sqlite
@@ -237,139 +211,268 @@ for _k, _v in [
 # ─── CSS ──────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-  /* KPI cards */
+  /* ── Google Fonts: Plus Jakarta Sans + Inter ─────────────────────────── */
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+  html, body, [class*="css"] {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* ── KPI cards — glassmorphism 2025 ─────────────────────────────────── */
   .kpi-card {
-    background: var(--secondary-background-color);
-    border-radius: 10px; padding: 18px 20px;
-    border: 1px solid rgba(94,82,64,0.15); margin-bottom: 12px;
-    position: relative; overflow: hidden;
-    transition: box-shadow 0.18s ease, transform 0.18s ease;
+    background: linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 18px;
+    padding: 20px 22px;
+    border: 1px solid rgba(33,128,141,0.14);
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.28s cubic-bezier(.25,.46,.45,.94),
+                transform 0.28s cubic-bezier(.25,.46,.45,.94),
+                border-color 0.28s ease;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
   }
   .kpi-card::before {
     content: ''; position: absolute; top: 0; left: 0; right: 0;
-    height: 3px; border-radius: 10px 10px 0 0;
-    background: linear-gradient(90deg, #21808D, #32B8C6);
+    height: 2px; border-radius: 18px 18px 0 0;
+    background: linear-gradient(90deg, #21808D 0%, #32B8C6 50%, #21808D 100%);
+    background-size: 200% 100%;
+    animation: shimmer 3.5s linear infinite;
+  }
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .kpi-card::after {
+    content: ''; position: absolute;
+    top: -40px; right: -30px;
+    width: 100px; height: 100px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(50,184,198,0.10) 0%, transparent 70%);
+    pointer-events: none;
   }
   .kpi-card:hover {
-    box-shadow: 0 4px 18px rgba(33,128,141,0.14);
-    transform: translateY(-1px);
+    box-shadow: 0 10px 36px rgba(33,128,141,0.18), 0 2px 8px rgba(0,0,0,0.06);
+    transform: translateY(-3px);
+    border-color: rgba(33,128,141,0.28);
   }
-  .kpi-header { display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 4px; }
-  .kpi-label { font-size:11px; font-weight:600; text-transform:uppercase;
-    letter-spacing:.05em; opacity:.55; }
+  .kpi-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .kpi-label {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 10px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .09em; opacity: .50;
+  }
   .kpi-icon-svg { flex-shrink:0; line-height:0; }
-  .kpi-value { font-size:26px; font-weight:700; letter-spacing:-.02em; line-height:1.1;
-    margin: 4px 0; }
-  .kpi-delta-pos     { color:#21808D; font-size:12px; font-weight:500; margin-top:6px; }
-  .kpi-delta-neg     { color:#C0152F; font-size:12px; font-weight:500; margin-top:6px; }
-  .kpi-delta-neutral { color:gray;    font-size:12px; font-weight:500; margin-top:6px; }
-  .kpi-date { font-size:10px; opacity:0.50; margin-top:6px; letter-spacing:.01em;
-    background: rgba(33,128,141,0.07); border-radius:4px; padding:2px 6px;
-    display:inline-block; }
+  .kpi-value {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -.035em; line-height: 1.05; margin: 6px 0;
+  }
+  .kpi-delta-pos     { color:#21808D; font-size:12px; font-weight:600; margin-top:6px; }
+  .kpi-delta-neg     { color:#C0152F; font-size:12px; font-weight:600; margin-top:6px; }
+  .kpi-delta-neutral { color:#626C71; font-size:12px; font-weight:600; margin-top:6px; }
+  .kpi-date {
+    font-size:10px; opacity:0.42; margin-top:8px; letter-spacing:.01em;
+    background: rgba(33,128,141,0.08); border-radius:6px; padding:3px 8px;
+    display:inline-block; font-weight:500;
+  }
 
-  /* Insight cards */
-  .insight-card { border-radius:10px; padding:14px 16px; margin-bottom:4px;
-    position:relative; border:1px solid rgba(94,82,64,0.12);
-    background: var(--secondary-background-color); }
-  .insight-card::before { content:''; position:absolute; top:0; left:0; right:0;
-    height:3px; border-radius:10px 10px 0 0; }
-  .insight-positive::before { background:linear-gradient(90deg,#21808D,#32B8C6); }
-  .insight-warning::before  { background:linear-gradient(90deg,#E68161,#f59e0b); }
-  .insight-negative::before { background:linear-gradient(90deg,#C0152F,#ef4444); }
-  .insight-info::before     { background:linear-gradient(90deg,#21808D,#626C71); }
-  .insight-title { font-size:13px; font-weight:600; margin-bottom:4px; }
-  .insight-body  { font-size:12px; opacity:.75; line-height:1.5; margin:0; }
+  /* ── Insight cards ────────────────────────────────────────────────────── */
+  .insight-card {
+    border-radius: 16px; padding: 16px 18px; margin-bottom: 6px;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+  }
+  .insight-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
+  .insight-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 3px; border-radius: 16px 16px 0 0;
+  }
+  .insight-positive::before { background: linear-gradient(90deg, #21808D, #32B8C6); }
+  .insight-warning::before  { background: linear-gradient(90deg, #E68161, #f59e0b); }
+  .insight-negative::before { background: linear-gradient(90deg, #C0152F, #ef4444); }
+  .insight-info::before     { background: linear-gradient(90deg, #21808D, #626C71); }
+  .insight-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px; font-weight: 700; margin-bottom: 6px; letter-spacing: -.01em;
+  }
+  .insight-body { font-size: 12px; opacity: .72; line-height: 1.6; margin: 0; }
 
-  /* AI chip */
-  .ai-chip { display:inline-block; font-size:10px; font-weight:700;
-    text-transform:uppercase; letter-spacing:.05em; padding:2px 8px;
-    border-radius:99px; background:rgba(33,128,141,.12); color:#21808D; margin-bottom:10px; }
+  /* ── AI chip ─────────────────────────────────────────────────────────── */
+  .ai-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em;
+    padding: 3px 10px; border-radius: 99px;
+    background: linear-gradient(135deg, rgba(33,128,141,.16), rgba(50,184,198,.10));
+    color: #21808D; margin-bottom: 12px;
+    border: 1px solid rgba(33,128,141,.22);
+  }
 
-  /* Event stat cards */
-  .event-stat { background:var(--secondary-background-color);
-    border:1px solid rgba(94,82,64,.12); border-radius:10px;
-    padding:16px; text-align:center; margin-bottom:8px; }
-  .event-icon  { line-height:0; display:flex; justify-content:center; margin-bottom:8px; }
-  .event-val   { font-size:28px; font-weight:700; color:#21808D; letter-spacing:-.02em; }
-  .event-label { font-size:12px; opacity:.6; margin-top:4px; }
-  .event-date  { font-size:10px; opacity:.4; margin-top:3px; }
+  /* ── Event stat cards ────────────────────────────────────────────────── */
+  .event-stat {
+    background: linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%);
+    border: 1px solid rgba(33,128,141,0.14);
+    border-radius: 18px; padding: 22px 18px; text-align: center; margin-bottom: 10px;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    backdrop-filter: blur(10px);
+  }
+  .event-stat:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 32px rgba(33,128,141,0.16);
+    border-color: rgba(33,128,141,0.28);
+  }
+  .event-icon  { line-height:0; display:flex; justify-content:center; margin-bottom:10px; }
+  .event-val   {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 30px; font-weight: 800; color: #21808D; letter-spacing: -.035em;
+  }
+  .event-label { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 600; opacity: .60; margin-top: 5px; }
+  .event-date  { font-size: 10px; opacity: .38; margin-top: 4px; }
 
-  /* Insight card icon */
+  /* ── Insight card icon ───────────────────────────────────────────────── */
   .insight-icon { display:inline-block; vertical-align:middle; margin-right:6px; line-height:0; }
 
   #MainMenu { visibility:hidden; }
   footer    { visibility:hidden; }
 
-  /* Empty-state cards */
+  /* ── Empty-state cards ───────────────────────────────────────────────── */
   .empty-card {
-    background: var(--secondary-background-color);
-    border-radius: 10px; padding: 32px 24px; text-align: center;
-    border: 1px dashed rgba(94,82,64,0.25); margin: 6px 0 12px 0;
+    background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+    border-radius: 16px; padding: 36px 28px; text-align: center;
+    border: 1px dashed rgba(33,128,141,0.20); margin: 6px 0 12px 0;
   }
-  .empty-icon  { font-size: 30px; margin-bottom: 10px; }
-  .empty-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
-  .empty-body  { font-size: 12px; opacity: 0.65; line-height: 1.55; }
+  .empty-icon  { font-size: 32px; margin-bottom: 12px; }
+  .empty-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 15px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.01em;
+  }
+  .empty-body  { font-size: 13px; opacity: 0.58; line-height: 1.65; }
 
-  /* Data-source health cards */
+  /* ── Data-source health cards ────────────────────────────────────────── */
   .src-card {
-    background: var(--secondary-background-color); border-radius: 10px;
-    padding: 13px 16px; border: 1px solid rgba(94,82,64,0.12);
+    background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+    border-radius: 14px; padding: 14px 18px;
+    border: 1px solid rgba(255,255,255,0.09);
     margin-bottom: 8px; display: flex; align-items: center; gap: 12px;
+    transition: box-shadow 0.20s ease, transform 0.20s ease; cursor: default;
   }
+  .src-card:hover { box-shadow: 0 4px 18px rgba(33,128,141,0.12); transform: translateX(2px); }
   .src-dot   { font-size: 15px; flex-shrink: 0; }
-  .src-name  { font-size: 13px; font-weight: 600; }
-  .src-meta  { font-size: 11px; opacity: 0.6; margin-top: 2px; line-height: 1.4; }
-  .src-count { font-size: 13px; font-weight: 700; color: #21808D;
-               margin-left: auto; text-align: right; white-space: nowrap; }
+  .src-name  { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 700; }
+  .src-meta  { font-size: 11px; opacity: 0.55; margin-top: 2px; line-height: 1.4; }
+  .src-count {
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 700;
+    color: #21808D; margin-left: auto; text-align: right; white-space: nowrap;
+  }
 
-  /* Grain badge */
+  /* ── Grain badge ─────────────────────────────────────────────────────── */
   .grain-badge {
-    display: inline-block; font-size: 10px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px;
-    border-radius: 99px; background: rgba(230,129,97,.13);
-    color: #E68161; margin-left: 8px; vertical-align: middle;
+    display: inline-block; font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em;
+    padding: 2px 8px; border-radius: 99px;
+    background: rgba(230,129,97,.14); color: #E68161;
+    margin-left: 8px; vertical-align: middle;
+    border: 1px solid rgba(230,129,97,.22);
   }
 
-  /* Home button title */
+  /* ── Hero banner ─────────────────────────────────────────────────────── */
+  .hero-banner {
+    background: linear-gradient(135deg,
+      rgba(33,128,141,0.11) 0%,
+      rgba(50,184,198,0.06) 50%,
+      rgba(230,129,97,0.05) 100%);
+    border-radius: 22px; padding: 28px 32px;
+    border: 1px solid rgba(33,128,141,0.14);
+    margin-bottom: 6px; position: relative; overflow: hidden;
+  }
+  .hero-banner::before {
+    content: ''; position: absolute;
+    top: -50px; right: -50px;
+    width: 220px; height: 220px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(50,184,198,0.13) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-banner::after {
+    content: ''; position: absolute;
+    bottom: -40px; left: 30%;
+    width: 160px; height: 160px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(230,129,97,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 2.15rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.1;
+    background: linear-gradient(135deg, #21808D 0%, #32B8C6 55%, #1a6b78 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 4px;
+  }
+  .hero-subtitle {
+    font-size: 13px; font-weight: 500; opacity: 0.52; letter-spacing: 0.005em;
+  }
+
+  /* ── Home button title (legacy — hero-banner is preferred) ───────────── */
   .home-title a {
-    text-decoration: none;
-    color: inherit;
-    font-size: 2rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1.2;
+    text-decoration: none; color: inherit;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 2rem; font-weight: 800;
+    letter-spacing: -0.03em; line-height: 1.2;
   }
-  .home-title a:hover { opacity: 0.75; }
+  .home-title a:hover { opacity: 0.78; }
 
-  /* Source card hover */
-  .src-card { transition: box-shadow 0.15s ease; cursor: default; }
-  .src-card:hover { box-shadow: 0 2px 10px rgba(33,128,141,0.10); }
-
-  /* Filter active badge */
+  /* ── Filter active badge ─────────────────────────────────────────────── */
   .filter-badge {
-    display: inline-block; font-size: 10px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px;
-    border-radius: 99px; background: rgba(230,129,97,.18);
-    color: #E68161; margin-left: 6px; vertical-align: middle;
+    display: inline-block; font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    padding: 2px 8px; border-radius: 99px;
+    background: rgba(230,129,97,.18); color: #E68161; margin-left: 6px; vertical-align: middle;
   }
 
-  /* Load-log source badges */
-  .log-badge-str { display:inline-block; padding:1px 7px; border-radius:99px;
+  /* ── Load-log source badges ──────────────────────────────────────────── */
+  .log-badge-str   { display:inline-block; padding:2px 8px; border-radius:99px;
     font-size:10px; font-weight:700; background:rgba(33,128,141,.12); color:#21808D; }
-  .log-badge-kpi { display:inline-block; padding:1px 7px; border-radius:99px;
+  .log-badge-kpi   { display:inline-block; padding:2px 8px; border-radius:99px;
     font-size:10px; font-weight:700; background:rgba(230,129,97,.13); color:#E68161; }
-  .log-badge-other { display:inline-block; padding:1px 7px; border-radius:99px;
+  .log-badge-other { display:inline-block; padding:2px 8px; border-radius:99px;
     font-size:10px; font-weight:700; background:rgba(0,0,0,.07); color:#626C71; }
 
-  /* Trend table strip */
-  .trend-row-pos { color:#21808D; font-weight:600; }
-  .trend-row-neg { color:#C0152F; font-weight:600; }
+  /* ── Trend table strip ───────────────────────────────────────────────── */
+  .trend-row-pos { color:#21808D; font-weight:700; }
+  .trend-row-neg { color:#C0152F; font-weight:700; }
 
-  /* Section sub-header */
+  /* ── Section sub-header ──────────────────────────────────────────────── */
   .section-label {
-    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
-    opacity:.45; margin-bottom:6px; margin-top:2px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 11px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .08em; opacity: .45; margin-bottom: 8px; margin-top: 2px;
+  }
+
+  /* ── Chart section header ────────────────────────────────────────────── */
+  .chart-header {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 2px;
+  }
+  .chart-caption {
+    font-size: 11px; opacity: .50; font-weight: 500; margin-bottom: 6px;
+  }
+
+  /* ── Sidebar brand ───────────────────────────────────────────────────── */
+  .sidebar-brand {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 18px; font-weight: 800; letter-spacing: -.02em;
+    background: linear-gradient(135deg, #21808D, #32B8C6);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  /* ── Tab label override ──────────────────────────────────────────────── */
+  button[data-baseweb="tab"] {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-weight: 600 !important;
   }
 </style>
 """, unsafe_allow_html=True)
@@ -1180,14 +1283,34 @@ def event_stat(val, label, icon: str = "", date: str = "") -> str:
 
 
 def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
+    _font = "Plus Jakarta Sans, Inter, system-ui, sans-serif"
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        font_family="Inter, system-ui, sans-serif", font_size=12,
-        height=height, margin=dict(l=0, r=0, t=30, b=0),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        font=dict(family=_font, size=12),
+        height=height,
+        margin=dict(l=0, r=0, t=36, b=0),
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
+            font=dict(size=11, family=_font),
+            bgcolor="rgba(0,0,0,0)", borderwidth=0,
+        ),
+        hoverlabel=dict(
+            bgcolor="rgba(18,24,30,0.90)",
+            bordercolor="rgba(33,128,141,0.45)",
+            font=dict(size=12, family=_font, color="#ffffff"),
+        ),
     )
-    fig.update_xaxes(showgrid=False, zeroline=False)
-    fig.update_yaxes(gridcolor="rgba(0,0,0,0.06)", zeroline=False)
+    fig.update_xaxes(
+        showgrid=False, zeroline=False,
+        tickfont=dict(size=11, family=_font),
+        linecolor="rgba(0,0,0,0.08)",
+    )
+    fig.update_yaxes(
+        gridcolor="rgba(127,127,127,0.10)",
+        gridwidth=1,
+        zeroline=False,
+        tickfont=dict(size=11, family=_font),
+    )
     return fig
 
 
@@ -1329,8 +1452,12 @@ df_log     = load_load_log()
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 🌊 Visit Dana Point")
-    st.markdown("VDP Select Portfolio · 12 Properties · Anaheim Area")
+    st.markdown(
+        '<div class="sidebar-brand">🌊 Visit Dana Point</div>'
+        '<div style="font-size:12px;opacity:0.55;font-weight:500;margin-top:3px;margin-bottom:2px;">'
+        'VDP Select Portfolio &nbsp;·&nbsp; 12 Properties &nbsp;·&nbsp; Anaheim Area</div>',
+        unsafe_allow_html=True,
+    )
     st.divider()
 
     # Grain must be chosen FIRST so the range options below can adapt
@@ -1520,10 +1647,6 @@ elif grain == "Daily" and not df_sel.empty:
 m = build_metrics_context(df_sel, df_comp)
 
 # ─── Header ───────────────────────────────────────────────────────────────────
-st.markdown(
-    '<div class="home-title"><a href="?" title="Reset to Overview">Visit Dana Point — Analytics</a></div>',
-    unsafe_allow_html=True,
-)
 if not df_active.empty:
     last_upd = df_active["as_of_date"].max().strftime(
         "%b %Y" if grain == "Monthly" else "%b %d, %Y"
@@ -1532,7 +1655,19 @@ elif not df_daily.empty:
     last_upd = df_daily["as_of_date"].max().strftime("%b %d, %Y")
 else:
     last_upd = "N/A"
-st.caption(f"VDP Select Portfolio · {range_label} · Last updated {last_upd}")
+
+st.markdown(
+    f'<div class="hero-banner">'
+    f'<a href="?" style="text-decoration:none;">'
+    f'<div class="hero-title">Visit Dana Point — Analytics</div>'
+    f'</a>'
+    f'<div class="hero-subtitle">'
+    f'VDP Select Portfolio &nbsp;·&nbsp; 12 Properties &nbsp;·&nbsp; '
+    f'{range_label} &nbsp;·&nbsp; Last updated {last_upd}'
+    f'</div>'
+    f'</div>',
+    unsafe_allow_html=True,
+)
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 tab_ov, tab_tr, tab_ev, tab_dl = st.tabs(
@@ -1621,8 +1756,13 @@ with tab_ov:
 
     # ── AI Insight Cards ───────────────────────────────────────────────────────
     if m:
-        st.markdown("**Auto-Detected Insights**")
-        st.caption("Pattern analysis from the selected date range")
+        st.markdown(
+            '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:14px;'
+            'font-weight:700;letter-spacing:-0.01em;margin-bottom:2px;">Auto-Detected Insights</div>'
+            '<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:8px;">'
+            'Pattern analysis from the selected date range</div>',
+            unsafe_allow_html=True,
+        )
         insights = generate_ai_insights(df_sel, df_comp, m)
         if insights:
             ic = st.columns(len(insights))
@@ -1646,7 +1786,11 @@ with tab_ov:
             "Adjust the date range or run the pipeline to load data.",
         ), unsafe_allow_html=True)
     else:
-        st.markdown("**Key Performance Indicators**")
+        st.markdown(
+            '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:14px;'
+            'font-weight:700;letter-spacing:-0.01em;margin-bottom:8px;">Key Performance Indicators</div>',
+            unsafe_allow_html=True,
+        )
         cols = st.columns(3)
         for i, k in enumerate(kpis):
             with cols[i % 3]:
@@ -1663,8 +1807,8 @@ with tab_ov:
         c1, c2 = st.columns(2)
 
         with c1:
-            st.markdown("**RevPAR Trend — with Anomaly Detection**")
-            st.caption("Green markers = spikes >2σ · Red = drops <1.5σ · Hover for context")
+            st.markdown('<div class="chart-header">RevPAR Trend — Anomaly Detection</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">Teal markers = spikes >2σ &nbsp;·&nbsp; Red = drops <1.5σ &nbsp;·&nbsp; Hover for context</div>', unsafe_allow_html=True)
 
             rvp_mean = df_sel["revpar"].mean()
             rvp_std  = df_sel["revpar"].std()
@@ -1675,21 +1819,23 @@ with tab_ov:
             fig.add_trace(go.Scatter(
                 x=df_sel["as_of_date"], y=df_sel["revpar"],
                 fill="tozeroy",
-                line=dict(color=TEAL, width=2),
-                fillcolor="rgba(33,128,141,0.10)",
+                line=dict(color=TEAL, width=2.2),
+                fillcolor="rgba(33,128,141,0.12)",
                 mode="lines", name="RevPAR",
                 hovertemplate="<b>%{x|%b %d, %Y}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
             ))
             fig.add_hline(
-                y=rvp_mean, line_dash="dot", line_color="rgba(167,169,169,0.5)",
-                annotation_text=f"Avg ${rvp_mean:.0f}", annotation_position="top right",
+                y=rvp_mean, line_dash="dash", line_color="rgba(167,169,169,0.45)",
+                annotation_text=f"Avg ${rvp_mean:.0f}",
+                annotation_position="top right",
+                annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"),
             )
             if not spikes.empty:
                 fig.add_trace(go.Scatter(
                     x=spikes["as_of_date"], y=spikes["revpar"],
                     mode="markers",
-                    marker=dict(color=TEAL, size=10, symbol="circle-open",
-                                line=dict(width=2.5, color=TEAL)),
+                    marker=dict(color=TEAL, size=11, symbol="circle",
+                                opacity=0.85, line=dict(width=0)),
                     name="⚡ Spike",
                     hovertemplate=(
                         "<b>⚡ Revenue Spike</b><br>"
@@ -1701,8 +1847,8 @@ with tab_ov:
                 fig.add_trace(go.Scatter(
                     x=drops["as_of_date"], y=drops["revpar"],
                     mode="markers",
-                    marker=dict(color=RED, size=10, symbol="circle-open",
-                                line=dict(width=2.5, color=RED)),
+                    marker=dict(color=RED, size=11, symbol="circle",
+                                opacity=0.85, line=dict(width=0)),
                     name="⚠️ Drop",
                     hovertemplate=(
                         "<b>⚠️ Below Average</b><br>"
@@ -1714,8 +1860,8 @@ with tab_ov:
             st.plotly_chart(style_fig(fig), use_container_width=True)
 
         with c2:
-            st.markdown("**Occupancy vs. ADR**")
-            st.caption("Dual-axis · fill rate & pricing power")
+            st.markdown('<div class="chart-header">Occupancy vs. ADR</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">Dual-axis &nbsp;·&nbsp; fill rate & pricing power</div>', unsafe_allow_html=True)
             fig = make_subplots(specs=[[{"secondary_y": True}]])
             fig.add_trace(go.Scatter(
                 x=df_sel["as_of_date"], y=df_sel["occupancy"],
@@ -1737,8 +1883,8 @@ with tab_ov:
 
         with c3:
             if grain == "Daily":
-                st.markdown("**Day-of-Week Performance**")
-                st.caption("Average RevPAR · orange = opportunity nights below overall avg")
+                st.markdown('<div class="chart-header">Day-of-Week Performance</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">Avg RevPAR &nbsp;·&nbsp; Orange = opportunity nights below average</div>', unsafe_allow_html=True)
                 dow_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
                 tmp = df_sel.copy()
                 tmp["dow"] = tmp["as_of_date"].dt.strftime("%a")
@@ -1747,20 +1893,21 @@ with tab_ov:
                 colors  = [TEAL if v >= ov_avg else ORANGE for v in dow_avg.fillna(0)]
                 fig = go.Figure(go.Bar(
                     x=dow_avg.index, y=dow_avg.values,
-                    marker=dict(color=colors, line_width=0),
+                    marker=dict(color=colors, line_width=0, cornerradius=6),
                     hovertemplate=(
                         "<b>%{x}</b><br>Avg RevPAR: $%{y:.0f}<br>"
                         "<i>Click 'Opportunity Nights' for AI analysis</i><extra></extra>"
                     ),
                 ))
-                fig.add_hline(y=ov_avg, line_dash="dot", line_color="rgba(167,169,169,0.5)",
-                              annotation_text=f"Avg ${ov_avg:.0f}", annotation_position="top right")
+                fig.add_hline(y=ov_avg, line_dash="dash", line_color="rgba(167,169,169,0.45)",
+                              annotation_text=f"Avg ${ov_avg:.0f}", annotation_position="top right",
+                              annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
                 fig.update_layout(yaxis_tickprefix="$", showlegend=False)
                 st.plotly_chart(style_fig(fig), use_container_width=True)
             else:
                 # Monthly grain → show calendar-month seasonality using all monthly history
-                st.markdown("**Month-of-Year Seasonality**")
-                st.caption("Average RevPAR by calendar month · all available monthly history")
+                st.markdown('<div class="chart-header">Month-of-Year Seasonality</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">Avg RevPAR by calendar month &nbsp;·&nbsp; all available monthly history</div>', unsafe_allow_html=True)
                 month_order = ["Jan","Feb","Mar","Apr","May","Jun",
                                "Jul","Aug","Sep","Oct","Nov","Dec"]
                 tmp = df_monthly.copy()
@@ -1773,17 +1920,18 @@ with tab_ov:
                 ]
                 fig = go.Figure(go.Bar(
                     x=mon_avg.index, y=mon_avg.values,
-                    marker=dict(color=colors, line_width=0),
+                    marker=dict(color=colors, line_width=0, cornerradius=6),
                     hovertemplate="<b>%{x}</b><br>Avg RevPAR: $%{y:.0f}<extra></extra>",
                 ))
-                fig.add_hline(y=ov_avg, line_dash="dot", line_color="rgba(167,169,169,0.5)",
-                              annotation_text=f"Avg ${ov_avg:.0f}", annotation_position="top right")
+                fig.add_hline(y=ov_avg, line_dash="dash", line_color="rgba(167,169,169,0.45)",
+                              annotation_text=f"Avg ${ov_avg:.0f}", annotation_position="top right",
+                              annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
                 fig.update_layout(yaxis_tickprefix="$", showlegend=False)
                 st.plotly_chart(style_fig(fig), use_container_width=True)
 
         with c4:
-            st.markdown("**Supply vs. Demand**")
-            st.caption("Room inventory vs. rooms sold · gap = unrealized revenue")
+            st.markdown('<div class="chart-header">Supply vs. Demand</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">Room inventory vs. rooms sold &nbsp;·&nbsp; gap = unrealized revenue</div>', unsafe_allow_html=True)
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=df_sel["as_of_date"], y=df_sel["supply"],
@@ -1854,8 +2002,8 @@ with tab_tr:
             ), unsafe_allow_html=True)
     else:
         # ── YOY RevPAR bar (full width) ────────────────────────────────────────
-        st.markdown("**YOY RevPAR Change**")
-        st.caption("Year-over-year % change by month · teal = growth, red = decline")
+        st.markdown('<div class="chart-header">YOY RevPAR Change</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-caption">Year-over-year % change by month &nbsp;·&nbsp; teal = growth &nbsp;·&nbsp; red = decline</div>', unsafe_allow_html=True)
         yoy = monthly.dropna(subset=["revpar_yoy"])
         if yoy.empty:
             st.markdown(empty_state(
@@ -1866,9 +2014,10 @@ with tab_tr:
             bar_colors = [GREEN if v >= 0 else RED for v in yoy["revpar_yoy"]]
             fig = go.Figure(go.Bar(
                 x=yoy["month_label"], y=yoy["revpar_yoy"],
-                marker=dict(color=bar_colors, line_width=0),
+                marker=dict(color=bar_colors, line_width=0, cornerradius=5),
                 text=[f"{v:+.1f}%" for v in yoy["revpar_yoy"]],
-                textposition="outside", textfont=dict(size=10),
+                textposition="outside",
+                textfont=dict(size=10, family="Plus Jakarta Sans, Inter, sans-serif"),
                 hovertemplate=(
                     "<b>%{x}</b><br>YOY RevPAR: %{y:+.1f}%<br>"
                     "<i>Use 'Board Talking Points' for AI narrative</i><extra></extra>"
@@ -1881,8 +2030,8 @@ with tab_tr:
         c1, c2 = st.columns(2)
 
         with c1:
-            st.markdown("**Seasonality Index**")
-            st.caption("Monthly RevPAR ÷ period average · above 1.0 = peak season")
+            st.markdown('<div class="chart-header">Seasonality Index</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">Monthly RevPAR ÷ period average &nbsp;·&nbsp; above 1.0 = peak season</div>', unsafe_allow_html=True)
             if len(monthly) >= 6:
                 ttm_avg = monthly["revpar"].mean()
                 monthly["season_idx"] = monthly["revpar"] / ttm_avg
@@ -1907,8 +2056,8 @@ with tab_tr:
                 ), unsafe_allow_html=True)
 
         with c2:
-            st.markdown("**TBID Revenue Estimate**")
-            st.caption("Monthly at blended 1.25% · hover to compare periods")
+            st.markdown('<div class="chart-header">TBID Revenue Estimate</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">Monthly at blended 1.25% &nbsp;·&nbsp; hover to compare periods</div>', unsafe_allow_html=True)
             if not df_active.empty:
                 tmp = df_active.copy()
                 tmp["month"] = tmp["as_of_date"].dt.to_period("M")
@@ -1917,7 +2066,7 @@ with tab_tr:
                 mrev["tbid_m"] = mrev["revenue"] * 0.0125 / 1e6
                 fig = go.Figure(go.Bar(
                     x=mrev["month_label"], y=mrev["tbid_m"],
-                    marker=dict(color=TEAL, line_width=0),
+                    marker=dict(color=TEAL, line_width=0, cornerradius=5),
                     hovertemplate="<b>%{x}</b><br>Est. TBID: $%{y:.2f}M<extra></extra>",
                 ))
                 fig.update_layout(yaxis_tickprefix="$", yaxis_ticksuffix="M", showlegend=False)
@@ -1931,20 +2080,20 @@ with tab_tr:
         st.markdown("---")
 
         # ── Compression quarters ───────────────────────────────────────────────
-        st.markdown("**Occupancy Compression Days by Quarter**")
-        st.caption("Days with occ ≥ 80% and ≥ 90% · signals pricing power windows")
+        st.markdown('<div class="chart-header">Occupancy Compression Days by Quarter</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-caption">Days with occ ≥ 80% and ≥ 90% &nbsp;·&nbsp; signals pricing power windows</div>', unsafe_allow_html=True)
         if not df_comp.empty:
             fig = go.Figure()
             fig.add_trace(go.Bar(
                 name="Days ≥ 80% Occ",
                 x=df_comp["quarter"], y=df_comp["days_above_80_occ"],
-                marker=dict(color=TEAL, line_width=0),
+                marker=dict(color=TEAL, line_width=0, cornerradius=5),
                 hovertemplate="<b>%{x}</b><br>Days ≥ 80%%: %{y}<extra></extra>",
             ))
             fig.add_trace(go.Bar(
                 name="Days ≥ 90% Occ",
                 x=df_comp["quarter"], y=df_comp["days_above_90_occ"],
-                marker=dict(color=TEAL_LIGHT, line_width=0),
+                marker=dict(color=TEAL_LIGHT, line_width=0, cornerradius=5),
                 hovertemplate="<b>%{x}</b><br>Days ≥ 90%%: %{y}<br>"
                               "<i>High compression — rate increases justified</i><extra></extra>",
             ))
@@ -1959,9 +2108,9 @@ with tab_tr:
         st.markdown("---")
 
         # ── Full history line chart ─────────────────────────────────────────────
-        st.markdown("**RevPAR / ADR / Occupancy — Full History**")
+        st.markdown('<div class="chart-header">RevPAR / ADR / Occupancy — Full History</div>', unsafe_allow_html=True)
         src_label = "monthly STR exports" if grain == "Monthly" else "kpi_daily_summary"
-        st.caption(f"Monthly averages · all available data · source: {src_label}")
+        st.markdown(f'<div class="chart-caption">Monthly averages &nbsp;·&nbsp; all available data &nbsp;·&nbsp; source: {src_label}</div>', unsafe_allow_html=True)
         fig = make_subplots(specs=[[{"secondary_y": True}]])
         fig.add_trace(go.Scatter(
             x=monthly["month_label"], y=monthly["revpar"],
@@ -1984,8 +2133,14 @@ with tab_tr:
 # TAB 3 — EVENT IMPACT
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ev:
-    st.markdown("### Ohana Fest 2025 — Dana Point, CA")
-    st.caption("Source: Datafy visitor economy report · Pending live DB integration")
+    st.markdown(
+        '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.55rem;'
+        'font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">'
+        'Ohana Fest 2025 — Dana Point, CA</div>'
+        '<div style="font-size:12px;opacity:0.50;font-weight:500;margin-bottom:20px;">'
+        'Source: Datafy visitor economy report &nbsp;·&nbsp; Pending live DB integration</div>',
+        unsafe_allow_html=True,
+    )
 
     # Hero stats grid
     hero_stats = [
@@ -2004,8 +2159,8 @@ with tab_ev:
     st.markdown("---")
 
     # ── Event lift chart ───────────────────────────────────────────────────────
-    st.markdown("**ADR & Occupancy Lift — Ohana Fest 2024**")
-    st.caption("Event period vs. surrounding baseline · shaded = event weekend")
+    st.markdown('<div class="chart-header">ADR & Occupancy Lift — Ohana Fest 2024</div>', unsafe_allow_html=True)
+    st.markdown('<div class="chart-caption">Event period vs. surrounding baseline &nbsp;·&nbsp; shaded = event weekend</div>', unsafe_allow_html=True)
     event_days = [
         "Sep 15","Sep 16","Sep 17","Sep 18","Sep 19","Sep 20","Sep 21",
         "Sep 22","Sep 23","Sep 24","Sep 25","Sep 26","Sep 27","Sep 28","Sep 29",
@@ -2038,16 +2193,23 @@ with tab_ev:
     c1, c2 = st.columns(2)
 
     with c1:
-        st.markdown("**Top Feeder Markets**")
-        st.caption("Visitor origin by share of visitor days (Datafy 2025)")
+        st.markdown('<div class="chart-header">Top Feeder Markets</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-caption">Visitor origin by share of visitor days (Datafy 2025)</div>', unsafe_allow_html=True)
         cities = ["San Clemente","San Juan Cap.","Dana Point","Laguna Niguel",
                   "Ladera Ranch","Huntington Bch","San Diego","Mission Viejo",
                   "Los Angeles","Cap. Beach"]
         shares = [8.89,7.84,6.78,6.50,3.53,3.19,2.96,2.42,2.35,1.85]
+        # Gradient color scale — deeper teal for larger shares
+        _max_s = max(shares)
+        _bar_colors = [
+            f"rgba(33,{int(128 + 56*(v/_max_s))},{int(141 + 57*(v/_max_s))},0.90)"
+            for v in shares
+        ]
         fig = go.Figure(go.Bar(
             x=shares, y=cities, orientation="h",
-            marker=dict(color=TEAL, line_width=0),
+            marker=dict(color=_bar_colors, line_width=0, cornerradius=5),
             text=[f"{v:.1f}%" for v in shares], textposition="outside",
+            textfont=dict(size=11, family="Plus Jakarta Sans, Inter, sans-serif"),
             hovertemplate="<b>%{y}</b><br>Share: %{x:.2f}%<extra></extra>",
         ))
         fig.update_layout(yaxis=dict(autorange="reversed"),
@@ -2055,8 +2217,8 @@ with tab_ev:
         st.plotly_chart(style_fig(fig, height=340), use_container_width=True)
 
     with c2:
-        st.markdown("**Spending by Category**")
-        st.caption("Share of total destination spend during event weekend")
+        st.markdown('<div class="chart-header">Spending by Category</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-caption">Share of total destination spend during event weekend</div>', unsafe_allow_html=True)
         cats   = ["Dining & Nightlife","Accommodations","Grocery/Dept",
                   "Service Stations","Fast Food","Specialty Retail",
                   "Personal Care","Clothing","Leisure/Rec"]
@@ -2064,10 +2226,18 @@ with tab_ev:
         palette = [TEAL,"#2DA6B2",TEAL_LIGHT,ORANGE,"#A84B2F",
                    "#5E5240","#626C71","#A7A9A9",RED]
         fig = go.Figure(go.Pie(
-            labels=cats, values=values, hole=0.42,
-            marker=dict(colors=palette), textfont=dict(size=10),
+            labels=cats, values=values, hole=0.48,
+            marker=dict(colors=palette, line=dict(color="rgba(0,0,0,0)", width=0)),
+            textfont=dict(size=11, family="Plus Jakarta Sans, Inter, sans-serif"),
+            hovertemplate="<b>%{label}</b><br>%{value:.1f}% of destination spend<extra></extra>",
         ))
-        fig.update_layout(legend=dict(font_size=10, orientation="v"))
+        fig.update_layout(
+            legend=dict(font_size=10, orientation="v",
+                        font=dict(family="Plus Jakarta Sans, Inter, sans-serif")),
+            annotations=[dict(text="Spend<br>Mix", x=0.5, y=0.5, font_size=13,
+                              font_family="Plus Jakarta Sans, sans-serif",
+                              font_color="#21808D", showarrow=False)],
+        )
         st.plotly_chart(style_fig(fig, height=340), use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2077,8 +2247,13 @@ with tab_dl:
     col_a, col_b = st.columns([3, 1])
 
     with col_a:
-        st.markdown("### Load Log")
-        st.caption("ETL pipeline audit trail from load_log")
+        st.markdown(
+            '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.2rem;'
+            'font-weight:800;letter-spacing:-0.025em;margin-bottom:4px;">Load Log</div>'
+            '<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:10px;">'
+            'ETL pipeline audit trail from load_log</div>',
+            unsafe_allow_html=True,
+        )
         if not df_log.empty:
             # Format for display: rename columns, add row count formatting
             _log_display = df_log.copy()
@@ -2106,7 +2281,11 @@ with tab_dl:
             ), unsafe_allow_html=True)
 
     with col_b:
-        st.markdown("### Row Counts")
+        st.markdown(
+            '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.2rem;'
+            'font-weight:800;letter-spacing:-0.025em;margin-bottom:10px;">Row Counts</div>',
+            unsafe_allow_html=True,
+        )
         # Only display DB table counts; exclude internal per-grain helper keys
         _TABLE_LABELS = {
             "fact_str_metrics":          "STR Metrics",
@@ -2121,8 +2300,13 @@ with tab_dl:
     st.markdown("---")
 
     # ── Data Source Health ─────────────────────────────────────────────────────
-    st.markdown("### Data Source Health")
-    st.caption("Live row counts and date coverage from analytics.sqlite")
+    st.markdown(
+        '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.2rem;'
+        'font-weight:800;letter-spacing:-0.025em;margin-bottom:4px;">Data Source Health</div>'
+        '<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:12px;">'
+        'Live row counts and date coverage from analytics.sqlite</div>',
+        unsafe_allow_html=True,
+    )
     _sc1, _sc2 = st.columns(2)
 
     with _sc1:
@@ -2182,8 +2366,13 @@ with tab_dl:
         if _dow_f and len(_dow_f) < 7:
             _adv_label = f" · {', '.join(_dow_f)}"
 
-    st.markdown("### Recent Metric Samples")
-    st.caption(f"Last 10 dates in selected window · grain={grain.lower()}{_adv_label}")
+    st.markdown(
+        '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.2rem;'
+        'font-weight:800;letter-spacing:-0.025em;margin-bottom:4px;">Recent Metric Samples</div>'
+        f'<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:10px;">'
+        f'Last 10 dates in selected window &nbsp;·&nbsp; grain={grain.lower()}{_adv_label}</div>',
+        unsafe_allow_html=True,
+    )
     if not df_sel.empty:
         sample = df_sel.tail(10).sort_values("as_of_date", ascending=False).copy()
         _date_fmt = "%b %Y" if grain == "Monthly" else "%b %d, %Y"
