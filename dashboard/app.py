@@ -195,7 +195,42 @@ in which case, say so once and move to what IS clear.
 - Frame findings in terms relevant to the audience: TBID board (revenue/ROI), hotel GMs (rate/occ), \
   city council (TOT/economic impact), or destination marketing staff (demand/campaign targeting)
 - Anchor every recommendation in the data provided, not in generic best practices
-- End with a single, clear, time-bound call to action that a board member could act on immediately\
+- End with a single, clear, time-bound call to action that a board member could act on immediately
+
+## Full Database Schema (analytics.sqlite)
+
+The VDP brain contains these tables — all are available for your analysis:
+
+**STR & KPI Tables (Layer 1 — Truth):**
+- `fact_str_metrics` — Long-format daily/monthly STR hotel data (supply, demand, revenue, occ, adr, revpar).
+  Columns: source, grain, property_name, market, submarket, as_of_date, metric_name, metric_value, unit.
+- `kpi_daily_summary` — Wide-format daily KPIs with YOY deltas and compression flags.
+  Columns: as_of_date, occ_pct, adr, revpar, occ_yoy, adr_yoy, revpar_yoy, is_occ_80, is_occ_90.
+- `kpi_compression_quarterly` — Days per quarter above 80% / 90% occupancy.
+  Columns: quarter (YYYY-Qn), days_above_80_occ, days_above_90_occ.
+
+**Datafy Visitor Economy Tables (Layer 1 — Truth):**
+- `datafy_overview_kpis` — Annual visitor overview: total_trips, overnight_pct, out_of_state_vd_pct, \
+  repeat_visitors_pct, avg_length_of_stay_days.
+- `datafy_overview_dma` — Feeder market breakdown: dma, visitor_days_share_pct, spending_share_pct, avg_spend_usd.
+- `datafy_overview_demographics` — Visitor demographics by segment.
+- `datafy_overview_category_spending` — Spending by category (accommodation, dining, retail, etc.).
+- `datafy_overview_cluster_visitation` — Visitation by area cluster type.
+- `datafy_overview_airports` — Origin airports by passenger share.
+- `datafy_attribution_website_kpis` — Website-attributed trips and estimated impact.
+- `datafy_attribution_website_top_markets`, `_dma`, `_channels`, `_clusters`, `_demographics` — \
+  Website attribution breakdowns.
+- `datafy_attribution_media_kpis` — Media campaign: attributable_trips, total_impact_usd, ROAS.
+- `datafy_attribution_media_top_markets` — Media attribution by market.
+- `datafy_social_traffic_sources` — GA4 traffic sources: sessions, engagement.
+- `datafy_social_audience_overview` — Website audience KPIs.
+- `datafy_social_top_pages` — Top pages by view count.
+
+**Intelligence Tables (Generated):**
+- `insights_daily` — Forward-looking insights for 4 audiences (dmo, city, visitor, resident). \
+  Columns: as_of_date, audience, category, headline, body, metric_basis (JSON), priority, horizon_days.
+- `table_relationships` — Documents all cross-table joins and derivations.
+- `load_log` — ETL pipeline audit trail.\
 """
 
 # ─── Session state ────────────────────────────────────────────────────────────
@@ -648,13 +683,56 @@ def load_str_monthly() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=300)
+def load_insights(audience: str | None = None) -> pd.DataFrame:
+    """Load today's (or most recent) forward-looking insights from insights_daily."""
+    conn = get_connection()
+    try:
+        if audience:
+            df = pd.read_sql_query(
+                "SELECT audience, category, headline, body, priority, horizon_days, "
+                "       metric_basis, data_sources, as_of_date "
+                "FROM insights_daily "
+                "WHERE audience = ? "
+                "ORDER BY as_of_date DESC, priority ASC",
+                conn, params=(audience,),
+            )
+        else:
+            df = pd.read_sql_query(
+                "SELECT audience, category, headline, body, priority, horizon_days, "
+                "       metric_basis, data_sources, as_of_date "
+                "FROM insights_daily "
+                "ORDER BY as_of_date DESC, audience ASC, priority ASC",
+                conn,
+            )
+        # Keep only the latest run date per audience+category
+        if not df.empty:
+            df = df.sort_values("as_of_date", ascending=False)
+            df = df.drop_duplicates(subset=["audience", "category"], keep="first")
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
 def get_table_counts() -> dict:
     conn = get_connection()
     counts = {}
-    for t in ["fact_str_metrics", "kpi_daily_summary",
-              "kpi_compression_quarterly", "load_log"]:
+    all_tables = [
+        "fact_str_metrics", "kpi_daily_summary", "kpi_compression_quarterly",
+        "load_log", "insights_daily", "table_relationships",
+        "datafy_overview_kpis", "datafy_overview_dma", "datafy_overview_demographics",
+        "datafy_overview_category_spending", "datafy_overview_cluster_visitation",
+        "datafy_overview_airports",
+        "datafy_attribution_website_kpis", "datafy_attribution_website_top_markets",
+        "datafy_attribution_website_dma", "datafy_attribution_website_channels",
+        "datafy_attribution_website_clusters", "datafy_attribution_website_demographics",
+        "datafy_attribution_media_kpis", "datafy_attribution_media_top_markets",
+        "datafy_social_traffic_sources", "datafy_social_audience_overview",
+        "datafy_social_top_pages",
+    ]
+    for t in all_tables:
         try:
-            row = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()
+            row = conn.execute(f"SELECT COUNT(*) FROM \"{t}\"").fetchone()
             counts[t] = row[0] if row else 0
         except Exception:
             counts[t] = "—"
@@ -1724,8 +1802,8 @@ st.markdown(
 )
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
-tab_ov, tab_tr, tab_ev, tab_dl = st.tabs(
-    ["📊 Overview", "📈 Trends", "🎪 Event Impact", "🗂 Data Log"]
+tab_ov, tab_tr, tab_fo, tab_ev, tab_dl = st.tabs(
+    ["📊 Overview", "📈 Trends", "🔭 Forward Outlook", "🎪 Event Impact", "🗂 Data Log"]
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2298,7 +2376,160 @@ with tab_tr:
         st.plotly_chart(style_fig(fig, height=300), use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 3 — EVENT IMPACT
+# TAB 3 — FORWARD OUTLOOK
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_fo:
+    # ── Header ─────────────────────────────────────────────────────────────────
+    st.markdown(
+        '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.55rem;'
+        'font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">'
+        'Forward Outlook</div>'
+        '<div style="font-size:12px;opacity:0.50;font-weight:500;margin-bottom:20px;">'
+        'Daily forward-looking insights from analytics.sqlite — updated every pipeline run</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Load all insights
+    df_insights_all = load_insights()
+
+    # ── Audience tabs ────────────────────────────────────────────────────────
+    AUDIENCE_CONFIG = {
+        "dmo":      ("🏢 DMO / TBID Board",    TEAL,       "Destination Marketing & Revenue Strategy"),
+        "city":     ("🏛 City of Dana Point",   "#4A6FA5",  "TOT Revenue, Infrastructure & Economic Policy"),
+        "visitor":  ("✈️ Visitors",              ORANGE,     "Trip Planning, Rates & Events"),
+        "resident": ("🏡 Residents",             "#6A4F8A",  "Community Impact & Local Access"),
+    }
+
+    aud_tabs = st.tabs([cfg[0] for cfg in AUDIENCE_CONFIG.values()])
+
+    for (audience, (label, color, subtitle)), aud_tab in zip(
+        AUDIENCE_CONFIG.items(), aud_tabs
+    ):
+        with aud_tab:
+            st.markdown(
+                f'<div style="font-size:12px;opacity:0.55;margin-bottom:16px;">{subtitle}</div>',
+                unsafe_allow_html=True,
+            )
+
+            df_aud = df_insights_all[df_insights_all["audience"] == audience] if not df_insights_all.empty else pd.DataFrame()
+
+            if df_aud.empty:
+                st.markdown(empty_state(
+                    "🔭", f"No insights yet for {label}.",
+                    "Run the pipeline to generate forward-looking insights.",
+                ), unsafe_allow_html=True)
+                continue
+
+            # Sort by priority ascending (1 = highest)
+            df_aud = df_aud.sort_values("priority")
+
+            PRIORITY_STYLE = {1: "insight-positive", 2: "insight-positive",
+                              3: "insight-warning",  4: "insight-info",
+                              5: "insight-info"}
+
+            # Render in a 2-column grid
+            rows = df_aud.to_dict("records")
+            col_pairs = [rows[i:i+2] for i in range(0, len(rows), 2)]
+
+            for pair in col_pairs:
+                cols = st.columns(len(pair))
+                for col, row in zip(cols, pair):
+                    style_cls = PRIORITY_STYLE.get(row.get("priority", 5), "insight-info")
+                    horizon   = row.get("horizon_days", 30)
+                    category  = row.get("category", "").replace("_", " ").title()
+                    sources   = row.get("data_sources", "")
+                    as_of     = row.get("as_of_date", "")
+
+                    with col:
+                        st.markdown(
+                            f'<div class="insight-card {style_cls}">'
+                            f'<div class="insight-title">{row["headline"]}</div>'
+                            f'<p class="insight-body">{row["body"]}</p>'
+                            f'<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
+                            f'<span style="font-size:10px;opacity:0.5;background:rgba(255,255,255,0.07);'
+                            f'padding:2px 8px;border-radius:99px;">{category}</span>'
+                            f'<span style="font-size:10px;opacity:0.5;background:rgba(255,255,255,0.07);'
+                            f'padding:2px 8px;border-radius:99px;">⏱ {horizon}d outlook</span>'
+                            f'<span style="font-size:10px;opacity:0.40;'
+                            f'padding:2px 4px;">as of {as_of}</span>'
+                            f'</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
+            # Data sources footnote
+            all_sources = set()
+            for row in rows:
+                if row.get("data_sources"):
+                    all_sources.update(row["data_sources"].split(","))
+            if all_sources:
+                st.caption(f"Data sources: {', '.join(sorted(s.strip() for s in all_sources if s.strip()))}")
+
+    st.markdown("---")
+
+    # ── All-table relationship map ───────────────────────────────────────────
+    with st.expander("🗺 Brain Architecture — Table Relationships", expanded=False):
+        st.markdown(
+            '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1rem;'
+            'font-weight:800;margin-bottom:8px;">All Table Relationships in analytics.sqlite</div>',
+            unsafe_allow_html=True,
+        )
+        try:
+            conn_ro = get_connection()
+            df_rels = pd.read_sql_query(
+                "SELECT table_a, table_b, relationship_type, join_key, description "
+                "FROM table_relationships ORDER BY table_a, relationship_type",
+                conn_ro,
+            )
+            if not df_rels.empty:
+                df_rels.columns = ["Table A", "Table B", "Relationship", "Join Key", "Description"]
+                st.dataframe(df_rels, use_container_width=True, hide_index=True)
+            else:
+                st.caption("Run the pipeline to populate table_relationships.")
+        except Exception as e:
+            st.caption(f"table_relationships not yet available: {e}")
+
+    # ── DB brain snapshot ────────────────────────────────────────────────────
+    with st.expander("🧠 Full Database Inventory", expanded=False):
+        st.markdown(
+            '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1rem;'
+            'font-weight:800;margin-bottom:8px;">All Tables in analytics.sqlite</div>',
+            unsafe_allow_html=True,
+        )
+        _brain_tables = {
+            "fact_str_metrics":                    "STR hotel metrics (source of truth)",
+            "kpi_daily_summary":                   "Derived daily KPIs + YOY deltas",
+            "kpi_compression_quarterly":           "Compression days per quarter",
+            "load_log":                            "Pipeline ETL audit trail",
+            "insights_daily":                      "Forward-looking insights (all audiences)",
+            "table_relationships":                 "Cross-table relationship map",
+            "datafy_overview_kpis":                "Datafy annual visitor overview KPIs",
+            "datafy_overview_dma":                 "Datafy feeder market DMA breakdown",
+            "datafy_overview_demographics":        "Datafy visitor demographics",
+            "datafy_overview_category_spending":   "Datafy visitor spending by category",
+            "datafy_overview_cluster_visitation":  "Datafy visitation by cluster/area",
+            "datafy_overview_airports":            "Datafy origin airports",
+            "datafy_attribution_website_kpis":     "Website-attributed trip KPIs",
+            "datafy_attribution_website_top_markets": "Website attribution top markets",
+            "datafy_attribution_website_dma":      "Website attribution DMA breakdown",
+            "datafy_attribution_website_channels": "Website attribution by channel",
+            "datafy_attribution_website_clusters": "Website attribution by cluster",
+            "datafy_attribution_website_demographics": "Website attribution demographics",
+            "datafy_attribution_media_kpis":       "Media campaign attribution KPIs",
+            "datafy_attribution_media_top_markets":"Media attribution top markets",
+            "datafy_social_traffic_sources":       "Social/web GA4 traffic sources",
+            "datafy_social_audience_overview":     "Social/web audience overview",
+            "datafy_social_top_pages":             "Top website pages by views",
+        }
+        _brain_rows = [
+            {"Table": t, "Description": d, "Row Count": counts.get(t, "—")}
+            for t, d in _brain_tables.items()
+        ]
+        st.dataframe(pd.DataFrame(_brain_rows), use_container_width=True, hide_index=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 4 — EVENT IMPACT
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ev:
     st.markdown(
@@ -2409,7 +2640,7 @@ with tab_ev:
         st.plotly_chart(style_fig(fig, height=340), use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — DATA LOG
+# TAB 5 — DATA LOG
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_dl:
     col_a, col_b = st.columns([3, 1])
@@ -2454,11 +2685,13 @@ with tab_dl:
             'font-weight:800;letter-spacing:-0.025em;margin-bottom:10px;">Row Counts</div>',
             unsafe_allow_html=True,
         )
-        # Only display DB table counts; exclude internal per-grain helper keys
+        # Core tables
         _TABLE_LABELS = {
             "fact_str_metrics":          "STR Metrics",
             "kpi_daily_summary":         "KPI Daily",
             "kpi_compression_quarterly": "Compression Qtrs",
+            "insights_daily":            "Insights",
+            "table_relationships":       "Table Rels",
             "load_log":                  "Load Log",
         }
         for _key, _label in _TABLE_LABELS.items():
@@ -2503,8 +2736,12 @@ with tab_dl:
     with _sc2:
         _kpi_ct  = counts.get("kpi_daily_summary", 0)
         _cmp_ct  = counts.get("kpi_compression_quarterly", 0)
+        _ins_ct  = counts.get("insights_daily", 0)
+        _rel_ct  = counts.get("table_relationships", 0)
         _kpi_dot = "🟢" if isinstance(_kpi_ct, int) and _kpi_ct > 0 else "⚫"
         _cmp_dot = "🟢" if isinstance(_cmp_ct, int) and _cmp_ct > 0 else "⚫"
+        _ins_dot = "🟢" if isinstance(_ins_ct, int) and _ins_ct > 0 else "⚫"
+        _rel_dot = "🟢" if isinstance(_rel_ct, int) and _rel_ct > 0 else "⚫"
         st.markdown(source_card(
             _kpi_dot, "KPI Daily Summary", "kpi_daily_summary",
             f"{_kpi_ct:,}" if isinstance(_kpi_ct, int) else _kpi_ct,
@@ -2514,8 +2751,29 @@ with tab_dl:
             f"{_cmp_ct:,}" if isinstance(_cmp_ct, int) else _cmp_ct,
         ), unsafe_allow_html=True)
         st.markdown(source_card(
+            _ins_dot, "Forward Insights", "insights_daily · all audiences",
+            f"{_ins_ct:,}" if isinstance(_ins_ct, int) else _ins_ct,
+        ), unsafe_allow_html=True)
+        st.markdown(source_card(
+            _rel_dot, "Table Relationships", "table_relationships · brain map",
+            f"{_rel_ct:,}" if isinstance(_rel_ct, int) else _rel_ct,
+        ), unsafe_allow_html=True)
+
+    _sc3, _sc4 = st.columns(2)
+    with _sc3:
+        # Datafy tables
+        _dfy_tables = [t for t in counts if t.startswith("datafy_")]
+        _dfy_total  = sum(counts[t] for t in _dfy_tables if isinstance(counts[t], int))
+        _dfy_dot    = "🟢" if _dfy_total > 0 else "⚫"
+        st.markdown(source_card(
+            _dfy_dot, "Datafy Visitor Economy",
+            f"{len(_dfy_tables)} tables · visitor economy data",
+            f"{_dfy_total:,}" if _dfy_total > 0 else "—",
+        ), unsafe_allow_html=True)
+        st.markdown(source_card(
             "⚫", "CoStar", "source=costar · pending export", "—",
         ), unsafe_allow_html=True)
+    with _sc4:
         st.markdown(source_card(
             "⚫", "FRED / CA TOT / JWA", "external context · not yet loaded", "—",
         ), unsafe_allow_html=True)

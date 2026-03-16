@@ -1,15 +1,19 @@
 """
 run_pipeline.py
 ---------------
-Orchestrates the full STR data pipeline in order:
+Orchestrates the full analytics pipeline in order:
 
-  1. load_str_daily_sqlite.py  — ingest STR daily export into fact_str_metrics
-  2. compute_kpis.py           — pivot fact_str_metrics into kpi_daily_summary
+  1. load_str_daily_sqlite.py   — ingest STR daily export into fact_str_metrics
+  2. load_str_monthly_sqlite.py — ingest STR monthly export into fact_str_metrics
+  3. load_datafy_reports.py     — ingest Datafy visitor economy data (non-fatal if missing)
+  4. compute_kpis.py            — pivot fact_str_metrics into kpi_daily_summary
+  5. compute_insights.py        — generate forward-looking insights for all 4 audiences
 
 Each step is logged to logs/pipeline.log as:
   YYYY-MM-DD HH:MM:SS | STEP | OK/FAIL | message
 
-Exit code is 0 only if every step succeeds; nonzero on first failure.
+FATAL steps (1, 2, 4, 5): abort pipeline on failure.
+NON-FATAL steps (3): log failure and continue.
 
 Run:
     python3 scripts/run_pipeline.py
@@ -28,10 +32,13 @@ BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 LOG_PATH     = os.path.join(PROJECT_ROOT, "logs", "pipeline.log")
 
+# (step_name, script_path, fatal_on_failure)
 STEPS = [
-    ("load_str_daily",   os.path.join(BASE_DIR, "load_str_daily_sqlite.py")),
-    ("load_str_monthly", os.path.join(BASE_DIR, "load_str_monthly_sqlite.py")),
-    ("compute_kpis",     os.path.join(BASE_DIR, "compute_kpis.py")),
+    ("load_str_daily",    os.path.join(BASE_DIR, "load_str_daily_sqlite.py"),  True),
+    ("load_str_monthly",  os.path.join(BASE_DIR, "load_str_monthly_sqlite.py"), True),
+    ("load_datafy",       os.path.join(BASE_DIR, "load_datafy_reports.py"),    False),
+    ("compute_kpis",      os.path.join(BASE_DIR, "compute_kpis.py"),           True),
+    ("compute_insights",  os.path.join(BASE_DIR, "compute_insights.py"),       True),
 ]
 
 
@@ -62,10 +69,11 @@ def run_step(step_name: str, script_path: str) -> bool:
 
     Returns True on success (exit code 0), False on any failure.
     Captured stdout/stderr are included in the log message.
+    If the script file does not exist, logs SKIP and returns True (non-blocking).
     """
     if not os.path.exists(script_path):
-        log(step_name, "FAIL", f"Script not found: {script_path}")
-        return False
+        log(step_name, "SKIP", f"Script not found (non-fatal): {script_path}")
+        return True   # allow pipeline to continue
 
     try:
         result = subprocess.run(
@@ -100,11 +108,14 @@ def run_step(step_name: str, script_path: str) -> bool:
 def main() -> None:
     log("pipeline", "OK  ", "=== pipeline start ===")
 
-    for step_name, script_path in STEPS:
+    for step_name, script_path, fatal in STEPS:
         success = run_step(step_name, script_path)
         if not success:
-            log("pipeline", "FAIL", f"pipeline aborted at step '{step_name}'")
-            sys.exit(1)
+            if fatal:
+                log("pipeline", "FAIL", f"pipeline aborted at step '{step_name}'")
+                sys.exit(1)
+            else:
+                log("pipeline", "WARN", f"non-fatal failure at '{step_name}' — continuing")
 
     log("pipeline", "OK  ", "=== pipeline complete ===")
 
