@@ -1,0 +1,7 @@
+forecast_as_of_date,forecast_period_start,forecast_period_end,period_label,forecast_occ_pct,forecast_adr_usd,forecast_revpar_usd,forecast_room_revenue_usd,prior_year_occ_pct,prior_year_adr_usd,prior_year_revpar_usd,prior_year_room_revenue_usd,yoy_occ_pp_chg,yoy_adr_pct_chg,yoy_revpar_pct_chg,confidence_level,report_source
+2025-10-01,2026-01-01,2026-03-31,Q1-2026,67.8,338.40,229.44,27986880,65.9,342.10,225.44,27490235,1.9,-1.1,1.8,Moderate,STR Market Forecast Report Q4-2025
+2025-10-01,2026-04-01,2026-06-30,Q2-2026,84.1,441.20,370.93,45292860,83.0,430.80,357.56,43659744,1.1,2.4,3.7,Moderate,STR Market Forecast Report Q4-2025
+2025-10-01,2026-07-01,2026-09-30,Q3-2026,92.8,554.60,514.67,62829540,91.7,527.40,483.63,59052504,1.1,5.2,6.4,High,STR Market Forecast Report Q4-2025
+2025-10-01,2026-10-01,2026-12-31,Q4-2026,75.8,412.80,312.90,38173620,73.9,398.20,294.27,35918856,1.9,3.7,6.3,Moderate,STR Market Forecast Report Q4-2025
+2025-10-01,2026-01-01,2026-12-31,FY-2026,80.1,437.30,350.38,174282900,78.5,424.60,333.27,166121339,1.6,3.0,5.1,Moderate,STR Market Forecast Report Q4-2025
+2025-10-01,2025-01-01,2025-12-31,FY-2025,79.8,424.60,338.83,163866120,77.9,411.60,320.54,155150400,1.9,3.2,5.7,Actual/Projected,STR Market Forecast Report Q4-2025
