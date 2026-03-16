@@ -766,6 +766,27 @@ def get_table_counts() -> dict:
             counts[t] = row[0] if row else 0
         except Exception:
             counts[t] = "—"
+    # Datafy tables — sum all datafy_* tables for total row count
+    _datafy_tables = [
+        "datafy_overview_kpis", "datafy_overview_dma", "datafy_overview_airports",
+        "datafy_overview_demographics", "datafy_overview_category_spending",
+        "datafy_overview_cluster_visitation",
+        "datafy_attribution_media_kpis", "datafy_attribution_media_top_markets",
+        "datafy_attribution_website_kpis", "datafy_attribution_website_channels",
+        "datafy_attribution_website_clusters", "datafy_attribution_website_demographics",
+        "datafy_attribution_website_dma", "datafy_attribution_website_top_markets",
+        "datafy_social_audience_overview", "datafy_social_top_pages",
+        "datafy_social_traffic_sources",
+    ]
+    _df_total = 0
+    for t in _datafy_tables:
+        try:
+            row = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()
+            counts[t] = row[0] if row else 0
+            _df_total += counts[t]
+        except Exception:
+            counts[t] = 0
+    counts["datafy_total_rows"] = _df_total
     # Per-grain breakdowns (used by sidebar status and Data Source Health cards)
     for grain_val, key in [("daily", "str_daily_rows"), ("monthly", "str_monthly_rows")]:
         try:
@@ -1791,7 +1812,10 @@ with st.sidebar:
     st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {_d_label}")
     st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_label}")
     st.markdown(f"{_cs_dot} CoStar Market &nbsp;·&nbsp; {_cs_label}")
-    st.markdown(f"⚫ Datafy &nbsp;·&nbsp; Not connected")
+    _df_rows  = counts.get("datafy_total_rows", 0)
+    _df_dot   = "🟢" if isinstance(_df_rows, int) and _df_rows > 0 else "⚫"
+    _df_label = f"{_df_rows:,} rows" if isinstance(_df_rows, int) and _df_rows > 0 else "No data"
+    st.markdown(f"{_df_dot} Datafy &nbsp;·&nbsp; {_df_label}")
     st.caption(f"Last ETL run: {last_log}")
 
     if not df_daily.empty:
@@ -2487,7 +2511,7 @@ with tab_ev:
         'font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">'
         'Ohana Fest 2025 — Dana Point, CA</div>'
         '<div style="font-size:12px;opacity:0.50;font-weight:500;margin-bottom:20px;">'
-        'Source: Datafy visitor economy report &nbsp;·&nbsp; Pending live DB integration</div>',
+        'Source: Datafy visitor economy report &nbsp;·&nbsp; Live data from analytics.sqlite</div>',
         unsafe_allow_html=True,
     )
 
@@ -3335,8 +3359,25 @@ with tab_dl:
             _cmp_dot, "Compression Quarters", "kpi_compression_quarterly",
             f"{_cmp_ct:,}" if isinstance(_cmp_ct, int) else _cmp_ct,
         ), unsafe_allow_html=True)
+        _cs_total = sum(
+            counts.get(t, 0) for t in [
+                "costar_monthly_performance", "costar_market_snapshot",
+                "costar_supply_pipeline", "costar_chain_scale_breakdown",
+                "costar_competitive_set",
+            ] if isinstance(counts.get(t, 0), int)
+        )
+        _cs_data_dot = "🟢" if _cs_total > 0 else "⚫"
         st.markdown(source_card(
-            "⚫", "CoStar", "source=costar · pending export", "—",
+            _cs_data_dot, "CoStar",
+            f"source=costar · {_cs_total:,} records across 5 tables",
+            f"{_cs_total:,}" if _cs_total > 0 else "—",
+        ), unsafe_allow_html=True)
+        _df_total_dl = counts.get("datafy_total_rows", 0)
+        _df_dl_dot   = "🟢" if isinstance(_df_total_dl, int) and _df_total_dl > 0 else "⚫"
+        st.markdown(source_card(
+            _df_dl_dot, "Datafy",
+            f"source=datafy · visitor economy · {_df_total_dl:,} records" if _df_total_dl > 0 else "source=datafy · visitor economy",
+            f"{_df_total_dl:,}" if isinstance(_df_total_dl, int) and _df_total_dl > 0 else "—",
         ), unsafe_allow_html=True)
         st.markdown(source_card(
             "⚫", "FRED / CA TOT / JWA", "external context · not yet loaded", "—",
