@@ -1,0 +1,33 @@
+year,quarter,segment,room_nights_sold,occ_pct,adr_usd,revpar_usd,share_of_total_demand_pct,yoy_demand_chg_pct,yoy_adr_chg_pct,report_source
+2024,Q1,Transient Leisure,76500,66.2,348.60,230.77,62.8,2.1,5.4,STR Market Hospitality Report
+2024,Q1,Transient Business,18200,66.2,298.40,197.62,14.9,0.8,2.1,STR Market Hospitality Report
+2024,Q1,Group,16800,66.2,362.10,239.79,13.8,3.5,6.8,STR Market Hospitality Report
+2024,Q1,Contract/Discount,10400,66.2,189.20,125.25,8.5,-1.2,-0.8,STR Market Hospitality Report
+2024,Q2,Transient Leisure,88900,81.4,412.30,335.61,62.1,3.8,7.2,STR Market Hospitality Report
+2024,Q2,Transient Business,21200,81.4,348.70,283.84,14.8,1.2,3.4,STR Market Hospitality Report
+2024,Q2,Group,20100,81.4,428.50,348.79,14.0,4.8,8.1,STR Market Hospitality Report
+2024,Q2,Contract/Discount,13100,81.4,201.40,163.86,9.2,-0.9,-0.3,STR Market Hospitality Report
+2024,Q3,Transient Leisure,102400,90.0,501.80,451.62,61.6,2.4,9.8,STR Market Hospitality Report
+2024,Q3,Transient Business,20800,90.0,398.20,358.38,12.5,0.4,4.2,STR Market Hospitality Report
+2024,Q3,Group,24600,90.0,532.10,478.89,14.8,5.2,12.3,STR Market Hospitality Report
+2024,Q3,Contract/Discount,18400,90.0,195.60,176.04,11.1,-1.8,-1.1,STR Market Hospitality Report
+2024,Q4,Transient Leisure,73800,72.1,381.20,274.85,62.4,2.0,6.1,STR Market Hospitality Report
+2024,Q4,Transient Business,16900,72.1,312.80,225.53,14.3,0.6,2.8,STR Market Hospitality Report
+2024,Q4,Group,17200,72.1,398.40,287.25,14.5,3.8,7.4,STR Market Hospitality Report
+2024,Q4,Contract/Discount,10400,72.1,192.30,138.65,8.8,-1.1,-0.6,STR Market Hospitality Report
+2025,Q1,Transient Leisure,79800,68.8,362.40,249.33,63.1,4.3,3.9,STR Market Hospitality Report
+2025,Q1,Transient Business,18700,68.8,308.20,212.04,14.8,2.7,3.3,STR Market Hospitality Report
+2025,Q1,Group,17400,68.8,378.90,260.65,13.7,3.6,4.6,STR Market Hospitality Report
+2025,Q1,Contract/Discount,10600,68.8,194.80,134.02,8.4,1.9,2.9,STR Market Hospitality Report
+2025,Q2,Transient Leisure,92400,83.0,430.80,357.56,62.8,3.9,4.5,STR Market Hospitality Report
+2025,Q2,Transient Business,21900,83.0,361.60,300.13,14.9,3.3,3.7,STR Market Hospitality Report
+2025,Q2,Group,20900,83.0,447.20,371.18,14.2,4.0,4.4,STR Market Hospitality Report
+2025,Q2,Contract/Discount,12000,83.0,208.40,173.02,8.1,-8.4,3.5,STR Market Hospitality Report
+2025,Q3,Transient Leisure,105600,91.7,527.40,483.63,61.8,3.1,5.1,STR Market Hospitality Report
+2025,Q3,Transient Business,21400,91.7,418.20,383.49,12.5,2.9,5.0,STR Market Hospitality Report
+2025,Q3,Group,25600,91.7,558.60,512.23,15.0,4.1,5.0,STR Market Hospitality Report
+2025,Q3,Contract/Discount,18600,91.7,201.40,184.68,10.7,1.1,3.0,STR Market Hospitality Report
+2025,Q4,Transient Leisure,76200,73.9,398.20,294.27,62.5,3.3,4.5,STR Market Hospitality Report
+2025,Q4,Transient Business,17500,73.9,323.70,239.21,14.3,3.6,3.5,STR Market Hospitality Report
+2025,Q4,Group,17900,73.9,415.90,307.35,14.7,4.1,4.4,STR Market Hospitality Report
+2025,Q4,Contract/Discount,10600,73.9,198.60,146.77,8.5,1.9,3.3,STR Market Hospitality Report

@@ -1,0 +1,13 @@
+year,property_class,property_count,total_rooms,occ_pct,adr_usd,revpar_usd,room_revenue_usd,supply_room_nights,demand_room_nights,share_of_market_revenue_pct,report_source
+2024,Luxury,3,498,82.4,612.40,504.62,91636944,181770,149817,47.8,STR Market Hospitality Report
+2024,Upper Upscale,3,412,80.1,428.80,343.47,51849456,150380,120455,27.0,STR Market Hospitality Report
+2024,Upscale,4,386,74.8,298.60,223.35,31571040,140890,105386,16.5,STR Market Hospitality Report
+2024,Upper Midscale,2,184,69.2,198.40,137.29,9248688,67160,46475,4.8,STR Market Hospitality Report
+2024,Midscale/Economy,2,138,61.4,142.80,87.68,4429584,50370,30927,2.3,STR Market Hospitality Report
+2024,Independent Boutique,2,162,78.6,389.40,306.27,18130044,59130,46476,9.4,STR Market Hospitality Report
+2025,Luxury,3,498,84.2,645.10,543.17,98600046,181770,153060,48.4,STR Market Hospitality Report
+2025,Upper Upscale,3,412,82.0,449.80,368.84,55642128,150380,123312,27.3,STR Market Hospitality Report
+2025,Upscale,4,386,76.9,313.20,240.85,34038480,140890,108344,16.7,STR Market Hospitality Report
+2025,Upper Midscale,2,184,71.4,207.60,148.23,9987192,67160,47953,4.9,STR Market Hospitality Report
+2025,Midscale/Economy,2,138,63.2,149.40,94.42,4771776,50370,31834,2.3,STR Market Hospitality Report
+2025,Independent Boutique,2,162,80.8,412.60,333.38,19727736,59130,47774,9.7,STR Market Hospitality Report

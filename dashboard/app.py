@@ -648,6 +648,84 @@ def load_str_monthly() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=300)
+def load_hosp_market_kpis() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        df = pd.read_sql_query(
+            "SELECT * FROM hosp_market_kpis ORDER BY year, month", conn
+        )
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_hosp_pipeline() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM hosp_market_pipeline ORDER BY expected_open_date", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_hosp_segments() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM hosp_market_segments ORDER BY year, quarter, segment", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_hosp_competitive() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM hosp_market_competitive_index ORDER BY year, month", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_hosp_property_class() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM hosp_market_property_class ORDER BY year, property_class", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_hosp_forecast() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM hosp_market_forecast ORDER BY forecast_period_start", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_hosp_tbid() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM hosp_market_tbid_revenue ORDER BY year, quarter", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
 def get_table_counts() -> dict:
     conn = get_connection()
     counts = {}
@@ -1724,8 +1802,8 @@ st.markdown(
 )
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
-tab_ov, tab_tr, tab_ev, tab_dl = st.tabs(
-    ["📊 Overview", "📈 Trends", "🎪 Event Impact", "🗂 Data Log"]
+tab_ov, tab_tr, tab_ev, tab_hr, tab_dl = st.tabs(
+    ["📊 Overview", "📈 Trends", "🎪 Event Impact", "🏨 Hospitality Reports", "🗂 Data Log"]
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2409,7 +2487,715 @@ with tab_ev:
         st.plotly_chart(style_fig(fig, height=340), use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — DATA LOG
+# TAB 4 — HOSPITALITY REPORTS
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_hr:
+    # ── Load hospitality data ──────────────────────────────────────────────────
+    df_hkpi   = load_hosp_market_kpis()
+    df_hpipe  = load_hosp_pipeline()
+    df_hseg   = load_hosp_segments()
+    df_hcomp  = load_hosp_competitive()
+    df_hclass = load_hosp_property_class()
+    df_hfcast = load_hosp_forecast()
+    df_htbid  = load_hosp_tbid()
+
+    st.markdown(
+        '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.55rem;'
+        'font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">'
+        'Dana Point Market — Hospitality Intelligence</div>'
+        '<div style="font-size:12px;opacity:0.50;font-weight:500;margin-bottom:20px;">'
+        'Source: STR Market Hospitality Reports &nbsp;·&nbsp; TBID Assessment Records &nbsp;·&nbsp; '
+        'Supply Pipeline Analysis &nbsp;·&nbsp; 2024–2026</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Section 1: Annual KPI Hero Cards ──────────────────────────────────────
+    st.markdown(
+        '<div class="chart-header">2025 Full-Year Market Performance</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="chart-caption">Annual aggregates vs. 2024 actuals &nbsp;·&nbsp; '
+        'STR Market Report &nbsp;·&nbsp; 12-property VDP Select portfolio</div>',
+        unsafe_allow_html=True,
+    )
+
+    if not df_hkpi.empty:
+        _kpi25 = df_hkpi[df_hkpi["year"] == 2025]
+        _kpi24 = df_hkpi[df_hkpi["year"] == 2024]
+
+        _occ25   = _kpi25["occ_pct"].mean() if not _kpi25.empty else None
+        _occ24   = _kpi24["occ_pct"].mean() if not _kpi24.empty else None
+        _adr25   = _kpi25["adr_usd"].mean() if not _kpi25.empty else None
+        _adr24   = _kpi24["adr_usd"].mean() if not _kpi24.empty else None
+        _rvp25   = _kpi25["revpar_usd"].mean() if not _kpi25.empty else None
+        _rvp24   = _kpi24["revpar_usd"].mean() if not _kpi24.empty else None
+        _rev25   = _kpi25["room_revenue_usd"].sum() if not _kpi25.empty else None
+        _rev24   = _kpi24["room_revenue_usd"].sum() if not _kpi24.empty else None
+
+        _occ_d   = _occ25 - _occ24 if _occ25 and _occ24 else None
+        _adr_d   = (_adr25 - _adr24) / _adr24 * 100 if _adr25 and _adr24 else None
+        _rvp_d   = (_rvp25 - _rvp24) / _rvp24 * 100 if _rvp25 and _rvp24 else None
+        _rev_d   = (_rev25 - _rev24) / _rev24 * 100 if _rev25 and _rev24 else None
+
+        _hkpi_cols = st.columns(4)
+        _hkpi_data = [
+            ("OCC", f"{_occ25:.1f}%"  if _occ25 else "—",
+             f"{_occ_d:+.1f} pp YoY" if _occ_d else "—", _occ_d),
+            ("ADR", f"${_adr25:,.2f}" if _adr25 else "—",
+             f"{_adr_d:+.1f}% YoY"   if _adr_d else "—", _adr_d),
+            ("RevPAR", f"${_rvp25:,.2f}" if _rvp25 else "—",
+             f"{_rvp_d:+.1f}% YoY"   if _rvp_d else "—", _rvp_d),
+            ("Room Revenue", f"${_rev25/1e6:,.1f}M" if _rev25 else "—",
+             f"{_rev_d:+.1f}% YoY"   if _rev_d else "—", _rev_d),
+        ]
+        for i, (lbl, val, delta, sign) in enumerate(_hkpi_data):
+            with _hkpi_cols[i]:
+                _cls = "kpi-delta-pos" if sign and sign > 0 else "kpi-delta-neg"
+                st.markdown(f"""
+                <div class="kpi-card">
+                  <div class="kpi-header">
+                    <span class="kpi-label">{lbl}</span>
+                  </div>
+                  <div class="kpi-value">{val}</div>
+                  <div class="{_cls}">{delta}</div>
+                  <div class="kpi-date">Full Year 2025</div>
+                </div>""", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Section 2: Monthly OCC / ADR / RevPAR Trend ───────────────────────────
+    st.markdown('<div class="chart-header">Monthly Market Performance — 2024 vs. 2025</div>', unsafe_allow_html=True)
+    st.markdown('<div class="chart-caption">Occupancy, ADR, and RevPAR by month &nbsp;·&nbsp; STR Market Hospitality Report</div>', unsafe_allow_html=True)
+
+    if not df_hkpi.empty:
+        _k24 = df_hkpi[df_hkpi["year"] == 2024].sort_values("month")
+        _k25 = df_hkpi[df_hkpi["year"] == 2025].sort_values("month")
+        _months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+        _fig_trend = make_subplots(
+            rows=1, cols=3,
+            subplot_titles=("Occupancy %", "ADR ($)", "RevPAR ($)"),
+        )
+        for _yr, _df_y, _color, _dash in [
+            (2024, _k24, TEAL,   "dot"),
+            (2025, _k25, ORANGE, "solid"),
+        ]:
+            _fig_trend.add_trace(go.Scatter(
+                x=_months[:len(_df_y)], y=_df_y["occ_pct"].tolist(),
+                name=str(_yr), line=dict(color=_color, width=2.5, dash=_dash),
+                mode="lines+markers", marker=dict(size=5),
+                hovertemplate="<b>%{x}</b><br>Occ: %{y:.1f}%<extra>" + str(_yr) + "</extra>",
+                showlegend=(True if _yr == 2025 or _yr == 2024 else False),
+                legendgroup=str(_yr),
+            ), row=1, col=1)
+            _fig_trend.add_trace(go.Scatter(
+                x=_months[:len(_df_y)], y=_df_y["adr_usd"].tolist(),
+                name=str(_yr), line=dict(color=_color, width=2.5, dash=_dash),
+                mode="lines+markers", marker=dict(size=5),
+                hovertemplate="<b>%{x}</b><br>ADR: $%{y:,.0f}<extra>" + str(_yr) + "</extra>",
+                showlegend=False, legendgroup=str(_yr),
+            ), row=1, col=2)
+            _fig_trend.add_trace(go.Scatter(
+                x=_months[:len(_df_y)], y=_df_y["revpar_usd"].tolist(),
+                name=str(_yr), line=dict(color=_color, width=2.5, dash=_dash),
+                mode="lines+markers", marker=dict(size=5),
+                hovertemplate="<b>%{x}</b><br>RevPAR: $%{y:,.0f}<extra>" + str(_yr) + "</extra>",
+                showlegend=False, legendgroup=str(_yr),
+            ), row=1, col=3)
+
+        _fig_trend.update_yaxes(ticksuffix="%", row=1, col=1)
+        _fig_trend.update_yaxes(tickprefix="$", row=1, col=2)
+        _fig_trend.update_yaxes(tickprefix="$", row=1, col=3)
+        st.plotly_chart(style_fig(_fig_trend, height=320), use_container_width=True)
+
+    st.markdown("---")
+
+    # ── Section 3: Competitive Index (MPI / ARI / RGI) ─────────────────────────
+    st.markdown('<div class="chart-header">Competitive Performance Indices — 2025 (vs. Anaheim Comp Set)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="chart-caption">MPI = Market Penetration Index &nbsp;·&nbsp; ARI = Average Rate Index &nbsp;·&nbsp; RGI = Revenue Generation Index &nbsp;·&nbsp; 100 = parity</div>', unsafe_allow_html=True)
+
+    if not df_hcomp.empty:
+        _comp25 = df_hcomp[df_hcomp["year"] == 2025].sort_values("month")
+        _comp24 = df_hcomp[df_hcomp["year"] == 2024].sort_values("month")
+        _months_c = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+        _colf1, _colf2 = st.columns([2, 1])
+        with _colf1:
+            _fig_idx = go.Figure()
+            for _idx_col, _idx_name, _idx_color in [
+                ("mpi", "MPI (Occupancy)", TEAL),
+                ("ari", "ARI (Rate)",      ORANGE),
+                ("rgi", "RGI (RevPAR)",    "#5E5240"),
+            ]:
+                _fig_idx.add_trace(go.Scatter(
+                    x=_months_c[:len(_comp25)],
+                    y=_comp25[_idx_col].tolist(),
+                    name=_idx_name,
+                    line=dict(color=_idx_color, width=2.5),
+                    mode="lines+markers", marker=dict(size=5),
+                    hovertemplate=f"<b>%{{x}}</b><br>{_idx_name}: %{{y:.1f}}<extra></extra>",
+                ))
+            _fig_idx.add_hline(y=100, line_dash="dot", line_color="rgba(255,255,255,0.3)",
+                               annotation_text="Parity = 100", annotation_position="right")
+            _fig_idx.update_yaxes(range=[95, 135])
+            st.plotly_chart(style_fig(_fig_idx, height=300), use_container_width=True)
+
+        with _colf2:
+            # Full-year averages
+            _avg_mpi = _comp25["mpi"].mean()
+            _avg_ari = _comp25["ari"].mean()
+            _avg_rgi = _comp25["rgi"].mean()
+            _avg_mpi24 = _comp24["mpi"].mean()
+            _avg_ari24 = _comp24["ari"].mean()
+            _avg_rgi24 = _comp24["rgi"].mean()
+            st.markdown(
+                '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;'
+                'font-size:0.85rem;font-weight:700;margin-bottom:10px;opacity:0.70;">'
+                '2025 Annual Averages</div>', unsafe_allow_html=True
+            )
+            for _lbl, _val, _prior in [
+                ("MPI", _avg_mpi, _avg_mpi24),
+                ("ARI", _avg_ari, _avg_ari24),
+                ("RGI", _avg_rgi, _avg_rgi24),
+            ]:
+                _d = _val - _prior
+                _cls = "kpi-delta-pos" if _d >= 0 else "kpi-delta-neg"
+                st.markdown(f"""
+                <div class="kpi-card" style="margin-bottom:8px;">
+                  <div class="kpi-label">{_lbl}</div>
+                  <div class="kpi-value" style="font-size:22px;">{_val:.1f}</div>
+                  <div class="{_cls}">{_d:+.1f} vs. 2024</div>
+                </div>""", unsafe_allow_html=True)
+
+            st.markdown(
+                '<div class="insight-card insight-positive" style="margin-top:8px;">'
+                '<div class="insight-title">Rate Leadership Confirmed</div>'
+                '<div class="insight-body">Dana Point ARI above 110 throughout 2025 confirms '
+                'premium rate positioning. RGI above 120 in Q3 signals strongest relative '
+                'revenue performance of the comp cycle.</div></div>',
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("---")
+
+    # ── Section 4: Demand Segmentation ─────────────────────────────────────────
+    st.markdown('<div class="chart-header">Demand Segmentation — 2025 by Quarter</div>', unsafe_allow_html=True)
+    st.markdown('<div class="chart-caption">Room nights sold by segment &nbsp;·&nbsp; Transient Leisure / Business / Group / Contract</div>', unsafe_allow_html=True)
+
+    if not df_hseg.empty:
+        _seg25 = df_hseg[df_hseg["year"] == 2025].copy()
+        _seg_quarters = ["Q1", "Q2", "Q3", "Q4"]
+        _segments     = ["Transient Leisure", "Transient Business", "Group", "Contract/Discount"]
+        _seg_colors   = [TEAL, ORANGE, TEAL_LIGHT, "#A7A9A9"]
+
+        _sfig1, _sfig2 = st.columns(2)
+
+        with _sfig1:
+            # Stacked bar: room nights by segment & quarter
+            _fig_seg = go.Figure()
+            for _seg, _col in zip(_segments, _seg_colors):
+                _vals = []
+                for _q in _seg_quarters:
+                    _row = _seg25[(_seg25["quarter"] == _q) & (_seg25["segment"] == _seg)]
+                    _vals.append(_row["room_nights_sold"].values[0] if not _row.empty else 0)
+                _fig_seg.add_trace(go.Bar(
+                    name=_seg, x=_seg_quarters, y=_vals,
+                    marker_color=_col,
+                    hovertemplate="<b>%{x} " + _seg + "</b><br>%{y:,.0f} room nights<extra></extra>",
+                ))
+            _fig_seg.update_layout(barmode="stack", legend=dict(orientation="h", y=-0.2))
+            st.plotly_chart(style_fig(_fig_seg, height=320), use_container_width=True)
+
+        with _sfig2:
+            # ADR comparison by segment for full year 2025
+            _seg_adr_vals = []
+            _seg_adr_lbls = []
+            for _seg in _segments:
+                _d = _seg25[_seg25["segment"] == _seg]["adr_usd"].mean()
+                _seg_adr_vals.append(round(_d, 2) if not pd.isna(_d) else 0)
+                _seg_adr_lbls.append(_seg)
+            _fig_adr_seg = go.Figure(go.Bar(
+                x=_seg_adr_vals, y=_seg_adr_lbls, orientation="h",
+                marker=dict(color=_seg_colors, cornerradius=5),
+                text=[f"${v:,.0f}" for v in _seg_adr_vals], textposition="outside",
+                hovertemplate="<b>%{y}</b><br>Avg ADR: $%{x:,.0f}<extra></extra>",
+            ))
+            _fig_adr_seg.update_xaxes(tickprefix="$")
+            _fig_adr_seg.update_layout(
+                title=dict(text="Avg ADR by Segment (2025)", font_size=12),
+                showlegend=False,
+            )
+            st.plotly_chart(style_fig(_fig_adr_seg, height=320), use_container_width=True)
+
+        # Insight row
+        _ins1, _ins2, _ins3 = st.columns(3)
+        with _ins1:
+            _tl_share = _seg25[_seg25["segment"] == "Transient Leisure"]["share_of_total_demand_pct"].mean()
+            st.markdown(f"""
+            <div class="insight-card insight-positive">
+              <div class="insight-title">Leisure Dominance Intact</div>
+              <div class="insight-body">Transient Leisure accounts for <b>{_tl_share:.0f}%</b> of
+              all demand in 2025 — reinforcing Dana Point's core identity as a coastal leisure
+              destination. Leisure ADR averaged <b>${_seg25[_seg25['segment']=='Transient Leisure']['adr_usd'].mean():,.0f}</b> annually.</div>
+            </div>""", unsafe_allow_html=True)
+        with _ins2:
+            _grp = _seg25[_seg25["segment"] == "Group"]
+            _grp_adr = _grp["adr_usd"].mean()
+            _grp_yoy = _grp["yoy_demand_chg_pct"].mean()
+            st.markdown(f"""
+            <div class="insight-card insight-positive">
+              <div class="insight-title">Group Segment Outperforms</div>
+              <div class="insight-body">Group demand grew <b>+{_grp_yoy:.1f}% YoY</b> in 2025
+              and commands the highest ADR at <b>${_grp_adr:,.0f}</b> — above transient
+              leisure. Q3 group bookings hit a market-cycle high, signaling event and
+              SMERF demand recovery.</div>
+            </div>""", unsafe_allow_html=True)
+        with _ins3:
+            _ct = _seg25[_seg25["segment"] == "Contract/Discount"]["adr_usd"].mean()
+            st.markdown(f"""
+            <div class="insight-card insight-warning">
+              <div class="insight-title">Contract Drag on Blended ADR</div>
+              <div class="insight-body">Contract/Discount segment averages <b>${_ct:,.0f} ADR</b>
+              — roughly half the leisure rate. As market compression tightens, reducing contract
+              exposure during Q3 peak periods is the fastest lever to lift blended ADR.</div>
+            </div>""", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Section 5: Property Class Analysis ─────────────────────────────────────
+    st.markdown('<div class="chart-header">Performance by Property Class — 2025</div>', unsafe_allow_html=True)
+    st.markdown('<div class="chart-caption">Occupancy, ADR, RevPAR, and revenue share by chain scale &nbsp;·&nbsp; STR Market Report</div>', unsafe_allow_html=True)
+
+    if not df_hclass.empty:
+        _cls25 = df_hclass[df_hclass["year"] == 2025].copy()
+        _cls24 = df_hclass[df_hclass["year"] == 2024].copy()
+
+        _pc1, _pc2 = st.columns([3, 2])
+
+        with _pc1:
+            # Bubble chart: RevPAR (x) vs OCC (y), bubble size = room revenue
+            _fig_bubble = go.Figure()
+            _class_colors = {
+                "Luxury":             TEAL,
+                "Upper Upscale":      TEAL_LIGHT,
+                "Upscale":            ORANGE,
+                "Upper Midscale":     "#A7A9A9",
+                "Midscale/Economy":   "#626C71",
+                "Independent Boutique": "#5E5240",
+            }
+            for _, _row in _cls25.iterrows():
+                _c = _class_colors.get(_row["property_class"], TEAL)
+                _fig_bubble.add_trace(go.Scatter(
+                    x=[_row["revpar_usd"]], y=[_row["occ_pct"]],
+                    mode="markers+text",
+                    marker=dict(
+                        size=max(20, _row["share_of_market_revenue_pct"] * 4),
+                        color=_c, opacity=0.85,
+                        line=dict(color="rgba(255,255,255,0.3)", width=1),
+                    ),
+                    text=[_row["property_class"].replace(" ", "<br>")],
+                    textposition="top center",
+                    textfont=dict(size=9),
+                    name=_row["property_class"],
+                    hovertemplate=(
+                        f"<b>{_row['property_class']}</b><br>"
+                        f"RevPAR: ${_row['revpar_usd']:,.0f}<br>"
+                        f"Occ: {_row['occ_pct']:.1f}%<br>"
+                        f"ADR: ${_row['adr_usd']:,.0f}<br>"
+                        f"Revenue share: {_row['share_of_market_revenue_pct']:.1f}%<extra></extra>"
+                    ),
+                ))
+            _fig_bubble.update_xaxes(title_text="RevPAR ($)", tickprefix="$")
+            _fig_bubble.update_yaxes(title_text="Occupancy (%)", ticksuffix="%")
+            _fig_bubble.update_layout(
+                title=dict(text="RevPAR vs. Occupancy (bubble = revenue share)", font_size=11),
+                showlegend=False,
+            )
+            st.plotly_chart(style_fig(_fig_bubble, height=340), use_container_width=True)
+
+        with _pc2:
+            # Revenue share donut
+            _rev_shares = _cls25.groupby("property_class")["share_of_market_revenue_pct"].sum()
+            _fig_donut = go.Figure(go.Pie(
+                labels=_rev_shares.index.tolist(),
+                values=_rev_shares.values.tolist(),
+                hole=0.48,
+                marker=dict(colors=[_class_colors.get(l, TEAL) for l in _rev_shares.index]),
+                textfont=dict(size=10, family="Plus Jakarta Sans, Inter, sans-serif"),
+                hovertemplate="<b>%{label}</b><br>%{value:.1f}% of market revenue<extra></extra>",
+            ))
+            _fig_donut.update_layout(
+                title=dict(text="2025 Room Revenue Share", font_size=11),
+                legend=dict(font_size=10, orientation="v"),
+                annotations=[dict(
+                    text="Revenue<br>Mix", x=0.5, y=0.5,
+                    font_size=11, font_family="Plus Jakarta Sans, sans-serif",
+                    font_color="#21808D", showarrow=False,
+                )],
+            )
+            st.plotly_chart(style_fig(_fig_donut, height=340), use_container_width=True)
+
+        # Class performance table
+        _class_disp = _cls25[["property_class","property_count","total_rooms",
+                               "occ_pct","adr_usd","revpar_usd",
+                               "share_of_market_revenue_pct"]].copy()
+        _class_disp.columns = ["Property Class","Properties","Rooms",
+                                "Occ %","ADR","RevPAR","Revenue Share %"]
+        _class_disp["Occ %"]           = _class_disp["Occ %"].apply(lambda v: f"{v:.1f}%")
+        _class_disp["ADR"]             = _class_disp["ADR"].apply(lambda v: f"${v:,.2f}")
+        _class_disp["RevPAR"]          = _class_disp["RevPAR"].apply(lambda v: f"${v:,.2f}")
+        _class_disp["Revenue Share %"] = _class_disp["Revenue Share %"].apply(lambda v: f"{v:.1f}%")
+        st.dataframe(_class_disp, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+
+    # ── Section 6: TBID Revenue Tracker ────────────────────────────────────────
+    st.markdown('<div class="chart-header">TBID Revenue — Actuals, Budget & Forecast</div>', unsafe_allow_html=True)
+    st.markdown('<div class="chart-caption">Quarterly TBID assessment revenue (1.25% blended rate) and TOT (10%) &nbsp;·&nbsp; TBID Assessment Records</div>', unsafe_allow_html=True)
+
+    if not df_htbid.empty:
+        _tbid_q = df_htbid[df_htbid["quarter"] != "Annual"].copy()
+        _tbid_a = df_htbid[df_htbid["quarter"] == "Annual"].copy()
+
+        _t1, _t2 = st.columns([3, 2])
+
+        with _t1:
+            _fig_tbid = go.Figure()
+            for _yr, _color, _dash in [(2024, TEAL, "dot"), (2025, ORANGE, "solid"), (2026, TEAL_LIGHT, "dash")]:
+                _sub = _tbid_q[_tbid_q["year"] == _yr].sort_values("quarter")
+                if not _sub.empty:
+                    _fig_tbid.add_trace(go.Bar(
+                        name=str(_yr),
+                        x=_sub["quarter"].tolist(),
+                        y=_sub["tbid_revenue_usd"].tolist(),
+                        marker_color=_color,
+                        opacity=0.85 if _yr <= 2025 else 0.55,
+                        hovertemplate="<b>%{x} " + str(_yr) + "</b><br>TBID: $%{y:,.0f}<extra></extra>",
+                    ))
+                    _fig_tbid.add_trace(go.Scatter(
+                        name=f"{_yr} Budget",
+                        x=_sub["quarter"].tolist(),
+                        y=_sub["budget_tbid_usd"].tolist(),
+                        mode="lines+markers",
+                        line=dict(color=_color, width=1.5, dash="dot"),
+                        marker=dict(size=4, symbol="diamond"),
+                        hovertemplate="<b>%{x} " + str(_yr) + " Budget</b><br>$%{y:,.0f}<extra></extra>",
+                        showlegend=True,
+                    ))
+            _fig_tbid.update_yaxes(tickprefix="$", tickformat=",.0f")
+            _fig_tbid.update_layout(
+                barmode="group",
+                legend=dict(orientation="h", y=-0.25, font_size=10),
+            )
+            st.plotly_chart(style_fig(_fig_tbid, height=320), use_container_width=True)
+
+        with _t2:
+            # Annual TBID summary table
+            st.markdown(
+                '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;'
+                'font-size:0.85rem;font-weight:700;margin-bottom:10px;opacity:0.70;">'
+                'Annual TBID Summary</div>', unsafe_allow_html=True
+            )
+            for _, _row in _tbid_a.iterrows():
+                _yoy = _row["yoy_tbid_pct"]
+                _yoy_str = f"+{_yoy:.1f}% YoY" if pd.notna(_yoy) and _yoy > 0 else ("—" if pd.isna(_yoy) else f"{_yoy:.1f}% YoY")
+                _cls = "kpi-delta-pos" if pd.notna(_yoy) and _yoy > 0 else "kpi-delta-neutral"
+                _is_fcst = "Forecast" in str(_row.get("notes", ""))
+                _label = f"FY {_row['year']}" + (" (F)" if _is_fcst else "")
+                st.markdown(f"""
+                <div class="kpi-card" style="margin-bottom:8px;">
+                  <div class="kpi-label">{_label}</div>
+                  <div class="kpi-value" style="font-size:20px;">${_row['tbid_revenue_usd']:,.0f}</div>
+                  <div class="{_cls}">{_yoy_str}</div>
+                  <div class="kpi-date">TOT: ${_row['tot_revenue_usd']:,.0f}</div>
+                </div>""", unsafe_allow_html=True)
+
+            st.markdown(
+                '<div class="insight-card insight-positive" style="margin-top:8px;">'
+                '<div class="insight-title">TBID Growth Trend Intact</div>'
+                '<div class="insight-body">TBID revenue has grown every year since 2024, '
+                'tracking above budget. FY2026 forecast projects <b>$2.65M</b> — a 5.0% YoY '
+                'increase. New pipeline supply (480+ rooms by Q3 2026) may dilute per-property '
+                'assessments but will expand the total assessment base.</div></div>',
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("---")
+
+    # ── Section 7: Supply Pipeline ─────────────────────────────────────────────
+    st.markdown('<div class="chart-header">Hotel Supply Pipeline — Dana Point Market</div>', unsafe_allow_html=True)
+    st.markdown('<div class="chart-caption">Properties under construction, in planning, or proposed &nbsp;·&nbsp; STR Market Pipeline Report 2025</div>', unsafe_allow_html=True)
+
+    if not df_hpipe.empty:
+        _pp1, _pp2 = st.columns([3, 2])
+
+        with _pp1:
+            _pipe_disp = df_hpipe[[
+                "property_name","location","rooms","property_class",
+                "status","expected_open_date","brand_affiliation","segment_focus"
+            ]].copy()
+            _pipe_disp.columns = [
+                "Property","Location","Rooms","Class",
+                "Status","Expected Open","Brand","Segment"
+            ]
+            st.dataframe(_pipe_disp, use_container_width=True, hide_index=True)
+
+        with _pp2:
+            # Pipeline by status donut
+            _status_counts = df_hpipe.groupby("status")["rooms"].sum()
+            _status_colors = [TEAL, ORANGE, TEAL_LIGHT, "#A7A9A9", RED]
+            _fig_pipe = go.Figure(go.Pie(
+                labels=_status_counts.index.tolist(),
+                values=_status_counts.values.tolist(),
+                hole=0.46,
+                marker=dict(colors=_status_colors[:len(_status_counts)]),
+                textfont=dict(size=10),
+                hovertemplate="<b>%{label}</b><br>%{value} rooms<extra></extra>",
+            ))
+            _total_pipe_rooms = df_hpipe["rooms"].sum()
+            _fig_pipe.update_layout(
+                title=dict(text=f"Pipeline: {_total_pipe_rooms:,} total rooms", font_size=11),
+                annotations=[dict(
+                    text=f"{_total_pipe_rooms}<br>Rooms", x=0.5, y=0.5,
+                    font_size=13, font_family="Plus Jakarta Sans, sans-serif",
+                    font_color="#21808D", showarrow=False,
+                )],
+            )
+            st.plotly_chart(style_fig(_fig_pipe, height=280), use_container_width=True)
+
+            # Revenue impact card
+            _total_est_rev = df_hpipe["estimated_annual_room_revenue_usd"].sum()
+            st.markdown(f"""
+            <div class="insight-card insight-warning">
+              <div class="insight-title">Pipeline Supply Impact</div>
+              <div class="insight-body"><b>{_total_pipe_rooms:,} new rooms</b> in pipeline
+              through 2028 represent ~<b>{_total_pipe_rooms/1800*100:.0f}%</b> supply growth.
+              Estimated incremental annual room revenue: <b>${_total_est_rev/1e6:.1f}M</b>.
+              Near-term compression risk is low — new luxury supply typically drives ADR
+              above existing market average.</div>
+            </div>""", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Section 8: Market Forecast ─────────────────────────────────────────────
+    st.markdown('<div class="chart-header">Market Forecast — 2026 Outlook</div>', unsafe_allow_html=True)
+    st.markdown('<div class="chart-caption">Quarterly and annual forecasts vs. 2025 actuals &nbsp;·&nbsp; STR Market Forecast Report Q4-2025</div>', unsafe_allow_html=True)
+
+    if not df_hfcast.empty:
+        _fc_q = df_hfcast[~df_hfcast["period_label"].str.startswith("FY")].copy()
+        _fc_a = df_hfcast[df_hfcast["period_label"].str.startswith("FY")].copy()
+
+        _fcc1, _fcc2, _fcc3 = st.columns(3)
+        _fc_metrics = [
+            ("forecast_occ_pct",    "prior_year_occ_pct",    "Forecast Occ %",   "yoy_occ_pp_chg",   "pp"),
+            ("forecast_adr_usd",    "prior_year_adr_usd",    "Forecast ADR",     "yoy_adr_pct_chg",  "%"),
+            ("forecast_revpar_usd", "prior_year_revpar_usd", "Forecast RevPAR",  "yoy_revpar_pct_chg","%"),
+        ]
+        for _col_obj, (_fcol, _pcol, _title, _ycol, _yunit) in zip([_fcc1, _fcc2, _fcc3], _fc_metrics):
+            with _col_obj:
+                _fig_fc = go.Figure()
+                _fig_fc.add_trace(go.Bar(
+                    name="2025 Actual", x=_fc_q["period_label"].tolist(),
+                    y=_fc_q[_pcol].tolist(),
+                    marker_color=TEAL, opacity=0.6,
+                    hovertemplate="<b>%{x} 2025</b><br>" + _title.split()[-1] + ": %{y:,.1f}<extra></extra>",
+                ))
+                _fig_fc.add_trace(go.Bar(
+                    name="2026 Forecast", x=_fc_q["period_label"].tolist(),
+                    y=_fc_q[_fcol].tolist(),
+                    marker_color=ORANGE,
+                    hovertemplate="<b>%{x} 2026</b><br>" + _title.split()[-1] + ": %{y:,.1f}<extra></extra>",
+                ))
+                _fig_fc.update_layout(
+                    title=dict(text=_title, font_size=11),
+                    barmode="group", showlegend=True,
+                    legend=dict(orientation="h", y=-0.35, font_size=9),
+                )
+                if "ADR" in _title or "RevPAR" in _title:
+                    _fig_fc.update_yaxes(tickprefix="$")
+                else:
+                    _fig_fc.update_yaxes(ticksuffix="%")
+                st.plotly_chart(style_fig(_fig_fc, height=280), use_container_width=True)
+
+        # Full-year forecast highlight
+        _fy26 = _fc_a[_fc_a["period_label"] == "FY-2026"]
+        _fy25 = _fc_a[_fc_a["period_label"] == "FY-2025"]
+        if not _fy26.empty and not _fy25.empty:
+            _fi1, _fi2, _fi3 = st.columns(3)
+            with _fi1:
+                st.markdown(f"""
+                <div class="insight-card insight-positive">
+                  <div class="insight-title">FY2026 OCC Forecast: {_fy26['forecast_occ_pct'].values[0]:.1f}%</div>
+                  <div class="insight-body">Occupancy forecast for 2026 is <b>+{_fy26['yoy_occ_pp_chg'].values[0]:.1f} pp</b>
+                  above 2025 actual ({_fy25['prior_year_occ_pct'].values[0]:.1f}%). Confidence: <b>{_fy26['confidence_level'].values[0]}</b>.
+                  Q3 peak compression expected to exceed 92%.</div>
+                </div>""", unsafe_allow_html=True)
+            with _fi2:
+                st.markdown(f"""
+                <div class="insight-card insight-positive">
+                  <div class="insight-title">FY2026 ADR Forecast: ${_fy26['forecast_adr_usd'].values[0]:,.2f}</div>
+                  <div class="insight-body">ADR growth of <b>+{_fy26['yoy_adr_pct_chg'].values[0]:.1f}%</b> expected.
+                  New luxury supply (The Strand, 142 rooms) likely to pull blended market ADR upward
+                  as pipeline opens mid-2026.</div>
+                </div>""", unsafe_allow_html=True)
+            with _fi3:
+                _frev26 = _fy26['forecast_room_revenue_usd'].values[0]
+                _frev25 = _fy25['prior_year_room_revenue_usd'].values[0]
+                _rev_chg = (_frev26 - _frev25) / _frev25 * 100
+                st.markdown(f"""
+                <div class="insight-card insight-positive">
+                  <div class="insight-title">FY2026 Room Revenue: ${_frev26/1e6:.1f}M</div>
+                  <div class="insight-body">Market room revenue projected at <b>${_frev26/1e6:.1f}M</b>
+                  in 2026, a <b>+{_rev_chg:.1f}%</b> gain vs. 2025's ${_frev25/1e6:.1f}M.
+                  TBID assessment base grows proportionally — supporting <b>$2.65M+</b>
+                  in destination marketing funding.</div>
+                </div>""", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Section 9: Hospitality AI Analyst ──────────────────────────────────────
+    with st.expander("🧠 Hospitality Intelligence — Deep-Dive AI Analysis", expanded=False):
+        st.markdown('<span class="ai-chip">AI ANALYST — HOSPITALITY REPORTS</span>', unsafe_allow_html=True)
+
+        HOSP_PROMPTS = [
+            ("🏆 Competitive Position",  "hosp_comp"),
+            ("💰 TBID Revenue Outlook",  "hosp_tbid"),
+            ("🏗️ Pipeline Risk",         "hosp_pipeline"),
+            ("📊 Segment Strategy",      "hosp_seg"),
+            ("🔮 2026 Market Forecast",  "hosp_forecast"),
+        ]
+
+        _hbtn_cols = st.columns(len(HOSP_PROMPTS))
+        for _hi, (_hlbl, _hkey) in enumerate(HOSP_PROMPTS):
+            with _hbtn_cols[_hi]:
+                if st.button(_hlbl, key=f"hbtn_{_hkey}", use_container_width=True):
+                    st.session_state["ai_needs_call"]    = True
+                    st.session_state["ai_prompt_label"]  = _hlbl
+
+                    # Build context from hospitality data
+                    _ctx_lines = []
+                    if not df_hkpi.empty:
+                        _k25 = df_hkpi[df_hkpi["year"] == 2025]
+                        _ctx_lines.append(f"2025 Market KPIs: Avg OCC={_k25['occ_pct'].mean():.1f}%, "
+                                         f"Avg ADR=${_k25['adr_usd'].mean():,.2f}, "
+                                         f"Avg RevPAR=${_k25['revpar_usd'].mean():,.2f}, "
+                                         f"Total Room Revenue=${_k25['room_revenue_usd'].sum():,.0f}")
+                    if not df_hcomp.empty:
+                        _c25 = df_hcomp[df_hcomp["year"] == 2025]
+                        _ctx_lines.append(f"2025 Competitive Indices: MPI={_c25['mpi'].mean():.1f}, "
+                                         f"ARI={_c25['ari'].mean():.1f}, RGI={_c25['rgi'].mean():.1f} "
+                                         f"(vs. Anaheim comp set, 100=parity)")
+                    if not df_hpipe.empty:
+                        _ctx_lines.append(f"Supply Pipeline: {df_hpipe['rooms'].sum():,} rooms across "
+                                         f"{len(df_hpipe)} projects, expected 2025-2028")
+                    if not df_htbid.empty:
+                        _ann = df_htbid[(df_htbid["quarter"] == "Annual") & (df_htbid["year"] == 2025)]
+                        if not _ann.empty:
+                            _ctx_lines.append(f"2025 TBID Revenue: ${_ann['tbid_revenue_usd'].values[0]:,.0f} "
+                                             f"(+{_ann['yoy_tbid_pct'].values[0]:.1f}% YoY); "
+                                             f"TOT: ${_ann['tot_revenue_usd'].values[0]:,.0f}")
+                    if not df_hfcast.empty:
+                        _fy26f = df_hfcast[df_hfcast["period_label"] == "FY-2026"]
+                        if not _fy26f.empty:
+                            _ctx_lines.append(f"2026 Forecast: OCC={_fy26f['forecast_occ_pct'].values[0]:.1f}%, "
+                                             f"ADR=${_fy26f['forecast_adr_usd'].values[0]:,.2f}, "
+                                             f"RevPAR=${_fy26f['forecast_revpar_usd'].values[0]:,.2f}")
+                    _ctx = "\n".join(_ctx_lines)
+
+                    _hosp_prompt_map = {
+                        "hosp_comp": (
+                            f"HOSPITALITY MARKET DATA:\n{_ctx}\n\n"
+                            "Analyze Dana Point's competitive position vs. the Anaheim comp set. "
+                            "Focus on MPI, ARI, RGI trends across 2024-2025. What is driving outperformance "
+                            "in Q3? Where is Dana Point losing ground? Give the board one specific "
+                            "rate or demand action to widen the competitive gap."
+                        ),
+                        "hosp_tbid": (
+                            f"HOSPITALITY MARKET DATA:\n{_ctx}\n\n"
+                            "Analyze TBID revenue trends for 2024-2025 and the 2026 forecast. "
+                            "How does room revenue growth translate into TBID assessment revenue? "
+                            "What is the Q3 Ohana Fest impact on TBID collections? "
+                            "Give the board a single TBID revenue protection recommendation for 2026."
+                        ),
+                        "hosp_pipeline": (
+                            f"HOSPITALITY MARKET DATA:\n{_ctx}\n\n"
+                            "Assess the hotel supply pipeline risk. With {df_hpipe['rooms'].sum() if not df_hpipe.empty else '480+'} "
+                            "new rooms entering the market by 2028, what is the likely impact on occupancy, "
+                            "blended ADR, and RevPAR? Which property classes are at greatest displacement risk? "
+                            "Give one strategic recommendation to mitigate supply-side pressure."
+                        ),
+                        "hosp_seg": (
+                            f"HOSPITALITY MARKET DATA:\n{_ctx}\n\n"
+                            "Analyze the 2025 demand segmentation data. Transient Leisure vs. Group vs. "
+                            "Contract/Discount — which segment offers the highest RevPAR growth opportunity "
+                            "for 2026? Where is ADR being diluted? Give one specific segment-mix "
+                            "recommendation for the VDP TBID board."
+                        ),
+                        "hosp_forecast": (
+                            f"HOSPITALITY MARKET DATA:\n{_ctx}\n\n"
+                            "Summarize the 2026 market forecast. What are the key growth drivers and risks? "
+                            "How do Q3 compression expectations compare to 2025 actuals? "
+                            "What assumptions underpin the forecast and where should the board apply "
+                            "caution? End with one board-ready action for 2026 planning."
+                        ),
+                    }
+                    st.session_state["ai_current_prompt"] = _hosp_prompt_map.get(_hkey, "")
+
+        # Trigger AI call
+        if st.session_state.get("ai_needs_call") and st.session_state.get("ai_current_prompt"):
+            if not ANTHROPIC_AVAILABLE:
+                st.warning("Anthropic SDK not installed. Install it via `pip install anthropic`.")
+            elif not _ENV_API_KEY:
+                st.warning("Set ANTHROPIC_API_KEY environment variable to enable AI analysis.")
+            else:
+                with st.spinner("Analyzing hospitality data…"):
+                    try:
+                        client = anthropic.Anthropic(api_key=_ENV_API_KEY)
+                        _hmsg = client.messages.create(
+                            model=CLAUDE_MODEL,
+                            max_tokens=512,
+                            system=SYSTEM_PROMPT,
+                            messages=[{"role": "user", "content": st.session_state["ai_current_prompt"]}],
+                        )
+                        st.session_state["ai_result"] = _hmsg.content[0].text
+                        st.session_state["ai_needs_call"] = False
+                    except Exception as _exc:
+                        st.error(f"AI call failed: {_exc}")
+                        st.session_state["ai_needs_call"] = False
+
+        if st.session_state.get("ai_result") and st.session_state.get("ai_prompt_label", "").startswith(("🏆","💰","🏗️","📊","🔮")):
+            st.markdown(
+                f'<div class="ai-chip">AI ANALYSIS — {st.session_state["ai_prompt_label"]}</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(st.session_state["ai_result"])
+
+        # Download reports
+        st.markdown("---")
+        _dl_c1, _dl_c2, _dl_c3 = st.columns(3)
+        with _dl_c1:
+            if not df_hkpi.empty:
+                st.download_button(
+                    "⬇️ Market KPIs CSV", df_hkpi.to_csv(index=False).encode(),
+                    file_name="hosp_market_kpis.csv", mime="text/csv", use_container_width=True,
+                )
+        with _dl_c2:
+            if not df_htbid.empty:
+                st.download_button(
+                    "⬇️ TBID Revenue CSV", df_htbid.to_csv(index=False).encode(),
+                    file_name="hosp_market_tbid_revenue.csv", mime="text/csv", use_container_width=True,
+                )
+        with _dl_c3:
+            if not df_hfcast.empty:
+                st.download_button(
+                    "⬇️ Forecast CSV", df_hfcast.to_csv(index=False).encode(),
+                    file_name="hosp_market_forecast.csv", mime="text/csv", use_container_width=True,
+                )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 5 — DATA LOG
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_dl:
     col_a, col_b = st.columns([3, 1])
