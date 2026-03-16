@@ -1544,16 +1544,24 @@ with st.sidebar:
 
     # ── Pipeline status ────────────────────────────────────────────────────────
     counts           = get_table_counts()
-    str_daily_rows   = counts.get("str_daily_rows",   0)
-    str_monthly_rows = counts.get("str_monthly_rows", 0)
+    # Derive raw row counts — prefer loaded dataframes as truth (immune to cache staleness)
+    str_daily_rows   = counts.get("str_daily_rows",   0) if not df_daily.empty   else 0
+    str_monthly_rows = counts.get("str_monthly_rows", 0) if not df_monthly.empty else 0
+    # Fallback: if cache returned 0/stale but df has data, use fact-table count directly
+    if str_daily_rows == 0 and not df_daily.empty:
+        str_daily_rows = len(df_daily)
+    if str_monthly_rows == 0 and not df_monthly.empty:
+        str_monthly_rows = len(df_monthly)
+
     _run_at  = df_log.iloc[0]["run_at"] if not df_log.empty else None
     last_log = str(_run_at)[:10] if pd.notna(_run_at) else "—"
 
-    _d_dot = "🟢" if isinstance(str_daily_rows,   int) and str_daily_rows   > 0 else "⚫"
-    _m_dot = "🟢" if isinstance(str_monthly_rows, int) and str_monthly_rows > 0 else "⚫"
-    _m_label = f"{str_monthly_rows:,} rows" if isinstance(str_monthly_rows, int) and str_monthly_rows > 0 else "No data"
+    _d_dot   = "🟢" if str_daily_rows   > 0 else "⚫"
+    _m_dot   = "🟢" if str_monthly_rows > 0 else "⚫"
+    _d_label = f"{str_daily_rows:,} rows"   if str_daily_rows   > 0 else "No data"
+    _m_label = f"{str_monthly_rows:,} rows" if str_monthly_rows > 0 else "No data"
     st.markdown("**Pipeline Status**")
-    st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {str_daily_rows:,} rows")
+    st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {_d_label}")
     st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_label}")
     st.markdown(f"⚫ Datafy &nbsp;·&nbsp; Not connected")
     st.caption(f"Last ETL run: {last_log}")
@@ -2309,8 +2317,8 @@ with tab_dl:
     _sc1, _sc2 = st.columns(2)
 
     with _sc1:
-        _d_dot   = "🟢" if isinstance(str_daily_rows,   int) and str_daily_rows   > 0 else "⚫"
-        _m_dot   = "🟡" if isinstance(str_monthly_rows, int) and str_monthly_rows > 0 else "⚫"
+        _d_dot   = "🟢" if str_daily_rows   > 0 else "⚫"
+        _m_dot   = "🟢" if str_monthly_rows > 0 else "⚫"
         _d_range = (
             f"{df_daily['as_of_date'].min().strftime('%b %d %Y')} – "
             f"{df_daily['as_of_date'].max().strftime('%b %d %Y')}"
@@ -2323,12 +2331,12 @@ with tab_dl:
         )
         st.markdown(source_card(
             _d_dot, "STR Daily", f"grain=daily · {_d_range}",
-            f"{str_daily_rows:,}" if isinstance(str_daily_rows, int) else str_daily_rows,
+            f"{str_daily_rows:,}" if str_daily_rows > 0 else "—",
         ), unsafe_allow_html=True)
         st.markdown(source_card(
             _m_dot, "STR Monthly",
             f"grain=monthly · {_m_range}",
-            f"{str_monthly_rows:,}" if isinstance(str_monthly_rows, int) else str_monthly_rows,
+            f"{str_monthly_rows:,}" if str_monthly_rows > 0 else "—",
         ), unsafe_allow_html=True)
 
     with _sc2:
