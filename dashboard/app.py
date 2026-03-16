@@ -752,6 +752,131 @@ def load_costar_compset() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+# ─── Datafy data loaders ──────────────────────────────────────────────────────
+
+@st.cache_data(ttl=300)
+def load_datafy_kpis() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM datafy_overview_kpis LIMIT 1", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_dma() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_overview_dma ORDER BY visitor_days_share_pct DESC", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_airports() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_overview_airports ORDER BY passengers_share_pct DESC", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_demographics() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM datafy_overview_demographics", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_spending() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_overview_category_spending ORDER BY spend_share_pct DESC", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_clusters() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_overview_cluster_visitation ORDER BY visitor_days_share_pct DESC", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_media_kpis() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM datafy_attribution_media_kpis LIMIT 1", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_media_markets() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_attribution_media_top_markets ORDER BY dma_est_impact_usd DESC", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_web_kpis() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM datafy_attribution_website_kpis LIMIT 1", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_web_channels() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_attribution_website_channels ORDER BY sessions DESC", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_web_demographics() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_attribution_website_demographics", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_web_dma() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_attribution_website_dma ORDER BY total_trips DESC", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_top_pages() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_social_top_pages ORDER BY page_views DESC LIMIT 20", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_datafy_traffic_sources() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_social_traffic_sources ORDER BY sessions DESC", conn)
+    except Exception:
+        return pd.DataFrame()
+
+
 @st.cache_data(ttl=300)
 def get_table_counts() -> dict:
     conn = get_connection()
@@ -1929,9 +2054,11 @@ st.markdown(
 )
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
-tab_ov, tab_tr, tab_ev, tab_cs, tab_dl = st.tabs(
-    ["📊 Overview", "📈 Trends", "🎪 Event Impact", "🏨 Market Intelligence", "🗂 Data Log"]
-)
+tab_ov, tab_tr, tab_ev, tab_cs, tab_vi, tab_rev, tab_dig, tab_cx, tab_dl = st.tabs([
+    "📊 Overview", "📈 Trends", "🎪 Event Impact", "🏨 Market Intelligence",
+    "👥 Visitor Intelligence", "💰 Revenue & TBID", "📱 Digital & Campaign",
+    "🔗 Cross-Dataset", "🗂 Data Log",
+])
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — OVERVIEW
@@ -3255,7 +3382,1135 @@ with tab_cs:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 5 — DATA LOG
+# TAB 5 — VISITOR INTELLIGENCE
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_vi:
+    _font = "Plus Jakarta Sans, Inter, system-ui, sans-serif"
+    C1, C2, C3 = "#6366f1", "#10b981", "#f59e0b"   # indigo, emerald, amber
+    C4, C5     = "#3b82f6", "#a855f7"               # blue, purple
+
+    st.markdown(
+        '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.55rem;'
+        'font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">'
+        'Visitor Intelligence — Dana Point 2025</div>'
+        '<div style="font-size:12px;opacity:0.50;font-weight:500;margin-bottom:20px;">'
+        'Source: Datafy Geolocation (Caladan 1.2) · 3.55M trips analyzed · Annual 2025</div>',
+        unsafe_allow_html=True,
+    )
+
+    df_vi_kpis   = load_datafy_kpis()
+    df_vi_dma    = load_datafy_dma()
+    df_vi_air    = load_datafy_airports()
+    df_vi_demo   = load_datafy_demographics()
+    df_vi_spend  = load_datafy_spending()
+    df_vi_clust  = load_datafy_clusters()
+
+    if df_vi_kpis.empty:
+        st.markdown(empty_state("👥", "Visitor data not loaded.", "Run load_datafy_reports.py to populate."), unsafe_allow_html=True)
+    else:
+        kv = df_vi_kpis.iloc[0]
+
+        # ── Hero KPI row ────────────────────────────────────────────────────
+        hc1, hc2, hc3, hc4, hc5, hc6 = st.columns(6)
+        with hc1:
+            st.metric("Total Trips", f"{kv['total_trips']/1e6:.2f}M",
+                      f"{kv.get('total_trips_vs_compare_pct', 0):+.1f}% YoY")
+        with hc2:
+            st.metric("Avg Stay", f"{kv.get('avg_length_of_stay_days', 0):.1f} days",
+                      f"{kv.get('avg_los_vs_compare_days', 0):+.1f} d vs prior")
+        with hc3:
+            st.metric("Overnight Share", f"{kv.get('overnight_trips_pct', 0):.1f}%",
+                      f"{kv.get('overnight_vs_compare_pct', 0):+.1f}pp YoY")
+        with hc4:
+            st.metric("Out-of-State", f"{kv.get('out_of_state_vd_pct', 0):.1f}%",
+                      f"{kv.get('out_of_state_vd_vs_compare_pct', 0):+.1f}pp YoY")
+        with hc5:
+            st.metric("Repeat Visitors", f"{kv.get('repeat_visitors_pct', 0):.1f}%")
+        with hc6:
+            st.metric("Visitor Spending Share", f"{kv.get('visitor_spending_pct', 0):.1f}%",
+                      f"{kv.get('visitors_vs_compare_pct', 0):+.1f}pp YoY")
+
+        st.divider()
+
+        # ── Row A: Trip-type, Origin, Loyalty donuts ───────────────────────
+        ra1, ra2, ra3 = st.columns(3)
+
+        with ra1:
+            fig = go.Figure(go.Pie(
+                labels=["Day Trips", "Overnight"],
+                values=[kv.get('day_trips_pct', 0), kv.get('overnight_trips_pct', 0)],
+                hole=0.62, marker_colors=[C3, C1],
+                textinfo="label+percent", textfont_size=12,
+            ))
+            style_fig(fig, 260)
+            fig.update_layout(title_text="Trip Type", showlegend=False)
+            st.plotly_chart(fig, use_container_width=True)
+
+        with ra2:
+            fig = go.Figure(go.Pie(
+                labels=["In-State CA", "Out-of-State"],
+                values=[kv.get('in_state_visitor_days_pct', 0), kv.get('out_of_state_vd_pct', 0)],
+                hole=0.62, marker_colors=[C2, C4],
+                textinfo="label+percent", textfont_size=12,
+            ))
+            style_fig(fig, 260)
+            fig.update_layout(title_text="Visitor Origin", showlegend=False)
+            st.plotly_chart(fig, use_container_width=True)
+
+        with ra3:
+            fig = go.Figure(go.Pie(
+                labels=["First-Time", "Repeat"],
+                values=[kv.get('one_time_visitors_pct', 0), kv.get('repeat_visitors_pct', 0)],
+                hole=0.62, marker_colors=[C4, C5],
+                textinfo="label+percent", textfont_size=12,
+            ))
+            style_fig(fig, 260)
+            fig.update_layout(title_text="Visitor Loyalty", showlegend=False)
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ── Row B: DMA origins ranked bar + DMA avg spend bubble ──────────
+        rb1, rb2 = st.columns([3, 2])
+
+        with rb1:
+            if not df_vi_dma.empty:
+                dma_s = df_vi_dma.sort_values("visitor_days_share_pct", ascending=True).tail(12)
+                bar_colors = [C2 if v >= 0 else "#ef4444"
+                              for v in dma_s["visitor_days_vs_compare_pct"].fillna(0)]
+                fig = go.Figure(go.Bar(
+                    y=dma_s["dma"], x=dma_s["visitor_days_share_pct"],
+                    orientation="h", marker_color=bar_colors,
+                    text=[f"{v:.1f}%" for v in dma_s["visitor_days_share_pct"]],
+                    textposition="outside",
+                    customdata=dma_s["visitor_days_vs_compare_pct"].fillna(0),
+                    hovertemplate="%{y}: %{x:.1f}% share<br>YoY: %{customdata:+.1f}pp<extra></extra>",
+                ))
+                style_fig(fig, 400)
+                fig.update_layout(
+                    title_text="Top Origin Markets — Share of Visitor Days<br>"
+                               "<sup>Green = growing YoY · Red = declining</sup>",
+                    xaxis_title="% of Visitor Days",
+                    margin=dict(l=0, r=70, t=52, b=0),
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+        with rb2:
+            if not df_vi_dma.empty and "avg_spend_usd" in df_vi_dma.columns:
+                dma_sp = df_vi_dma.dropna(subset=["avg_spend_usd"]).sort_values("avg_spend_usd", ascending=False)
+                fig = go.Figure(go.Bar(
+                    x=dma_sp["dma"], y=dma_sp["avg_spend_usd"],
+                    marker_color=C1,
+                    text=[f"${v:.0f}" for v in dma_sp["avg_spend_usd"]],
+                    textposition="outside",
+                    hovertemplate="%{x}: $%{y:.2f} avg spend/day<extra></extra>",
+                ))
+                style_fig(fig, 400)
+                fig.update_layout(
+                    title_text="Avg Spend per Visitor-Day by Origin",
+                    yaxis_title="USD", xaxis_tickangle=-30,
+                    margin=dict(l=0, r=10, t=52, b=0),
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ── Row C: Spending treemap + Age demographics + Income ───────────
+        rc1, rc2 = st.columns(2)
+
+        with rc1:
+            if not df_vi_spend.empty:
+                fig = go.Figure(go.Treemap(
+                    labels=df_vi_spend["category"],
+                    parents=["Visitor Spending"] * len(df_vi_spend),
+                    values=df_vi_spend["spend_share_pct"],
+                    textinfo="label+percent entry",
+                    marker=dict(colorscale="Blues", showscale=False),
+                    hovertemplate="%{label}<br>%{percentParent:.1%} of total spend<extra></extra>",
+                ))
+                style_fig(fig, 380)
+                fig.update_layout(title_text="Visitor Spending by Category",
+                                  margin=dict(l=0, r=0, t=40, b=0))
+                st.plotly_chart(fig, use_container_width=True)
+
+        with rc2:
+            if not df_vi_demo.empty:
+                age_df = df_vi_demo[df_vi_demo["dimension"] == "age"].sort_values("segment")
+                if not age_df.empty:
+                    fig = go.Figure(go.Bar(
+                        x=age_df["segment"], y=age_df["share_pct"],
+                        marker=dict(
+                            color=age_df["share_pct"],
+                            colorscale="Purples", showscale=False,
+                        ),
+                        text=[f"{v:.1f}%" for v in age_df["share_pct"]],
+                        textposition="outside",
+                        hovertemplate="Age %{x}: %{y:.1f}%<extra></extra>",
+                    ))
+                    style_fig(fig, 380)
+                    fig.update_layout(
+                        title_text="Visitor Age Profile",
+                        yaxis_title="Share (%)", xaxis_title="Age Group",
+                        margin=dict(l=0, r=0, t=40, b=0),
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ── Row D: Airports + Cluster visitation ──────────────────────────
+        rd1, rd2 = st.columns(2)
+
+        with rd1:
+            if not df_vi_air.empty:
+                air_s = df_vi_air.sort_values("passengers_share_pct", ascending=True)
+                fig = go.Figure(go.Bar(
+                    y=air_s["airport_code"], x=air_s["passengers_share_pct"],
+                    orientation="h", marker_color=C3,
+                    text=[f"{v:.1f}%" for v in air_s["passengers_share_pct"]],
+                    textposition="outside",
+                    customdata=air_s["airport_name"],
+                    hovertemplate="%{customdata}<br>%{x:.1f}% of fly-in passengers<extra></extra>",
+                ))
+                style_fig(fig, 340)
+                fig.update_layout(
+                    title_text="Fly-In Visitors — Top Origin Airports",
+                    xaxis_title="Share of Passengers (%)",
+                    margin=dict(l=0, r=60, t=40, b=0),
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+        with rd2:
+            if not df_vi_clust.empty:
+                fig = go.Figure()
+                clust_colors = [C2 if v >= 0 else "#ef4444"
+                                for v in df_vi_clust["vs_compare_pct"].fillna(0)]
+                fig.add_trace(go.Bar(
+                    x=df_vi_clust["cluster"], y=df_vi_clust["visitor_days_share_pct"],
+                    marker_color=clust_colors,
+                    text=[f"{v:.1f}%" for v in df_vi_clust["visitor_days_share_pct"]],
+                    textposition="outside",
+                    customdata=df_vi_clust["vs_compare_pct"].fillna(0),
+                    hovertemplate="%{x}<br>%{y:.1f}% visitor days<br>YoY: %{customdata:+.1f}pp<extra></extra>",
+                ))
+                style_fig(fig, 340)
+                fig.update_layout(
+                    title_text="Cluster Visitation — Share of Visitor Days",
+                    yaxis_title="% of Visitor Days",
+                    xaxis_tickangle=-15,
+                    margin=dict(l=0, r=0, t=40, b=0),
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+        # ── Spending vs. Visitor origin scatter (cross-analysis) ──────────
+        if not df_vi_dma.empty:
+            st.divider()
+            dma_full = df_vi_dma.dropna(subset=["avg_spend_usd", "visitor_days_share_pct"])
+            if not dma_full.empty:
+                fig = go.Figure(go.Scatter(
+                    x=dma_full["visitor_days_share_pct"],
+                    y=dma_full["avg_spend_usd"],
+                    mode="markers+text",
+                    marker=dict(
+                        size=dma_full["spending_share_pct"].fillna(5) * 3 + 8,
+                        color=dma_full["visitor_days_vs_compare_pct"].fillna(0),
+                        colorscale="RdYlGn", showscale=True,
+                        colorbar=dict(title="YoY pp"),
+                        line=dict(width=1, color="rgba(255,255,255,0.3)"),
+                    ),
+                    text=dma_full["dma"],
+                    textposition="top center",
+                    textfont=dict(size=10),
+                    hovertemplate=(
+                        "<b>%{text}</b><br>"
+                        "Visitor Days Share: %{x:.1f}%<br>"
+                        "Avg Spend/Day: $%{y:.2f}<br>"
+                        "<extra></extra>"
+                    ),
+                ))
+                style_fig(fig, 380)
+                fig.update_layout(
+                    title_text="Origin Market Intelligence — Visitor Share vs. Avg Spend<br>"
+                               "<sup>Bubble size = spending share · Color = YoY growth (green=growing)</sup>",
+                    xaxis_title="Visitor Days Share (%)",
+                    yaxis_title="Avg Spend per Visitor Day (USD)",
+                    margin=dict(l=0, r=0, t=60, b=0),
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.caption("High-value quadrant (top-right): markets with both large visitor share AND high spend — "
+                           "prioritize in media buy. Bottom-right: high-volume, lower-yield — potential yield improvement targets.")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 6 — REVENUE & TBID
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_rev:
+    st.markdown(
+        '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.55rem;'
+        'font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">'
+        'Revenue Analytics & TBID Estimation</div>'
+        '<div style="font-size:12px;opacity:0.50;font-weight:500;margin-bottom:20px;">'
+        'Source: STR Monthly · CoStar South OC · TBID blended rate 1.25%</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Use monthly STR data for revenue analytics
+    if df_monthly.empty:
+        st.markdown(empty_state("💰", "No monthly STR data.", "Load STR monthly exports to populate."), unsafe_allow_html=True)
+    else:
+        _rev_df = df_monthly.copy().sort_values("as_of_date")
+        _rev_df["year"] = _rev_df["as_of_date"].dt.year
+        _rev_df["month"] = _rev_df["as_of_date"].dt.month
+        _rev_df["month_label"] = _rev_df["as_of_date"].dt.strftime("%b %Y")
+
+        # TBID estimate (blended 1.25% of room revenue)
+        if "revenue" in _rev_df.columns:
+            _rev_df["tbid_est"] = _rev_df["revenue"].fillna(0) * 0.0125
+
+        # ── Hero TBID KPIs ────────────────────────────────────────────────
+        total_rev  = _rev_df["revenue"].sum()  if "revenue" in _rev_df.columns else 0
+        total_tbid = _rev_df["tbid_est"].sum() if "tbid_est" in _rev_df.columns else 0
+        latest_adr = _rev_df["adr"].iloc[-1] if "adr" in _rev_df.columns and not _rev_df.empty else 0
+        latest_occ = _rev_df["occupancy"].iloc[-1] if "occupancy" in _rev_df.columns and not _rev_df.empty else 0
+        latest_rev = _rev_df["revpar"].iloc[-1] if "revpar" in _rev_df.columns and not _rev_df.empty else 0
+
+        tr1, tr2, tr3, tr4, tr5 = st.columns(5)
+        with tr1:
+            st.metric("Total Room Revenue", f"${total_rev/1e6:.1f}M")
+        with tr2:
+            st.metric("Est. TBID Contribution", f"${total_tbid/1e3:.0f}K",
+                      help="Room Revenue × 1.25% blended TBID rate")
+        with tr3:
+            st.metric("Latest ADR", f"${latest_adr:,.2f}")
+        with tr4:
+            st.metric("Latest Occupancy", f"{latest_occ:.1f}%")
+        with tr5:
+            st.metric("Latest RevPAR", f"${latest_rev:,.2f}")
+
+        st.divider()
+
+        # ── Row A: Monthly Revenue + TBID estimate ────────────────────────
+        if "revenue" in _rev_df.columns:
+            fig_tbid = make_subplots(specs=[[{"secondary_y": True}]])
+            fig_tbid.add_trace(go.Bar(
+                x=_rev_df["month_label"], y=_rev_df["revenue"] / 1e6,
+                name="Room Revenue ($M)", marker_color="rgba(99,102,241,0.7)",
+                hovertemplate="%{x}<br>Revenue: $%{y:.2f}M<extra></extra>",
+            ), secondary_y=False)
+            fig_tbid.add_trace(go.Scatter(
+                x=_rev_df["month_label"], y=_rev_df["tbid_est"] / 1e3,
+                name="TBID Estimate ($K)", mode="lines+markers",
+                line=dict(color="#f59e0b", width=2),
+                marker=dict(size=5, color="#f59e0b"),
+                hovertemplate="%{x}<br>TBID Est: $%{y:.1f}K<extra></extra>",
+            ), secondary_y=True)
+            style_fig(fig_tbid, 320)
+            fig_tbid.update_layout(
+                title_text="Monthly Room Revenue & TBID Estimate",
+                legend=dict(orientation="h", y=1.1, x=0),
+                margin=dict(l=0, r=0, t=52, b=0),
+            )
+            fig_tbid.update_yaxes(title_text="Room Revenue ($M)", secondary_y=False)
+            fig_tbid.update_yaxes(title_text="TBID Estimate ($K)", secondary_y=True,
+                                  gridcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig_tbid, use_container_width=True)
+
+        st.divider()
+
+        # ── Row B: ADR vs Occupancy scatter (all months) + RevPAR heatmap ─
+        rb1, rb2 = st.columns(2)
+
+        with rb1:
+            if "adr" in _rev_df.columns and "occupancy" in _rev_df.columns:
+                has_rev = "revenue" in _rev_df.columns
+                scatter_df = _rev_df.dropna(subset=["adr", "occupancy"])
+                fig_sc = go.Figure(go.Scatter(
+                    x=scatter_df["occupancy"],
+                    y=scatter_df["adr"],
+                    mode="markers+text",
+                    marker=dict(
+                        size=scatter_df["revenue"].fillna(0) / scatter_df["revenue"].max() * 20 + 6
+                              if has_rev else 10,
+                        color=scatter_df["year"],
+                        colorscale="Viridis", showscale=True,
+                        colorbar=dict(title="Year"),
+                        opacity=0.85,
+                        line=dict(width=1, color="rgba(255,255,255,0.3)"),
+                    ),
+                    text=scatter_df["month_label"],
+                    textposition="top center",
+                    textfont=dict(size=9),
+                    hovertemplate=(
+                        "<b>%{text}</b><br>"
+                        "Occupancy: %{x:.1f}%<br>"
+                        "ADR: $%{y:.2f}<br>"
+                        "<extra></extra>"
+                    ),
+                ))
+                # Trend line
+                import numpy as np
+                x_arr = scatter_df["occupancy"].values
+                y_arr = scatter_df["adr"].values
+                if len(x_arr) > 2:
+                    z = np.polyfit(x_arr, y_arr, 1)
+                    p = np.poly1d(z)
+                    x_line = np.linspace(x_arr.min(), x_arr.max(), 50)
+                    fig_sc.add_trace(go.Scatter(
+                        x=x_line, y=p(x_line),
+                        mode="lines", name="Trend",
+                        line=dict(color="#ef4444", width=2, dash="dot"),
+                        hoverinfo="skip",
+                    ))
+                style_fig(fig_sc, 380)
+                fig_sc.update_layout(
+                    title_text="ADR vs. Occupancy Correlation<br>"
+                               "<sup>Bubble size = room revenue · Color = year</sup>",
+                    xaxis_title="Occupancy (%)",
+                    yaxis_title="ADR (USD)",
+                    margin=dict(l=0, r=0, t=60, b=0),
+                )
+                st.plotly_chart(fig_sc, use_container_width=True)
+
+        with rb2:
+            # RevPAR heatmap by month × year
+            if "revpar" in _rev_df.columns:
+                piv = _rev_df.pivot_table(
+                    index="month", columns="year", values="revpar", aggfunc="mean"
+                )
+                month_names = {1:"Jan",2:"Feb",3:"Mar",4:"Apr",5:"May",6:"Jun",
+                               7:"Jul",8:"Aug",9:"Sep",10:"Oct",11:"Nov",12:"Dec"}
+                y_labels = [month_names.get(m, str(m)) for m in piv.index]
+                fig_heat = go.Figure(go.Heatmap(
+                    z=piv.values,
+                    x=[str(c) for c in piv.columns],
+                    y=y_labels,
+                    colorscale="RdYlGn",
+                    text=[[f"${v:.0f}" if not np.isnan(v) else "—"
+                           for v in row] for row in piv.values],
+                    texttemplate="%{text}",
+                    hovertemplate="Month: %{y}<br>Year: %{x}<br>RevPAR: $%{z:.2f}<extra></extra>",
+                ))
+                style_fig(fig_heat, 380)
+                fig_heat.update_layout(
+                    title_text="RevPAR Heatmap — Month × Year",
+                    xaxis_title="Year", yaxis_title="Month",
+                    margin=dict(l=0, r=0, t=40, b=0),
+                )
+                st.plotly_chart(fig_heat, use_container_width=True)
+
+        st.divider()
+
+        # ── Row C: Occupancy calendar heatmap + YoY waterfall ─────────────
+        rc1, rc2 = st.columns(2)
+
+        with rc1:
+            # Compression: days above 80% / 90% per quarter
+            if not df_comp.empty:
+                fig_comp = go.Figure()
+                fig_comp.add_trace(go.Bar(
+                    x=df_comp["quarter"], y=df_comp["days_above_80_occ"],
+                    name="Days >80% Occ", marker_color="rgba(99,102,241,0.75)",
+                ))
+                fig_comp.add_trace(go.Bar(
+                    x=df_comp["quarter"], y=df_comp["days_above_90_occ"],
+                    name="Days >90% Occ", marker_color="rgba(239,68,68,0.85)",
+                ))
+                style_fig(fig_comp, 320)
+                fig_comp.update_layout(
+                    title_text="Compression Days by Quarter",
+                    barmode="group",
+                    yaxis_title="Days",
+                    margin=dict(l=0, r=0, t=40, b=0),
+                )
+                st.plotly_chart(fig_comp, use_container_width=True)
+
+        with rc2:
+            # TBID tier breakdown illustration
+            if "adr" in _rev_df.columns:
+                _tier_data = {"≤$199 (1.0%)": 0, "$200–$399 (1.5%)": 0, "≥$400 (2.0%)": 0}
+                for _, row in _rev_df.iterrows():
+                    adr = row.get("adr", 0) or 0
+                    rev = row.get("revenue", 0) or 0
+                    if adr < 200:
+                        _tier_data["≤$199 (1.0%)"] += rev * 0.010
+                    elif adr < 400:
+                        _tier_data["$200–$399 (1.5%)"] += rev * 0.015
+                    else:
+                        _tier_data["≥$400 (2.0%)"] += rev * 0.020
+                _tier_df = pd.DataFrame({
+                    "Tier": list(_tier_data.keys()),
+                    "TBID ($K)": [v / 1000 for v in _tier_data.values()],
+                })
+                fig_tier = go.Figure(go.Funnel(
+                    y=_tier_df["Tier"],
+                    x=_tier_df["TBID ($K)"],
+                    textinfo="value+percent total",
+                    marker_color=["#3b82f6", "#6366f1", "#a855f7"],
+                ))
+                style_fig(fig_tier, 320)
+                fig_tier.update_layout(
+                    title_text="Est. TBID by Rate Tier ($K)",
+                    margin=dict(l=0, r=0, t=40, b=0),
+                )
+                st.plotly_chart(fig_tier, use_container_width=True)
+
+        # ── Revenue waterfall by year ──────────────────────────────────────
+        if "revenue" in _rev_df.columns:
+            _yr_rev = _rev_df.groupby("year")["revenue"].sum().reset_index()
+            _yr_rev = _yr_rev.sort_values("year")
+            if len(_yr_rev) >= 2:
+                st.divider()
+                wf_measure = ["absolute"] + ["relative"] * (len(_yr_rev) - 2) + ["total"]
+                wf_x       = [str(y) for y in _yr_rev["year"]]
+                wf_y       = [_yr_rev["revenue"].iloc[0]] + \
+                             list(_yr_rev["revenue"].diff().dropna().iloc[:-1]) + \
+                             [_yr_rev["revenue"].iloc[-1]]
+                if len(_yr_rev) == 2:
+                    wf_measure = ["absolute", "total"]
+                    wf_y = list(_yr_rev["revenue"])
+                fig_wf = go.Figure(go.Waterfall(
+                    x=wf_x, y=[v / 1e6 for v in wf_y],
+                    measure=wf_measure,
+                    textposition="outside",
+                    text=[f"${v/1e6:.1f}M" for v in wf_y],
+                    connector=dict(line=dict(color="rgba(127,127,127,0.3)")),
+                    increasing=dict(marker_color="#10b981"),
+                    decreasing=dict(marker_color="#ef4444"),
+                    totals=dict(marker_color="#6366f1"),
+                ))
+                style_fig(fig_wf, 300)
+                fig_wf.update_layout(
+                    title_text="Annual Room Revenue Waterfall ($M)",
+                    yaxis_title="Revenue ($M)",
+                    margin=dict(l=0, r=0, t=40, b=0),
+                )
+                st.plotly_chart(fig_wf, use_container_width=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 7 — DIGITAL & CAMPAIGN
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_dig:
+    st.markdown(
+        '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.55rem;'
+        'font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">'
+        'Digital & Campaign Analytics</div>'
+        '<div style="font-size:12px;opacity:0.50;font-weight:500;margin-bottom:20px;">'
+        'Source: Datafy Attribution · 2025-26 Annual Campaign · visitdanapoint.com</div>',
+        unsafe_allow_html=True,
+    )
+
+    df_mk  = load_datafy_media_kpis()
+    df_mm  = load_datafy_media_markets()
+    df_wk  = load_datafy_web_kpis()
+    df_wch = load_datafy_web_channels()
+    df_wdm = load_datafy_web_dma()
+    df_tp  = load_datafy_top_pages()
+    df_ts  = load_datafy_traffic_sources()
+
+    # ── Campaign Hero KPIs ────────────────────────────────────────────────
+    if not df_mk.empty:
+        mk = df_mk.iloc[0]
+        st.markdown("### 📡 Annual Media Campaign")
+        ck1, ck2, ck3, ck4, ck5, ck6 = st.columns(6)
+        with ck1:
+            st.metric("Total Impressions", f"{mk.get('total_impressions', 0)/1e6:.1f}M")
+        with ck2:
+            st.metric("Unique Reach", f"{mk.get('unique_reach', 0)/1e6:.2f}M")
+        with ck3:
+            st.metric("Attributable Trips", f"{mk.get('attributable_trips', 0):,}")
+        with ck4:
+            st.metric("Campaign Impact", f"${mk.get('total_impact_usd', 0)/1e3:.0f}K")
+        with ck5:
+            st.metric("Manual ADR Used", f"${mk.get('manual_adr', 0):,.0f}")
+        with ck6:
+            st.metric("Spend/Visitor", f"${mk.get('cohort_spend_per_visitor', 0):.2f}")
+
+        st.divider()
+
+        # Campaign funnel
+        impressions  = mk.get("total_impressions", 0)
+        reach        = mk.get("unique_reach", 0)
+        trips        = mk.get("attributable_trips", 0)
+        impact       = mk.get("total_impact_usd", 0)
+
+        fig_funnel = go.Figure(go.Funnel(
+            y=["Impressions", "Unique Reach", "Attributable Trips", "Economic Impact ($)"],
+            x=[impressions / 1e6, reach / 1e6, trips / 1000, impact / 1e6],
+            textinfo="value+percent initial",
+            texttemplate=[
+                f"{impressions/1e6:.1f}M",
+                f"{reach/1e6:.2f}M ({reach/impressions*100:.1f}%)",
+                f"{trips:,} trips ({trips/reach*100:.2f}%)",
+                f"${impact/1e3:.0f}K impact",
+            ],
+            marker_color=["#6366f1", "#3b82f6", "#10b981", "#f59e0b"],
+        ))
+        style_fig(fig_funnel, 320)
+        fig_funnel.update_layout(
+            title_text="Campaign Conversion Funnel — Impressions → Economic Impact",
+            margin=dict(l=0, r=0, t=40, b=0),
+        )
+        st.plotly_chart(fig_funnel, use_container_width=True)
+
+        # Media top markets impact
+        if not df_mm.empty:
+            st.divider()
+            mm_s = df_mm.sort_values("dma_est_impact_usd", ascending=True)
+            fig_mm = go.Figure(go.Bar(
+                y=mm_s["top_dma"], x=mm_s["dma_est_impact_usd"] / 1e3,
+                orientation="h",
+                marker=dict(
+                    color=mm_s["dma_share_of_impact_pct"],
+                    colorscale="Blues", showscale=True,
+                    colorbar=dict(title="% of Total Impact"),
+                ),
+                text=[f"${v/1e3:.0f}K" for v in mm_s["dma_est_impact_usd"]],
+                textposition="outside",
+                hovertemplate="%{y}<br>Impact: $%{x:.0f}K<br>Share: %{marker.color:.1f}%<extra></extra>",
+            ))
+            style_fig(fig_mm, 380)
+            fig_mm.update_layout(
+                title_text="Campaign Economic Impact by Origin Market",
+                xaxis_title="Estimated Impact ($K)",
+                margin=dict(l=0, r=70, t=40, b=0),
+            )
+            st.plotly_chart(fig_mm, use_container_width=True)
+    else:
+        st.info("No media campaign data. Run load_datafy_reports.py.")
+
+    # ── Website Attribution Section ───────────────────────────────────────
+    if not df_wk.empty:
+        wk = df_wk.iloc[0]
+        st.markdown("### 🌐 Website Attribution")
+        wk1, wk2, wk3, wk4, wk5 = st.columns(5)
+        with wk1:
+            st.metric("Total Sessions", f"{wk.get('total_website_sessions', 0):,}")
+        with wk2:
+            st.metric("Page Views", f"{wk.get('website_pageviews', 0):,}")
+        with wk3:
+            st.metric("Attributable Trips", f"{wk.get('attributable_trips', 0):,}")
+        with wk4:
+            st.metric("Engagement Rate", f"{wk.get('avg_engagement_rate_pct', 0):.1f}%")
+        with wk5:
+            st.metric("Website Impact", f"${wk.get('est_impact_usd', 0)/1e3:.0f}K")
+
+    if not df_wch.empty:
+        st.divider()
+        wc1, wc2 = st.columns(2)
+
+        with wc1:
+            fig_ch = go.Figure()
+            ch_colors = {"email": "#6366f1", "redirect": "#3b82f6", "search": "#10b981"}
+            fig_ch.add_trace(go.Bar(
+                x=df_wch["acquisition_channel"],
+                y=df_wch["sessions"],
+                name="Sessions",
+                marker_color=[ch_colors.get(c, "#94a3b8") for c in df_wch["acquisition_channel"]],
+                text=df_wch["sessions"],
+                textposition="outside",
+            ))
+            fig_ch2 = make_subplots(rows=1, cols=1)
+            fig_channels = go.Figure()
+            fig_channels.add_trace(go.Bar(
+                name="Sessions",
+                x=df_wch["acquisition_channel"],
+                y=df_wch["sessions"],
+                marker_color=["#6366f1", "#3b82f6", "#10b981"][:len(df_wch)],
+                yaxis="y",
+            ))
+            fig_channels.add_trace(go.Scatter(
+                name="Engagement Rate",
+                x=df_wch["acquisition_channel"],
+                y=df_wch["engagement_rate_pct"],
+                mode="markers+lines",
+                marker=dict(size=10, color="#f59e0b"),
+                line=dict(color="#f59e0b", width=2),
+                yaxis="y2",
+            ))
+            style_fig(fig_channels, 320)
+            fig_channels.update_layout(
+                title_text="Channel Sessions & Engagement Rate",
+                yaxis=dict(title="Sessions"),
+                yaxis2=dict(title="Engagement Rate (%)", overlaying="y", side="right",
+                            showgrid=False),
+                margin=dict(l=0, r=50, t=40, b=0),
+            )
+            st.plotly_chart(fig_channels, use_container_width=True)
+
+        with wc2:
+            if not df_wch.empty and "attributable_trips_dest" in df_wch.columns:
+                fig_attr = go.Figure(go.Bar(
+                    x=df_wch["acquisition_channel"],
+                    y=df_wch["attributable_trips_dest"].fillna(0),
+                    marker_color=["#6366f1", "#3b82f6", "#10b981"][:len(df_wch)],
+                    text=df_wch["attributable_trips_dest"].fillna(0).astype(int),
+                    textposition="outside",
+                    hovertemplate="%{x}: %{y} attributable trips<extra></extra>",
+                ))
+                style_fig(fig_attr, 320)
+                fig_attr.update_layout(
+                    title_text="Attributable Trips by Acquisition Channel",
+                    yaxis_title="Trips",
+                    margin=dict(l=0, r=0, t=40, b=0),
+                )
+                st.plotly_chart(fig_attr, use_container_width=True)
+
+    # ── Top Pages + Traffic Sources ────────────────────────────────────────
+    if not df_tp.empty or not df_ts.empty:
+        st.divider()
+        dp1, dp2 = st.columns(2)
+
+        with dp1:
+            if not df_tp.empty:
+                pages_s = df_tp.head(15).sort_values("page_views", ascending=True)
+                # Truncate long titles
+                pages_s = pages_s.copy()
+                pages_s["short_title"] = pages_s["page_title"].str[:35] + "…"
+                fig_pages = go.Figure(go.Bar(
+                    y=pages_s["short_title"],
+                    x=pages_s["page_views"],
+                    orientation="h",
+                    marker=dict(
+                        color=pages_s["page_views"],
+                        colorscale="Blues", showscale=False,
+                    ),
+                    text=[f"{v:,}" for v in pages_s["page_views"]],
+                    textposition="outside",
+                    customdata=pages_s["page_path"],
+                    hovertemplate="%{y}<br>Path: %{customdata}<br>Views: %{x:,}<extra></extra>",
+                ))
+                style_fig(fig_pages, 440)
+                fig_pages.update_layout(
+                    title_text="Top Pages by Views (visitdanapoint.com)",
+                    xaxis_title="Page Views",
+                    margin=dict(l=0, r=80, t=40, b=0),
+                )
+                st.plotly_chart(fig_pages, use_container_width=True)
+
+        with dp2:
+            if not df_ts.empty:
+                ts_s = df_ts.sort_values("sessions", ascending=True)
+                fig_ts = go.Figure()
+                fig_ts.add_trace(go.Bar(
+                    y=ts_s["source"], x=ts_s["sessions"],
+                    orientation="h", name="Sessions",
+                    marker_color="rgba(99,102,241,0.75)",
+                    hovertemplate="%{y}: %{x:,} sessions<extra></extra>",
+                ))
+                style_fig(fig_ts, 440)
+                fig_ts.update_layout(
+                    title_text="Traffic Sources by Sessions",
+                    xaxis_title="Sessions",
+                    margin=dict(l=0, r=0, t=40, b=0),
+                )
+                st.plotly_chart(fig_ts, use_container_width=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 8 — CROSS-DATASET INTELLIGENCE
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_cx:
+    st.markdown(
+        '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.55rem;'
+        'font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">'
+        'Cross-Dataset Intelligence</div>'
+        '<div style="font-size:12px;opacity:0.50;font-weight:500;margin-bottom:20px;">'
+        'STR Portfolio × CoStar Market × Datafy Visitors — correlation &amp; gap analysis</div>',
+        unsafe_allow_html=True,
+    )
+
+    df_cx_costar = load_costar_monthly()
+    df_cx_chain  = load_costar_chain()
+    df_cx_comp   = load_costar_compset()
+    df_cx_dma    = load_datafy_dma()
+    df_cx_media  = load_datafy_media_markets()
+
+    # ── Section 1: STR Portfolio vs CoStar Market ─────────────────────────
+    st.markdown("### STR Portfolio vs. CoStar South OC Market")
+
+    if not df_monthly.empty and not df_cx_costar.empty:
+        # Align on as_of_date
+        _str = df_monthly[["as_of_date","revpar","adr","occupancy"]].copy()
+        _str["as_of_date"] = pd.to_datetime(_str["as_of_date"])
+        _str["month_label"] = _str["as_of_date"].dt.strftime("%b %Y")
+
+        _cs = df_cx_costar[["as_of_date","revpar_usd","adr_usd","occupancy_pct"]].copy()
+        _cs["as_of_date"] = pd.to_datetime(_cs["as_of_date"])
+        _cs["month_label"] = _cs["as_of_date"].dt.strftime("%b %Y")
+
+        merged = pd.merge(_str, _cs, on="month_label", how="inner", suffixes=("_str","_cs"))
+
+        if not merged.empty:
+            # RevPAR dual-axis
+            fig_rv = go.Figure()
+            fig_rv.add_trace(go.Scatter(
+                x=merged["month_label"], y=merged["revpar"],
+                name="STR Portfolio RevPAR", mode="lines+markers",
+                line=dict(color="#6366f1", width=2.5),
+                marker=dict(size=5),
+                hovertemplate="%{x}<br>Portfolio RevPAR: $%{y:.2f}<extra></extra>",
+            ))
+            fig_rv.add_trace(go.Scatter(
+                x=merged["month_label"], y=merged["revpar_usd"],
+                name="CoStar Market RevPAR", mode="lines+markers",
+                line=dict(color="#10b981", width=2.5, dash="dash"),
+                marker=dict(size=5, symbol="diamond"),
+                hovertemplate="%{x}<br>Market RevPAR: $%{y:.2f}<extra></extra>",
+            ))
+            # Gap fill
+            fig_rv.add_trace(go.Scatter(
+                x=list(merged["month_label"]) + list(reversed(merged["month_label"])),
+                y=list(merged["revpar"]) + list(reversed(merged["revpar_usd"])),
+                fill="toself",
+                fillcolor="rgba(99,102,241,0.07)",
+                line=dict(color="rgba(0,0,0,0)"),
+                name="Gap", showlegend=False, hoverinfo="skip",
+            ))
+            style_fig(fig_rv, 320)
+            fig_rv.update_layout(
+                title_text="RevPAR: STR Portfolio vs. CoStar South OC Market",
+                yaxis_title="RevPAR (USD)",
+                margin=dict(l=0, r=0, t=40, b=0),
+            )
+            st.plotly_chart(fig_rv, use_container_width=True)
+
+            # ADR + Occ comparison side by side
+            cx1, cx2 = st.columns(2)
+            with cx1:
+                fig_adr = go.Figure()
+                fig_adr.add_trace(go.Bar(
+                    x=merged["month_label"], y=merged["adr"],
+                    name="STR Portfolio ADR", marker_color="rgba(99,102,241,0.7)",
+                ))
+                fig_adr.add_trace(go.Bar(
+                    x=merged["month_label"], y=merged["adr_usd"],
+                    name="CoStar Market ADR", marker_color="rgba(16,185,129,0.7)",
+                ))
+                style_fig(fig_adr, 300)
+                fig_adr.update_layout(
+                    title_text="ADR Comparison — Portfolio vs. Market",
+                    barmode="group", yaxis_title="ADR ($)",
+                    margin=dict(l=0, r=0, t=40, b=0),
+                )
+                st.plotly_chart(fig_adr, use_container_width=True)
+
+            with cx2:
+                fig_occ = go.Figure()
+                fig_occ.add_trace(go.Scatter(
+                    x=merged["month_label"], y=merged["occupancy"],
+                    name="STR Portfolio Occ", mode="lines+markers",
+                    line=dict(color="#6366f1", width=2),
+                    marker=dict(size=5),
+                ))
+                fig_occ.add_trace(go.Scatter(
+                    x=merged["month_label"], y=merged["occupancy_pct"],
+                    name="CoStar Market Occ", mode="lines+markers",
+                    line=dict(color="#10b981", width=2, dash="dash"),
+                    marker=dict(size=5, symbol="diamond"),
+                ))
+                # 80% reference line
+                fig_occ.add_hline(y=80, line=dict(color="#f59e0b", width=1, dash="dot"),
+                                  annotation_text="80% Compression", annotation_position="bottom right")
+                style_fig(fig_occ, 300)
+                fig_occ.update_layout(
+                    title_text="Occupancy — Portfolio vs. Market",
+                    yaxis_title="Occupancy (%)",
+                    margin=dict(l=0, r=0, t=40, b=0),
+                )
+                st.plotly_chart(fig_occ, use_container_width=True)
+
+    st.divider()
+
+    # ── Section 2: Chain Scale Competitive Positioning ────────────────────
+    st.markdown("### Chain Scale Performance — Competitive Landscape")
+
+    if not df_cx_chain.empty:
+        chain_24 = df_cx_chain[df_cx_chain["year"] == "2024"].sort_values("revpar_usd", ascending=False)
+        if not chain_24.empty:
+            cx2a, cx2b = st.columns(2)
+
+            with cx2a:
+                # ADR vs Occupancy bubble (bubble = rooms, color = RevPAR)
+                fig_bub = go.Figure(go.Scatter(
+                    x=chain_24["occupancy_pct"],
+                    y=chain_24["adr_usd"],
+                    mode="markers+text",
+                    marker=dict(
+                        size=chain_24["supply_rooms"] / chain_24["supply_rooms"].max() * 50 + 15,
+                        color=chain_24["revpar_usd"],
+                        colorscale="Viridis", showscale=True,
+                        colorbar=dict(title="RevPAR ($)"),
+                        opacity=0.85,
+                        line=dict(width=1, color="rgba(255,255,255,0.4)"),
+                    ),
+                    text=chain_24["chain_scale"],
+                    textposition="top center",
+                    textfont=dict(size=10, family=_font),
+                    hovertemplate=(
+                        "<b>%{text}</b><br>"
+                        "Occupancy: %{x:.1f}%<br>"
+                        "ADR: $%{y:.0f}<br>"
+                        "RevPAR: %{marker.color:.0f}<extra></extra>"
+                    ),
+                ))
+                style_fig(fig_bub, 360)
+                fig_bub.update_layout(
+                    title_text="Chain Scale — ADR vs. Occupancy<br>"
+                               "<sup>Bubble size = supply rooms · Color = RevPAR</sup>",
+                    xaxis_title="Occupancy (%)",
+                    yaxis_title="ADR ($)",
+                    margin=dict(l=0, r=0, t=60, b=0),
+                )
+                st.plotly_chart(fig_bub, use_container_width=True)
+
+            with cx2b:
+                # RevPAR horizontal bar ranked
+                cs_sorted = chain_24.sort_values("revpar_usd", ascending=True)
+                fig_cs_bar = go.Figure(go.Bar(
+                    y=cs_sorted["chain_scale"],
+                    x=cs_sorted["revpar_usd"],
+                    orientation="h",
+                    marker=dict(
+                        color=cs_sorted["revpar_usd"],
+                        colorscale="Blues", showscale=False,
+                    ),
+                    text=[f"${v:.0f}" for v in cs_sorted["revpar_usd"]],
+                    textposition="outside",
+                    hovertemplate="%{y}<br>RevPAR: $%{x:.2f}<extra></extra>",
+                ))
+                style_fig(fig_cs_bar, 360)
+                fig_cs_bar.update_layout(
+                    title_text="RevPAR Ranking by Chain Scale (2024)",
+                    xaxis_title="RevPAR (USD)",
+                    margin=dict(l=0, r=70, t=40, b=0),
+                )
+                st.plotly_chart(fig_cs_bar, use_container_width=True)
+
+    st.divider()
+
+    # ── Section 3: Competitive Set — Market Positioning Radar ─────────────
+    st.markdown("### Competitive Set — MPI / ARI / RGI Positioning")
+
+    if not df_cx_comp.empty and {"mpi","ari","rgi","property_name"}.issubset(df_cx_comp.columns):
+        cx3a, cx3b = st.columns(2)
+
+        with cx3a:
+            # Radar chart per property (MPI/ARI/RGI)
+            categories = ["Market Penetration Index<br>(MPI)",
+                          "Average Rate Index<br>(ARI)",
+                          "Revenue Gen. Index<br>(RGI)"]
+            fig_radar = go.Figure()
+            pal = ["#6366f1","#10b981","#f59e0b","#3b82f6","#a855f7","#ef4444",
+                   "#14b8a6","#f97316","#8b5cf6","#ec4899"]
+            for i, row in df_cx_comp.iterrows():
+                vals = [row.get("mpi", 100), row.get("ari", 100), row.get("rgi", 100)]
+                vals_closed = vals + [vals[0]]
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=vals_closed,
+                    theta=categories + [categories[0]],
+                    name=row["property_name"][:22],
+                    fill="toself",
+                    opacity=0.35,
+                    line=dict(color=pal[i % len(pal)], width=2),
+                ))
+            # 100 reference circle
+            fig_radar.add_trace(go.Scatterpolar(
+                r=[100, 100, 100, 100],
+                theta=categories + [categories[0]],
+                name="Market Parity (100)",
+                line=dict(color="#ffffff", width=1.5, dash="dot"),
+                fill=None, showlegend=True,
+            ))
+            style_fig(fig_radar, 420)
+            fig_radar.update_layout(
+                polar=dict(
+                    bgcolor="rgba(0,0,0,0)",
+                    radialaxis=dict(visible=True, range=[0, 300],
+                                   tickfont=dict(size=10)),
+                    angularaxis=dict(tickfont=dict(size=10)),
+                ),
+                title_text="Competitive Set — Index Radar",
+                showlegend=True,
+                margin=dict(l=0, r=0, t=50, b=0),
+            )
+            st.plotly_chart(fig_radar, use_container_width=True)
+
+        with cx3b:
+            # Compset ADR vs Occupancy scatter
+            fig_csc = go.Figure()
+            scale_colors = {"Luxury": "#a855f7", "Upper Upscale": "#6366f1",
+                            "Upscale": "#3b82f6", "Upper Midscale": "#10b981",
+                            "Midscale": "#f59e0b"}
+            for chain_sc, grp in df_cx_comp.groupby("chain_scale"):
+                fig_csc.add_trace(go.Scatter(
+                    x=grp["occupancy_pct"],
+                    y=grp["adr_usd"],
+                    mode="markers+text",
+                    name=chain_sc,
+                    marker=dict(
+                        size=grp["rooms"] / df_cx_comp["rooms"].max() * 30 + 10,
+                        color=scale_colors.get(chain_sc, "#94a3b8"),
+                        opacity=0.85,
+                        line=dict(width=1, color="rgba(255,255,255,0.3)"),
+                    ),
+                    text=grp["property_name"].str[:14],
+                    textposition="top center",
+                    textfont=dict(size=9),
+                    hovertemplate=(
+                        "<b>%{text}</b><br>"
+                        "Occ: %{x:.1f}%<br>ADR: $%{y:.0f}<br>"
+                        "RevPAR: $" + grp["revpar_usd"].astype(str) + "<extra></extra>"
+                    ),
+                ))
+            style_fig(fig_csc, 420)
+            fig_csc.update_layout(
+                title_text="Compset Positioning — ADR vs. Occupancy<br>"
+                           "<sup>Bubble size = rooms · Color = chain scale</sup>",
+                xaxis_title="Occupancy (%)",
+                yaxis_title="ADR ($)",
+                margin=dict(l=0, r=0, t=60, b=0),
+            )
+            st.plotly_chart(fig_csc, use_container_width=True)
+
+    st.divider()
+
+    # ── Section 4: Visitor Origin × Campaign Impact ROI ───────────────────
+    st.markdown("### Visitor Origin × Campaign Impact — ROI by Market")
+
+    if not df_cx_dma.empty and not df_cx_media.empty:
+        roi_dma = pd.merge(
+            df_cx_dma[["dma","visitor_days_share_pct","avg_spend_usd",
+                        "visitor_days_vs_compare_pct"]].dropna(subset=["avg_spend_usd"]),
+            df_cx_media[["top_dma","dma_est_impact_usd","dma_share_of_impact_pct"]].rename(
+                columns={"top_dma":"dma"}),
+            on="dma", how="inner",
+        )
+        if not roi_dma.empty:
+            fig_roi = go.Figure(go.Scatter(
+                x=roi_dma["visitor_days_share_pct"],
+                y=roi_dma["dma_est_impact_usd"] / 1e3,
+                mode="markers+text",
+                marker=dict(
+                    size=roi_dma["avg_spend_usd"] / roi_dma["avg_spend_usd"].max() * 40 + 12,
+                    color=roi_dma["visitor_days_vs_compare_pct"],
+                    colorscale="RdYlGn", showscale=True,
+                    colorbar=dict(title="YoY Visitor<br>Growth (pp)"),
+                    opacity=0.85,
+                    line=dict(width=1, color="rgba(255,255,255,0.3)"),
+                ),
+                text=roi_dma["dma"],
+                textposition="top center",
+                textfont=dict(size=10),
+                hovertemplate=(
+                    "<b>%{text}</b><br>"
+                    "Visitor Days Share: %{x:.1f}%<br>"
+                    "Campaign Impact: $%{y:.0f}K<br>"
+                    "Avg Spend/Day: $" +
+                    roi_dma["avg_spend_usd"].round(0).astype(int).astype(str) +
+                    "<extra></extra>"
+                ),
+            ))
+            style_fig(fig_roi, 400)
+            fig_roi.update_layout(
+                title_text="Origin Market ROI Matrix — Visitor Share vs. Campaign Impact<br>"
+                           "<sup>Bubble size = avg spend/day · Color = YoY visitor growth</sup>",
+                xaxis_title="Visitor Days Share (%)",
+                yaxis_title="Campaign Impact ($K)",
+                margin=dict(l=0, r=0, t=60, b=0),
+            )
+            st.plotly_chart(fig_roi, use_container_width=True)
+            st.caption(
+                "Top-right quadrant = highest-performing markets (large visitor share + strong campaign impact). "
+                "Green bubbles = growing markets. Prioritize media spend toward high-spend, growing markets."
+            )
+    else:
+        st.info("Visitor + campaign data not yet loaded. Run load_datafy_reports.py to populate.")
+
+    st.divider()
+
+    # ── Section 5: Supply Pipeline Impact Forecast ────────────────────────
+    st.markdown("### Supply Pipeline — Market Impact Forecast")
+
+    df_cx_pipe = load_costar_pipeline()
+    if not df_cx_pipe.empty:
+        # Show pipeline properties with bar chart
+        pipe_sorted = df_cx_pipe.sort_values("rooms", ascending=True)
+        scale_pal = {"Luxury": "#a855f7", "Upper Upscale": "#6366f1",
+                     "Upscale": "#3b82f6", "Upper Midscale": "#10b981",
+                     "Midscale": "#f59e0b", "Economy": "#94a3b8"}
+        pipe_colors = [scale_pal.get(s, "#64748b") for s in pipe_sorted["chain_scale"]]
+        fig_pipe = go.Figure(go.Bar(
+            y=pipe_sorted["property_name"],
+            x=pipe_sorted["rooms"],
+            orientation="h",
+            marker_color=pipe_colors,
+            text=[f"{r} rooms · {s}" for r, s in
+                  zip(pipe_sorted["rooms"], pipe_sorted["projected_open_date"])],
+            textposition="outside",
+            customdata=pipe_sorted[["chain_scale","status","submarket"]].values,
+            hovertemplate=(
+                "<b>%{y}</b><br>Rooms: %{x}<br>"
+                "Chain Scale: %{customdata[0]}<br>"
+                "Status: %{customdata[1]}<br>"
+                "Submarket: %{customdata[2]}<extra></extra>"
+            ),
+        ))
+        style_fig(fig_pipe, 300)
+        fig_pipe.update_layout(
+            title_text="Supply Pipeline — New Rooms by Property",
+            xaxis_title="New Rooms",
+            margin=dict(l=0, r=160, t=40, b=0),
+        )
+        st.plotly_chart(fig_pipe, use_container_width=True)
+
+        # Summary: total rooms by status
+        px1, px2 = st.columns(2)
+        with px1:
+            status_sum = df_cx_pipe.groupby("status")["rooms"].sum().reset_index()
+            fig_status = go.Figure(go.Pie(
+                labels=status_sum["status"],
+                values=status_sum["rooms"],
+                hole=0.55,
+                marker_colors=["#6366f1", "#f59e0b", "#10b981", "#3b82f6"][:len(status_sum)],
+                textinfo="label+value",
+            ))
+            style_fig(fig_status, 280)
+            fig_status.update_layout(
+                title_text="Pipeline Rooms by Status",
+                showlegend=False,
+                margin=dict(l=0, r=0, t=40, b=0),
+            )
+            st.plotly_chart(fig_status, use_container_width=True)
+
+        with px2:
+            scale_sum = df_cx_pipe.groupby("chain_scale")["rooms"].sum().reset_index()
+            fig_scale = go.Figure(go.Pie(
+                labels=scale_sum["chain_scale"],
+                values=scale_sum["rooms"],
+                hole=0.55,
+                marker_colors=[scale_pal.get(s, "#64748b") for s in scale_sum["chain_scale"]],
+                textinfo="label+value",
+            ))
+            style_fig(fig_scale, 280)
+            fig_scale.update_layout(
+                title_text="Pipeline Rooms by Chain Scale",
+                showlegend=False,
+                margin=dict(l=0, r=0, t=40, b=0),
+            )
+            st.plotly_chart(fig_scale, use_container_width=True)
+
+        total_pipeline = df_cx_pipe["rooms"].sum()
+        current_supply = 5120  # from CoStar snapshot
+        st.info(
+            f"**Supply Impact:** {total_pipeline:,} new rooms in pipeline vs. "
+            f"{current_supply:,} current supply = "
+            f"**+{total_pipeline/current_supply*100:.1f}% supply growth** when all projects open. "
+            f"This may pressure occupancy rates unless demand grows proportionally."
+        )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 9 — DATA LOG
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_dl:
     col_a, col_b = st.columns([3, 1])
