@@ -1,0 +1,10 @@
+property_name,market,submarket,brand,chain_scale,rooms,year,occupancy_pct,adr_usd,revpar_usd,mpi,ari,rgi,notes
+Waldorf Astoria Monarch Beach,South Orange County CA,Dana Point,Waldorf Astoria,Luxury,400,2024,71.0,850.0,603.5,92.9,294.5,273.9,Flagship luxury; sets luxury rate ceiling for market
+Ritz-Carlton Laguna Niguel,South Orange County CA,Laguna Beach,Ritz-Carlton,Luxury,396,2024,70.8,720.0,509.76,92.7,249.5,231.2,Clifftop ocean-view luxury; competing feeder: LA + SF
+Laguna Cliffs Marriott,South Orange County CA,Dana Point,Marriott,Upper Upscale,378,2024,78.5,295.0,231.58,102.7,102.2,105.1,Harbor-adjacent; strong meetings + leisure blend
+DoubleTree Suites Dana Point,South Orange County CA,Dana Point,DoubleTree by Hilton,Upper Upscale,196,2024,76.2,248.0,188.98,99.7,85.9,85.7,Suite-focused; captures extended-stay and family segment
+Boonies Hotel Dana Point,South Orange County CA,Dana Point,Tapestry Collection,Upscale,130,2024,80.4,215.0,172.86,105.2,74.5,78.4,Surfer/lifestyle boutique; strong weekend demand
+Holiday Inn Express Dana Point,South Orange County CA,Dana Point,Holiday Inn Express,Upper Midscale,112,2024,82.1,168.0,137.93,107.4,58.2,62.5,Drive-market value-seeker; high occupancy floor
+Pacific Edge Hotel Laguna,South Orange County CA,Laguna Beach,Independent,Upper Upscale,56,2024,74.3,390.0,289.77,97.2,135.2,131.4,Boutique independent; oceanfront; rate premium justified
+Laguna Beach House,South Orange County CA,Laguna Beach,Independent,Upscale,36,2024,73.8,268.0,197.78,96.5,92.9,89.7,Lifestyle boutique; Instagram-friendly; high repeat
+VDP Select Portfolio (Blended),South Orange County CA,Dana Point,Multi-Brand,Mixed,960,2024,76.4,288.5,220.42,100.0,100.0,100.0,12-property portfolio baseline for MPI/ARI/RGI index

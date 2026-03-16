@@ -49,8 +49,98 @@ BASE_DIR      = os.path.dirname(os.path.abspath(__file__))   # …/scripts/
 PROJECT_ROOT  = os.path.dirname(BASE_DIR)                    # ~/Documents/dmo-analytics/
 DB_PATH       = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
 DOWNLOADS_DIR = os.path.join(PROJECT_ROOT, "downloads")      # raw Datafy/GA exports
+DATAFY_DIR    = os.path.join(PROJECT_ROOT, "data", "datafy") # alt location for Datafy files
 
 NOW = datetime.utcnow().isoformat()
+
+
+def _already_loaded(conn, filename: str, source: str = "Datafy") -> bool:
+    """Return True if this file was already processed (recorded in load_log)."""
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT COUNT(*) FROM load_log WHERE source=? AND file_name=?",
+        (source, filename),
+    )
+    return cur.fetchone()[0] > 0
+
+
+def _scan_new_files(conn) -> dict:
+    """
+    Scan downloads/ and data/datafy/ for new Datafy PDFs and GA4 CSVs.
+    Returns dict: {filename: full_path} for files not yet in load_log.
+    """
+    search_dirs = [d for d in [DOWNLOADS_DIR, DATAFY_DIR] if os.path.isdir(d)]
+    new_files   = {}
+    for d in search_dirs:
+        for ext in ["*.pdf", "*.PDF", "*.csv", "*.CSV", "*.xlsx", "*.XLSX"]:
+            for path in glob.glob(os.path.join(d, ext)):
+                fname = os.path.basename(path)
+                if not _already_loaded(conn, fname):
+                    new_files[fname] = path
+    return new_files
+
+
+def _parse_ga4_csv(path: str, conn) -> int:
+    """
+    Load a new Google Analytics 4 CSV export into the appropriate
+    datafy_social_* table based on filename pattern.
+    Returns rows inserted.
+    """
+    fname = os.path.basename(path)
+    cur   = conn.cursor()
+    rows  = 0
+    try:
+        import csv as csv_mod
+        with open(path, newline="", encoding="utf-8-sig") as f:
+            reader = csv_mod.DictReader(f)
+            data   = list(reader)
+
+        if not data:
+            return 0
+
+        # Detect report type from filename
+        fname_l = fname.lower()
+        if "popular" in fname_l or "pages" in fname_l:
+            table = "datafy_social_top_pages"
+            for row in data[:200]:
+                page = row.get("Page path", row.get("Page", ""))
+                views = row.get("Views", row.get("Pageviews", "0"))
+                try:
+                    cur.execute(
+                        "INSERT OR IGNORE INTO datafy_social_top_pages "
+                        "(page_path, page_views, loaded_at) VALUES (?,?,datetime('now'))",
+                        (page, int(str(views).replace(",", "")) if views else 0),
+                    )
+                    rows += cur.rowcount
+                except Exception:
+                    pass
+        elif "traffic" in fname_l or "source" in fname_l or "channel" in fname_l:
+            table = "datafy_social_traffic_sources"
+            for row in data[:100]:
+                src     = row.get("Session source / medium", row.get("Source / Medium", ""))
+                sessions = row.get("Sessions", "0")
+                try:
+                    cur.execute(
+                        "INSERT OR IGNORE INTO datafy_social_traffic_sources "
+                        "(source_medium, sessions, loaded_at) VALUES (?,?,datetime('now'))",
+                        (src, int(str(sessions).replace(",", "")) if sessions else 0),
+                    )
+                    rows += cur.rowcount
+                except Exception:
+                    pass
+        else:
+            table = "load_log"
+
+        conn.commit()
+        cur.execute(
+            "INSERT INTO load_log (source,grain,file_name,rows_inserted) VALUES (?,?,?,?)",
+            ("Datafy", "ga4_csv", fname, rows),
+        )
+        conn.commit()
+        print(f"  ✓ {fname} → {rows} rows into {table}")
+    except Exception as exc:
+        print(f"  ✗ Error parsing GA4 CSV {fname}: {exc}")
+    return rows
 
 # ─── DB helpers ────────────────────────────────────────────────────────────────
 
@@ -1002,15 +1092,36 @@ def main():
     log("load_datafy_reports", "OK  ", f"=== start | db={DB_PATH} | downloads={DOWNLOADS_DIR} ===")
 
     conn = get_conn()
-    cur = conn.cursor()
 
+    # ── Step 1: Detect and process any NEW files in downloads/ or data/datafy/ ──
+    new_files = _scan_new_files(conn)
+    if new_files:
+        log("load_datafy_reports", "OK  ",
+            f"Found {len(new_files)} new file(s): {list(new_files.keys())}")
+        for fname, path in new_files.items():
+            ext = os.path.splitext(fname)[1].lower()
+            if ext == ".csv":
+                _parse_ga4_csv(path, conn)
+            elif ext == ".pdf":
+                log("load_datafy_reports", "INFO",
+                    f"PDF detected: {fname} — update hardcoded tables with values from this report")
+            # xlsx Datafy exports are rare; log for manual review
+            elif ext == ".xlsx":
+                log("load_datafy_reports", "INFO",
+                    f"Excel file detected: {fname} — review and add to hardcoded loader if needed")
+    else:
+        log("load_datafy_reports", "INFO",
+            "No new Datafy files detected — running baseline data load")
+
+    # ── Step 2: Always reload baseline hardcoded tables (full rebuild) ──────────
+    cur = conn.cursor()
     try:
         load_overview(cur)
         load_attribution_website(cur)
         load_attribution_media(cur)
         load_social(cur)
         conn.commit()
-        log("load_datafy_reports", "OK  ", "all tables committed")
+        log("load_datafy_reports", "OK  ", "all baseline tables committed")
     except Exception as e:
         conn.rollback()
         log("load_datafy_reports", "FAIL", str(e))
