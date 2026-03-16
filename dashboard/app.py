@@ -1550,12 +1550,11 @@ with st.sidebar:
     last_log = str(_run_at)[:10] if pd.notna(_run_at) else "—"
 
     _d_dot = "🟢" if isinstance(str_daily_rows,   int) and str_daily_rows   > 0 else "⚫"
+    _m_dot = "🟢" if isinstance(str_monthly_rows, int) and str_monthly_rows > 0 else "⚫"
+    _m_label = f"{str_monthly_rows:,} rows" if isinstance(str_monthly_rows, int) and str_monthly_rows > 0 else "No data"
     st.markdown("**Pipeline Status**")
     st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {str_daily_rows:,} rows")
-    # Keep the Pending loader label as a WIP indicator — also show row count when present
-    st.markdown("🟡 STR Monthly &nbsp;·&nbsp; Pending loader")
-    if isinstance(str_monthly_rows, int) and str_monthly_rows > 0:
-        st.caption(f"  ↳ {str_monthly_rows:,} rows loaded (grain=monthly)")
+    st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_label}")
     st.markdown(f"⚫ Datafy &nbsp;·&nbsp; Not connected")
     st.caption(f"Last ETL run: {last_log}")
 
@@ -2327,7 +2326,7 @@ with tab_dl:
             f"{str_daily_rows:,}" if isinstance(str_daily_rows, int) else str_daily_rows,
         ), unsafe_allow_html=True)
         st.markdown(source_card(
-            _m_dot, "STR Monthly (Pending loader)",
+            _m_dot, "STR Monthly",
             f"grain=monthly · {_m_range}",
             f"{str_monthly_rows:,}" if isinstance(str_monthly_rows, int) else str_monthly_rows,
         ), unsafe_allow_html=True)
