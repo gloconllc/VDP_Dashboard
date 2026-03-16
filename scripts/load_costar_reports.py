@@ -527,59 +527,227 @@ def load_compset(cur: sqlite3.Cursor) -> int:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Optional: PDF parser (pdfplumber) — runs if PDFs found in data/costar/
+# PDF / XLSX parser — runs on any NEW files found in data/costar/
 # ══════════════════════════════════════════════════════════════════════════════
 
-def try_parse_pdfs() -> list[dict]:
+def already_loaded(conn: sqlite3.Connection, filename: str) -> bool:
+    """Return True if this file was already processed (recorded in load_log)."""
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT COUNT(*) FROM load_log WHERE source='CoStar' AND file_name=?",
+        (filename,),
+    )
+    return cur.fetchone()[0] > 0
+
+
+def parse_pdf(pdf_path: Path, conn: sqlite3.Connection) -> int:
     """
-    Attempt to extract key metrics from CoStar PDF exports in data/costar/.
-    Returns a list of dicts with any parsed overrides (keyed by table + field).
-    Falls back gracefully if pdfplumber is not installed or no PDFs found.
+    Extract metrics from a CoStar hospitality PDF report and insert into
+    costar_monthly_performance + costar_market_snapshot.
+    Requires: pip install pdfplumber
     """
     try:
         import pdfplumber  # type: ignore
     except ImportError:
-        log("costar_pdf", "WARN", "pdfplumber not installed — skipping PDF parse. "
-            "Install with: pip install pdfplumber")
-        return []
+        log("costar_pdf", "WARN",
+            "pdfplumber not installed — run: pip install pdfplumber")
+        return 0
 
-    pdf_files = list(COSTAR_DIR.glob("*.pdf")) + list(COSTAR_DIR.glob("*.PDF"))
-    if not pdf_files:
-        log("costar_pdf", "INFO", "No PDFs in data/costar/ — using hardcoded baseline data")
-        return []
+    log("costar_pdf", "OK  ", f"Parsing PDF: {pdf_path.name}")
+    rows_inserted = 0
+    try:
+        with pdfplumber.open(str(pdf_path)) as pdf:
+            full_text = "\n".join(p.extract_text() or "" for p in pdf.pages)
 
-    parsed = []
-    for pdf_path in pdf_files:
-        log("costar_pdf", "OK  ", f"Parsing: {pdf_path.name}")
+        # ── Extract date period ──────────────────────────────────────────────
+        date_m = re.search(
+            r"(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|"
+            r"Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|"
+            r"Dec(?:ember)?)\s+(\d{4})",
+            full_text, re.IGNORECASE,
+        )
+        report_date = None
+        if date_m:
+            try:
+                import datetime as dt
+                report_date = dt.datetime.strptime(
+                    f"01 {date_m.group(1)} {date_m.group(2)}", "%d %B %Y"
+                ).strftime("%Y-%m-%d")
+            except Exception:
+                pass
+
+        # ── Extract key metrics ──────────────────────────────────────────────
+        patterns = {
+            "occupancy_pct": [
+                r"Occupancy[:\s]+(\d+\.?\d*)\s*%",
+                r"Occ(?:upancy)?\.?\s*(\d+\.?\d*)\s*%",
+            ],
+            "adr_usd": [
+                r"ADR[:\s]+\$?(\d{2,4}\.?\d*)",
+                r"Average\s+Daily\s+Rate[:\s]+\$?(\d{2,4}\.?\d*)",
+            ],
+            "revpar_usd": [
+                r"RevPAR[:\s]+\$?(\d{2,4}\.?\d*)",
+                r"Revenue\s+Per\s+Available\s+Room[:\s]+\$?(\d{2,4}\.?\d*)",
+            ],
+            "supply_rooms": [
+                r"Supply[:\s]+([\d,]+)\s*(?:rooms?)?",
+            ],
+            "demand_rooms": [
+                r"Demand[:\s]+([\d,]+)\s*(?:rooms?)?",
+            ],
+        }
+
+        extracted = {}
+        for field, pats in patterns.items():
+            for pat in pats:
+                m = re.search(pat, full_text, re.IGNORECASE)
+                if m:
+                    val_str = m.group(1).replace(",", "")
+                    try:
+                        extracted[field] = float(val_str)
+                        break
+                    except ValueError:
+                        pass
+
+        if not extracted:
+            log("costar_pdf", "WARN",
+                f"  No metrics found in {pdf_path.name} — check PDF format")
+            return 0
+
+        log("costar_pdf", "OK  ",
+            f"  Extracted: {list(extracted.keys())} from {pdf_path.name}")
+
+        # ── Write extracted CSV for audit trail ──────────────────────────────
+        csv_path = COSTAR_DIR / f"parsed_{pdf_path.stem}.csv"
+        import csv as csv_mod
+        with open(csv_path, "w", newline="") as f:
+            w = csv_mod.writer(f)
+            w.writerow(["field", "value", "source_file", "report_date"])
+            for field, val in extracted.items():
+                w.writerow([field, val, pdf_path.name, report_date or ""])
+        log("costar_csv", "OK  ", f"  Wrote {csv_path.name}")
+
+        # ── Insert into costar_monthly_performance ───────────────────────────
+        if report_date and ("occupancy_pct" in extracted or "adr_usd" in extracted):
+            cur = conn.cursor()
+            cur.execute(
+                """INSERT OR IGNORE INTO costar_monthly_performance
+                   (as_of_date, market, submarket,
+                    supply_rooms, demand_rooms,
+                    occupancy_pct, adr_usd, revpar_usd)
+                   VALUES (?,?,?,?,?,?,?,?)""",
+                (
+                    report_date,
+                    "South Orange County CA",
+                    "Dana Point / Laguna Beach",
+                    int(extracted.get("supply_rooms", 0)) or None,
+                    int(extracted.get("demand_rooms", 0)) or None,
+                    extracted.get("occupancy_pct"),
+                    extracted.get("adr_usd"),
+                    extracted.get("revpar_usd"),
+                ),
+            )
+            rows_inserted += cur.rowcount
+            conn.commit()
+
+        # ── Log to load_log ──────────────────────────────────────────────────
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO load_log (source,grain,file_name,rows_inserted) VALUES (?,?,?,?)",
+            ("CoStar", "pdf", pdf_path.name, rows_inserted),
+        )
+        conn.commit()
+
+    except Exception as exc:
+        log("costar_pdf", "FAIL", f"  Error parsing {pdf_path.name}: {exc}")
+
+    return rows_inserted
+
+
+def parse_xlsx(xlsx_path: Path, conn: sqlite3.Connection) -> int:
+    """
+    Parse a CoStar Excel export (market analytics download) and insert rows
+    into costar_monthly_performance via fact_str_metrics column mapping.
+    """
+    try:
+        import pandas as pd  # type: ignore
+    except ImportError:
+        log("costar_xlsx", "WARN", "pandas not installed")
+        return 0
+
+    log("costar_xlsx", "OK  ", f"Parsing Excel: {xlsx_path.name}")
+
+    COLUMN_MAP = {
+        "occupancy": "occupancy_pct", "occ": "occupancy_pct",
+        "occ rate": "occupancy_pct", "occupancy rate": "occupancy_pct",
+        "adr": "adr_usd", "average daily rate": "adr_usd",
+        "revpar": "revpar_usd", "rev par": "revpar_usd",
+        "supply": "supply_rooms", "demand": "demand_rooms",
+        "revenue": "room_revenue_usd", "room revenue": "room_revenue_usd",
+        "date": "as_of_date", "period": "as_of_date", "month": "as_of_date",
+        "market": "market", "submarket": "submarket",
+    }
+
+    try:
+        df = pd.read_excel(str(xlsx_path), engine="openpyxl")
+    except Exception as exc:
+        log("costar_xlsx", "FAIL", f"Cannot read {xlsx_path.name}: {exc}")
+        return 0
+
+    df.columns = [str(c).strip().lower() for c in df.columns]
+    df = df.rename(columns={c: COLUMN_MAP[c] for c in df.columns if c in COLUMN_MAP})
+
+    if "as_of_date" not in df.columns:
+        log("costar_xlsx", "WARN", f"No date column found in {xlsx_path.name} — skipping")
+        return 0
+
+    # Write intermediary CSV
+    csv_path = COSTAR_DIR / f"parsed_{xlsx_path.stem}.csv"
+    df.to_csv(csv_path, index=False)
+    log("costar_csv", "OK  ", f"  Wrote {csv_path.name} ({len(df)} rows)")
+
+    cur = conn.cursor()
+    rows_inserted = 0
+    for _, row in df.iterrows():
         try:
-            with pdfplumber.open(str(pdf_path)) as pdf:
-                full_text = "\n".join(p.extract_text() or "" for p in pdf.pages)
+            import pandas as pd
+            as_of = pd.to_datetime(row["as_of_date"]).strftime("%Y-%m-%d")
+        except Exception:
+            continue
 
-            # Extract occupancy
-            occ_m = re.search(r"Occupancy[:\s]+(\d+\.?\d*)\s*%", full_text, re.IGNORECASE)
-            adr_m = re.search(r"ADR[:\s]+\$?(\d+\.?\d*)", full_text, re.IGNORECASE)
-            rvp_m = re.search(r"RevPAR[:\s]+\$?(\d+\.?\d*)", full_text, re.IGNORECASE)
+        occ = row.get("occupancy_pct")
+        if pd.notna(occ) and float(occ) > 1:
+            occ = float(occ) / 100
 
-            row = {"source_file": pdf_path.name}
-            if occ_m:
-                row["occupancy_pct"] = float(occ_m.group(1))
-            if adr_m:
-                row["adr_usd"] = float(adr_m.group(1))
-            if rvp_m:
-                row["revpar_usd"] = float(rvp_m.group(1))
+        cur.execute(
+            """INSERT OR IGNORE INTO costar_monthly_performance
+               (as_of_date, market, submarket,
+                supply_rooms, demand_rooms,
+                occupancy_pct, adr_usd, revpar_usd, room_revenue_usd)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (
+                as_of,
+                str(row.get("market", "South Orange County CA")),
+                str(row.get("submarket", "Dana Point / Laguna Beach")),
+                int(row["supply_rooms"]) if pd.notna(row.get("supply_rooms")) else None,
+                int(row["demand_rooms"]) if pd.notna(row.get("demand_rooms")) else None,
+                float(occ) if pd.notna(occ) else None,
+                float(row["adr_usd"]) if pd.notna(row.get("adr_usd")) else None,
+                float(row["revpar_usd"]) if pd.notna(row.get("revpar_usd")) else None,
+                float(row["room_revenue_usd"]) if pd.notna(row.get("room_revenue_usd")) else None,
+            ),
+        )
+        rows_inserted += cur.rowcount
 
-            if len(row) > 1:
-                parsed.append(row)
-                log("costar_pdf", "OK  ",
-                    f"  Extracted {len(row)-1} metrics from {pdf_path.name}")
-            else:
-                log("costar_pdf", "WARN",
-                    f"  No standard metrics found in {pdf_path.name} — using baseline")
-
-        except Exception as exc:
-            log("costar_pdf", "FAIL", f"  Error parsing {pdf_path.name}: {exc}")
-
-    return parsed
+    conn.commit()
+    cur.execute(
+        "INSERT INTO load_log (source,grain,file_name,rows_inserted) VALUES (?,?,?,?)",
+        ("CoStar", "xlsx", xlsx_path.name, rows_inserted),
+    )
+    conn.commit()
+    log("costar_xlsx", "OK  ", f"  {xlsx_path.name} → {rows_inserted} rows inserted")
+    return rows_inserted
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -590,30 +758,48 @@ def main() -> None:
     COSTAR_DIR.mkdir(parents=True, exist_ok=True)
     log("costar_load", "OK  ", "=== CoStar report loader start ===")
 
-    # 1. Try to parse any PDFs present
-    _pdf_data = try_parse_pdfs()
-    if _pdf_data:
-        log("costar_load", "OK  ",
-            f"Parsed {len(_pdf_data)} PDF(s) — values will supplement baseline data")
+    conn = get_conn()
 
-    # 2. Write CSVs (intermediary layer; always refreshed from baseline)
+    # ── Step 1: Scan for NEW PDFs not yet in load_log ─────────────────────────
+    pdf_files = sorted(
+        list(COSTAR_DIR.glob("*.pdf")) + list(COSTAR_DIR.glob("*.PDF"))
+    )
+    new_pdfs = [p for p in pdf_files if not already_loaded(conn, p.name)]
+    if new_pdfs:
+        log("costar_load", "OK  ", f"Found {len(new_pdfs)} new PDF(s) to parse")
+        for pdf_path in new_pdfs:
+            parse_pdf(pdf_path, conn)
+    else:
+        log("costar_pdf", "INFO", "No new PDFs — using baseline data")
+
+    # ── Step 2: Scan for NEW xlsx exports not yet in load_log ─────────────────
+    xlsx_files = sorted(COSTAR_DIR.glob("*.xlsx"))
+    # Exclude the auto-generated CSVs (those are in COSTAR_DIR but are CSVs)
+    new_xlsx = [x for x in xlsx_files if not already_loaded(conn, x.name)]
+    if new_xlsx:
+        log("costar_load", "OK  ", f"Found {len(new_xlsx)} new Excel export(s) to parse")
+        for xlsx_path in new_xlsx:
+            parse_xlsx(xlsx_path, conn)
+    else:
+        log("costar_xlsx", "INFO", "No new CoStar Excel exports found")
+
+    # ── Step 3: Always rebuild baseline tables + CSVs ─────────────────────────
+    # (Full rebuild ensures baseline data is always current)
+    cur = conn.cursor()
+
     write_snapshot_csv()
     write_monthly_csv()
     write_pipeline_csv()
     write_chain_csv()
     write_compset_csv()
 
-    # 3. Load into SQLite
-    conn = get_conn()
-    cur  = conn.cursor()
-
     totals = {}
     for label, fn in [
-        ("costar_market_snapshot",    load_snapshot),
-        ("costar_monthly_performance",load_monthly),
-        ("costar_supply_pipeline",    load_pipeline),
+        ("costar_market_snapshot",       load_snapshot),
+        ("costar_monthly_performance",   load_monthly),
+        ("costar_supply_pipeline",       load_pipeline),
         ("costar_chain_scale_breakdown", load_chain),
-        ("costar_competitive_set",    load_compset),
+        ("costar_competitive_set",       load_compset),
     ]:
         try:
             n = fn(cur)
@@ -626,11 +812,10 @@ def main() -> None:
 
     conn.commit()
 
-    # 4. Log each table to load_log
+    # ── Step 4: Log baseline tables to load_log ────────────────────────────────
     for table, n in totals.items():
         cur.execute(
-            "INSERT INTO load_log (source, grain, file_name, rows_inserted) "
-            "VALUES (?, ?, ?, ?)",
+            "INSERT INTO load_log (source,grain,file_name,rows_inserted) VALUES (?,?,?,?)",
             ("CoStar", "market_report", table, n),
         )
     conn.commit()
@@ -638,8 +823,8 @@ def main() -> None:
 
     total_rows = sum(totals.values())
     log("costar_load", "OK  ",
-        f"=== CoStar load complete: {total_rows} total rows across {len(totals)} tables ===")
-    print(f"\nDone. Tables loaded: {list(totals.keys())}")
+        f"=== CoStar load complete: {total_rows} baseline rows across {len(totals)} tables ===")
+    print(f"\nDone. Tables: {list(totals.keys())}")
 
 
 if __name__ == "__main__":

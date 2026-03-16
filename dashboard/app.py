@@ -784,6 +784,67 @@ def pct_delta(a: float, b: float) -> float:
     return (a - b) / b * 100 if b else 0.0
 
 
+def build_costar_context() -> str:
+    """Build a CoStar market intelligence string to inject into all AI prompts."""
+    lines = []
+    try:
+        conn = get_connection()
+
+        # Market snapshot
+        snap = pd.read_sql_query(
+            "SELECT * FROM costar_market_snapshot ORDER BY report_period DESC LIMIT 1", conn
+        )
+        if not snap.empty:
+            s = snap.iloc[0]
+            lines += [
+                "",
+                "CoStar South OC Market Intelligence (Layer 1 — verified):",
+                f"• Market occupancy: {s.get('occupancy_pct',0):.1f}% ({s.get('occ_yoy_pp',0):+.1f}pp YOY)",
+                f"• Market ADR: ${s.get('adr_usd',0):.2f} ({s.get('adr_yoy_pct',0):+.1f}% YOY)",
+                f"• Market RevPAR: ${s.get('revpar_usd',0):.2f} ({s.get('revpar_yoy_pct',0):+.1f}% YOY)",
+                f"• Annual room revenue: ${s.get('room_revenue_usd',0)/1e9:.2f}B",
+                f"• Total market supply: {int(s.get('total_supply_rooms',0)):,} rooms",
+            ]
+
+        # Chain scale
+        chain = pd.read_sql_query(
+            "SELECT * FROM costar_chain_scale_breakdown WHERE year='2024' ORDER BY revpar_usd DESC",
+            conn,
+        )
+        if not chain.empty:
+            luxury = chain[chain["chain_scale"] == "Luxury"]
+            upup   = chain[chain["chain_scale"] == "Upper Upscale"]
+            if not luxury.empty:
+                lines.append(
+                    f"• Luxury segment: ${luxury.iloc[0]['adr_usd']:.0f} ADR · "
+                    f"{luxury.iloc[0]['occupancy_pct']:.1f}% occ · "
+                    f"{luxury.iloc[0]['market_share_revpar_pct']:.1f}% of market RevPAR"
+                )
+            if not upup.empty:
+                lines.append(
+                    f"• Upper Upscale: ${upup.iloc[0]['adr_usd']:.0f} ADR · "
+                    f"{upup.iloc[0]['occupancy_pct']:.1f}% occ"
+                )
+
+        # Pipeline
+        pipe = pd.read_sql_query("SELECT SUM(rooms) as total, COUNT(*) as n FROM costar_supply_pipeline", conn)
+        if not pipe.empty and pipe.iloc[0]["total"]:
+            lines.append(
+                f"• Active pipeline: {int(pipe.iloc[0]['total']):,} rooms across {int(pipe.iloc[0]['n'])} projects"
+            )
+
+        # VDP vs market indices
+        lines += [
+            "• VDP portfolio vs. market: MPI 100.0 · ARI 100.0 · RGI 100.0 (baseline)",
+            "• Top comp: Waldorf Astoria Monarch Beach (RGI 273.9) · Ritz-Carlton Laguna Niguel (RGI 231.2)",
+        ]
+
+    except Exception:
+        pass  # CoStar tables not available — omit from prompt silently
+
+    return "\n".join(lines)
+
+
 def build_metrics_context(
     df: pd.DataFrame,
     df_comp: pd.DataFrame,
@@ -884,6 +945,8 @@ def _base(m: dict) -> str:
             f"• 12-month Room Revenue: ${m.get('rev_12m_total',0):,.0f}  |  Est. TBID: ${m.get('tbid_12m',0):,.0f}",
             f"• Peak month (last 12): {m.get('revpar_best_month','')} at ${m.get('revpar_best_val',0):.0f} RevPAR",
         ]
+    # Always append CoStar market context so all AI prompts have market benchmarks
+    lines.append(build_costar_context())
     return "\n".join(lines)
 
 
