@@ -142,23 +142,15 @@ apply seasonal adjustment factors (Q3 ≈ 1.25×, Q1 ≈ 0.75×, Q2/Q4 ≈ 1.00�
 - **RGI** (Revenue Generation Index) = Portfolio RevPAR ÷ Comp Set RevPAR × 100. \
   Goal: >100 means overall revenue leadership. The composite index that combines MPI and ARI.
 
-## Ohana Fest 2025 — Verified Event-Impact Benchmark (Datafy Data)
-Use this as the gold-standard reference model for all future event ROI analysis and projection.
-
-| Metric | Value |
-|---|---|
-| Event expenditure (direct) | $14.6M |
-| Total destination spend | $18.4M |
-| ADR lift vs. baseline | +$139 (+45%): $542 event nights vs. $403 baseline |
-| RevPAR lift vs. baseline | +$140: $427 event vs. $287 baseline |
-| Avg accommodation spend per trip | $1,219 (+53% vs. prior year Ohana Fest 2024) |
-| Out-of-state visitors | 68% of total attendees |
-| Economic spend multiplier | 3.2× direct event expenditure |
-| Overnight hotel visitor share | 24% of all attendees |
-
-Key takeaway: Major music events with a high out-of-state draw generate genuine incremental tourism \
-dollars — not just displacement of existing visitors. In board communications, always lead with the \
-68% out-of-state figure and the 3.2× multiplier as the clearest evidence of VDP event marketing ROI.
+## Event Impact Analysis
+When discussing event impacts (Ohana Fest, surf competitions, regattas, holiday weekends), \
+use ONLY data provided in the prompt context from the live database (STR daily data for ADR/Occ lifts, \
+Datafy for visitor origin and spending). Do NOT cite specific event dollar figures unless they appear \
+in the data provided to you. Use STR daily data to identify occupancy/ADR spikes during event periods \
+and quantify lift vs. surrounding baseline dates. Datafy 2025 annual visitor data provides the overall \
+visitor economy profile — cite those actual figures (3.55M trips, 61% out-of-state visitor days, \
+59.4% overnight share, 2.0-day avg stay, top DMAs: Los Angeles 18.7%, San Diego 8.1%, Phoenix 7.3%) \
+when relevant to event analysis.
 
 ## DATA HIERARCHY (non-negotiable)
 1. **Vetted Layer 1 data (STR exports, Datafy reports, TBID records)** = TRUTH. \
@@ -1717,6 +1709,61 @@ def build_costar_context() -> str:
     return "\n".join(lines)
 
 
+def build_datafy_context() -> str:
+    """Build a Datafy visitor economy context string for AI prompts (live DB query)."""
+    lines = []
+    try:
+        conn = get_connection()
+        kpis = pd.read_sql_query("SELECT * FROM datafy_overview_kpis LIMIT 1", conn)
+        if not kpis.empty:
+            k = kpis.iloc[0]
+            period = (f"{str(k.get('report_period_start',''))[:7]} – "
+                      f"{str(k.get('report_period_end',''))[:7]}")
+            lines += [
+                "",
+                f"Datafy Visitor Economy — Dana Point ({period}):",
+                f"• Total trips: {int(k.get('total_trips', 0)):,} "
+                f"({k.get('total_trips_vs_compare_pct', 0):+.1f}% vs prior year)",
+                f"• Avg length of stay: {k.get('avg_length_of_stay_days', 0):.1f} days "
+                f"({k.get('avg_los_vs_compare_days', 0):+.1f}d vs prior year)",
+                f"• Overnight: {k.get('overnight_trips_pct', 0):.1f}% | "
+                f"Day trips: {k.get('day_trips_pct', 0):.1f}%",
+                f"• Out-of-state visitor days: {k.get('out_of_state_vd_pct', 0):.1f}% "
+                f"({k.get('out_of_state_vd_vs_compare_pct', 0):+.1f}pp YoY)",
+                f"• Repeat visitors: {k.get('repeat_visitors_pct', 0):.1f}% | "
+                f"First-time: {k.get('one_time_visitors_pct', 0):.1f}%",
+                f"• Visitor spending share: {k.get('visitor_spending_pct', 0):.1f}% of total",
+            ]
+        dma = pd.read_sql_query(
+            "SELECT dma, visitor_days_share_pct, avg_spend_usd, visitor_days_vs_compare_pct "
+            "FROM datafy_overview_dma ORDER BY visitor_days_share_pct DESC LIMIT 6", conn)
+        if not dma.empty:
+            lines.append("• Top feeder markets (visitor days share):")
+            for _, r in dma.iterrows():
+                sp = (f", ${r['avg_spend_usd']:.0f}/day" if r.get("avg_spend_usd") else "")
+                lines.append(f"  — {r['dma']}: {r['visitor_days_share_pct']:.1f}%"
+                             f"{sp} ({r.get('visitor_days_vs_compare_pct', 0):+.1f}pp YoY)")
+        spend = pd.read_sql_query(
+            "SELECT category, spend_share_pct FROM datafy_overview_category_spending "
+            "ORDER BY spend_share_pct DESC", conn)
+        if not spend.empty:
+            cats = ", ".join(f"{r['category']} {r['spend_share_pct']:.1f}%"
+                             for _, r in spend.iterrows())
+            lines.append(f"• Spending categories: {cats}")
+        mk = pd.read_sql_query("SELECT * FROM datafy_attribution_media_kpis LIMIT 1", conn)
+        if not mk.empty:
+            m2 = mk.iloc[0]
+            lines.append(
+                f"• Campaign: {int(m2.get('total_impressions', 0)):,} impressions, "
+                f"{int(m2.get('unique_reach', 0)):,} reach, "
+                f"{int(m2.get('attributable_trips', 0)):,} attributable trips, "
+                f"${m2.get('total_impact_usd', 0):,.0f} economic impact"
+            )
+    except Exception:
+        pass
+    return "\n".join(lines)
+
+
 def build_metrics_context(
     df: pd.DataFrame,
     df_comp: pd.DataFrame,
@@ -1817,8 +1864,9 @@ def _base(m: dict) -> str:
             f"• 12-month Room Revenue: ${m.get('rev_12m_total',0):,.0f}  |  Est. TBID: ${m.get('tbid_12m',0):,.0f}",
             f"• Peak month (last 12): {m.get('revpar_best_month','')} at ${m.get('revpar_best_val',0):.0f} RevPAR",
         ]
-    # Always append CoStar market context so all AI prompts have market benchmarks
+    # Append CoStar and Datafy context so all AI prompts have full market + visitor benchmarks
     lines.append(build_costar_context())
+    lines.append(build_datafy_context())
     return "\n".join(lines)
 
 
@@ -1839,23 +1887,23 @@ def build_prompt(key: str, m: dict) -> str:
             "to close the gap — tailored to Dana Point's coastal leisure visitor profile."
         ),
         "ohana": (
-            "Ohana Fest 2025 — Datafy visitor economy data for Dana Point:\n"
-            "• Event expenditure: $14.6M  |  Total destination spend: $18.4M\n"
-            "• ADR lift: +$139 vs. baseline ($542 vs. $403)\n"
-            "• RevPAR lift: +$140 ($427 vs. $287 baseline)\n"
-            "• Overnight hotel visitors: 24% of total attendees\n"
-            "• Avg accommodation spend/trip: $1,219 (+53% vs. 2024)\n"
-            "• Out-of-state visitors: 68%  |  Spend multiplier: 3.2×\n\n"
-            f"Current portfolio context: {b}\n\n"
-            "Generate a concise board-ready ROI analysis of Ohana Fest and provide 2 specific "
-            "recommendations to maximize hotel revenue impact for future events."
+            f"{b}\n\n"
+            "Using only the Datafy visitor economy data and STR daily data provided above, "
+            "identify the highest-demand periods in the last 12 months where occupancy or ADR "
+            "spiked significantly above surrounding baseline days. These likely correspond to "
+            "major events (Ohana Fest, surf competitions, holidays). "
+            "For the top 2–3 compression peaks: quantify the ADR lift vs. 7-day baseline, "
+            "the occupancy delta, and the estimated incremental room revenue. "
+            "Use the Datafy out-of-state visitor data and spending categories to model the "
+            "economic multiplier effect. Provide 2 specific recommendations to maximize hotel "
+            "revenue during future high-demand event periods."
         ),
         "board": (
             f"{b}\n"
-            f"• Est. TBID monthly revenue: ${m.get('tbid_monthly',0):,.0f} (blended 1.25%)\n"
-            "• Ohana Fest destination spend: $18.4M\n\n"
+            f"• Est. TBID monthly revenue: ${m.get('tbid_monthly',0):,.0f} (blended 1.25%)\n\n"
             "Generate 5 concise talking points for the VDP TBID board meeting. "
-            "Each point = one sentence with a specific data reference. Format for an executive audience."
+            "Each point = one sentence with a specific data reference from the data provided. "
+            "Format for an executive audience. Only cite numbers that appear in the data above."
         ),
         "midweek": (
             f"{b}\n\n"
@@ -1931,8 +1979,10 @@ def local_fallback(key: str, m: dict) -> str:
             f"({m.get('revpar_delta',0):+.1f}% vs. prior period)\n"
             f"2. **Compression Building:** **{m.get('comp_recent_q',0)}** days above 90% occ "
             f"last quarter (vs. {m.get('comp_prior_q',0)} prior) — rate increases are justified\n"
-            f"3. **Ohana Fest ROI:** $18.4M destination spend, 3.2× multiplier, "
-            f"68% out-of-state visitors\n"
+            f"3. **Visitor Economy:** {int(_ev_kpis.iloc[0].get('total_trips',0))/1e6:.2f}M annual trips, "
+            f"{_ev_kpis.iloc[0].get('out_of_state_vd_pct',0):.1f}% out-of-state visitor days\n"
+            if not _ev_kpis.empty else
+            f"3. **Visitor Economy:** See Datafy Visitor Intelligence tab for live data\n"
             f"4. **TBID Revenue:** Tracking ~**${m.get('tbid_monthly',0):,.0f}/month** "
             f"at blended 1.25%\n"
             f"5. **Midweek Opportunity:** Weekend/midweek RevPAR gap "
@@ -1940,15 +1990,19 @@ def local_fallback(key: str, m: dict) -> str:
             f"**→ Action:** Request board approval for a $50K midweek demand-generation campaign."
         ),
         "ohana": (
-            f"**Ohana Fest Impact** *(local mode)*\n\n"
-            f"• Event expenditure: **$14.6M** | Destination spend: **$18.4M**\n"
-            f"• ADR lift vs. baseline: **+$139** (+45%) on event nights\n"
-            f"• RevPAR lift: **+$140** ($427 vs. $287 baseline)\n"
-            f"• 68% out-of-state visitors = genuine incremental tourism dollars\n"
-            f"• Avg accommodation spend: **$1,219/trip** (+53% vs. 2024)\n\n"
-            f"**ROI:** 3.2× spend multiplier · 5-day post-event ADR halo: +$22 above baseline\n\n"
-            f"**→ Action:** Negotiate multi-year Ohana Fest partnership with preferred "
-            f"hotel rate agreements to capture accommodation spend upstream."
+            f"**Event Impact Analysis** *(local mode — add API key for live AI analysis)*\n\n"
+            f"• 2025 annual overnight trip share: **{_ev_kpis.iloc[0].get('overnight_trips_pct',0):.1f}%** "
+            f"of {int(_ev_kpis.iloc[0].get('total_trips',0))/1e6:.2f}M total trips\n"
+            f"• Out-of-state visitor days: **{_ev_kpis.iloc[0].get('out_of_state_vd_pct',0):.1f}%** "
+            f"— genuine incremental tourism (not local displacement)\n"
+            f"• Top feeder market: **{_ev_dma.iloc[0]['dma'] if not _ev_dma.empty else 'Los Angeles'}** "
+            f"({_ev_dma.iloc[0]['visitor_days_share_pct']:.1f}% of visitor days)\n"
+            f"• Top spending category: **{_ev_spend.iloc[0]['category'] if not _ev_spend.empty else 'Accommodations'}** "
+            f"({_ev_spend.iloc[0]['spend_share_pct']:.1f}% of visitor spend)\n\n"
+            f"**→ Action:** Use STR daily data to identify compression peaks — add API key for "
+            f"event-specific ADR lift analysis tied to your actual demand data."
+            if not _ev_kpis.empty and not _ev_dma.empty and not _ev_spend.empty
+            else "Add API key for AI analysis · Load Datafy data for visitor economy insights."
         ),
         "anomaly": (
             f"**Anomaly Detection** *(local mode)*\n\n"
@@ -2663,9 +2717,30 @@ with st.sidebar:
     st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {_d_label}")
     st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_label}")
     st.markdown(f"{_cs_dot} CoStar Market &nbsp;·&nbsp; {_cs_label}")
-    _df_rows  = counts.get("datafy_total_rows", 0)
-    _df_dot   = "🟢" if isinstance(_df_rows, int) and _df_rows > 0 else "⚫"
-    _df_label = f"{_df_rows:,} rows" if isinstance(_df_rows, int) and _df_rows > 0 else "No data"
+    # Datafy — query directly to bypass any cache staleness
+    _df_rows = 0
+    try:
+        _df_conn = get_connection()
+        _df_rows = _df_conn.execute(
+            "SELECT COUNT(*) FROM datafy_overview_kpis").fetchone()[0]
+        # If the overview table has data, sum all datafy tables
+        if _df_rows > 0:
+            _df_rows = counts.get("datafy_total_rows", 0) or 0
+            if _df_rows == 0:
+                # Direct fallback sum
+                for _dt in ["datafy_overview_kpis","datafy_overview_dma",
+                            "datafy_overview_category_spending","datafy_overview_demographics",
+                            "datafy_attribution_media_kpis","datafy_attribution_website_kpis",
+                            "datafy_social_top_pages","datafy_social_traffic_sources"]:
+                    try:
+                        _df_rows += _df_conn.execute(
+                            f"SELECT COUNT(*) FROM {_dt}").fetchone()[0]
+                    except Exception:
+                        pass
+    except Exception:
+        _df_rows = counts.get("datafy_total_rows", 0)
+    _df_dot   = "🟢" if _df_rows > 0 else "⚫"
+    _df_label = f"{_df_rows:,} rows" if _df_rows > 0 else "No data"
     st.markdown(f"{_df_dot} Datafy &nbsp;·&nbsp; {_df_label}")
     st.caption(f"Last ETL run: {last_log}")
 
@@ -2674,9 +2749,20 @@ with st.sidebar:
         max_d = df_daily["as_of_date"].max().strftime("%b %d, %Y")
         st.caption(f"Daily data: {min_d} → {max_d}")
     if not df_monthly.empty:
-        mon_min = df_monthly["as_of_date"].min().strftime("%b %Y")
-        mon_max = df_monthly["as_of_date"].max().strftime("%b %Y")
-        st.caption(f"Monthly data: {mon_min} → {mon_max}")
+        # Show only recent date range (last 5 years) in sidebar for clarity
+        _mon_recent = df_monthly[df_monthly["as_of_date"].dt.year >= df_monthly["as_of_date"].dt.year.max() - 4]
+        if not _mon_recent.empty:
+            mon_min = _mon_recent["as_of_date"].min().strftime("%b %Y")
+            mon_max = _mon_recent["as_of_date"].max().strftime("%b %Y")
+            _total_yrs = df_monthly["as_of_date"].dt.year.nunique()
+            st.caption(f"Monthly (recent): {mon_min} → {mon_max}")
+            st.caption(f"Full history: {_total_yrs} years in database")
+    # Datafy date range
+    _df_kpi_row = load_datafy_kpis()
+    if not _df_kpi_row.empty:
+        _dfr = _df_kpi_row.iloc[0]
+        st.caption(f"Datafy: {str(_dfr.get('report_period_start',''))[:7]} → "
+                   f"{str(_dfr.get('report_period_end',''))[:7]}")
 
     st.divider()
 
@@ -2798,7 +2884,7 @@ with tab_ov:
         PROMPTS_META = [
             ("💹 RevPAR Drivers",       "revpar"),
             ("📅 Opportunity Nights",   "opportunity"),
-            ("🎵 Ohana Fest Impact",    "ohana"),
+            ("🎵 Event Impact Analysis", "ohana"),
             ("📋 Board Talking Points", "board"),
             ("🌙 Weekend vs Midweek",   "midweek"),
             ("🏨 TBID Revenue Est.",    "tbid"),
@@ -3356,115 +3442,245 @@ with tab_tr:
         st.plotly_chart(style_fig(fig, height=300), use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 3 — EVENT IMPACT
+# TAB 3 — EVENT IMPACT / VISITOR ECONOMY
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ev:
+    _ev_kpis  = load_datafy_kpis()
+    _ev_dma   = load_datafy_dma()
+    _ev_spend = load_datafy_spending()
+    _ev_demo  = load_datafy_demographics()
+    _ev_air   = load_datafy_airports()
+    _ev_mk    = load_datafy_media_kpis()
+
+    # Build header from actual data
+    _ev_period = "2025"
+    if not _ev_kpis.empty:
+        _k = _ev_kpis.iloc[0]
+        _ev_period = (f"{str(_k.get('report_period_start','2025-01-01'))[:7].replace('-','/')} – "
+                      f"{str(_k.get('report_period_end','2025-12-31'))[:7].replace('-','/')}")
+
     st.markdown(
         '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.55rem;'
         'font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">'
-        'Ohana Fest 2025 — Dana Point, CA</div>'
-        '<div style="font-size:12px;opacity:0.50;font-weight:500;margin-bottom:20px;">'
-        'Source: Datafy visitor economy report &nbsp;·&nbsp; Live data from analytics.sqlite</div>',
+        'Visitor Economy Intelligence — Dana Point</div>'
+        f'<div style="font-size:12px;opacity:0.50;font-weight:500;margin-bottom:20px;">'
+        f'Source: Datafy Geolocation (Caladan 1.2) &nbsp;·&nbsp; Live data from analytics.sqlite'
+        f' &nbsp;·&nbsp; Period: {_ev_period}</div>',
         unsafe_allow_html=True,
     )
 
-    # Hero stats grid
-    hero_stats = [
-        ("$14.6M", "Event Expenditure",      "money",    "Sep 26–28, 2025"),
-        ("$18.4M", "Destination Spend",      "globe",    "Sep 26–28, 2025"),
-        ("+$139",  "ADR Lift vs. Baseline",  "tag",      "Event nights vs. baseline"),
-        ("$1,219", "Avg Accom. Spend / Trip","bed",      "Per overnight visitor"),
-        ("68%",    "Out-of-State Visitors",  "plane",    "Share of total attendees"),
-        ("3.2×",   "Spend Multiplier",       "chart_up", "Economic impact ratio"),
-    ]
-    ec = st.columns(3)
-    for i, (val, lbl, ico, dt) in enumerate(hero_stats):
-        with ec[i % 3]:
-            st.markdown(event_stat(val, lbl, ico, dt), unsafe_allow_html=True)
+    if _ev_kpis.empty:
+        st.markdown(empty_state("📊", "Datafy data not loaded.",
+                    "Run load_datafy_reports.py to populate visitor economy tables."),
+                    unsafe_allow_html=True)
+    else:
+        _kv = _ev_kpis.iloc[0]
 
-    st.markdown("---")
+        # ── Hero stats from actual Datafy KPI table ──────────────────────────
+        _total_trips    = int(_kv.get("total_trips", 0))
+        _overnight_pct  = _kv.get("overnight_trips_pct", 0)
+        _oos_pct        = _kv.get("out_of_state_vd_pct", 0)
+        _repeat_pct     = _kv.get("repeat_visitors_pct", 0)
+        _avg_los        = _kv.get("avg_length_of_stay_days", 0)
+        _visitor_spend  = _kv.get("visitor_spending_pct", 0)
 
-    # ── Event lift chart ───────────────────────────────────────────────────────
-    st.markdown('<div class="chart-header">ADR & Occupancy Lift — Ohana Fest 2024</div>', unsafe_allow_html=True)
-    st.markdown('<div class="chart-caption">Event period vs. surrounding baseline &nbsp;·&nbsp; shaded = event weekend</div>', unsafe_allow_html=True)
-    event_days = [
-        "Sep 15","Sep 16","Sep 17","Sep 18","Sep 19","Sep 20","Sep 21",
-        "Sep 22","Sep 23","Sep 24","Sep 25","Sep 26","Sep 27","Sep 28","Sep 29",
-    ]
-    adr_vals = [403,410,415,420,436,430,425,418,412,430,460,510,542,530,403]
-    occ_vals = [65.6,66,67,68,71.2,70,69,67,66,70,74,77,78.8,76,65.6]
-
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-    fig.add_trace(go.Scatter(
-        x=event_days, y=occ_vals, name="Occupancy %",
-        line=dict(color=TEAL, width=2),
-        mode="lines+markers", marker=dict(size=5, color=TEAL),
-        hovertemplate="<b>%{x}</b><br>Occ: %{y:.1f}%<extra></extra>",
-    ), secondary_y=False)
-    fig.add_trace(go.Scatter(
-        x=event_days, y=adr_vals, name="ADR $",
-        line=dict(color=ORANGE, width=2),
-        mode="lines+markers", marker=dict(size=5, color=ORANGE),
-        hovertemplate="<b>%{x}</b><br>ADR: $%{y:.0f}<extra></extra>",
-    ), secondary_y=True)
-    # Shade event weekend
-    for shade_x in ["Sep 26", "Sep 27", "Sep 28"]:
-        fig.add_vline(x=shade_x, line_width=1,
-                      line_color="rgba(33,128,141,0.2)", line_dash="dot")
-    fig.update_yaxes(title_text="Occ %", range=[60, 85], secondary_y=False)
-    fig.update_yaxes(title_text="ADR $", tickprefix="$", range=[350, 580],
-                     secondary_y=True, showgrid=False)
-    st.plotly_chart(style_fig(fig, height=320), use_container_width=True)
-
-    c1, c2 = st.columns(2)
-
-    with c1:
-        st.markdown('<div class="chart-header">Top Feeder Markets</div>', unsafe_allow_html=True)
-        st.markdown('<div class="chart-caption">Visitor origin by share of visitor days (Datafy 2025)</div>', unsafe_allow_html=True)
-        cities = ["San Clemente","San Juan Cap.","Dana Point","Laguna Niguel",
-                  "Ladera Ranch","Huntington Bch","San Diego","Mission Viejo",
-                  "Los Angeles","Cap. Beach"]
-        shares = [8.89,7.84,6.78,6.50,3.53,3.19,2.96,2.42,2.35,1.85]
-        # Gradient color scale — deeper teal for larger shares
-        _max_s = max(shares)
-        _bar_colors = [
-            f"rgba(33,{int(128 + 56*(v/_max_s))},{int(141 + 57*(v/_max_s))},0.90)"
-            for v in shares
+        hero_stats = [
+            (f"{_total_trips/1e6:.2f}M", "Total Trips to Dana Point",
+             "globe", f"{_kv.get('total_trips_vs_compare_pct',0):+.1f}% vs prior year"),
+            (f"{_overnight_pct:.1f}%", "Overnight Trips",
+             "bed", f"{_kv.get('overnight_vs_compare_pct',0):+.1f}pp vs prior year"),
+            (f"{_oos_pct:.1f}%", "Out-of-State Visitor Days",
+             "plane", f"{_kv.get('out_of_state_vd_vs_compare_pct',0):+.1f}pp vs prior year"),
+            (f"{_avg_los:.1f} days", "Avg Length of Stay",
+             "chart_up", f"{_kv.get('avg_los_vs_compare_days',0):+.1f}d vs prior year"),
+            (f"{_repeat_pct:.1f}%", "Repeat Visitors",
+             "tag", "Brand loyalty indicator"),
+            (f"{_visitor_spend:.1f}%", "Visitor Spending Share",
+             "money", f"vs {_kv.get('local_spending_pct',0):.1f}% local spend"),
         ]
-        fig = go.Figure(go.Bar(
-            x=shares, y=cities, orientation="h",
-            marker=dict(color=_bar_colors, line_width=0, cornerradius=5),
-            text=[f"{v:.1f}%" for v in shares], textposition="outside",
-            textfont=dict(size=11, family="Plus Jakarta Sans, Inter, sans-serif"),
-            hovertemplate="<b>%{y}</b><br>Share: %{x:.2f}%<extra></extra>",
-        ))
-        fig.update_layout(yaxis=dict(autorange="reversed"),
-                          xaxis_ticksuffix="%", showlegend=False)
-        st.plotly_chart(style_fig(fig, height=340), use_container_width=True)
+        ec = st.columns(3)
+        for i, (val, lbl, ico, dt) in enumerate(hero_stats):
+            with ec[i % 3]:
+                st.markdown(event_stat(val, lbl, ico, dt), unsafe_allow_html=True)
 
-    with c2:
-        st.markdown('<div class="chart-header">Spending by Category</div>', unsafe_allow_html=True)
-        st.markdown('<div class="chart-caption">Share of total destination spend during event weekend</div>', unsafe_allow_html=True)
-        cats   = ["Dining & Nightlife","Accommodations","Grocery/Dept",
-                  "Service Stations","Fast Food","Specialty Retail",
-                  "Personal Care","Clothing","Leisure/Rec"]
-        values = [30.2,23.6,17.4,7.71,6.73,6.46,4.08,2.09,1.33]
-        palette = [TEAL,"#2DA6B2",TEAL_LIGHT,ORANGE,"#A84B2F",
-                   "#5E5240","#626C71","#A7A9A9",RED]
-        fig = go.Figure(go.Pie(
-            labels=cats, values=values, hole=0.48,
-            marker=dict(colors=palette, line=dict(color="rgba(0,0,0,0)", width=0)),
-            textfont=dict(size=11, family="Plus Jakarta Sans, Inter, sans-serif"),
-            hovertemplate="<b>%{label}</b><br>%{value:.1f}% of destination spend<extra></extra>",
-        ))
-        fig.update_layout(
-            legend=dict(font_size=10, orientation="v",
-                        font=dict(family="Plus Jakarta Sans, Inter, sans-serif")),
-            annotations=[dict(text="Spend<br>Mix", x=0.5, y=0.5, font_size=13,
-                              font_family="Plus Jakarta Sans, sans-serif",
-                              font_color="#21808D", showarrow=False)],
-        )
-        st.plotly_chart(style_fig(fig, height=340), use_container_width=True)
+        st.markdown("---")
+
+        # ── ADR & Occupancy seasonal pattern from actual STR daily data ───────
+        st.markdown('<div class="chart-header">Daily ADR & Occupancy — Seasonal Pattern (STR Daily)</div>',
+                    unsafe_allow_html=True)
+        st.markdown('<div class="chart-caption">Actual STR daily data · peaks reveal event-driven compression · '
+                    'hover for exact values</div>', unsafe_allow_html=True)
+
+        if not df_daily.empty:
+            # Use last 365 days of daily data
+            _ev_daily = df_daily.copy().sort_values("as_of_date")
+            _ev_cutoff = _ev_daily["as_of_date"].max() - pd.Timedelta(days=365)
+            _ev_daily = _ev_daily[_ev_daily["as_of_date"] >= _ev_cutoff]
+
+            if not _ev_daily.empty and "adr" in _ev_daily.columns and "occupancy" in _ev_daily.columns:
+                _ev_x = _ev_daily["as_of_date"].dt.strftime("%b %d, %Y")
+                fig_ev = make_subplots(specs=[[{"secondary_y": True}]])
+                fig_ev.add_trace(go.Scatter(
+                    x=_ev_x, y=_ev_daily["occupancy"],
+                    name="Occupancy %", mode="lines",
+                    line=dict(color=TEAL, width=1.8),
+                    hovertemplate="<b>%{x}</b><br>Occ: %{y:.1f}%<extra></extra>",
+                ), secondary_y=False)
+                fig_ev.add_trace(go.Scatter(
+                    x=_ev_x, y=_ev_daily["adr"],
+                    name="ADR $", mode="lines",
+                    line=dict(color=ORANGE, width=1.8),
+                    hovertemplate="<b>%{x}</b><br>ADR: $%{y:.0f}<extra></extra>",
+                ), secondary_y=True)
+                # Mark high-compression days (>80% occ) as red dots
+                _high_occ = _ev_daily[_ev_daily["occupancy"] > 80]
+                if not _high_occ.empty:
+                    fig_ev.add_trace(go.Scatter(
+                        x=_high_occ["as_of_date"].dt.strftime("%b %d, %Y"),
+                        y=_high_occ["occupancy"],
+                        name="Compression (>80%)", mode="markers",
+                        marker=dict(color=RED, size=6, symbol="circle"),
+                        hovertemplate="<b>%{x}</b><br>Compression: %{y:.1f}% occ<extra></extra>",
+                    ), secondary_y=False)
+                fig_ev.update_yaxes(title_text="Occupancy (%)", secondary_y=False)
+                fig_ev.update_yaxes(title_text="ADR ($)", tickprefix="$",
+                                    secondary_y=True, showgrid=False)
+                st.plotly_chart(style_fig(fig_ev, height=320), use_container_width=True)
+                n_comp = len(_high_occ)
+                st.caption(f"Red dots = {n_comp} compression days (>80% occupancy) in last 365 days · "
+                           f"peaks indicate event-driven demand or holiday weekends")
+        else:
+            st.info("Load STR daily data to see the seasonal ADR/Occupancy pattern.")
+
+        st.markdown("---")
+        c1, c2 = st.columns(2)
+
+        with c1:
+            # Top Feeder Markets from actual Datafy DMA data
+            st.markdown('<div class="chart-header">Top Visitor Origin Markets</div>',
+                        unsafe_allow_html=True)
+            st.markdown(f'<div class="chart-caption">Share of visitor days · Datafy {_ev_period} · '
+                        f'green = growing YoY</div>', unsafe_allow_html=True)
+            if not _ev_dma.empty:
+                _dma_s = _ev_dma.sort_values("visitor_days_share_pct", ascending=True).tail(12)
+                _dma_colors = [
+                    "rgba(33,128,141,0.90)" if v >= 0 else "rgba(192,21,47,0.80)"
+                    for v in _dma_s["visitor_days_vs_compare_pct"].fillna(0)
+                ]
+                fig_dma = go.Figure(go.Bar(
+                    x=_dma_s["visitor_days_share_pct"],
+                    y=_dma_s["dma"],
+                    orientation="h",
+                    marker=dict(color=_dma_colors, line_width=0),
+                    text=[f"{v:.1f}%" for v in _dma_s["visitor_days_share_pct"]],
+                    textposition="outside",
+                    customdata=_dma_s["visitor_days_vs_compare_pct"].fillna(0),
+                    hovertemplate="<b>%{y}</b><br>%{x:.1f}% visitor days<br>"
+                                  "YoY: %{customdata:+.1f}pp<extra></extra>",
+                ))
+                fig_dma.update_layout(xaxis_ticksuffix="%", showlegend=False,
+                                      margin=dict(l=0, r=60, t=4, b=0))
+                st.plotly_chart(style_fig(fig_dma, height=360), use_container_width=True)
+            else:
+                st.info("Load Datafy data to see feeder market breakdown.")
+
+        with c2:
+            # Spending Categories from actual Datafy spend data
+            st.markdown('<div class="chart-header">Visitor Spending by Category</div>',
+                        unsafe_allow_html=True)
+            st.markdown(f'<div class="chart-caption">Share of total visitor spend · Datafy {_ev_period}</div>',
+                        unsafe_allow_html=True)
+            if not _ev_spend.empty:
+                _palette = [TEAL, "#2DA6B2", TEAL_LIGHT, ORANGE, "#A84B2F",
+                            "#5E5240", "#626C71", "#A7A9A9", RED, "#3B82F6"]
+                fig_sp = go.Figure(go.Pie(
+                    labels=_ev_spend["category"],
+                    values=_ev_spend["spend_share_pct"],
+                    hole=0.48,
+                    marker=dict(
+                        colors=_palette[:len(_ev_spend)],
+                        line=dict(color="rgba(0,0,0,0)", width=0),
+                    ),
+                    textfont=dict(size=11, family="Plus Jakarta Sans, Inter, sans-serif"),
+                    hovertemplate="<b>%{label}</b><br>%{value:.1f}% of visitor spend<extra></extra>",
+                ))
+                fig_sp.update_layout(
+                    legend=dict(font_size=10, orientation="v",
+                                font=dict(family="Plus Jakarta Sans, Inter, sans-serif")),
+                    annotations=[dict(text="Spend<br>Mix", x=0.5, y=0.5, font_size=13,
+                                      font_family="Plus Jakarta Sans, sans-serif",
+                                      font_color="#21808D", showarrow=False)],
+                )
+                st.plotly_chart(style_fig(fig_sp, height=360), use_container_width=True)
+            else:
+                st.info("Load Datafy data to see spending categories.")
+
+        # ── Row 2: Demographics + Airports ────────────────────────────────────
+        st.markdown("---")
+        c3, c4 = st.columns(2)
+
+        with c3:
+            st.markdown('<div class="chart-header">Visitor Age Profile</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chart-caption">Age demographics · Datafy {_ev_period}</div>',
+                        unsafe_allow_html=True)
+            if not _ev_demo.empty:
+                _age_df = _ev_demo[_ev_demo["dimension"] == "age"].sort_values("segment")
+                if not _age_df.empty:
+                    _max_age = _age_df["share_pct"].max()
+                    _age_colors = [
+                        f"rgba(33,{int(128 + 56*(v/_max_age))},{int(141 + 57*(v/_max_age))},0.90)"
+                        for v in _age_df["share_pct"]
+                    ]
+                    fig_age = go.Figure(go.Bar(
+                        x=_age_df["segment"], y=_age_df["share_pct"],
+                        marker=dict(color=_age_colors, line_width=0),
+                        text=[f"{v:.1f}%" for v in _age_df["share_pct"]],
+                        textposition="outside",
+                        hovertemplate="Age %{x}: %{y:.1f}%<extra></extra>",
+                    ))
+                    fig_age.update_layout(yaxis_title="Share (%)", margin=dict(l=0, r=0, t=4, b=0))
+                    st.plotly_chart(style_fig(fig_age, height=280), use_container_width=True)
+
+        with c4:
+            st.markdown('<div class="chart-header">Fly-In Visitors — Origin Airports</div>',
+                        unsafe_allow_html=True)
+            st.markdown(f'<div class="chart-caption">Share of inbound air passengers · Datafy {_ev_period}</div>',
+                        unsafe_allow_html=True)
+            if not _ev_air.empty:
+                _air_s = _ev_air.sort_values("passengers_share_pct", ascending=True)
+                fig_air = go.Figure(go.Bar(
+                    y=_air_s["airport_code"], x=_air_s["passengers_share_pct"],
+                    orientation="h",
+                    marker=dict(color=TEAL, line_width=0),
+                    text=[f"{v:.1f}%" for v in _air_s["passengers_share_pct"]],
+                    textposition="outside",
+                    customdata=_air_s["airport_name"],
+                    hovertemplate="%{customdata}<br>%{x:.1f}%<extra></extra>",
+                ))
+                fig_air.update_layout(xaxis_ticksuffix="%", margin=dict(l=0, r=60, t=4, b=0))
+                st.plotly_chart(style_fig(fig_air, height=280), use_container_width=True)
+
+        # ── Media Campaign KPIs from actual attribution data ───────────────────
+        if not _ev_mk.empty:
+            st.markdown("---")
+            _mk = _ev_mk.iloc[0]
+            st.markdown('<div class="chart-header">Media Campaign Attribution</div>',
+                        unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="chart-caption">{_mk.get("campaign_name","2025-26 Campaign")} · '
+                f'Datafy Attribution · {_mk.get("report_period_start","")[:10]} – '
+                f'{_mk.get("report_period_end","")[:10]}</div>',
+                unsafe_allow_html=True,
+            )
+            _mk_cols = st.columns(4)
+            with _mk_cols[0]:
+                st.metric("Total Impressions", f"{int(_mk.get('total_impressions',0))/1e6:.1f}M")
+            with _mk_cols[1]:
+                st.metric("Unique Reach", f"{int(_mk.get('unique_reach',0))/1e6:.2f}M")
+            with _mk_cols[2]:
+                st.metric("Attributable Trips", f"{int(_mk.get('attributable_trips',0)):,}")
+            with _mk_cols[3]:
+                st.metric("Economic Impact", f"${_mk.get('total_impact_usd',0)/1e3:.0f}K")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — MARKET INTELLIGENCE (CoStar)
