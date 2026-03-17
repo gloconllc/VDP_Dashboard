@@ -1941,13 +1941,11 @@ st.markdown(
 )
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
-<<<<<<< HEAD
+
 tab_ov, tab_tr, tab_fo, tab_ev, tab_dl = st.tabs(
     ["📊 Overview", "📈 Trends", "🔭 Forward Outlook", "🎪 Event Impact", "🗂 Data Log"]
-=======
 tab_ov, tab_tr, tab_ev, tab_cs, tab_dl = st.tabs(
     ["📊 Overview", "📈 Trends", "🎪 Event Impact", "🏨 Market Intelligence", "🗂 Data Log"]
->>>>>>> claude/add-market-specialty-reports-AHlDa
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
