@@ -1,3 +1,4 @@
+
 """
 Visit Dana Point — Analytics Dashboard
 Streamlit app with Claude AI Analyst · Read-only connection to data/analytics.sqlite
@@ -835,7 +836,8 @@ def get_table_counts() -> dict:
         "datafy_attribution_media_kpis", "datafy_attribution_media_top_markets",
         "datafy_social_traffic_sources", "datafy_social_audience_overview",
         "datafy_social_top_pages",
-    ]
+      for t in all_tables  ]
+    
     for t in all_tables:
 
     for t in ["fact_str_metrics", "kpi_daily_summary",
@@ -849,6 +851,9 @@ def get_table_counts() -> dict:
         except Exception:
             counts[t] = "—"
     # Per-grain breakdowns (used by sidebar status and Data Source Health cards)
+
+
+
     for grain_val, key in [("daily", "str_daily_rows"), ("monthly", "str_monthly_rows")]:
         try:
             row = conn.execute(
