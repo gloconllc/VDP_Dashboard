@@ -46,7 +46,9 @@
       "Bash(git status:*)",
       "Bash(git check-ignore:*)",
       "Bash(pip install:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(python3 -c \"import sqlite3; conn=sqlite3.connect\\(''data/analytics.sqlite''\\); cur=conn.cursor\\(\\); cur.execute\\(\"\"SELECT name FROM sqlite_master WHERE type=''table''\"\"\\); print\\([r[0] for r in cur.fetchall\\(\\)]\\)\")",
+      "Bash(grep -n \"Ohana\\\\|ohana\\\\|ohana_fest\\\\|14\\\\.6M\\\\|18\\\\.4M\\\\|$139\\\\|1,219\\\\|68%\\\\|3\\\\.2\" /Users/johnpicou/Documents/dmo-analytics/dashboard/app.py)"
     ]
   }
 }
