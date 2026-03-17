@@ -734,6 +734,37 @@ def _init_db(conn: sqlite3.Connection) -> None:
             mpi REAL, ari REAL, rgi REAL, notes TEXT,
             loaded_at TEXT DEFAULT (datetime('now'))
         );
+
+        CREATE TABLE IF NOT EXISTS visit_ca_travel_forecast (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            year INTEGER, total_visits_m REAL, domestic_visits_m REAL, intl_visits_m REAL,
+            total_yoy_pct REAL, domestic_yoy_pct REAL, intl_yoy_pct REAL,
+            total_spend_b REAL, spend_yoy_pct REAL, notes TEXT,
+            loaded_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS visit_ca_lodging_forecast (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            region TEXT, year INTEGER, supply_daily REAL, demand_daily REAL,
+            occupancy_pct REAL, adr_usd REAL, revpar_usd REAL,
+            occ_yoy_pp REAL, adr_yoy_pct REAL, revpar_yoy_pct REAL,
+            loaded_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS visit_ca_airport_traffic (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            airport TEXT, year INTEGER, month INTEGER,
+            total_pax INTEGER, domestic_pax INTEGER, intl_pax INTEGER,
+            total_yoy_pct REAL, domestic_yoy_pct REAL, intl_yoy_pct REAL,
+            loaded_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS visit_ca_intl_arrivals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            year INTEGER, month INTEGER, total_intl INTEGER, total_overseas INTEGER,
+            priority_markets INTEGER, top_country TEXT, top_country_arrivals INTEGER,
+            loaded_at TEXT DEFAULT (datetime('now'))
+        );
     """)
     conn.commit()
 
@@ -1148,6 +1179,83 @@ def load_datafy_media_markets() -> pd.DataFrame:
     try:
         return pd.read_sql_query(
             "SELECT * FROM datafy_attribution_media_top_markets ORDER BY report_period_start DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_datafy_website_dma() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_attribution_website_dma ORDER BY report_period_start DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_datafy_website_channels() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_attribution_website_channels ORDER BY report_period_start DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_datafy_website_top_markets() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_attribution_website_top_markets ORDER BY report_period_start DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_datafy_social_traffic() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_social_traffic_sources ORDER BY sessions DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_datafy_social_top_pages() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_social_top_pages ORDER BY page_views DESC LIMIT 20", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_datafy_social_audience() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_social_audience_overview ORDER BY report_period_start DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_datafy_clusters() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_overview_cluster_visitation ORDER BY report_period_start DESC", conn
         )
     except Exception:
         return pd.DataFrame()
@@ -2129,9 +2237,16 @@ df_dfy_dma     = load_datafy_dma()
 df_dfy_spend   = load_datafy_spending()
 df_dfy_demo    = load_datafy_demographics()
 df_dfy_air     = load_datafy_airports()
-df_dfy_media   = load_datafy_media_kpis()
-df_dfy_web     = load_datafy_website_kpis()
-df_dfy_mktmkt  = load_datafy_media_markets()
+df_dfy_media       = load_datafy_media_kpis()
+df_dfy_web         = load_datafy_website_kpis()
+df_dfy_mktmkt      = load_datafy_media_markets()
+df_dfy_web_dma     = load_datafy_website_dma()
+df_dfy_web_ch      = load_datafy_website_channels()
+df_dfy_web_mkts    = load_datafy_website_top_markets()
+df_dfy_social_traf = load_datafy_social_traffic()
+df_dfy_social_pages= load_datafy_social_top_pages()
+df_dfy_social_aud  = load_datafy_social_audience()
+df_dfy_clusters    = load_datafy_clusters()
 df_insights    = load_insights()          # Forward-looking insights (all audiences)
 # Zartico historical reference data (Jun 2025 snapshot — for trend comparison only)
 df_zrt_kpis    = load_zartico_kpis()
@@ -2151,7 +2266,9 @@ df_vca_intl     = load_vca_intl_arrivals()
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown(
+        '<a href="?" style="text-decoration:none;">'
         '<div class="sidebar-brand">🌊 Dana Point PULSE</div>'
+        '</a>'
         '<div style="font-size:11px;opacity:0.55;font-weight:500;margin-top:2px;margin-bottom:1px;">'
         'Performance · Understanding · Leadership · Spending · Economy</div>'
         '<div style="font-size:11px;opacity:0.45;font-weight:500;margin-top:1px;margin-bottom:2px;">'
@@ -2273,17 +2390,30 @@ with st.sidebar:
     _cs_rows = len(df_cs_snap) if not df_cs_snap.empty else 0
     _cs_dot  = "🟢" if _cs_rows > 0 else "⚫"
     _cs_label = f"{_cs_rows:,} rows" if _cs_rows > 0 else "No data"
-    _dfy_rows = counts.get("datafy_overview_kpis", 0)
-    _dfy_dot  = "🟢" if isinstance(_dfy_rows, int) and _dfy_rows > 0 else "⚫"
-    _dfy_label = f"{_dfy_rows:,} report(s)" if isinstance(_dfy_rows, int) and _dfy_rows > 0 else "No data"
+    _dfy_tables  = [t for t in counts if t.startswith("datafy_")]
+    _dfy_rows    = sum(counts.get(t, 0) for t in _dfy_tables if isinstance(counts.get(t, 0), int))
+    _dfy_active  = sum(1 for t in _dfy_tables if isinstance(counts.get(t, 0), int) and counts.get(t, 0) > 0)
+    _dfy_dot     = "🟢" if _dfy_rows > 0 else "⚫"
+    _dfy_label   = f"{_dfy_active} datasets · {_dfy_rows:,} rows" if _dfy_rows > 0 else "No data"
     _zrt_rows = sum(counts.get(t, 0) for t in ["zartico_kpis","zartico_markets","zartico_spending_monthly","zartico_lodging_kpis","zartico_overnight_trend"] if isinstance(counts.get(t, 0), int))
     _zrt_dot  = "🟢" if _zrt_rows > 0 else "⚫"
     _zrt_label = f"{_zrt_rows:,} rows (historical)" if _zrt_rows > 0 else "No data"
     _evts_rows = counts.get("vdp_events", 0)
     _evts_dot  = "🟢" if isinstance(_evts_rows, int) and _evts_rows > 0 else "⚫"
     _evts_label = f"{_evts_rows:,} events" if isinstance(_evts_rows, int) and _evts_rows > 0 else "Not loaded"
-    # Use already-loaded DFs for Visit CA (immune to cache staleness)
+    # Use already-loaded DFs for Visit CA — fallback to direct DB count if cache is stale/empty
     _vca_rows = len(df_vca_forecast) + len(df_vca_lodging) + len(df_vca_airport) + len(df_vca_intl)
+    if _vca_rows == 0:
+        try:
+            _vca_conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+            _vca_rows = sum(
+                _vca_conn.execute(f"SELECT COUNT(*) FROM {_t}").fetchone()[0]
+                for _t in ["visit_ca_travel_forecast","visit_ca_lodging_forecast",
+                           "visit_ca_airport_traffic","visit_ca_intl_arrivals"]
+            )
+            _vca_conn.close()
+        except Exception:
+            pass
     _vca_dot  = "🟢" if _vca_rows > 0 else "⚫"
     _vca_label = f"{_vca_rows:,} rows" if _vca_rows > 0 else "No data"
     st.markdown("**Pipeline Status**")
@@ -5005,6 +5135,172 @@ with tab_ev:
                 "Flow width = proportional visitor share. Overnight stays dominate accommodation spend. "
                 "Day trippers concentrate in dining — capturing even 5% as overnight stays = significant room revenue."
             )
+
+    # ── Website Attribution Deep-Dive ─────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("### 🌐 Website Attribution — Acquisition Channels & Top Markets")
+    st.caption("Source: Datafy Attribution Website · Q3 2025 · visitdanapoint.com")
+
+    _web_c1, _web_c2 = st.columns(2)
+
+    with _web_c1:
+        st.markdown('<div class="chart-header">Acquisition Channels</div>', unsafe_allow_html=True)
+        if not df_dfy_web_ch.empty:
+            _ch = df_dfy_web_ch.copy()
+            _ch_cols = [c for c in ["channel","sessions","attributable_trips","trip_share_pct"] if c in _ch.columns]
+            if "channel" in _ch.columns and "sessions" in _ch.columns:
+                _ch_s = _ch.sort_values("sessions", ascending=True)
+                fig_ch = go.Figure(go.Bar(
+                    x=_ch_s["sessions"].values,
+                    y=_ch_s["channel"].values,
+                    orientation="h",
+                    marker_color=TEAL,
+                    hovertemplate="<b>%{y}</b><br>Sessions: %{x:,}<extra></extra>",
+                ))
+                fig_ch.update_layout(xaxis_title="Sessions", yaxis_title=None, margin=dict(l=0,r=0,t=20,b=20), height=220)
+                st.plotly_chart(style_fig(fig_ch, height=220), use_container_width=True)
+                with st.expander("📊 View raw channel data"):
+                    st.dataframe(_ch[_ch_cols].reset_index(drop=True), use_container_width=True)
+                    st.download_button("⬇️ Download", _ch[_ch_cols].to_csv(index=False), "website_channels.csv", "text/csv", key="dl_web_ch")
+            else:
+                st.dataframe(_ch.reset_index(drop=True), use_container_width=True)
+        else:
+            st.info("Website channel data not available.")
+
+    with _web_c2:
+        st.markdown('<div class="chart-header">Top Markets — Website Attribution</div>', unsafe_allow_html=True)
+        if not df_dfy_web_mkts.empty:
+            _wm = df_dfy_web_mkts.copy()
+            _wm_cols = [c for c in ["market","sessions","attributable_trips","trip_share_pct"] if c in _wm.columns]
+            if "market" in _wm.columns and len(_wm) > 0:
+                _wm_s = _wm.head(10).sort_values(_wm.columns[1] if len(_wm.columns) > 1 else _wm.columns[0], ascending=True)
+                _x_col = "sessions" if "sessions" in _wm.columns else _wm.columns[1]
+                _y_col = "market" if "market" in _wm.columns else _wm.columns[0]
+                fig_wm = go.Figure(go.Bar(
+                    x=_wm_s[_x_col].values,
+                    y=_wm_s[_y_col].values,
+                    orientation="h",
+                    marker_color=ORANGE,
+                    hovertemplate=f"<b>%{{y}}</b><br>{_x_col}: %{{x:,}}<extra></extra>",
+                ))
+                fig_wm.update_layout(xaxis_title=_x_col.replace("_"," ").title(), yaxis_title=None, margin=dict(l=0,r=0,t=20,b=20), height=220)
+                st.plotly_chart(style_fig(fig_wm, height=220), use_container_width=True)
+                with st.expander("📊 View raw top markets data"):
+                    st.dataframe(_wm[_wm_cols].reset_index(drop=True), use_container_width=True)
+                    st.download_button("⬇️ Download", _wm[_wm_cols].to_csv(index=False), "website_top_markets.csv", "text/csv", key="dl_web_mkts")
+            else:
+                st.dataframe(_wm.reset_index(drop=True), use_container_width=True)
+        else:
+            st.info("Website top markets data not available.")
+
+    # Website DMA comparison
+    if not df_dfy_web_dma.empty and not df_dfy_dma.empty:
+        st.markdown('<div class="chart-header" style="margin-top:12px;">Website DMA Attribution vs. Overall Visitor Days (Q3 2025 vs Annual)</div>', unsafe_allow_html=True)
+        st.caption("Compares website-attributed trip share by DMA (Q3 2025) against overall visitor day share (annual) — reveals which markets convert better via digital.")
+        _wd = df_dfy_web_dma.copy()
+        _od = df_dfy_dma.copy()
+        if "dma" in _wd.columns and "dma" in _od.columns:
+            _merge_col = "attributable_trips_pct" if "attributable_trips_pct" in _wd.columns else (_wd.columns[1] if len(_wd.columns) > 1 else None)
+            _od_col = "visitor_days_share_pct" if "visitor_days_share_pct" in _od.columns else None
+            if _merge_col and _od_col:
+                _comp = _wd[["dma", _merge_col]].merge(_od[["dma", _od_col]], on="dma", how="inner").head(8)
+                if not _comp.empty:
+                    _dmas = _comp["dma"].values
+                    fig_cmp = go.Figure()
+                    fig_cmp.add_trace(go.Bar(name="Website Trip Share (Q3)", x=_dmas, y=_comp[_merge_col].values, marker_color=TEAL))
+                    fig_cmp.add_trace(go.Bar(name="Overall Visitor Days (Annual)", x=_dmas, y=_comp[_od_col].values, marker_color=ORANGE, opacity=0.7))
+                    fig_cmp.update_layout(barmode="group", xaxis_tickangle=-30, height=300, margin=dict(l=0,r=0,t=20,b=60), legend=dict(orientation="h",y=1.08))
+                    st.plotly_chart(style_fig(fig_cmp, height=300), use_container_width=True)
+
+    # ── Visitor Cluster Visitation ─────────────────────────────────────────────
+    if not df_dfy_clusters.empty:
+        st.markdown("---")
+        st.markdown("### 🗺️ Visitor Cluster Visitation — Where They Go")
+        st.caption("Which Dana Point area clusters attract the most visitor activity · Datafy Annual 2025")
+        _cl = df_dfy_clusters.copy()
+        _cl_share_col = [c for c in _cl.columns if "share" in c.lower() or "pct" in c.lower() or "visits" in c.lower()]
+        _cl_name_col  = [c for c in _cl.columns if "cluster" in c.lower() or "area" in c.lower() or "zone" in c.lower() or "name" in c.lower()]
+        if _cl_share_col and _cl_name_col:
+            _cl_x = _cl_share_col[0]; _cl_y = _cl_name_col[0]
+            _cl_s = _cl.sort_values(_cl_x, ascending=True).head(10)
+            fig_cl = go.Figure(go.Bar(
+                x=_cl_s[_cl_x].values, y=_cl_s[_cl_y].values,
+                orientation="h", marker_color=TEAL_LIGHT,
+                hovertemplate="<b>%{y}</b><br>Share: %{x:.1f}%<extra></extra>",
+            ))
+            fig_cl.update_layout(xaxis_title="Visitation Share (%)", xaxis_ticksuffix="%", height=280, margin=dict(l=0,r=0,t=20,b=20))
+            st.plotly_chart(style_fig(fig_cl, height=280), use_container_width=True)
+            with st.expander("📊 View raw cluster data"):
+                st.dataframe(_cl.reset_index(drop=True), use_container_width=True)
+
+    # ── Social & Web Analytics ────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("### 📱 Social & Web Analytics — visitdanapoint.com")
+    st.caption("Source: Datafy GA4 Social / Web Analytics · Annual 2025")
+
+    _soc_c1, _soc_c2 = st.columns(2)
+
+    with _soc_c1:
+        st.markdown('<div class="chart-header">Traffic Sources</div>', unsafe_allow_html=True)
+        if not df_dfy_social_traf.empty:
+            _st = df_dfy_social_traf.copy()
+            _src_col  = next((c for c in _st.columns if "source" in c.lower() or "channel" in c.lower() or "medium" in c.lower()), None)
+            _sess_col = next((c for c in _st.columns if "session" in c.lower() or "visits" in c.lower()), None)
+            if _src_col and _sess_col:
+                _st_s = _st.sort_values(_sess_col, ascending=False).head(12)
+                fig_st = go.Figure(go.Bar(
+                    x=_st_s[_src_col].values,
+                    y=_st_s[_sess_col].values,
+                    marker_color=TEAL,
+                    hovertemplate="<b>%{x}</b><br>Sessions: %{y:,}<extra></extra>",
+                ))
+                fig_st.update_layout(xaxis_tickangle=-35, yaxis_title="Sessions", height=260, margin=dict(l=0,r=0,t=20,b=60))
+                st.plotly_chart(style_fig(fig_st, height=260), use_container_width=True)
+            else:
+                st.dataframe(_st.reset_index(drop=True), use_container_width=True)
+            with st.expander("📊 View raw traffic source data"):
+                st.dataframe(_st.reset_index(drop=True), use_container_width=True)
+                st.download_button("⬇️ Download", _st.to_csv(index=False), "traffic_sources.csv", "text/csv", key="dl_traf")
+        else:
+            st.info("Social traffic source data not available.")
+
+    with _soc_c2:
+        st.markdown('<div class="chart-header">Top Pages by Views</div>', unsafe_allow_html=True)
+        if not df_dfy_social_pages.empty:
+            _pg = df_dfy_social_pages.copy()
+            _pg_name = next((c for c in _pg.columns if "page" in c.lower() or "url" in c.lower() or "title" in c.lower()), None)
+            _pg_views = next((c for c in _pg.columns if "view" in c.lower() or "visit" in c.lower() or "session" in c.lower()), None)
+            if _pg_name and _pg_views:
+                _pg_s = _pg.sort_values(_pg_views, ascending=False).head(10)
+                _pg_labels = [str(v)[:35] + "…" if len(str(v)) > 35 else str(v) for v in _pg_s[_pg_name].values]
+                fig_pg = go.Figure(go.Bar(
+                    x=_pg_s[_pg_views].values,
+                    y=_pg_labels,
+                    orientation="h",
+                    marker_color=ORANGE,
+                    hovertemplate="<b>%{y}</b><br>Views: %{x:,}<extra></extra>",
+                ))
+                fig_pg.update_layout(xaxis_title="Page Views", height=310, margin=dict(l=0,r=0,t=20,b=20), yaxis=dict(autorange="reversed"))
+                st.plotly_chart(style_fig(fig_pg, height=310), use_container_width=True)
+            else:
+                st.dataframe(_pg.reset_index(drop=True), use_container_width=True)
+            with st.expander("📊 View raw top pages data"):
+                st.dataframe(_pg.reset_index(drop=True), use_container_width=True)
+                st.download_button("⬇️ Download", _pg.to_csv(index=False), "top_pages.csv", "text/csv", key="dl_pages")
+        else:
+            st.info("Top pages data not available.")
+
+    # Audience Overview KPIs
+    if not df_dfy_social_aud.empty:
+        _aud = df_dfy_social_aud.iloc[0]
+        _aud_metrics = {k: v for k, v in _aud.items() if k not in ("id","loaded_at","report_period_start","report_period_end","website_url") and pd.notna(v)}
+        if _aud_metrics:
+            st.markdown("#### Website Audience KPIs")
+            _aud_cols = st.columns(min(4, len(_aud_metrics)))
+            for _ai, (_ak, _av) in enumerate(_aud_metrics.items()):
+                with _aud_cols[_ai % len(_aud_cols)]:
+                    _disp = f"{float(_av):,.0f}" if isinstance(_av, (int,float)) else str(_av)
+                    st.metric(_ak.replace("_"," ").title(), _disp)
 
     st.markdown("---")
 
