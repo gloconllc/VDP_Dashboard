@@ -822,7 +822,7 @@ def load_insights(audience: str | None = None) -> pd.DataFrame:
 def get_table_counts() -> dict:
     conn = get_connection()
     counts = {}
-<<<<<<< HEAD
+
     all_tables = [
         "fact_str_metrics", "kpi_daily_summary", "kpi_compression_quarterly",
         "load_log", "insights_daily", "table_relationships",
@@ -837,13 +837,12 @@ def get_table_counts() -> dict:
         "datafy_social_top_pages",
     ]
     for t in all_tables:
-=======
+
     for t in ["fact_str_metrics", "kpi_daily_summary",
               "kpi_compression_quarterly", "load_log",
               "costar_monthly_performance", "costar_market_snapshot",
               "costar_supply_pipeline", "costar_chain_scale_breakdown",
               "costar_competitive_set"]:
->>>>>>> claude/add-market-specialty-reports-AHlDa
         try:
             row = conn.execute(f"SELECT COUNT(*) FROM \"{t}\"").fetchone()
             counts[t] = row[0] if row else 0
