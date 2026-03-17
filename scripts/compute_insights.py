@@ -423,6 +423,26 @@ def _days_to_event(month: int, day: int) -> int:
     return (target - today).days
 
 
+def _5wh(
+    who: str,
+    what: str,
+    when: str,
+    where: str,
+    why: str,
+    how: str,
+) -> str:
+    """Return a structured 5W+H intelligence block appended to insight bodies.
+
+    All insights must answer: WHO is affected, WHAT the data shows, WHEN action is needed,
+    WHERE the opportunity or risk is located, WHY it matters strategically, HOW to act.
+    This makes every insight immediately actionable for the board, staff, and hotel GMs.
+    """
+    return (
+        f" | WHO: {who} | WHAT: {what} | WHEN: {when}"
+        f" | WHERE: {where} | WHY: {why} | HOW: {how}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Insight generators — DMO
 # ---------------------------------------------------------------------------
@@ -451,6 +471,7 @@ def gen_dmo_demand_trend(kpi: pd.DataFrame, comp: pd.DataFrame) -> dict:
         f"RevPAR {trend_word} at {_dollar(avg_rvp)} (30-day avg); "
         f"YOY {_pct(avg_ryoy)} — {season} position"
     )
+    action = "Maintain rate discipline and lock 2-night minimums on compression dates." if (avg_ryoy or 0) >= 0 else "Launch targeted demand programs for mid-week shoulder periods."
     body = (
         f"The trailing 30-day average RevPAR is {_dollar(avg_rvp)}, "
         f"with ADR at {_dollar(avg_adr)} and occupancy at {avg_occ:.1f}%. "
@@ -458,6 +479,14 @@ def gen_dmo_demand_trend(kpi: pd.DataFrame, comp: pd.DataFrame) -> dict:
         f"{'a healthy pricing environment — rate discipline should be maintained' if (avg_ryoy or 0) >= 0 else 'rate pressure — evaluate demand generation programs'}. "
         f"{next_peak} "
         f"Current-quarter compression: {comp_80} days above 80% occupancy."
+        + _5wh(
+            who="VDP TBID board, hotel revenue managers",
+            what=f"RevPAR {_dollar(avg_rvp)} ({_pct(avg_ryoy)} YOY), {comp_80} compression days QTD",
+            when=f"Next 30 days — {season} season, {q_lbl}",
+            where="Dana Point select portfolio (12 properties)",
+            why="RevPAR trajectory sets TBID revenue and board narrative for the quarter",
+            how=action,
+        )
     )
     return dict(
         headline=headline, body=body, priority=1, horizon_days=30,

@@ -1,32 +1,20 @@
 """
 run_pipeline.py
 ---------------
-<<<<<<< HEAD
-Orchestrates the full analytics pipeline in order:
-
-  1. load_str_daily_sqlite.py   — ingest STR daily export into fact_str_metrics
-  2. load_str_monthly_sqlite.py — ingest STR monthly export into fact_str_metrics
-  3. load_datafy_reports.py     — ingest Datafy visitor economy data (non-fatal if missing)
-  4. compute_kpis.py            — pivot fact_str_metrics into kpi_daily_summary
-  5. compute_insights.py        — generate forward-looking insights for all 4 audiences
-=======
 Orchestrates the full VDP analytics pipeline in order:
 
   1. load_str_daily_sqlite.py    — ingest STR daily export into fact_str_metrics
   2. load_str_monthly_sqlite.py  — ingest STR monthly export into fact_str_metrics
   3. compute_kpis.py             — pivot fact_str_metrics into kpi_daily_summary
-  4. load_datafy_reports.py      — load Datafy visitor economy data (skip-safe)
+  4. load_datafy_reports.py      — load Datafy visitor economy CSVs (skip-safe)
   5. load_costar_reports.py      — load CoStar hospitality market data (skip-safe)
+  6. compute_insights.py         — generate forward-looking insights for all audiences
 
 Steps 4 and 5 are SKIP-SAFE: if input files are absent, the step logs a warning
-and continues (exit code 0). Steps 1–3 are FAIL-FAST: any failure aborts the run.
->>>>>>> claude/add-market-specialty-reports-AHlDa
+and continues (exit code 0). Steps 1, 2, 3, 6 are FAIL-FAST: any failure aborts.
 
 Each step is logged to logs/pipeline.log as:
   YYYY-MM-DD HH:MM:SS | STEP                 | OK/FAIL | message
-
-FATAL steps (1, 2, 4, 5): abort pipeline on failure.
-NON-FATAL steps (3): log failure and continue.
 
 Run:
     python3 scripts/run_pipeline.py
@@ -45,17 +33,8 @@ BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 LOG_PATH     = os.path.join(PROJECT_ROOT, "logs", "pipeline.log")
 
-<<<<<<< HEAD
-# (step_name, script_path, fatal_on_failure)
-STEPS = [
-    ("load_str_daily",    os.path.join(BASE_DIR, "load_str_daily_sqlite.py"),  True),
-    ("load_str_monthly",  os.path.join(BASE_DIR, "load_str_monthly_sqlite.py"), True),
-    ("load_datafy",       os.path.join(BASE_DIR, "load_datafy_reports.py"),    False),
-    ("compute_kpis",      os.path.join(BASE_DIR, "compute_kpis.py"),           True),
-    ("compute_insights",  os.path.join(BASE_DIR, "compute_insights.py"),       True),
-=======
 # Steps: (step_name, script_path, fail_fast)
-# fail_fast=True  → pipeline aborts if step fails (core STR/KPI steps)
+# fail_fast=True  → pipeline aborts if step fails (core STR/KPI/Insights steps)
 # fail_fast=False → pipeline warns and continues (optional enrichment steps)
 STEPS = [
     ("load_str_daily",    os.path.join(BASE_DIR, "load_str_daily_sqlite.py"),   True),
@@ -63,7 +42,7 @@ STEPS = [
     ("compute_kpis",      os.path.join(BASE_DIR, "compute_kpis.py"),            True),
     ("load_datafy",       os.path.join(BASE_DIR, "load_datafy_reports.py"),     False),
     ("load_costar",       os.path.join(BASE_DIR, "load_costar_reports.py"),     False),
->>>>>>> claude/add-market-specialty-reports-AHlDa
+    ("compute_insights",  os.path.join(BASE_DIR, "compute_insights.py"),        True),
 ]
 
 
@@ -114,7 +93,6 @@ def run_step(step_name: str, script_path: str) -> bool:
     # Condense stdout/stderr into a single one-line summary for the log
     output_lines = (result.stdout + result.stderr).strip().splitlines()
     summary = " | ".join(line.strip() for line in output_lines if line.strip()) or "(no output)"
-    # Truncate so the log line stays readable
     if len(summary) > 300:
         summary = summary[:297] + "..."
 
@@ -133,16 +111,6 @@ def run_step(step_name: str, script_path: str) -> bool:
 def main() -> None:
     log("pipeline", "OK  ", "=== pipeline start ===")
 
-<<<<<<< HEAD
-    for step_name, script_path, fatal in STEPS:
-        success = run_step(step_name, script_path)
-        if not success:
-            if fatal:
-                log("pipeline", "FAIL", f"pipeline aborted at step '{step_name}'")
-                sys.exit(1)
-            else:
-                log("pipeline", "WARN", f"non-fatal failure at '{step_name}' — continuing")
-=======
     for step_name, script_path, fail_fast in STEPS:
         success = run_step(step_name, script_path)
         if not success:
@@ -152,7 +120,6 @@ def main() -> None:
             else:
                 log("pipeline", "WARN",
                     f"step '{step_name}' failed — non-critical, continuing")
->>>>>>> claude/add-market-specialty-reports-AHlDa
 
     log("pipeline", "OK  ", "=== pipeline complete ===")
 
