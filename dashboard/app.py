@@ -865,6 +865,47 @@ def load_costar_compset() -> pd.DataFrame:
 
 
 
+# ── Visit California state context loaders ───────────────────────────────────
+
+@st.cache_data(ttl=300)
+def load_vca_travel_forecast() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM visit_ca_travel_forecast ORDER BY year", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_vca_lodging_forecast() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM visit_ca_lodging_forecast ORDER BY year, region", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_vca_airport_traffic() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM visit_ca_airport_traffic ORDER BY airport, month_num", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_vca_intl_arrivals() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM visit_ca_intl_arrivals ORDER BY year, month_num", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
 # ── Zartico historical data loaders ──────────────────────────────────────────
 
 @st.cache_data(ttl=300)
@@ -1109,6 +1150,10 @@ def get_table_counts() -> dict:
         "zartico_movement_monthly",
         "zartico_future_events_summary",
         "vdp_events",
+        "visit_ca_travel_forecast",
+        "visit_ca_lodging_forecast",
+        "visit_ca_airport_traffic",
+        "visit_ca_intl_arrivals",
     ]:
         try:
             row = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()
@@ -2049,6 +2094,11 @@ df_zrt_overnight = load_zartico_overnight()
 df_zrt_events  = load_zartico_events()
 df_zrt_movement = load_zartico_movement()
 df_vdp_events  = load_vdp_events()
+# Visit California state context data
+df_vca_forecast = load_vca_travel_forecast()
+df_vca_lodging  = load_vca_lodging_forecast()
+df_vca_airport  = load_vca_airport_traffic()
+df_vca_intl     = load_vca_intl_arrivals()
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -2174,6 +2224,9 @@ with st.sidebar:
     _evts_rows = counts.get("vdp_events", 0)
     _evts_dot  = "🟢" if isinstance(_evts_rows, int) and _evts_rows > 0 else "⚫"
     _evts_label = f"{_evts_rows:,} events" if isinstance(_evts_rows, int) and _evts_rows > 0 else "Not loaded"
+    _vca_rows = sum(counts.get(t, 0) for t in ["visit_ca_travel_forecast","visit_ca_lodging_forecast","visit_ca_airport_traffic","visit_ca_intl_arrivals"] if isinstance(counts.get(t, 0), int))
+    _vca_dot  = "🟢" if _vca_rows > 0 else "⚫"
+    _vca_label = f"{_vca_rows:,} rows" if _vca_rows > 0 else "No data"
     st.markdown("**Pipeline Status**")
     st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {_d_label}")
     st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_label}")
@@ -2181,6 +2234,7 @@ with st.sidebar:
     st.markdown(f"{_dfy_dot} Datafy &nbsp;·&nbsp; {_dfy_label}")
     st.markdown(f"{_zrt_dot} Zartico (Hist.) &nbsp;·&nbsp; {_zrt_label}")
     st.markdown(f"{_evts_dot} VDP Events &nbsp;·&nbsp; {_evts_label}")
+    st.markdown(f"{_vca_dot} Visit California &nbsp;·&nbsp; {_vca_label}")
     st.caption(f"Last ETL run: {last_log}")
 
     if not df_daily.empty:
@@ -5523,6 +5577,203 @@ with tab_cs:
             mime="text/csv", use_container_width=True,
         )
 
+    # ── Visit California State Context ────────────────────────────────────────
+    st.markdown("---")
+    st.markdown(
+        '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.35rem;'
+        'font-weight:800;letter-spacing:-0.03em;margin-bottom:2px;">'
+        'Visit California — State Context</div>'
+        '<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:14px;">'
+        'Statewide travel forecasts &amp; lodging benchmarks · Visit California (Feb 2026)</div>',
+        unsafe_allow_html=True,
+    )
+
+    _has_vca = not df_vca_forecast.empty or not df_vca_lodging.empty
+
+    if _has_vca:
+        # ── Row 1: CA statewide KPIs vs OC vs Dana Point ──────────────────────
+        st.markdown("#### California vs OC vs Dana Point Benchmark")
+        _vc1, _vc2, _vc3, _vc4 = st.columns(4)
+
+        # OC lodging row from visit_ca_lodging_forecast (most recent year)
+        _oc_row = pd.DataFrame()
+        _ca_row = pd.DataFrame()
+        if not df_vca_lodging.empty:
+            _latest_yr = df_vca_lodging["year"].max()
+            _oc_row = df_vca_lodging[
+                (df_vca_lodging["year"] == _latest_yr) &
+                (df_vca_lodging["region"].str.contains("Orange County", case=False, na=False))
+            ]
+            _ca_row = df_vca_lodging[
+                (df_vca_lodging["year"] == _latest_yr) &
+                (df_vca_lodging["region"].str.contains("California", case=False, na=False))
+            ]
+
+        _oc_occ  = float(_oc_row["occupancy_pct"].iloc[0]) if not _oc_row.empty and "occupancy_pct" in _oc_row.columns else 73.0
+        _oc_adr  = float(_oc_row["adr_usd"].iloc[0])       if not _oc_row.empty and "adr_usd" in _oc_row.columns else 209.53
+        _oc_revp = float(_oc_row["revpar_usd"].iloc[0])     if not _oc_row.empty and "revpar_usd" in _oc_row.columns else 153.01
+        _ca_occ  = float(_ca_row["occupancy_pct"].iloc[0])  if not _ca_row.empty and "occupancy_pct" in _ca_row.columns else 67.3
+        _ca_adr  = float(_ca_row["adr_usd"].iloc[0])        if not _ca_row.empty and "adr_usd" in _ca_row.columns else 189.85
+        _ca_revp = float(_ca_row["revpar_usd"].iloc[0])     if not _ca_row.empty and "revpar_usd" in _ca_row.columns else 127.80
+
+        # Dana Point reference from CoStar/STR
+        _dp_adr  = float(df_cs_snap["adr_usd"].mean())   if not df_cs_snap.empty and "adr_usd" in df_cs_snap.columns else 295.0
+        _dp_revp = float(df_cs_snap["revpar_usd"].mean()) if not df_cs_snap.empty and "revpar_usd" in df_cs_snap.columns else 220.0
+        _dp_occ  = float(df_cs_snap["occ_pct"].mean())   if not df_cs_snap.empty and "occ_pct" in df_cs_snap.columns else 76.0
+
+        _adr_premium_oc = (_dp_adr / _oc_adr - 1) * 100 if _oc_adr > 0 else 0
+        _adr_premium_ca = (_dp_adr / _ca_adr - 1) * 100 if _ca_adr > 0 else 0
+        _revp_premium   = (_dp_revp / _oc_revp - 1) * 100 if _oc_revp > 0 else 0
+
+        with _vc1:
+            st.metric("Dana Point ADR", f"${_dp_adr:,.0f}",
+                      delta=f"+{_adr_premium_oc:.0f}% vs OC",
+                      help="Dana Point portfolio ADR vs Orange County market average")
+        with _vc2:
+            st.metric("OC Market ADR", f"${_oc_adr:,.0f}",
+                      delta=f"CA avg: ${_ca_adr:,.0f}",
+                      help="Orange County 2025 lodging forecast ADR")
+        with _vc3:
+            st.metric("Dana Point RevPAR", f"${_dp_revp:,.0f}",
+                      delta=f"+{_revp_premium:.0f}% vs OC",
+                      help="Dana Point portfolio RevPAR vs Orange County")
+        with _vc4:
+            st.metric("OC Occupancy", f"{_oc_occ:.1f}%",
+                      delta=f"CA avg: {_ca_occ:.1f}%",
+                      help="Orange County 2025 lodging forecast occupancy")
+
+        st.caption(
+            f"Dana Point commands a **{_adr_premium_oc:.0f}% ADR premium** over Orange County "
+            f"and a **{_adr_premium_ca:.0f}% premium** over the California statewide average — "
+            f"confirming Dana Point's positioning as a premium coastal destination."
+        )
+
+        # ── Row 2: Lodging ladder chart ────────────────────────────────────────
+        if not df_vca_lodging.empty and "region" in df_vca_lodging.columns:
+            _latest_yr = df_vca_lodging["year"].max()
+            _lodge_slice = df_vca_lodging[
+                (df_vca_lodging["year"] == _latest_yr) &
+                (df_vca_lodging["region"].notna())
+            ].copy()
+            if not _lodge_slice.empty and "adr_usd" in _lodge_slice.columns:
+                _lodge_slice = _lodge_slice.sort_values("adr_usd", ascending=True)
+                # Inject Dana Point as a benchmark row
+                _dp_bench = pd.DataFrame([{
+                    "region": "Dana Point (Portfolio)", "adr_usd": _dp_adr,
+                    "revpar_usd": _dp_revp, "occupancy_pct": _dp_occ
+                }])
+                _lodge_plot = pd.concat([_lodge_slice, _dp_bench], ignore_index=True)
+                _lodge_plot = _lodge_plot.sort_values("adr_usd", ascending=True)
+
+                _colors = [
+                    TEAL if "Dana Point" in str(r) else ORANGE
+                    for r in _lodge_plot["region"]
+                ]
+                fig_lodge = go.Figure(go.Bar(
+                    x=_lodge_plot["adr_usd"],
+                    y=_lodge_plot["region"],
+                    orientation="h",
+                    marker_color=_colors,
+                    text=[f"${v:,.0f}" for v in _lodge_plot["adr_usd"]],
+                    textposition="outside",
+                    hovertemplate="<b>%{y}</b><br>ADR: $%{x:,.0f}<extra></extra>",
+                ))
+                fig_lodge.update_layout(
+                    title=f"ADR by CA Region ({_latest_yr}) — Dana Point vs Market",
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    xaxis=dict(title="ADR (USD)", gridcolor="rgba(255,255,255,0.06)"),
+                    yaxis=dict(gridcolor="rgba(255,255,255,0.06)"),
+                    height=420, margin=dict(l=10, r=10, t=40, b=10),
+                    font=dict(family="Plus Jakarta Sans, sans-serif", size=11),
+                )
+                st.plotly_chart(fig_lodge, use_container_width=True)
+
+        # ── Row 3: CA travel volume forecast trend ─────────────────────────────
+        if not df_vca_forecast.empty and "year" in df_vca_forecast.columns:
+            _col_vca1, _col_vca2 = st.columns(2)
+            with _col_vca1:
+                st.markdown("#### CA Visitor Volume Forecast")
+                _fcast_plot = df_vca_forecast[df_vca_forecast["total_visits_m"].notna()].copy()
+                if not _fcast_plot.empty:
+                    fig_fcast = go.Figure()
+                    _actual = _fcast_plot[_fcast_plot["is_forecast"] == 0]
+                    _fcast  = _fcast_plot[_fcast_plot["is_forecast"] == 1]
+                    if not _actual.empty:
+                        fig_fcast.add_trace(go.Scatter(
+                            x=_actual["year"], y=_actual["total_visits_m"],
+                            name="Actual", mode="lines+markers",
+                            line=dict(color=TEAL, width=2.5),
+                            hovertemplate="<b>%{x}</b><br>Visits: %{y:.1f}M<extra></extra>",
+                        ))
+                    if not _fcast.empty:
+                        fig_fcast.add_trace(go.Scatter(
+                            x=_fcast["year"], y=_fcast["total_visits_m"],
+                            name="Forecast", mode="lines+markers",
+                            line=dict(color=ORANGE, width=2, dash="dot"),
+                            hovertemplate="<b>%{x}</b><br>Forecast: %{y:.1f}M<extra></extra>",
+                        ))
+                    fig_fcast.update_layout(
+                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                        xaxis=dict(title="Year", gridcolor="rgba(255,255,255,0.06)"),
+                        yaxis=dict(title="Total Visits (M)", gridcolor="rgba(255,255,255,0.06)"),
+                        legend=dict(font=dict(size=11)),
+                        height=300, margin=dict(l=10, r=10, t=20, b=10),
+                        font=dict(family="Plus Jakarta Sans, sans-serif", size=11),
+                    )
+                    st.plotly_chart(fig_fcast, use_container_width=True)
+
+            with _col_vca2:
+                st.markdown("#### JWA / SNA Airport Traffic (2025)")
+                if not df_vca_airport.empty and "airport" in df_vca_airport.columns:
+                    _jwa = df_vca_airport[df_vca_airport["airport"].isin(["SNA", "JWA"])].copy()
+                    if _jwa.empty:
+                        _jwa = df_vca_airport[
+                            df_vca_airport["airport"].str.contains("John Wayne|SNA|Orange County", case=False, na=False)
+                        ].copy()
+                    if _jwa.empty:
+                        _jwa = df_vca_airport.copy()
+
+                    if not _jwa.empty and "month_num" in _jwa.columns and "total_passengers" in _jwa.columns:
+                        fig_air = go.Figure()
+                        for _apt in _jwa["airport"].unique():
+                            _apt_df = _jwa[_jwa["airport"] == _apt].sort_values("month_num")
+                            fig_air.add_trace(go.Scatter(
+                                x=_apt_df["month_num"],
+                                y=_apt_df["total_passengers"],
+                                name=_apt, mode="lines+markers",
+                                hovertemplate=f"<b>{_apt}</b><br>Month: %{{x}}<br>Passengers: %{{y:,.0f}}<extra></extra>",
+                            ))
+                        fig_air.update_layout(
+                            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                            xaxis=dict(title="Month", gridcolor="rgba(255,255,255,0.06)",
+                                       tickvals=list(range(1, 13)),
+                                       ticktext=["Jan","Feb","Mar","Apr","May","Jun",
+                                                 "Jul","Aug","Sep","Oct","Nov","Dec"]),
+                            yaxis=dict(title="Passengers", gridcolor="rgba(255,255,255,0.06)"),
+                            legend=dict(font=dict(size=11)),
+                            height=300, margin=dict(l=10, r=10, t=20, b=10),
+                            font=dict(family="Plus Jakarta Sans, sans-serif", size=11),
+                        )
+                        st.plotly_chart(fig_air, use_container_width=True)
+                    else:
+                        st.info("Airport traffic data loaded — no monthly breakdown available.")
+                else:
+                    st.info("No airport traffic data loaded. Run the pipeline to populate visit_ca_airport_traffic.")
+
+        # Download
+        if not df_vca_lodging.empty:
+            _vca_dl = df_vca_lodging.to_csv(index=False).encode()
+            st.download_button(
+                "⬇️ Download Visit CA Lodging Forecast CSV",
+                _vca_dl, file_name="visit_ca_lodging_forecast.csv",
+                mime="text/csv", use_container_width=True,
+            )
+    else:
+        st.markdown(empty_state(
+            "🏔️", "Visit California data not yet loaded.",
+            "Run the pipeline to populate visit_ca_* tables from data/Visit_California/.",
+        ), unsafe_allow_html=True)
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -5681,6 +5932,14 @@ with tab_dl:
             _evt_dot, "VDP Event Calendar",
             "vdp_events · scraped from visitdanapoint.com",
             f"{_evt_ct:,}" if isinstance(_evt_ct, int) and _evt_ct > 0 else "—",
+        ), unsafe_allow_html=True)
+        _vca_tables = [t for t in counts if t.startswith("visit_ca_")]
+        _vca_total  = sum(counts[t] for t in _vca_tables if isinstance(counts[t], int))
+        _vca_src_dot = "🟢" if _vca_total > 0 else "⚫"
+        st.markdown(source_card(
+            _vca_src_dot, "Visit California",
+            f"{len(_vca_tables)} tables · statewide travel & lodging forecasts",
+            f"{_vca_total:,}" if _vca_total > 0 else "—",
         ), unsafe_allow_html=True)
         st.markdown(source_card(
             "⚫", "FRED / CA TOT / JWA", "external context · not yet loaded", "—",
