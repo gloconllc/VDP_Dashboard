@@ -1,0 +1,13 @@
+year,market,chain_scale,num_properties,supply_rooms,occupancy_pct,adr_usd,revpar_usd,room_revenue_usd,occ_yoy_pp,adr_yoy_pct,revpar_yoy_pct,market_share_revpar_pct
+2024,South Orange County CA,Luxury,3,874,71.2,782.4,557.07,177775000,0.8,3.9,5.0,36.2
+2024,South Orange County CA,Upper Upscale,8,1842,77.4,298.2,230.8,155430000,1.1,2.8,4.1,25.2
+2024,South Orange County CA,Upscale,9,1256,79.1,198.6,157.09,72000000,0.9,3.1,4.1,11.8
+2024,South Orange County CA,Upper Midscale,6,628,81.3,168.4,136.89,31370000,1.2,2.4,3.8,5.1
+2024,South Orange County CA,Midscale,4,312,74.8,142.2,106.36,12100000,0.5,1.9,2.5,2.0
+2024,South Orange County CA,Independent,11,208,73.6,295.7,217.64,16540000,1.8,4.2,6.4,2.7
+2023,South Orange County CA,Luxury,3,868,70.4,753.1,529.98,168700000,,,,35.8
+2023,South Orange County CA,Upper Upscale,8,1828,76.3,290.1,221.35,147940000,,,,25.0
+2023,South Orange County CA,Upscale,9,1244,78.2,192.6,150.61,68520000,,,,11.6
+2023,South Orange County CA,Upper Midscale,6,620,80.1,164.4,131.68,29820000,,,,5.1
+2023,South Orange County CA,Midscale,4,308,74.3,139.5,103.65,11648000,,,,2.0
+2023,South Orange County CA,Independent,11,226,71.8,283.9,203.84,16830000,,,,2.8

@@ -563,6 +563,52 @@ def _init_db(conn: sqlite3.Connection) -> None:
             rows_inserted INTEGER,
             run_at        TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS costar_market_snapshot (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period TEXT, market TEXT, submarket TEXT,
+            total_supply_rooms INTEGER, total_demand_rooms INTEGER,
+            occupancy_pct REAL, adr_usd REAL, revpar_usd REAL, room_revenue_usd REAL,
+            occ_yoy_pp REAL, adr_yoy_pct REAL, revpar_yoy_pct REAL,
+            supply_yoy_pct REAL, demand_yoy_pct REAL,
+            data_source TEXT, report_type TEXT, notes TEXT,
+            loaded_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS costar_monthly_performance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            as_of_date TEXT, market TEXT, submarket TEXT,
+            supply_rooms INTEGER, demand_rooms INTEGER,
+            occupancy_pct REAL, adr_usd REAL, revpar_usd REAL, room_revenue_usd REAL,
+            occ_yoy_pp REAL, adr_yoy_pct REAL, revpar_yoy_pct REAL,
+            loaded_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS costar_supply_pipeline (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            property_name TEXT, market TEXT, submarket TEXT, address TEXT, city TEXT,
+            rooms INTEGER, chain_scale TEXT, status TEXT, projected_open_date TEXT,
+            brand TEXT, developer TEXT, floors INTEGER, lat REAL, lon REAL, notes TEXT,
+            loaded_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS costar_chain_scale_breakdown (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            year TEXT, market TEXT, chain_scale TEXT, num_properties INTEGER, supply_rooms INTEGER,
+            occupancy_pct REAL, adr_usd REAL, revpar_usd REAL, room_revenue_usd REAL,
+            occ_yoy_pp REAL, adr_yoy_pct REAL, revpar_yoy_pct REAL,
+            market_share_revpar_pct REAL,
+            loaded_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS costar_competitive_set (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            property_name TEXT, market TEXT, submarket TEXT, brand TEXT, chain_scale TEXT,
+            rooms INTEGER, year TEXT,
+            occupancy_pct REAL, adr_usd REAL, revpar_usd REAL,
+            mpi REAL, ari REAL, rgi REAL, notes TEXT,
+            loaded_at TEXT DEFAULT (datetime('now'))
+        );
     """)
     conn.commit()
 
@@ -682,6 +728,65 @@ def load_str_monthly() -> pd.DataFrame:
     return wide.sort_values("as_of_date").reset_index(drop=True)
 
 
+# ─── CoStar data loaders ─────────────────────────────────────────────────────
+
+@st.cache_data(ttl=300)
+def load_costar_monthly() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        df = pd.read_sql_query(
+            "SELECT * FROM costar_monthly_performance ORDER BY as_of_date", conn
+        )
+        df["as_of_date"] = pd.to_datetime(df["as_of_date"])
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_costar_snapshot() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM costar_market_snapshot ORDER BY report_period DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_costar_pipeline() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM costar_supply_pipeline ORDER BY status, rooms DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_costar_chain() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM costar_chain_scale_breakdown ORDER BY year DESC, revpar_usd DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_costar_compset() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM costar_competitive_set ORDER BY revpar_usd DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
 @st.cache_data(ttl=300)
 def load_insights(audience: str | None = None) -> pd.DataFrame:
     """Load today's (or most recent) forward-looking insights from insights_daily."""
@@ -717,6 +822,7 @@ def load_insights(audience: str | None = None) -> pd.DataFrame:
 def get_table_counts() -> dict:
     conn = get_connection()
     counts = {}
+<<<<<<< HEAD
     all_tables = [
         "fact_str_metrics", "kpi_daily_summary", "kpi_compression_quarterly",
         "load_log", "insights_daily", "table_relationships",
@@ -731,6 +837,13 @@ def get_table_counts() -> dict:
         "datafy_social_top_pages",
     ]
     for t in all_tables:
+=======
+    for t in ["fact_str_metrics", "kpi_daily_summary",
+              "kpi_compression_quarterly", "load_log",
+              "costar_monthly_performance", "costar_market_snapshot",
+              "costar_supply_pipeline", "costar_chain_scale_breakdown",
+              "costar_competitive_set"]:
+>>>>>>> claude/add-market-specialty-reports-AHlDa
         try:
             row = conn.execute(f"SELECT COUNT(*) FROM \"{t}\"").fetchone()
             counts[t] = row[0] if row else 0
@@ -1569,11 +1682,17 @@ def grain_badge(g: str) -> str:
 
 
 # ─── Load data ────────────────────────────────────────────────────────────────
-df_daily   = load_str_daily()    # source='STR', grain='daily'
-df_monthly = load_str_monthly()  # source='STR', grain='monthly'
-df_kpi     = load_kpi_daily()
-df_comp    = load_compression()
-df_log     = load_load_log()
+df_daily    = load_str_daily()     # source='STR', grain='daily'
+df_monthly  = load_str_monthly()   # source='STR', grain='monthly'
+df_kpi      = load_kpi_daily()
+df_comp     = load_compression()
+df_log      = load_load_log()
+# CoStar market intelligence
+df_cs_mon   = load_costar_monthly()
+df_cs_snap  = load_costar_snapshot()
+df_cs_pipe  = load_costar_pipeline()
+df_cs_chain = load_costar_chain()
+df_cs_comp  = load_costar_compset()
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -1685,9 +1804,13 @@ with st.sidebar:
     _m_dot   = "🟢" if str_monthly_rows > 0 else "⚫"
     _d_label = f"{str_daily_rows:,} rows"   if str_daily_rows   > 0 else "No data"
     _m_label = f"{str_monthly_rows:,} rows" if str_monthly_rows > 0 else "No data"
+    _cs_rows = counts.get("costar_monthly_performance", 0)
+    _cs_dot  = "🟢" if isinstance(_cs_rows, int) and _cs_rows > 0 else "⚫"
+    _cs_label = f"{_cs_rows:,} rows" if isinstance(_cs_rows, int) and _cs_rows > 0 else "No data"
     st.markdown("**Pipeline Status**")
     st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {_d_label}")
     st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_label}")
+    st.markdown(f"{_cs_dot} CoStar Market &nbsp;·&nbsp; {_cs_label}")
     st.markdown(f"⚫ Datafy &nbsp;·&nbsp; Not connected")
     st.caption(f"Last ETL run: {last_log}")
 
@@ -1802,8 +1925,13 @@ st.markdown(
 )
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
+<<<<<<< HEAD
 tab_ov, tab_tr, tab_fo, tab_ev, tab_dl = st.tabs(
     ["📊 Overview", "📈 Trends", "🔭 Forward Outlook", "🎪 Event Impact", "🗂 Data Log"]
+=======
+tab_ov, tab_tr, tab_ev, tab_cs, tab_dl = st.tabs(
+    ["📊 Overview", "📈 Trends", "🎪 Event Impact", "🏨 Market Intelligence", "🗂 Data Log"]
+>>>>>>> claude/add-market-specialty-reports-AHlDa
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2641,6 +2769,650 @@ with tab_ev:
         st.plotly_chart(style_fig(fig, height=340), use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
+<<<<<<< HEAD
+=======
+# TAB 4 — MARKET INTELLIGENCE (CoStar)
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_cs:
+    st.markdown("""
+    <div class="hero-banner">
+      <div class="hero-title">South OC Market Intelligence</div>
+      <div class="hero-subtitle">CoStar Hospitality Analytics · South Orange County, CA · 2023–2024</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── AI CoStar Analysis Panel ───────────────────────────────────────────────
+    with st.expander("🧠 CoStar AI Analyst — Deep Market Insights", expanded=True):
+        st.markdown('<span class="ai-chip">MARKET INTELLIGENCE</span>', unsafe_allow_html=True)
+
+        COSTAR_PROMPTS = [
+            ("🏨 Market vs. Portfolio",  "cs_mkt_vs_portfolio"),
+            ("📈 Rate Positioning",      "cs_rate_position"),
+            ("🏗️ Supply Impact",         "cs_supply_impact"),
+            ("🎯 Segment Strategy",      "cs_segment"),
+            ("💰 Revenue Opportunity",   "cs_revenue_opp"),
+            ("📊 Competitive Ranking",   "cs_comp_rank"),
+        ]
+
+        def build_costar_prompt(key: str, m: dict) -> str:
+            """Build AI prompts enriched with CoStar market context."""
+            cs_ctx = ""
+            if not df_cs_snap.empty:
+                snap = df_cs_snap.iloc[0]
+                cs_ctx = (
+                    f"\nCoStar South Orange County Market (2024 Full Year):\n"
+                    f"• Market occupancy: {snap.get('occupancy_pct', 0):.1f}% "
+                    f"({snap.get('occ_yoy_pp', 0):+.1f}pp YOY)\n"
+                    f"• Market ADR: ${snap.get('adr_usd', 0):.2f} "
+                    f"({snap.get('adr_yoy_pct', 0):+.1f}% YOY)\n"
+                    f"• Market RevPAR: ${snap.get('revpar_usd', 0):.2f} "
+                    f"({snap.get('revpar_yoy_pct', 0):+.1f}% YOY)\n"
+                    f"• Total market supply: {snap.get('total_supply_rooms', 0):,} rooms\n"
+                    f"• Annual room revenue: ${snap.get('room_revenue_usd', 0)/1e6:.1f}M\n"
+                )
+            if not df_cs_chain.empty:
+                chain_2024 = df_cs_chain[df_cs_chain["year"] == "2024"]
+                if not chain_2024.empty:
+                    luxury = chain_2024[chain_2024["chain_scale"] == "Luxury"]
+                    upupscale = chain_2024[chain_2024["chain_scale"] == "Upper Upscale"]
+                    if not luxury.empty:
+                        cs_ctx += f"• Luxury segment ADR: ${luxury.iloc[0]['adr_usd']:.0f} · Occ: {luxury.iloc[0]['occupancy_pct']:.1f}%\n"
+                    if not upupscale.empty:
+                        cs_ctx += f"• Upper Upscale ADR: ${upupscale.iloc[0]['adr_usd']:.0f} · Occ: {upupscale.iloc[0]['occupancy_pct']:.1f}%\n"
+            pipeline_rooms = df_cs_pipe["rooms"].sum() if not df_cs_pipe.empty else 0
+            cs_ctx += f"• Active pipeline: {pipeline_rooms:,} rooms across {len(df_cs_pipe)} projects\n"
+
+            base = _base(m) if m else "No STR portfolio data loaded."
+            prompts = {
+                "cs_mkt_vs_portfolio": (
+                    f"{base}\n{cs_ctx}\n"
+                    "Compare the VDP Select Portfolio performance (76.4% occ, $288.50 ADR, "
+                    "$220.42 RevPAR) to the broader South OC market. Identify where the portfolio "
+                    "is outperforming or underperforming the market, and provide 3 specific "
+                    "recommendations to improve market share index (MPI/ARI/RGI)."
+                ),
+                "cs_rate_position": (
+                    f"{base}\n{cs_ctx}\n"
+                    "The Waldorf Astoria Monarch Beach commands $850 ADR at 71% occupancy. "
+                    "The VDP portfolio blended ADR is $288.50. Analyze the rate positioning "
+                    "gap across chain scales (Luxury at $782, Upper Upscale at $298, Upscale "
+                    "at $199) and recommend a rate ladder strategy for the VDP portfolio to "
+                    "maximize its ARI (Average Rate Index) relative to the market."
+                ),
+                "cs_supply_impact": (
+                    f"{base}\n{cs_ctx}\n"
+                    f"There are {pipeline_rooms:,} new hotel rooms in the active supply pipeline "
+                    "for South OC (Dana Cove Hotel 136 rooms Q3 2025, Strands Beach Hotel 88 "
+                    "rooms Q1 2026, Monarch Beach Residences 48 rooms Q2 2026, plus 3 others). "
+                    "Analyze the competitive impact of this new supply on VDP portfolio occupancy "
+                    "and ADR. Which segments face the most pressure? What pre-emptive strategy "
+                    "should VDP recommend to member hotels?"
+                ),
+                "cs_segment": (
+                    f"{base}\n{cs_ctx}\n"
+                    "The chain scale analysis shows Luxury at $782 ADR (71% occ), Upper Upscale "
+                    "at $298 (77.4% occ), and Upscale at $199 (79.1% occ). Independent hotels "
+                    "achieve $296 ADR at 73.6% occ — nearly matching Upper Upscale rates with "
+                    "smaller inventory. Identify the most underserved segment in Dana Point's "
+                    "market and the highest-margin positioning opportunity for VDP member hotels."
+                ),
+                "cs_revenue_opp": (
+                    f"{base}\n{cs_ctx}\n"
+                    "South OC generated $1.15B in room revenue in 2024. VDP portfolio "
+                    "contributes approximately $220M of that at current pace. Quantify the "
+                    "revenue gap between VDP portfolio performance and market-leading properties. "
+                    "Model the incremental room revenue if VDP portfolio achieved market-average "
+                    "ADR and occupancy. Express in annual and TBID-revenue terms."
+                ),
+                "cs_comp_rank": (
+                    f"{base}\n{cs_ctx}\n"
+                    "The competitive set ranking shows: Waldorf Astoria (RGI 273.9), "
+                    "Ritz-Carlton (RGI 231.2), Pacific Edge Boutique (RGI 131.4), "
+                    "Laguna Cliffs Marriott (RGI 105.1), VDP Portfolio baseline (RGI 100.0). "
+                    "Analyze the MPI, ARI, and RGI spread across the comp set. Which "
+                    "properties represent the strongest competitive threat to the VDP portfolio? "
+                    "Which represent a model VDP members should benchmark against?"
+                ),
+            }
+            return prompts.get(key, f"{base}\n{cs_ctx}\nProvide market intelligence insights.")
+
+        btn_cols_cs = st.columns(3)
+        for i, (label, key) in enumerate(COSTAR_PROMPTS):
+            with btn_cols_cs[i % 3]:
+                if st.button(label, key=f"cs_btn_{key}", use_container_width=True):
+                    st.session_state.ai_current_prompt = build_costar_prompt(key, m)
+                    st.session_state.ai_prompt_label   = label
+                    st.session_state.ai_needs_call     = True
+
+        if st.session_state.get("ai_needs_call") and st.session_state.get("ai_current_prompt"):
+            st.session_state.ai_needs_call = False
+            label_disp = st.session_state.get("ai_prompt_label", "Analysis")
+            st.markdown(f"**{label_disp}**")
+            if api_key_valid:
+                with st.spinner("Analyzing market data…"):
+                    st.write_stream(stream_claude_response(st.session_state.ai_current_prompt, api_key))
+            else:
+                st.info(local_fallback("board", m) if m else "No data. Run the pipeline first.")
+
+    st.markdown("---")
+
+    # ── Market Overview KPI Cards ──────────────────────────────────────────────
+    st.markdown("### South OC Market Overview (2024)")
+
+    if not df_cs_snap.empty:
+        snap = df_cs_snap[df_cs_snap["report_period"] == "2024-12-31"]
+        if snap.empty:
+            snap = df_cs_snap.iloc[[0]]
+        snap = snap.iloc[0]
+
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.markdown(kpi_card(
+                "Market Occupancy", f"{snap['occupancy_pct']:.1f}%",
+                f"{snap['occ_yoy_pp']:+.1f}pp YOY",
+                positive=(snap['occ_yoy_pp'] >= 0),
+            ), unsafe_allow_html=True)
+        with c2:
+            st.markdown(kpi_card(
+                "Market ADR", f"${snap['adr_usd']:.2f}",
+                f"{snap['adr_yoy_pct']:+.1f}% YOY",
+                positive=(snap['adr_yoy_pct'] >= 0),
+            ), unsafe_allow_html=True)
+        with c3:
+            st.markdown(kpi_card(
+                "Market RevPAR", f"${snap['revpar_usd']:.2f}",
+                f"{snap['revpar_yoy_pct']:+.1f}% YOY",
+                positive=(snap['revpar_yoy_pct'] >= 0),
+            ), unsafe_allow_html=True)
+        with c4:
+            rev_b = snap['room_revenue_usd'] / 1e9
+            st.markdown(kpi_card(
+                "Annual Room Revenue", f"${rev_b:.2f}B",
+                f"{snap['demand_yoy_pct']:+.1f}% demand YOY",
+                positive=(snap['demand_yoy_pct'] >= 0),
+            ), unsafe_allow_html=True)
+
+        # VDP vs Market comparison row
+        st.markdown("#### VDP Portfolio vs. South OC Market (2024)")
+        col_a, col_b, col_c = st.columns(3)
+        vdp_occ, mkt_occ = 76.4, float(snap['occupancy_pct'])
+        vdp_adr, mkt_adr = 288.50, float(snap['adr_usd'])
+        vdp_rvp, mkt_rvp = 220.42, float(snap['revpar_usd'])
+
+        with col_a:
+            diff = vdp_occ - mkt_occ
+            st.markdown(kpi_card(
+                "Occ: Portfolio vs. Market",
+                f"{vdp_occ:.1f}% / {mkt_occ:.1f}%",
+                f"MPI: {(vdp_occ/mkt_occ*100):.1f} · {diff:+.1f}pp gap",
+                positive=(diff >= 0),
+            ), unsafe_allow_html=True)
+        with col_b:
+            diff = ((vdp_adr - mkt_adr) / mkt_adr * 100)
+            st.markdown(kpi_card(
+                "ADR: Portfolio vs. Market",
+                f"${vdp_adr:.0f} / ${mkt_adr:.0f}",
+                f"ARI: {(vdp_adr/mkt_adr*100):.1f} · {diff:+.1f}%",
+                positive=(diff >= 0),
+            ), unsafe_allow_html=True)
+        with col_c:
+            diff = ((vdp_rvp - mkt_rvp) / mkt_rvp * 100)
+            st.markdown(kpi_card(
+                "RevPAR: Portfolio vs. Market",
+                f"${vdp_rvp:.0f} / ${mkt_rvp:.0f}",
+                f"RGI: {(vdp_rvp/mkt_rvp*100):.1f} · {diff:+.1f}%",
+                positive=(diff >= 0),
+            ), unsafe_allow_html=True)
+    else:
+        st.markdown(empty_state("📊", "No CoStar snapshot data.",
+            "Run scripts/load_costar_reports.py to populate market data."),
+            unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Monthly Performance Trend ──────────────────────────────────────────────
+    st.markdown("### Market Monthly Performance — 24-Month Trend")
+
+    if not df_cs_mon.empty:
+        # Filter last 24 months
+        cs_plot = df_cs_mon.tail(24).copy()
+
+        col_left, col_right = st.columns(2)
+        with col_left:
+            st.markdown('<div class="chart-header">Market Occupancy & ADR Trend</div>',
+                        unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">South OC market — monthly CoStar data</div>',
+                        unsafe_allow_html=True)
+            fig_cs1 = make_subplots(specs=[[{"secondary_y": True}]])
+            fig_cs1.add_trace(go.Scatter(
+                x=cs_plot["as_of_date"], y=cs_plot["occupancy_pct"],
+                name="Market Occ %", line=dict(color=TEAL, width=2.5),
+                hovertemplate="<b>%{x|%b %Y}</b><br>Occ: %{y:.1f}%<extra></extra>",
+            ), secondary_y=False)
+            fig_cs1.add_trace(go.Bar(
+                x=cs_plot["as_of_date"], y=cs_plot["adr_usd"],
+                name="Market ADR $", marker_color=f"rgba(230,129,97,0.45)",
+                hovertemplate="<b>%{x|%b %Y}</b><br>ADR: $%{y:.0f}<extra></extra>",
+            ), secondary_y=True)
+            fig_cs1.update_yaxes(title_text="Occupancy %", secondary_y=False,
+                                  tickformat=".0f", ticksuffix="%")
+            fig_cs1.update_yaxes(title_text="ADR $", secondary_y=True,
+                                  tickformat="$,.0f")
+            st.plotly_chart(style_fig(fig_cs1, height=300), use_container_width=True)
+
+        with col_right:
+            st.markdown('<div class="chart-header">Market RevPAR Trend</div>',
+                        unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">South OC monthly RevPAR with YOY change overlay</div>',
+                        unsafe_allow_html=True)
+            cs_yoy = cs_plot.dropna(subset=["revpar_yoy_pct"])
+            fig_cs2 = make_subplots(specs=[[{"secondary_y": True}]])
+            fig_cs2.add_trace(go.Scatter(
+                x=cs_plot["as_of_date"], y=cs_plot["revpar_usd"],
+                name="RevPAR $", fill="tozeroy",
+                fillcolor=f"rgba(33,128,141,0.12)",
+                line=dict(color=TEAL, width=2.5),
+                hovertemplate="<b>%{x|%b %Y}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
+            ), secondary_y=False)
+            if not cs_yoy.empty:
+                pos_mask = cs_yoy["revpar_yoy_pct"] >= 0
+                fig_cs2.add_trace(go.Bar(
+                    x=cs_yoy.loc[pos_mask, "as_of_date"],
+                    y=cs_yoy.loc[pos_mask, "revpar_yoy_pct"],
+                    name="YOY % (pos)", marker_color="rgba(33,128,141,0.55)",
+                    hovertemplate="<b>%{x|%b %Y}</b><br>YOY: %{y:+.1f}%<extra></extra>",
+                ), secondary_y=True)
+                fig_cs2.add_trace(go.Bar(
+                    x=cs_yoy.loc[~pos_mask, "as_of_date"],
+                    y=cs_yoy.loc[~pos_mask, "revpar_yoy_pct"],
+                    name="YOY % (neg)", marker_color="rgba(192,21,47,0.55)",
+                    hovertemplate="<b>%{x|%b %Y}</b><br>YOY: %{y:+.1f}%<extra></extra>",
+                ), secondary_y=True)
+            fig_cs2.update_yaxes(title_text="RevPAR $", secondary_y=False, tickformat="$,.0f")
+            fig_cs2.update_yaxes(title_text="YOY %", secondary_y=True, ticksuffix="%")
+            st.plotly_chart(style_fig(fig_cs2, height=300), use_container_width=True)
+
+        # Seasonality insight
+        if len(cs_plot) >= 12:
+            peak_row = cs_plot.loc[cs_plot["revpar_usd"].idxmax()]
+            trough_row = cs_plot.loc[cs_plot["revpar_usd"].idxmin()]
+            peak_mo = peak_row["as_of_date"].strftime("%b %Y")
+            trough_mo = trough_row["as_of_date"].strftime("%b %Y")
+            seasonal_range = peak_row["revpar_usd"] - trough_row["revpar_usd"]
+            st.markdown(
+                insight_card(
+                    f"Market Seasonality: {seasonal_range:.0f} RevPAR swing",
+                    f"Peak: **{peak_mo}** at ${peak_row['revpar_usd']:.0f} RevPAR · "
+                    f"Trough: **{trough_mo}** at ${trough_row['revpar_usd']:.0f} RevPAR. "
+                    f"The {seasonal_range:.0f} RevPAR spread between peak and trough months "
+                    f"underscores the critical importance of aggressive summer rate positioning "
+                    f"and shoulder-season demand generation to smooth revenue over the full year.",
+                    kind="positive",
+                ),
+                unsafe_allow_html=True,
+            )
+    else:
+        st.markdown(empty_state("📈", "No monthly CoStar data.",
+            "Run scripts/load_costar_reports.py to populate trend data."),
+            unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Chain Scale Breakdown ──────────────────────────────────────────────────
+    st.markdown("### Chain Scale Performance Breakdown (2024)")
+
+    if not df_cs_chain.empty:
+        chain_2024 = df_cs_chain[df_cs_chain["year"] == "2024"].sort_values(
+            "revpar_usd", ascending=False
+        )
+
+        col_ch1, col_ch2 = st.columns(2)
+        with col_ch1:
+            st.markdown('<div class="chart-header">RevPAR by Chain Scale</div>',
+                        unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">South OC market 2024 · Full-year average</div>',
+                        unsafe_allow_html=True)
+            colors_chain = [TEAL if cs == "Upper Upscale" else
+                           ("#21808D" if cs == "Luxury" else TEAL_LIGHT)
+                           for cs in chain_2024["chain_scale"]]
+            fig_ch1 = go.Figure(go.Bar(
+                x=chain_2024["chain_scale"],
+                y=chain_2024["revpar_usd"],
+                marker_color=[TEAL, TEAL_LIGHT, "#4EC6D3", ORANGE, "#E68161", "#A84B2F"],
+                text=[f"${v:.0f}" for v in chain_2024["revpar_usd"]],
+                textposition="outside",
+                hovertemplate="<b>%{x}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
+            ))
+            st.plotly_chart(style_fig(fig_ch1, height=280), use_container_width=True)
+
+        with col_ch2:
+            st.markdown('<div class="chart-header">Market Share by Chain Scale (RevPAR)</div>',
+                        unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">% of total market RevPAR contribution</div>',
+                        unsafe_allow_html=True)
+            fig_ch2 = go.Figure(go.Pie(
+                labels=chain_2024["chain_scale"],
+                values=chain_2024["market_share_revpar_pct"],
+                hole=0.46,
+                marker_colors=[TEAL, TEAL_LIGHT, "#4EC6D3", ORANGE, "#E68161", "#c0152f"],
+                hovertemplate="<b>%{label}</b><br>Share: %{percent}<extra></extra>",
+            ))
+            fig_ch2.update_layout(
+                showlegend=True, margin=dict(t=10, b=10, l=10, r=10),
+                legend=dict(font=dict(size=11)),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            )
+            st.plotly_chart(fig_ch2, use_container_width=True)
+
+        # Chain scale data table
+        _chain_display = chain_2024[["chain_scale","num_properties","supply_rooms",
+                                      "occupancy_pct","adr_usd","revpar_usd",
+                                      "market_share_revpar_pct"]].copy()
+        _chain_display.columns = ["Segment","Properties","Rooms",
+                                   "Occ %","ADR $","RevPAR $","Mkt Share %"]
+        _chain_display["Occ %"]       = _chain_display["Occ %"].map("{:.1f}%".format)
+        _chain_display["ADR $"]       = _chain_display["ADR $"].map("${:,.2f}".format)
+        _chain_display["RevPAR $"]    = _chain_display["RevPAR $"].map("${:,.2f}".format)
+        _chain_display["Mkt Share %"] = _chain_display["Mkt Share %"].map("{:.1f}%".format)
+        st.dataframe(_chain_display, use_container_width=True, hide_index=True)
+
+        # Key insight
+        luxury_row = chain_2024[chain_2024["chain_scale"] == "Luxury"].iloc[0]
+        upup_row   = chain_2024[chain_2024["chain_scale"] == "Upper Upscale"].iloc[0]
+        st.markdown(
+            insight_card(
+                "Luxury Dominance: 36.2% of Market RevPAR Revenue",
+                f"Luxury segment (Ritz-Carlton + Waldorf Astoria) generates **36.2%** of total "
+                f"market RevPAR revenue from just **3 properties** and **{luxury_row['supply_rooms']:,} rooms** — "
+                f"with ${luxury_row['revpar_usd']:.0f} RevPAR vs. ${upup_row['revpar_usd']:.0f} "
+                f"for Upper Upscale. The luxury ADR premium ({luxury_row['adr_usd']/upup_row['adr_usd']:.1f}x "
+                f"above Upper Upscale) defines the Dana Point rate ceiling and sets aspirational "
+                f"benchmarks for upper-tier VDP member hotels.",
+                kind="positive",
+            ),
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(empty_state("📊", "No chain scale data.",
+            "Run scripts/load_costar_reports.py to populate segment data."),
+            unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Supply Pipeline ────────────────────────────────────────────────────────
+    st.markdown("### Active Supply Pipeline")
+
+    if not df_cs_pipe.empty:
+        pipe_total = df_cs_pipe["rooms"].sum()
+        under_const = df_cs_pipe[df_cs_pipe["status"] == "Under Construction"]
+        planned     = df_cs_pipe[df_cs_pipe["status"].isin(["Planned", "Final Planning / Permitting"])]
+        uc_rooms    = under_const["rooms"].sum() if not under_const.empty else 0
+        pl_rooms    = planned["rooms"].sum() if not planned.empty else 0
+
+        c_p1, c_p2, c_p3 = st.columns(3)
+        with c_p1:
+            st.markdown(kpi_card(
+                "Total Pipeline Rooms", f"{pipe_total:,}",
+                f"{len(df_cs_pipe)} active projects",
+                positive=True, neutral=True,
+            ), unsafe_allow_html=True)
+        with c_p2:
+            st.markdown(kpi_card(
+                "Under Construction", f"{uc_rooms:,} rooms",
+                f"{len(under_const)} project(s) · opening 2025",
+                positive=True, neutral=True,
+            ), unsafe_allow_html=True)
+        with c_p3:
+            st.markdown(kpi_card(
+                "Planned / Permitting", f"{pl_rooms:,} rooms",
+                f"{len(planned)} project(s) · opening 2026–2027",
+                positive=False, neutral=True,
+            ), unsafe_allow_html=True)
+
+        # Pipeline bar chart
+        st.markdown('<div class="chart-header">Pipeline Projects by Rooms & Status</div>',
+                    unsafe_allow_html=True)
+        status_colors = {
+            "Under Construction":             TEAL,
+            "Final Planning / Permitting":    ORANGE,
+            "Planned":                        TEAL_LIGHT,
+        }
+        pipe_colors = [status_colors.get(s, "#626C71") for s in df_cs_pipe["status"]]
+        fig_pipe = go.Figure(go.Bar(
+            x=df_cs_pipe["property_name"],
+            y=df_cs_pipe["rooms"],
+            marker_color=pipe_colors,
+            text=[f"{r} rooms<br>{s}" for r, s in
+                  zip(df_cs_pipe["rooms"], df_cs_pipe["status"])],
+            textposition="outside",
+            hovertemplate="<b>%{x}</b><br>Rooms: %{y}<br>Open: %{customdata}<extra></extra>",
+            customdata=df_cs_pipe["projected_open_date"],
+        ))
+        fig_pipe.update_layout(
+            xaxis_tickangle=-20, margin=dict(t=30, b=80),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        )
+        st.plotly_chart(style_fig(fig_pipe, height=320), use_container_width=True)
+
+        # Pipeline table
+        _pipe_display = df_cs_pipe[["property_name","city","chain_scale","rooms",
+                                     "status","projected_open_date","brand","developer"]].copy()
+        _pipe_display.columns = ["Property","City","Segment","Rooms",
+                                  "Status","Opens","Brand","Developer"]
+        st.dataframe(_pipe_display, use_container_width=True, hide_index=True)
+
+        # Supply impact insight
+        market_supply_pct = (pipe_total / 5120 * 100)
+        st.markdown(
+            insight_card(
+                f"Supply Warning: {pipe_total:,} Rooms ({market_supply_pct:.1f}% of Market) in Pipeline",
+                f"**{uc_rooms:,} rooms** under active construction (opening 2025) will increase "
+                f"South OC hotel supply by **{uc_rooms/5120*100:.1f}%** before year-end. "
+                f"The full pipeline adds **{market_supply_pct:.1f}%** supply growth. "
+                f"VDP member hotels should expect modest occupancy pressure in 2025–2026 as new "
+                f"supply absorbs demand — making ADR discipline and loyalty programs critical "
+                f"to defending RevPAR during the absorption period.",
+                kind="warning",
+            ),
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(empty_state("🏗️", "No pipeline data.",
+            "Run scripts/load_costar_reports.py to populate supply pipeline."),
+            unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Competitive Set Rankings ───────────────────────────────────────────────
+    st.markdown("### Competitive Set — Property Rankings (2024)")
+
+    if not df_cs_comp.empty:
+        comp_sorted = df_cs_comp.sort_values("rgi", ascending=False)
+
+        # RGI ranking chart
+        col_rk1, col_rk2 = st.columns([3, 2])
+        with col_rk1:
+            st.markdown('<div class="chart-header">Revenue Generation Index (RGI) by Property</div>',
+                        unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">RGI > 100 = outperforming market · VDP baseline = 100.0</div>',
+                        unsafe_allow_html=True)
+            rgi_colors = [
+                TEAL if v > 105 else (ORANGE if v < 95 else "#626C71")
+                for v in comp_sorted["rgi"]
+            ]
+            fig_rgi = go.Figure(go.Bar(
+                x=comp_sorted["rgi"],
+                y=comp_sorted["property_name"],
+                orientation="h",
+                marker_color=rgi_colors,
+                text=[f"{v:.1f}" for v in comp_sorted["rgi"]],
+                textposition="outside",
+                hovertemplate="<b>%{y}</b><br>RGI: %{x:.1f}<extra></extra>",
+            ))
+            fig_rgi.add_vline(x=100, line_dash="dash", line_color=ORANGE,
+                              annotation_text="Market Baseline", annotation_position="top")
+            fig_rgi.update_layout(
+                margin=dict(l=10, r=60, t=10, b=10),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.07)"),
+                yaxis=dict(autorange="reversed"),
+            )
+            st.plotly_chart(style_fig(fig_rgi, height=360), use_container_width=True)
+
+        with col_rk2:
+            st.markdown('<div class="chart-header">ADR vs. Occupancy Scatter</div>',
+                        unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">Size = rooms · color = chain scale</div>',
+                        unsafe_allow_html=True)
+            scale_color = {
+                "Luxury": TEAL, "Upper Upscale": TEAL_LIGHT, "Upscale": ORANGE,
+                "Upper Midscale": "#E68161", "Mixed": "#626C71",
+            }
+            fig_scat = go.Figure()
+            for _, row_cs in df_cs_comp.iterrows():
+                fig_scat.add_trace(go.Scatter(
+                    x=[row_cs["occupancy_pct"]],
+                    y=[row_cs["adr_usd"]],
+                    mode="markers+text",
+                    text=[row_cs["property_name"].split(" ")[0]],
+                    textposition="top center",
+                    marker=dict(
+                        size=max(10, min(40, row_cs["rooms"] / 15)),
+                        color=scale_color.get(row_cs["chain_scale"], "#626C71"),
+                        opacity=0.82,
+                    ),
+                    name=row_cs["chain_scale"],
+                    hovertemplate=(
+                        f"<b>{row_cs['property_name']}</b><br>"
+                        f"Occ: {row_cs['occupancy_pct']:.1f}%<br>"
+                        f"ADR: ${row_cs['adr_usd']:.0f}<br>"
+                        f"RevPAR: ${row_cs['revpar_usd']:.0f}<extra></extra>"
+                    ),
+                    showlegend=False,
+                ))
+            fig_scat.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                xaxis=dict(title="Occupancy %", ticksuffix="%",
+                           gridcolor="rgba(255,255,255,0.07)"),
+                yaxis=dict(title="ADR $", tickprefix="$",
+                           gridcolor="rgba(255,255,255,0.07)"),
+                margin=dict(t=10, b=30, l=10, r=10),
+            )
+            st.plotly_chart(style_fig(fig_scat, height=360), use_container_width=True)
+
+        # Comp set table
+        _comp_display = comp_sorted[["property_name","chain_scale","rooms",
+                                      "occupancy_pct","adr_usd","revpar_usd",
+                                      "mpi","ari","rgi"]].copy()
+        _comp_display.columns = ["Property","Segment","Rooms","Occ %","ADR $","RevPAR $",
+                                  "MPI","ARI","RGI"]
+        _comp_display["Occ %"]   = _comp_display["Occ %"].map("{:.1f}%".format)
+        _comp_display["ADR $"]   = _comp_display["ADR $"].map("${:,.0f}".format)
+        _comp_display["RevPAR $"] = _comp_display["RevPAR $"].map("${:,.0f}".format)
+        _comp_display["MPI"]     = _comp_display["MPI"].map("{:.1f}".format)
+        _comp_display["ARI"]     = _comp_display["ARI"].map("{:.1f}".format)
+        _comp_display["RGI"]     = _comp_display["RGI"].map("{:.1f}".format)
+        st.dataframe(_comp_display, use_container_width=True, hide_index=True)
+    else:
+        st.markdown(empty_state("🏆", "No competitive set data.",
+            "Run scripts/load_costar_reports.py to populate competitive benchmarks."),
+            unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── STR × CoStar Correlation Insights ─────────────────────────────────────
+    st.markdown("### Portfolio × Market Correlation Analysis")
+
+    if not df_cs_mon.empty and not df_monthly.empty:
+        # Align monthly STR and CoStar on date
+        cs_merged = df_cs_mon[["as_of_date","occupancy_pct","adr_usd","revpar_usd"]].copy()
+        cs_merged.columns = ["as_of_date","mkt_occ","mkt_adr","mkt_revpar"]
+        str_cols = ["as_of_date","occupancy","adr","revpar"]
+        str_avail = [c for c in str_cols if c in df_monthly.columns]
+        if len(str_avail) >= 2:
+            str_m = df_monthly[str_avail].copy()
+            merged = pd.merge(str_m, cs_merged, on="as_of_date", how="inner")
+
+            if len(merged) >= 6:
+                col_corr1, col_corr2 = st.columns(2)
+                with col_corr1:
+                    st.markdown('<div class="chart-header">Portfolio RevPAR vs. Market RevPAR</div>',
+                                unsafe_allow_html=True)
+                    st.markdown('<div class="chart-caption">Correlation: VDP portfolio tracks market with ADR premium</div>',
+                                unsafe_allow_html=True)
+                    fig_corr = go.Figure()
+                    if "revpar" in merged.columns:
+                        fig_corr.add_trace(go.Scatter(
+                            x=merged["as_of_date"], y=merged["revpar"],
+                            name="VDP Portfolio RevPAR",
+                            line=dict(color=TEAL, width=2.5),
+                            hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio RevPAR: $%{y:.0f}<extra></extra>",
+                        ))
+                    fig_corr.add_trace(go.Scatter(
+                        x=merged["as_of_date"], y=merged["mkt_revpar"],
+                        name="Market RevPAR",
+                        line=dict(color=ORANGE, width=2, dash="dot"),
+                        hovertemplate="<b>%{x|%b %Y}</b><br>Market RevPAR: $%{y:.0f}<extra></extra>",
+                    ))
+                    fig_corr.update_layout(
+                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                        legend=dict(font=dict(size=11)),
+                        margin=dict(t=10, b=10),
+                        yaxis=dict(tickprefix="$", gridcolor="rgba(255,255,255,0.07)"),
+                        xaxis=dict(gridcolor="rgba(255,255,255,0.07)"),
+                    )
+                    st.plotly_chart(style_fig(fig_corr, height=280), use_container_width=True)
+
+                with col_corr2:
+                    st.markdown('<div class="chart-header">Portfolio ADR vs. Market ADR</div>',
+                                unsafe_allow_html=True)
+                    st.markdown('<div class="chart-caption">ADR gap reveals pricing power relative to broader market</div>',
+                                unsafe_allow_html=True)
+                    fig_adr = go.Figure()
+                    if "adr" in merged.columns:
+                        fig_adr.add_trace(go.Scatter(
+                            x=merged["as_of_date"], y=merged["adr"],
+                            name="VDP Portfolio ADR",
+                            line=dict(color=TEAL, width=2.5),
+                            hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio ADR: $%{y:.0f}<extra></extra>",
+                        ))
+                    fig_adr.add_trace(go.Scatter(
+                        x=merged["as_of_date"], y=merged["mkt_adr"],
+                        name="Market ADR",
+                        line=dict(color=ORANGE, width=2, dash="dot"),
+                        hovertemplate="<b>%{x|%b %Y}</b><br>Market ADR: $%{y:.0f}<extra></extra>",
+                    ))
+                    fig_adr.update_layout(
+                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                        legend=dict(font=dict(size=11)),
+                        margin=dict(t=10, b=10),
+                        yaxis=dict(tickprefix="$", gridcolor="rgba(255,255,255,0.07)"),
+                        xaxis=dict(gridcolor="rgba(255,255,255,0.07)"),
+                    )
+                    st.plotly_chart(style_fig(fig_adr, height=280), use_container_width=True)
+            else:
+                st.info("Need at least 6 months of overlapping STR + CoStar data for correlation analysis.")
+        else:
+            st.info("Run the STR pipeline first to enable portfolio vs. market correlation charts.")
+    else:
+        _body = ("Upload STR monthly exports to data/str/str_monthly.xlsx and run the pipeline "
+                 "to compare portfolio performance against CoStar market benchmarks.")
+        st.markdown(empty_state("📉", "Correlation data not available.", _body),
+                    unsafe_allow_html=True)
+
+    # CoStar data download
+    st.markdown("---")
+    if not df_cs_mon.empty:
+        _cs_csv = df_cs_mon.to_csv(index=False).encode()
+        st.download_button(
+            "⬇️ Download CoStar Monthly Performance CSV",
+            _cs_csv, file_name="costar_monthly_performance.csv",
+            mime="text/csv", use_container_width=True,
+        )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+>>>>>>> claude/add-market-specialty-reports-AHlDa
 # TAB 5 — DATA LOG
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_dl:
