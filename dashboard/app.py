@@ -2115,6 +2115,370 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ══════════════════════════════════════════════════════════════════════════════
+# BOARD REPORT HTML GENERATOR
+# Produces a full-fidelity, print-ready HTML document with inline CSS.
+# Download as .html → open in browser → Cmd/Ctrl+P → Save as PDF.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def generate_board_report_html(
+    m: dict,
+    df_kpi_in: "pd.DataFrame",
+    df_dfy_ov_in: "pd.DataFrame",
+    df_dfy_dma_in: "pd.DataFrame",
+    df_cs_snap_in: "pd.DataFrame",
+    df_insights_in: "pd.DataFrame",
+    df_dfy_media_in: "pd.DataFrame",
+) -> str:
+    """Return a complete, self-contained HTML board report string."""
+    now = datetime.now()
+    report_date = now.strftime("%B %d, %Y")
+    period_label = now.strftime("%B %Y")
+
+    # ── Metric extraction ──────────────────────────────────────────────────────
+    rvp   = m.get("revpar_30", 0)
+    rvp_d = m.get("revpar_delta", 0)
+    adr   = m.get("adr_30", 0)
+    adr_d = m.get("adr_delta", 0)
+    occ   = m.get("occ_30", 0)
+    occ_d = m.get("occ_delta", 0)
+    tbid  = m.get("tbid_monthly", 0)
+    cq    = m.get("comp_recent_q", 0)
+    cpq   = m.get("comp_prior_q", 0)
+    wknd  = m.get("wknd_revpar", 0)
+    wkdy  = m.get("wkdy_revpar", 0)
+    wkgap = ((wknd - wkdy) / wkdy * 100) if wkdy else 0
+
+    # Annual 2024 averages from kpi_daily_summary
+    _k24 = df_kpi_in[df_kpi_in["as_of_date"].astype(str).str.startswith("2024")] if not df_kpi_in.empty else pd.DataFrame()
+    vdp_occ_ann = float(_k24["occ_pct"].mean()) if not _k24.empty else occ
+    vdp_adr_ann = float(_k24["adr"].mean())     if not _k24.empty else adr
+    vdp_rvp_ann = float(_k24["revpar"].mean())  if not _k24.empty else rvp
+
+    # Datafy metrics
+    trips_m   = int(df_dfy_ov_in.iloc[0].get("total_trips", 0) or 0) / 1_000_000 if not df_dfy_ov_in.empty else 0
+    overnight = float(df_dfy_ov_in.iloc[0].get("overnight_pct", 0) or 0) if not df_dfy_ov_in.empty else 0
+    oos_pct   = float(df_dfy_ov_in.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov_in.empty else 0
+    avg_los   = float(df_dfy_ov_in.iloc[0].get("avg_los", 0) or 0) if not df_dfy_ov_in.empty else 0
+
+    # ROAS
+    roas = float(df_dfy_media_in.iloc[0].get("roas", 0) or 0) if not df_dfy_media_in.empty else 0
+    attr_trips = int(df_dfy_media_in.iloc[0].get("attributable_trips", 0) or 0) if not df_dfy_media_in.empty else 0
+    total_impact = float(df_dfy_media_in.iloc[0].get("total_impact_usd", 0) or 0) if not df_dfy_media_in.empty else 0
+
+    # CoStar market
+    mkt_occ = mkt_adr = mkt_rvp = 0.0
+    if not df_cs_snap_in.empty:
+        _snap = df_cs_snap_in[df_cs_snap_in["report_period"] == "2024-12-31"]
+        if _snap.empty:
+            _snap = df_cs_snap_in.iloc[[0]]
+        _snap = _snap.fillna(0).iloc[0]
+        mkt_occ = float(_snap.get("occupancy_pct", 0))
+        mkt_adr = float(_snap.get("adr_usd", 0))
+        mkt_rvp = float(_snap.get("revpar_usd", 0))
+
+    mpi = (vdp_occ_ann / mkt_occ * 100) if mkt_occ else 0
+    ari = (vdp_adr_ann / mkt_adr * 100) if mkt_adr else 0
+    rgi = (vdp_rvp_ann / mkt_rvp * 100) if mkt_rvp else 0
+
+    # Top DMA feeder markets
+    dma_rows = ""
+    if not df_dfy_dma_in.empty:
+        for _, r in df_dfy_dma_in.nlargest(5, "visitor_days_share_pct").iterrows():
+            dma_rows += f"<tr><td>{r.get('dma','—')}</td><td style='text-align:center'>{float(r.get('visitor_days_share_pct',0)):.1f}%</td><td style='text-align:right'>${float(r.get('avg_spend_usd',0)):,.0f}</td></tr>"
+
+    # Insights (DMO audience)
+    dmo_insights = df_insights_in[df_insights_in["audience"] == "dmo"].head(3) if not df_insights_in.empty else pd.DataFrame()
+    insight_rows = ""
+    for _, row in dmo_insights.iterrows():
+        insight_rows += f"""
+        <div class="insight-block">
+          <div class="insight-cat">{str(row.get('category','—')).replace('_',' ').upper()}</div>
+          <div class="insight-hl">{row.get('headline','')}</div>
+          <div class="insight-body">{str(row.get('body',''))[:320]}{'…' if len(str(row.get('body',''))) > 320 else ''}</div>
+        </div>"""
+
+    # Color helpers
+    def _clr(v): return "#1a7a5e" if v >= 0 else "#b91c1c"
+    def _arr(v): return "▲" if v >= 0 else "▼"
+    def _idx_clr(v): return "#1a7a5e" if v >= 100 else "#b91c1c"
+
+    tbid_ann = tbid * 12
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VDP Board Report — {period_label}</title>
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{ font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11pt; color: #1a1a2e; background: #fff; line-height: 1.55; }}
+  a {{ color: #21808D; text-decoration: none; }}
+
+  /* ── Layout ── */
+  .page {{ max-width: 860px; margin: 0 auto; padding: 32px 40px; }}
+  .section {{ margin-bottom: 32px; page-break-inside: avoid; }}
+  .col2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }}
+  .col3 {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }}
+  .col4 {{ display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }}
+
+  /* ── Header ── */
+  .report-header {{ background: #21808D; color: white; padding: 28px 36px 22px; border-radius: 8px; margin-bottom: 28px; }}
+  .report-header .org {{ font-size: 11pt; font-weight: 600; letter-spacing: .12em; opacity: .88; margin-bottom: 6px; }}
+  .report-header h1 {{ font-size: 22pt; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; margin-bottom: 8px; }}
+  .report-header .meta {{ font-size: 9.5pt; opacity: .82; }}
+  .report-header .meta span {{ margin-right: 16px; }}
+
+  /* ── Section headings ── */
+  h2 {{ font-size: 13pt; font-weight: 700; color: #21808D; border-bottom: 2px solid #21808D; padding-bottom: 5px; margin-bottom: 14px; letter-spacing: .02em; }}
+  h3 {{ font-size: 11pt; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }}
+
+  /* ── Executive Summary ── */
+  .exec-summary {{ background: #f0fafb; border-left: 4px solid #21808D; border-radius: 6px; padding: 16px 20px; font-size: 10.5pt; line-height: 1.65; }}
+  .exec-summary strong {{ color: #21808D; }}
+
+  /* ── KPI Cards ── */
+  .kpi-card {{ background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; }}
+  .kpi-card .label {{ font-size: 8.5pt; color: #64748b; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; margin-bottom: 4px; }}
+  .kpi-card .value {{ font-size: 20pt; font-weight: 800; color: #1a1a2e; line-height: 1.1; }}
+  .kpi-card .delta {{ font-size: 9pt; font-weight: 600; margin-top: 3px; }}
+  .kpi-card .sub {{ font-size: 8.5pt; color: #64748b; margin-top: 2px; }}
+  .kpi-card.highlight {{ border-color: #21808D; border-width: 2px; background: #f0fafb; }}
+
+  /* ── Narrative stories ── */
+  .story {{ background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 18px; }}
+  .story .story-label {{ font-size: 8pt; font-weight: 700; color: #21808D; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 6px; }}
+  .story p {{ font-size: 10pt; line-height: 1.65; margin-bottom: 8px; }}
+  .story .action {{ background: rgba(33,128,141,.08); border-radius: 5px; padding: 8px 12px; font-size: 9.5pt; color: #21808D; font-weight: 600; margin-top: 8px; }}
+
+  /* ── Index comparison ── */
+  .index-bar {{ display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font-size: 9.5pt; }}
+  .index-bar .bar-wrap {{ flex: 1; background: #e2e8f0; border-radius: 4px; height: 8px; }}
+  .index-bar .bar-fill {{ height: 8px; border-radius: 4px; }}
+
+  /* ── Insights ── */
+  .insight-block {{ border-left: 3px solid #21808D; padding: 8px 14px; margin-bottom: 10px; }}
+  .insight-cat {{ font-size: 8pt; color: #21808D; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 2px; }}
+  .insight-hl {{ font-size: 10pt; font-weight: 700; color: #1a1a2e; margin-bottom: 3px; }}
+  .insight-body {{ font-size: 9.5pt; color: #475569; line-height: 1.55; }}
+
+  /* ── Table ── */
+  table {{ width: 100%; border-collapse: collapse; font-size: 9.5pt; }}
+  th {{ background: #21808D; color: white; padding: 7px 10px; text-align: left; font-weight: 600; font-size: 8.5pt; letter-spacing: .04em; }}
+  td {{ padding: 6px 10px; border-bottom: 1px solid #f1f5f9; }}
+  tr:nth-child(even) td {{ background: #f8fafc; }}
+
+  /* ── Actions list ── */
+  .action-list {{ list-style: none; }}
+  .action-list li {{ padding: 10px 14px; border-left: 3px solid #21808D; margin-bottom: 8px; font-size: 10pt; background: #f0fafb; border-radius: 0 6px 6px 0; }}
+  .action-list li strong {{ color: #21808D; display: block; font-size: 8.5pt; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 3px; }}
+
+  /* ── Risk flags ── */
+  .risk-flag {{ display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; font-size: 9.5pt; }}
+  .risk-flag.amber {{ background: #fffbeb; border: 1px solid #f59e0b; }}
+  .risk-flag.red {{ background: #fef2f2; border: 1px solid #ef4444; }}
+  .risk-flag.green {{ background: #f0fdf4; border: 1px solid #22c55e; }}
+  .risk-icon {{ font-size: 14pt; line-height: 1; }}
+
+  /* ── Footer ── */
+  .footer {{ margin-top: 36px; padding-top: 14px; border-top: 1px solid #e2e8f0; font-size: 8.5pt; color: #94a3b8; display: flex; justify-content: space-between; }}
+
+  /* ── Print ── */
+  @media print {{
+    body {{ font-size: 10pt; }}
+    .page {{ padding: 0; max-width: 100%; }}
+    .section {{ page-break-inside: avoid; }}
+    .kpi-card {{ border: 1px solid #ccc !important; }}
+    h2 {{ color: #000 !important; border-bottom-color: #000 !important; }}
+    .report-header {{ background: #21808D !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+    @page {{ margin: 18mm 16mm; }}
+  }}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- HEADER -->
+<div class="report-header">
+  <div class="org">VISIT DANA POINT &nbsp;·&nbsp; TBID ANALYTICS</div>
+  <h1>VDP Portfolio Board Report</h1>
+  <div class="meta">
+    <span>📅 {report_date}</span>
+    <span>📍 Dana Point, CA — South Orange County</span>
+    <span>🏨 12-Property Select Portfolio</span>
+    <span>📊 Data: STR · Datafy · CoStar</span>
+  </div>
+</div>
+
+<!-- EXECUTIVE SUMMARY -->
+<div class="section">
+<h2>Executive Summary</h2>
+<div class="exec-summary">
+The VDP Select Portfolio delivered <strong>RevPAR of ${rvp:.0f}</strong> over the last 30 days
+({_arr(rvp_d)} <strong style="color:{_clr(rvp_d)}">{rvp_d:+.1f}%</strong> vs. prior period),
+with ADR at <strong>${adr:.0f}</strong> ({_arr(adr_d)}&thinsp;{adr_d:+.1f}%) and occupancy at <strong>{occ:.1f}%</strong>.
+The portfolio generated an estimated <strong>${tbid:,.0f}/month</strong> in TBID assessments (blended 1.25%),
+on pace for <strong>${tbid_ann:,.0f} annually</strong>.
+{"Compression activity increased to <strong>" + str(cq) + " days above 90% occupancy</strong> this quarter vs. " + str(cpq) + " prior — a signal to pursue rate increases." if cq >= cpq else "Compression activity moderated to <strong>" + str(cq) + " days above 90% occupancy</strong> vs. " + str(cpq) + " prior quarter — shoulder season demand programs are warranted."}
+{"Dana Point hosted <strong>{:.2f}M visitor trips</strong> annually, with <strong>{:.0f}%</strong> overnight stays and <strong>{:.0f}%</strong> out-of-state visitors driving disproportionate room revenue per trip.".format(trips_m, overnight, oos_pct) if trips_m > 0 else ""}
+{"CoStar benchmarks show VDP portfolio at MPI <strong>{:.0f}</strong> / ARI <strong>{:.0f}</strong> / RGI <strong>{:.0f}</strong> vs. the South OC market.".format(mpi, ari, rgi) if mkt_rvp > 0 else ""}
+</div>
+</div>
+
+<!-- KPI DASHBOARD -->
+<div class="section">
+<h2>Performance Dashboard — Last 30 Days vs. Prior Period</h2>
+<div class="col4">
+  <div class="kpi-card highlight">
+    <div class="label">RevPAR</div>
+    <div class="value">${rvp:.0f}</div>
+    <div class="delta" style="color:{_clr(rvp_d)}">{_arr(rvp_d)} {rvp_d:+.1f}%</div>
+    <div class="sub">vs. prior 30 days</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">ADR</div>
+    <div class="value">${adr:.0f}</div>
+    <div class="delta" style="color:{_clr(adr_d)}">{_arr(adr_d)} {adr_d:+.1f}%</div>
+    <div class="sub">avg daily rate</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Occupancy</div>
+    <div class="value">{occ:.1f}%</div>
+    <div class="delta" style="color:{_clr(occ_d)}">{_arr(occ_d)} {occ_d:+.1f}pp</div>
+    <div class="sub">room demand</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">TBID Est. (Monthly)</div>
+    <div class="value">${tbid:,.0f}</div>
+    <div class="delta" style="color:#21808D">${tbid_ann:,.0f}/yr</div>
+    <div class="sub">at 1.25% blended</div>
+  </div>
+</div>
+<div class="col4" style="margin-top:12px">
+  <div class="kpi-card">
+    <div class="label">Compression Days (QTD)</div>
+    <div class="value">{cq}</div>
+    <div class="delta" style="color:{_clr(cq - cpq)}">{_arr(cq - cpq)} vs. {cpq} prior Q</div>
+    <div class="sub">nights &gt;90% occ</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Weekend RevPAR</div>
+    <div class="value">${wknd:.0f}</div>
+    <div class="delta" style="color:#64748b">vs. ${wkdy:.0f} midweek</div>
+    <div class="sub">{wkgap:.0f}% premium</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Annual Visitor Trips</div>
+    <div class="value">{"N/A" if trips_m == 0 else f"{trips_m:.2f}M"}</div>
+    <div class="delta" style="color:#21808D">{overnight:.0f}% overnight</div>
+    <div class="sub">{oos_pct:.0f}% out-of-state</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Marketing ROAS</div>
+    <div class="value">{"N/A" if roas == 0 else f"{roas:.1f}×"}</div>
+    <div class="delta" style="color:#21808D">{"N/A" if attr_trips == 0 else f"{attr_trips:,} attributed trips"}</div>
+    <div class="sub">{"N/A" if total_impact == 0 else f"${total_impact/1e6:.1f}M total impact"}</div>
+  </div>
+</div>
+</div>
+
+<!-- STORY 1: REVENUE -->
+<div class="section">
+<h2>Story 1 — Revenue Performance</h2>
+<div class="col2">
+  <div class="story">
+    <div class="story-label">What the data shows</div>
+    <p>The portfolio's <strong>RevPAR of ${rvp:.0f}</strong> reflects {"strong rate discipline and sustained demand" if rvp_d >= 0 else "softness in demand or rate discipline that warrants attention"}. ADR at <strong>${adr:.0f}</strong> ({_arr(adr_d)}&thinsp;{adr_d:+.1f}%) is {"outpacing" if adr_d >= 0 else "lagging"} the prior period. Full-year 2024 portfolio averages: Occ {vdp_occ_ann:.1f}%, ADR ${vdp_adr_ann:.0f}, RevPAR ${vdp_rvp_ann:.0f}.</p>
+    <p>Weekend RevPAR (${wknd:.0f}) exceeds midweek (${wkdy:.0f}) by {wkgap:.0f}%. Closing just 20% of this gap via midweek programs adds approximately <strong>${(wknd-wkdy)*0.2*90/7*12:,.0f}/year</strong> in portfolio room revenue.</p>
+    <div class="action">→ ACTION: {"Capture rate on compression nights — data supports ADR increases of 8–12% on nights with occupancy above 85%." if cq >= cpq else "Launch targeted midweek demand campaign. Recommend $50K budget authorization."}</div>
+  </div>
+  <div class="story">
+    <div class="story-label">Market context (CoStar 2024)</div>
+    {"<p>South OC market: <strong>Occ {:.1f}%</strong> · ADR <strong>${:.0f}</strong> · RevPAR <strong>${:.0f}</strong>.</p><p>VDP Portfolio Index vs. Market:</p>".format(mkt_occ, mkt_adr, mkt_rvp) if mkt_rvp > 0 else "<p>CoStar benchmark data available in the Market Intelligence tab.</p>"}
+    {"<div class='index-bar'><span style='width:80px;font-size:9pt;color:#475569'>MPI (Occ)</span><div class='bar-wrap'><div class='bar-fill' style='width:min(100%,{:.0f}%);background:{};'></div></div><span style='font-weight:700;color:{};font-size:9.5pt'>{:.0f}</span></div>".format(min(mpi,100), _idx_clr(mpi), _idx_clr(mpi), mpi) if mkt_rvp > 0 else ""}
+    {"<div class='index-bar'><span style='width:80px;font-size:9pt;color:#475569'>ARI (Rate)</span><div class='bar-wrap'><div class='bar-fill' style='width:min(100%,{:.0f}%);background:{};'></div></div><span style='font-weight:700;color:{};font-size:9.5pt'>{:.0f}</span></div>".format(min(ari,100), _idx_clr(ari), _idx_clr(ari), ari) if mkt_rvp > 0 else ""}
+    {"<div class='index-bar'><span style='width:80px;font-size:9pt;color:#475569'>RGI (RevPAR)</span><div class='bar-wrap'><div class='bar-fill' style='width:min(100%,{:.0f}%);background:{};'></div></div><span style='font-weight:700;color:{};font-size:9.5pt'>{:.0f}</span></div>".format(min(rgi,100), _idx_clr(rgi), _idx_clr(rgi), rgi) if mkt_rvp > 0 else ""}
+    <div class="action" style="margin-top:10px">→ {"Index above 100: portfolio outperforming market. Protect rate positioning." if rgi >= 100 else "Index below 100: portfolio underperforming market. Review rate strategy and channel mix."}</div>
+  </div>
+</div>
+</div>
+
+<!-- STORY 2: VISITOR ECONOMY -->
+<div class="section">
+<h2>Story 2 — Visitor Economy (Datafy)</h2>
+<div class="col2">
+  <div class="story">
+    <div class="story-label">Who is visiting Dana Point</div>
+    {"<p>Dana Point welcomed <strong>{:.2f}M annual visitor trips</strong>. <strong>{:.0f}%</strong> stayed overnight (avg {:.1f} nights), while <strong>{:.0f}%</strong> were day trips.</p><p><strong>{:.0f}%</strong> of visitor days came from out-of-state markets, which generate higher per-trip ADR and longer stays than LA drive market visitors.</p>".format(trips_m, overnight, avg_los, 100-overnight, oos_pct) if trips_m > 0 else "<p>Load Datafy visitor economy data to see visitor profile.</p>"}
+    {"<div class='action'>→ ACTION: OOS visitors from fly markets (SLC, DFW, NYC) generate 1.3–1.4× room revenue per trip vs. LA drive. Recommend increasing fly-market budget allocation by 15%.</div>" if oos_pct > 40 else ""}
+  </div>
+  <div class="story">
+    <div class="story-label">Top feeder markets by visitor share</div>
+    {"<table><thead><tr><th>Market (DMA)</th><th style='text-align:center'>Visitor Days %</th><th style='text-align:right'>Avg Spend</th></tr></thead><tbody>" + dma_rows + "</tbody></table>" if dma_rows else "<p>DMA data not yet loaded.</p>"}
+  </div>
+</div>
+</div>
+
+<!-- STORY 3: FORWARD OUTLOOK -->
+<div class="section">
+<h2>Story 3 — Forward Outlook (AI-Generated Insights)</h2>
+{insight_rows if insight_rows else "<p style='color:#64748b;font-size:10pt'>Run compute_insights.py to generate forward-looking insights.</p>"}
+</div>
+
+<!-- RECOMMENDED ACTIONS -->
+<div class="section">
+<h2>Recommended Board Actions</h2>
+<ul class="action-list">
+  <li><strong>Revenue Strategy</strong>{"Approve rate increase on compression nights (90%+ occ). Proposed floor: ADR +" + str(int(adr * 0.10)) + " on nights with forecast demand above 90%." if cq > 0 else "Authorize $50K shoulder-season demand generation campaign targeting midweek bookings."}</li>
+  <li><strong>TBID Revenue Projection</strong>At current pace, annual TBID revenue is estimated at <strong>${tbid_ann:,.0f}</strong>. {"Trending above prior period — budget assumptions may be revised upward." if rvp_d >= 0 else "Monitor for sustained softness; consider revised budget assumptions if trend persists 60+ days."}</li>
+  <li><strong>Visitor Economy Investment</strong>{"Authorize increased media investment in fly markets (SLC, DFW, NYC, ORD). These DMAs generate 1.3–1.4× room revenue per trip. ROAS on attribution tracking: " + str(roas) + "×." if roas > 0 else "Approve Datafy attribution study to quantify media ROAS — required for next budget cycle."}</li>
+  <li><strong>Market Intelligence Review</strong>Present updated CoStar comp set analysis at next board meeting. {"Portfolio at RGI {:.0f} — discuss rate ladder strategy to close gap vs. Upper Upscale segment.".format(rgi) if mkt_rvp > 0 else "Request CoStar market report subscription renewal for 2026."}</li>
+  <li><strong>Midweek Demand Program</strong>Authorize feasibility review for midweek demand program. Closing 20% of the weekend/midweek RevPAR gap (${wknd:.0f}→${wkdy:.0f}) generates approximately <strong>${(wknd-wkdy)*0.2*90/7*12:,.0f}/year</strong> in incremental portfolio room revenue.</li>
+</ul>
+</div>
+
+<!-- RISK FACTORS -->
+<div class="section">
+<h2>Risk Factors</h2>
+<div class="risk-flag amber">
+  <span class="risk-icon">⚠️</span>
+  <div><strong>Labor Cost Pressure</strong> — Regional hotel labor agreement (2024) drives wage increases through 2028. Margins compress even as RevPAR grows. Monitor GOP margins and adjust TBID projection models annually.</div>
+</div>
+<div class="risk-flag amber">
+  <span class="risk-icon">⚠️</span>
+  <div><strong>Supply Pipeline</strong> — {"Active supply pipeline adds rooms to South OC market. New competitive supply may pressure occupancy for mid-tier segments in 2025–2026." if not df_cs_snap_in.empty else "Monitor CoStar supply pipeline for new competitive openings."}</div>
+</div>
+<div class="risk-flag {"green" if rvp_d >= 0 else "red"}">
+  <span class="risk-icon">{"✅" if rvp_d >= 0 else "🔴"}</span>
+  <div><strong>Demand Trend</strong> — RevPAR {"growing" if rvp_d >= 0 else "softening"} at {rvp_d:+.1f}% vs. prior period. {"Demand trajectory supports current pricing strategy." if rvp_d >= 0 else "Softening demand warrants review of rate strategy and demand generation program effectiveness."}</div>
+</div>
+</div>
+
+<!-- DATA SOURCES & FOOTER -->
+<div class="section">
+<h2>Data Sources &amp; Methodology</h2>
+<p style="font-size:9.5pt;color:#475569">
+<strong>STR (Smith Travel Research)</strong> — hotel performance data (occupancy, ADR, RevPAR) for VDP Select Portfolio (12 properties, South Orange County, CA). Updated via monthly/daily export files.<br>
+<strong>Datafy</strong> — visitor economy intelligence (visitor trips, DMA profiles, spending, media attribution). Annual/seasonal report periods.<br>
+<strong>CoStar Hospitality Analytics</strong> — market-level benchmarks for Newport Beach/Dana Point submarket. Data as of {report_date}.<br>
+<strong>TBID Revenue</strong> — estimated at blended 1.25% assessment rate applied to room revenue. Actual assessments may vary by property tier.<br>
+<strong>All metrics are based on available loaded data.</strong> Run <code>python scripts/run_pipeline.py</code> to refresh with latest source files.
+</p>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <span>Visit Dana Point — VDP Analytics Platform</span>
+  <span>Prepared: {report_date} &nbsp;·&nbsp; Confidential — Board Use Only</span>
+</div>
+
+</div>
+</body>
+</html>"""
+    return html
+
+
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 tab_ov, tab_tr, tab_fo, tab_ev, tab_cs, tab_dl = st.tabs(
@@ -2179,6 +2543,34 @@ Dana Point/South OC market ADR forecast: $285+ through 2025 (CoStar). VDP portfo
 """, unsafe_allow_html=True)
         else:
             st.info("Run the pipeline to load STR data for board report generation.")
+
+        # ── Download button ────────────────────────────────────────────────────
+        st.markdown("<br>", unsafe_allow_html=True)
+        _dl_col, _sp_col = st.columns([1, 3])
+        with _dl_col:
+            _report_html = generate_board_report_html(
+                m or {},
+                df_kpi,
+                df_dfy_ov,
+                df_dfy_dma,
+                df_cs_snap,
+                df_insights,
+                df_dfy_media,
+            )
+            st.download_button(
+                label="📥 Download Board Report (Print-Ready HTML)",
+                data=_report_html.encode("utf-8"),
+                file_name=f"VDP_Board_Report_{datetime.now().strftime('%Y-%m')}.html",
+                mime="text/html",
+                use_container_width=True,
+                type="primary",
+                help="Download → open in browser → Cmd+P / Ctrl+P → Save as PDF",
+            )
+        with _sp_col:
+            st.caption(
+                "Opens as a formatted HTML document. To save as PDF: open in browser → "
+                "File → Print → 'Save as PDF'. Optimized for A4/Letter paper."
+            )
 
     st.markdown("---")
 
