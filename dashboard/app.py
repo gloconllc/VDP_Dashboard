@@ -1943,9 +1943,7 @@ st.markdown(
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 tab_ov, tab_tr, tab_fo, tab_ev, tab_dl = st.tabs(
-    ["📊 Overview", "📈 Trends", "🔭 Forward Outlook", "🎪 Event Impact", "🗂 Data Log"]
-tab_ov, tab_tr, tab_ev, tab_cs, tab_dl = st.tabs(
-    ["📊 Overview", "📈 Trends", "🎪 Event Impact", "🏨 Market Intelligence", "🗂 Data Log"]
+    ["Overview Brain", "STR & Pipeline", "Forward Outlook", "Events & Factors", "Data & Downloads"]
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2783,8 +2781,8 @@ with tab_ev:
         st.plotly_chart(style_fig(fig, height=340), use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-<<<<<<< HEAD
-=======
+
+
 # TAB 4 — MARKET INTELLIGENCE (CoStar)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_cs:
@@ -3426,7 +3424,9 @@ with tab_cs:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
->>>>>>> claude/add-market-specialty-reports-AHlDa
+
+
+
 # TAB 5 — DATA LOG
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_dl:
