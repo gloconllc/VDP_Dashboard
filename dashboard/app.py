@@ -375,8 +375,17 @@ st.markdown("""
   /* ── Insight card icon ───────────────────────────────────────────────── */
   .insight-icon { display:inline-block; vertical-align:middle; margin-right:6px; line-height:0; }
 
-  #MainMenu { visibility:hidden; }
-  footer    { visibility:hidden; }
+  /* ── Hide all Streamlit chrome from client view ──────────────────────── */
+  #MainMenu                              { visibility: hidden !important; }
+  footer                                 { visibility: hidden !important; }
+  [data-testid="stToolbar"]             { visibility: hidden !important; }
+  [data-testid="stDecoration"]          { display:    none    !important; }
+  [data-testid="stStatusWidget"]        { visibility: hidden !important; }
+  [data-testid="stHeader"]              { background: transparent !important; }
+  .viewerBadge_container__1QSob        { display:    none    !important; }
+  .styles_viewerBadge__CvC9N           { display:    none    !important; }
+  a[href*="streamlit.io"]               { display:    none    !important; }
+  a[href*="github.com/streamlit"]       { display:    none    !important; }
 
   /* ── Empty-state cards ───────────────────────────────────────────────── */
   .empty-card {
