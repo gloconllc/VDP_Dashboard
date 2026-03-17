@@ -1957,6 +1957,7 @@ df_dfy_air     = load_datafy_airports()
 df_dfy_media   = load_datafy_media_kpis()
 df_dfy_web     = load_datafy_website_kpis()
 df_dfy_mktmkt  = load_datafy_media_markets()
+df_insights    = load_insights()          # Forward-looking insights (all audiences)
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -2068,7 +2069,10 @@ with st.sidebar:
     _m_dot   = "🟢" if str_monthly_rows > 0 else "⚫"
     _d_label = f"{str_daily_rows:,} rows"   if str_daily_rows   > 0 else "No data"
     _m_label = f"{str_monthly_rows:,} rows" if str_monthly_rows > 0 else "No data"
-    _cs_rows = counts.get("costar_monthly_performance", 0)
+    # Use costar_market_snapshot as the primary CoStar row count (55 rows when PDFs loaded)
+    _cs_rows = counts.get("costar_market_snapshot", 0) or counts.get("costar_monthly_performance", 0)
+    if not df_cs_snap.empty and _cs_rows == 0:
+        _cs_rows = len(df_cs_snap)   # fallback: count loaded DataFrame directly
     _cs_dot  = "🟢" if isinstance(_cs_rows, int) and _cs_rows > 0 else "⚫"
     _cs_label = f"{_cs_rows:,} rows" if isinstance(_cs_rows, int) and _cs_rows > 0 else "No data"
     _dfy_rows = counts.get("datafy_overview_kpis", 0)
