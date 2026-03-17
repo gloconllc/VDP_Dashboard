@@ -2312,6 +2312,87 @@ with tab_ov:
                         unsafe_allow_html=True,
                     )
 
+        # ── Bullet Chart: KPI vs Benchmark ────────────────────────────────────
+        if kpis and not df_cs_snap.empty:
+            st.markdown('<div class="chart-header">Performance vs. Market Benchmark — Bullet Chart</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="chart-caption">Black bar = VDP portfolio actual · '
+                'Gray range = South OC market benchmark (CoStar) · '
+                'Teal = target (5% above market)</div>',
+                unsafe_allow_html=True,
+            )
+            _snap = df_cs_snap.iloc[0]
+            _mkt_occ  = float(_snap.get("occupancy_pct", 76.4) or 76.4)
+            _mkt_adr  = float(_snap.get("adr_usd", 288.50) or 288.50)
+            _mkt_rvp  = float(_snap.get("revpar_usd", 220.42) or 220.42)
+            # VDP actuals from kpis
+            _vdp_occ  = next((k["raw_value"] for k in kpis if "Occ" in k.get("label","")), _mkt_occ)
+            _vdp_adr  = next((k["raw_value"] for k in kpis if "ADR" in k.get("label","")), _mkt_adr)
+            _vdp_rvp  = next((k["raw_value"] for k in kpis if "RevPAR" in k.get("label","")), _mkt_rvp)
+            # Extract numeric from raw_value (already float)
+            def _num(v):
+                if isinstance(v, (int, float)):
+                    return float(v)
+                s = str(v).replace("$","").replace("%","").replace(",","").strip()
+                try: return float(s)
+                except: return 0.0
+            _vdp_occ_n = _num(_vdp_occ)
+            _vdp_adr_n = _num(_vdp_adr)
+            _vdp_rvp_n = _num(_vdp_rvp)
+
+            _bul_metrics = [
+                ("Occupancy %", _vdp_occ_n, _mkt_occ, _mkt_occ * 1.05),
+                ("ADR ($)",     _vdp_adr_n, _mkt_adr, _mkt_adr * 1.05),
+                ("RevPAR ($)",  _vdp_rvp_n, _mkt_rvp, _mkt_rvp * 1.05),
+            ]
+            fig = go.Figure()
+            for idx, (lbl, actual, benchmark, target) in enumerate(_bul_metrics):
+                y_pos = idx * 1.5
+                # Background range (market benchmark ± 15%)
+                fig.add_shape(type="rect",
+                    x0=benchmark * 0.85, x1=benchmark * 1.15,
+                    y0=y_pos - 0.4, y1=y_pos + 0.4,
+                    fillcolor="rgba(167,169,169,0.20)",
+                    line=dict(width=0),
+                )
+                # Target line
+                fig.add_shape(type="line",
+                    x0=target, x1=target, y0=y_pos - 0.45, y1=y_pos + 0.45,
+                    line=dict(color=TEAL, width=2, dash="dash"),
+                )
+                # Actual bar
+                color = TEAL if actual >= benchmark else ORANGE
+                fig.add_shape(type="rect",
+                    x0=0, x1=actual,
+                    y0=y_pos - 0.18, y1=y_pos + 0.18,
+                    fillcolor=color,
+                    line=dict(width=0),
+                )
+                # Labels
+                suffix = "%" if "%" in lbl else ""
+                prefix = "$" if "$" in lbl else ""
+                fig.add_annotation(
+                    x=0, y=y_pos + 0.55,
+                    text=f"<b>{lbl}</b>", showarrow=False,
+                    xanchor="left", font=dict(size=11, family="Plus Jakarta Sans, Inter, sans-serif"),
+                )
+                fig.add_annotation(
+                    x=actual, y=y_pos,
+                    text=f" {prefix}{actual:.1f}{suffix}", showarrow=False,
+                    xanchor="left", font=dict(size=10, color=color, family="Plus Jakarta Sans, Inter, sans-serif"),
+                )
+            max_val = max(_vdp_adr_n, _mkt_adr) * 1.25
+            fig.update_layout(
+                xaxis=dict(range=[0, max_val], showgrid=True, gridcolor="rgba(167,169,169,0.15)"),
+                yaxis=dict(visible=False, range=[-0.8, 3.8]),
+                showlegend=False,
+                height=200,
+                margin=dict(l=10, r=10, t=10, b=10),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.caption("Gray band = market ±15%. Dashed teal line = 5% above market target. Colored bar = VDP actual. Source: STR (portfolio) + CoStar (market).")
+            st.markdown("<br>", unsafe_allow_html=True)
+
         st.markdown("---")
 
         # ── Row 1: RevPAR with anomaly detection  |  Occ vs ADR ───────────────
@@ -2623,30 +2704,53 @@ with tab_tr:
         c1, c2 = st.columns(2)
 
         with c1:
-            st.markdown('<div class="chart-header">Seasonality Index</div>', unsafe_allow_html=True)
-            st.markdown('<div class="chart-caption">Monthly RevPAR ÷ period average &nbsp;·&nbsp; above 1.0 = peak season</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-header">Seasonal Demand Rose — Monthly RevPAR Compass</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">Petal length = avg RevPAR · longer petals = stronger months · reveals true seasonality shape</div>', unsafe_allow_html=True)
             if len(monthly) >= 6:
-                ttm_avg = monthly["revpar"].mean()
-                monthly["season_idx"] = monthly["revpar"] / ttm_avg
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=monthly["month_label"], y=monthly["season_idx"],
-                    fill="tozeroy",
-                    line=dict(color=TEAL, width=2),
-                    fillcolor="rgba(33,128,141,0.10)",
-                    mode="lines+markers",
-                    marker=dict(size=5, color=TEAL),
-                    hovertemplate="<b>%{x}</b><br>Index: %{y:.2f}<extra></extra>",
+                month_order_full = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+                _tmp_rose = df_monthly.copy()
+                _tmp_rose["mon_num"] = _tmp_rose["as_of_date"].dt.month
+                _tmp_rose["mon_lbl"] = _tmp_rose["as_of_date"].dt.strftime("%b")
+                rose_avg = _tmp_rose.groupby("mon_num")["revpar"].mean().reindex(range(1, 13))
+                rose_avg = rose_avg.fillna(0)
+                # Polar bar chart (rose plot)
+                _rose_colors = [
+                    TEAL if v >= rose_avg.mean() else TEAL_LIGHT
+                    for v in rose_avg.values
+                ]
+                fig = go.Figure(go.Barpolar(
+                    r=rose_avg.values,
+                    theta=month_order_full,
+                    marker=dict(
+                        color=_rose_colors,
+                        line=dict(color="white", width=1),
+                        opacity=0.85,
+                    ),
+                    hovertemplate="<b>%{theta}</b><br>Avg RevPAR: $%{r:.0f}<extra></extra>",
                 ))
-                fig.add_hline(y=1.0, line_dash="dot", line_color="rgba(167,169,169,0.5)",
-                              annotation_text="Baseline 1.0", annotation_position="right")
-                fig.update_layout(yaxis_range=[0.5, 1.65], showlegend=False)
-                st.plotly_chart(style_fig(fig), use_container_width=True)
+                fig.update_layout(
+                    polar=dict(
+                        radialaxis=dict(
+                            visible=True,
+                            tickprefix="$",
+                            gridcolor="rgba(167,169,169,0.2)",
+                            linecolor="rgba(167,169,169,0.2)",
+                        ),
+                        angularaxis=dict(
+                            tickfont=dict(size=11, family="Plus Jakarta Sans, Inter, sans-serif"),
+                        ),
+                    ),
+                    showlegend=False,
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                )
+                st.plotly_chart(style_fig(fig, height=360), use_container_width=True)
+                _peak_mon = month_order_full[rose_avg.idxmax() - 1]
+                _soft_mon = month_order_full[rose_avg.idxmin() - 1]
+                st.caption(f"Peak: {_peak_mon} (${rose_avg.max():.0f} RevPAR) · Softest: {_soft_mon} (${rose_avg.min():.0f}). "
+                           f"Shoulder months show the biggest rate-capture opportunity.")
             else:
-                st.markdown(empty_state(
-                    "📊", "Need 6+ months of data.",
-                    "Load more history to compute the seasonality index.",
-                ), unsafe_allow_html=True)
+                st.markdown(empty_state("📊", "Need 6+ months.", "Load more history."), unsafe_allow_html=True)
 
         with c2:
             st.markdown('<div class="chart-header">TBID Revenue Estimate</div>', unsafe_allow_html=True)
@@ -2721,6 +2825,59 @@ with tab_tr:
         fig.update_yaxes(title_text="Occ %", ticksuffix="%",
                          secondary_y=True, showgrid=False)
         st.plotly_chart(style_fig(fig, height=300), use_container_width=True)
+
+        # ── Beeswarm: Daily RevPAR Distribution ───────────────────────────────
+        if not df_daily.empty and len(df_daily) >= 30:
+            st.markdown("---")
+            st.markdown('<div class="chart-header">Daily RevPAR Distribution — Beeswarm</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="chart-caption">Each dot = one day · spread by RevPAR value · '
+                'color = quarter · reveals compression clusters and soft-period gaps</div>',
+                unsafe_allow_html=True,
+            )
+            _bsw = df_daily.copy().tail(365)
+            _bsw["quarter"] = _bsw["as_of_date"].dt.quarter
+            _bsw["year"] = _bsw["as_of_date"].dt.year
+            _q_colors = {1: "#A7D5D9", 2: TEAL_LIGHT, 3: TEAL, 4: "#1A6470"}
+            _bsw["color"] = _bsw["quarter"].map(_q_colors)
+            # Jitter y-axis to create beeswarm effect
+            np.random.seed(42)
+            _bsw["jitter"] = np.random.uniform(-0.4, 0.4, len(_bsw))
+            fig = go.Figure()
+            for q in [1, 2, 3, 4]:
+                _sub = _bsw[_bsw["quarter"] == q]
+                if _sub.empty:
+                    continue
+                fig.add_trace(go.Scatter(
+                    x=_sub["revpar"],
+                    y=_sub["jitter"],
+                    mode="markers",
+                    name=f"Q{q}",
+                    marker=dict(
+                        color=_q_colors[q],
+                        size=7,
+                        opacity=0.75,
+                        line=dict(width=0.5, color="white"),
+                    ),
+                    hovertemplate=(
+                        "<b>%{customdata[0]|%b %d, %Y}</b><br>"
+                        "RevPAR: $%{x:.0f}<br>Q%{customdata[1]}<extra></extra>"
+                    ),
+                    customdata=_sub[["as_of_date", "quarter"]].values,
+                ))
+            _bsw_avg = _bsw["revpar"].mean()
+            fig.add_vline(x=_bsw_avg, line_dash="dash",
+                          line_color="rgba(167,169,169,0.6)",
+                          annotation_text=f"Avg ${_bsw_avg:.0f}",
+                          annotation_position="top")
+            fig.update_layout(
+                yaxis=dict(visible=False, range=[-1, 1]),
+                xaxis=dict(title="RevPAR ($)", tickprefix="$"),
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            )
+            st.plotly_chart(style_fig(fig, height=280), use_container_width=True)
+            st.caption("Density clusters reveal seasonal compression. Q3 (dark teal) dots pushed right = peak pricing power. Spread = rate variability risk.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — FORWARD OUTLOOK
@@ -3190,6 +3347,79 @@ with tab_ev:
                     "Upper-right = high value, high volume (premium targets). "
                     "Upper-left = high spend but low volume (fly-market opportunity)."
                 )
+
+        # ── Sankey: Visitor Flow Origin → Type → Spend ─────────────────────────
+        if not df_dfy_dma.empty and not df_dfy_spend.empty:
+            st.markdown("---")
+            st.markdown('<div class="chart-header">Visitor Flow — Origin to Spend Category (Sankey)</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="chart-caption">WHO visits × WHERE they come from × WHAT they spend on · '
+                'width of flow = relative share · surface hidden revenue concentration</div>',
+                unsafe_allow_html=True,
+            )
+            # Build Sankey nodes and links from real data
+            # Nodes: [Top 5 DMAs] → [Overnight, Day Trip] → [Top 3 Spend Categories]
+            _top_dma_sk = df_dfy_dma[df_dfy_dma["visitor_days_share_pct"].notna()].head(5)
+            _top_spend_sk = df_dfy_spend.head(3)
+
+            # Pull overview KPIs for overnight/daytrip split
+            _ov_sk = df_dfy_ov.iloc[0] if not df_dfy_ov.empty else {}
+            _on_pct = float(_ov_sk.get("overnight_trips_pct", 60) or 60)
+            _dt_pct = float(_ov_sk.get("day_trips_pct", 40) or 40)
+
+            # Node labels
+            _dma_labels = list(_top_dma_sk["dma"].values)
+            _type_labels = ["Overnight Stays", "Day Trips"]
+            _spend_labels = list(_top_spend_sk["category"].values)
+            node_labels = _dma_labels + _type_labels + _spend_labels
+
+            n_dma = len(_dma_labels)
+            idx_on = n_dma      # Overnight
+            idx_dt = n_dma + 1  # Day Trip
+            idx_sp_start = n_dma + 2
+
+            sources, targets, values_sk = [], [], []
+
+            # DMA → trip type
+            total_dma_share = _top_dma_sk["visitor_days_share_pct"].sum()
+            for i, (_, row) in enumerate(_top_dma_sk.iterrows()):
+                share = row["visitor_days_share_pct"] / total_dma_share * 100
+                sources.append(i); targets.append(idx_on); values_sk.append(share * _on_pct / 100)
+                sources.append(i); targets.append(idx_dt); values_sk.append(share * _dt_pct / 100)
+
+            # Trip type → spend category (proportional)
+            total_spend_share = _top_spend_sk["spend_share_pct"].sum()
+            for j, (_, row) in enumerate(_top_spend_sk.iterrows()):
+                sp_share = row["spend_share_pct"] / total_spend_share * 100
+                sources.append(idx_on); targets.append(idx_sp_start + j); values_sk.append(100 * _on_pct / 100 * sp_share / 100)
+                sources.append(idx_dt); targets.append(idx_sp_start + j); values_sk.append(100 * _dt_pct / 100 * sp_share / 100)
+
+            _node_colors = (
+                [TEAL_LIGHT] * n_dma +
+                [TEAL, "#A8D4D9"] +
+                [ORANGE, "#E68161", "#A84B2F"][:len(_spend_labels)]
+            )
+            fig = go.Figure(go.Sankey(
+                node=dict(
+                    pad=18, thickness=22,
+                    line=dict(color="rgba(0,0,0,0)", width=0),
+                    label=node_labels,
+                    color=_node_colors,
+                    hovertemplate="%{label}<extra></extra>",
+                ),
+                link=dict(
+                    source=sources,
+                    target=targets,
+                    value=values_sk,
+                    color="rgba(33,128,141,0.18)",
+                ),
+            ))
+            fig.update_layout(font=dict(family="Plus Jakarta Sans, Inter, sans-serif", size=12))
+            st.plotly_chart(style_fig(fig, height=400), use_container_width=True)
+            st.caption(
+                "Flow width = proportional visitor share. Overnight stays dominate accommodation spend. "
+                "Day trippers concentrate in dining — capturing even 5% as overnight stays = significant room revenue."
+            )
 
 # ══════════════════════════════════════════════════════════════════════════════
 

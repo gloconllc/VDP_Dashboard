@@ -527,59 +527,521 @@ def load_compset(cur: sqlite3.Cursor) -> int:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Optional: PDF parser (pdfplumber) — runs if PDFs found in data/costar/
+# TABLE 6 — costar_annual_performance
+# Multi-year annual time series extracted from CoStar PDF reports
+# Covers occ/ADR/RevPAR/supply/demand per year per market scope
 # ══════════════════════════════════════════════════════════════════════════════
 
-def try_parse_pdfs() -> list[dict]:
+def load_annual_performance(cur: sqlite3.Cursor, rows: list) -> int:
+    """UPSERT rows into costar_annual_performance. rows = list of dicts."""
+    cur.executescript("""
+    CREATE TABLE IF NOT EXISTS costar_annual_performance (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        year_label      TEXT    NOT NULL,
+        market          TEXT    NOT NULL,
+        report_scope    TEXT    NOT NULL DEFAULT 'Overall',
+        available_rooms INTEGER,
+        occupied_rooms  INTEGER,
+        occupancy_pct   REAL,
+        occ_yoy_pct     REAL,
+        adr_usd         REAL,
+        adr_yoy_pct     REAL,
+        revpar_usd      REAL,
+        revpar_yoy_pct  REAL,
+        source_file     TEXT,
+        report_date     TEXT,
+        loaded_at       TEXT DEFAULT (datetime('now')),
+        UNIQUE(year_label, market, report_scope)
+    );
+    """)
+    n = 0
+    for r in rows:
+        cur.execute("""
+            INSERT INTO costar_annual_performance
+                (year_label, market, report_scope,
+                 available_rooms, occupied_rooms,
+                 occupancy_pct, occ_yoy_pct,
+                 adr_usd, adr_yoy_pct,
+                 revpar_usd, revpar_yoy_pct,
+                 source_file, report_date)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(year_label, market, report_scope)
+            DO UPDATE SET
+                available_rooms = excluded.available_rooms,
+                occupied_rooms  = excluded.occupied_rooms,
+                occupancy_pct   = excluded.occupancy_pct,
+                occ_yoy_pct     = excluded.occ_yoy_pct,
+                adr_usd         = excluded.adr_usd,
+                adr_yoy_pct     = excluded.adr_yoy_pct,
+                revpar_usd      = excluded.revpar_usd,
+                revpar_yoy_pct  = excluded.revpar_yoy_pct,
+                source_file     = excluded.source_file,
+                report_date     = excluded.report_date,
+                loaded_at       = datetime('now')
+        """, (
+            r["year_label"], r["market"], r.get("report_scope", "Overall"),
+            r.get("available_rooms"), r.get("occupied_rooms"),
+            r.get("occupancy_pct"), r.get("occ_yoy_pct"),
+            r.get("adr_usd"), r.get("adr_yoy_pct"),
+            r.get("revpar_usd"), r.get("revpar_yoy_pct"),
+            r.get("source_file"), r.get("report_date"),
+        ))
+        n += 1
+    print(f"  ✓ costar_annual_performance ({n} rows upserted)")
+    return n
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TABLE 7 — costar_profitability
+# Full-service hotel P&L benchmarks extracted from CoStar PDF reports
+# ══════════════════════════════════════════════════════════════════════════════
+
+def load_profitability(cur: sqlite3.Cursor, rows: list) -> int:
+    """UPSERT rows into costar_profitability."""
+    cur.executescript("""
+    CREATE TABLE IF NOT EXISTS costar_profitability (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        year_label      TEXT    NOT NULL,
+        market          TEXT    NOT NULL,
+        line_item       TEXT    NOT NULL,
+        revenue_pct     REAL,
+        per_key_usd     REAL,
+        por_usd         REAL,
+        per_key_yoy_pct REAL,
+        por_yoy_pct     REAL,
+        source_file     TEXT,
+        loaded_at       TEXT DEFAULT (datetime('now')),
+        UNIQUE(year_label, market, line_item)
+    );
+    """)
+    n = 0
+    for r in rows:
+        cur.execute("""
+            INSERT INTO costar_profitability
+                (year_label, market, line_item,
+                 revenue_pct, per_key_usd, por_usd,
+                 per_key_yoy_pct, por_yoy_pct, source_file)
+            VALUES (?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(year_label, market, line_item)
+            DO UPDATE SET
+                revenue_pct     = excluded.revenue_pct,
+                per_key_usd     = excluded.per_key_usd,
+                por_usd         = excluded.por_usd,
+                per_key_yoy_pct = excluded.per_key_yoy_pct,
+                por_yoy_pct     = excluded.por_yoy_pct,
+                loaded_at       = datetime('now')
+        """, (
+            r["year_label"], r["market"], r["line_item"],
+            r.get("revenue_pct"), r.get("per_key_usd"), r.get("por_usd"),
+            r.get("per_key_yoy_pct"), r.get("por_yoy_pct"),
+            r.get("source_file"),
+        ))
+        n += 1
+    print(f"  ✓ costar_profitability ({n} rows upserted)")
+    return n
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PDF Parser — comprehensive extraction from CoStar Hospitality PDFs
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _parse_dollar(s: str):
+    """Parse '$1,234.56' or '1234' to float. Returns None on failure."""
+    try:
+        return float(str(s).replace("$", "").replace(",", "").strip())
+    except (ValueError, AttributeError):
+        return None
+
+
+def _parse_pct(s: str):
+    """Parse '69.1%' or '-4.6%' to float (as percentage points). None on failure."""
+    try:
+        return float(str(s).replace("%", "").strip())
+    except (ValueError, AttributeError):
+        return None
+
+
+def _parse_int(s: str):
+    """Parse '4,219,235' or '(8,512)' to int (negative if parens). None on failure."""
+    try:
+        s = str(s).strip()
+        neg = s.startswith("(") and s.endswith(")")
+        val = int(s.strip("()").replace(",", ""))
+        return -val if neg else val
+    except (ValueError, AttributeError):
+        return None
+
+
+def _detect_scope(filename: str):
+    """Return (market_name, report_type) from PDF filename."""
+    fn = filename.lower()
+    if "newport beach" in fn or "dana point" in fn:
+        market = "Newport Beach/Dana Point"
+    elif "orange county" in fn:
+        market = "Orange County CA"
+    elif "united states" in fn:
+        market = "United States"
+    else:
+        market = "Unknown"
+
+    if "capital" in fn:
+        rtype = "Capital"
+    elif "submarket" in fn:
+        rtype = "Submarket"
+    elif "national" in fn:
+        rtype = "National"
+    else:
+        rtype = "Market"
+
+    return market, rtype
+
+
+def _find_page_text(pages: list, *keywords: str):
+    """Return (page_index, text) of first page containing all keywords."""
+    for i, page in enumerate(pages):
+        text = page.extract_text() or ""
+        if all(kw.lower() in text.lower() for kw in keywords):
+            return i, text
+    return -1, ""
+
+
+def _extract_overview_kpis(pages: list) -> dict:
+    """Extract 12-month headline KPIs from overview page (page 3 typically)."""
+    result = {}
+    _, text = _find_page_text(pages, "12 Mo Occupancy", "12 Mo ADR", "12 Mo RevPAR")
+    if not text:
+        return result
+
+    # Pattern: "69.1% $285 $197 4.2M 2.9M" on a single line
+    m = re.search(
+        r"([\d.]+)%\s+\$([\d,]+)\s+\$([\d,]+)\s+([\d.]+)M\s+([\d.]+)M",
+        text,
+    )
+    if m:
+        result["occ_12mo"]    = float(m.group(1))
+        result["adr_12mo"]    = _parse_dollar(m.group(2))
+        result["revpar_12mo"] = _parse_dollar(m.group(3))
+        result["supply_12mo_m"] = float(m.group(4))
+        result["demand_12mo_m"] = float(m.group(5))
+    return result
+
+
+def _extract_trend_table(pages: list) -> dict:
+    """Extract current/YTD/12Mo/forecast metrics from the trend summary table."""
+    result = {}
+    _, text = _find_page_text(pages, "Average Trend", "Occupancy Change", "ADR Change")
+    if not text:
+        return result
+
+    # Occupancy row: "Occupancy 60.5% 61.3% 60.5% 69.1% 66.9% 71.1%"
+    occ_m = re.search(
+        r"^Occupancy\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%",
+        text, re.MULTILINE,
+    )
+    adr_m = re.search(
+        r"^ADR\s+\$([\d.]+)\s+\$([\d.]+)\s+\$([\d.]+)\s+\$([\d.]+)",
+        text, re.MULTILINE,
+    )
+    rvp_m = re.search(
+        r"^RevPAR\s+\$([\d.]+)\s+\$([\d.]+)\s+\$([\d.]+)\s+\$([\d.]+)",
+        text, re.MULTILINE,
+    )
+    if occ_m:
+        result["occ_current"] = float(occ_m.group(1))
+        result["occ_3mo"]     = float(occ_m.group(2))
+        result["occ_ytd"]     = float(occ_m.group(3))
+        result["occ_12mo"]    = float(occ_m.group(4))
+    if adr_m:
+        result["adr_current"] = float(adr_m.group(1))
+        result["adr_3mo"]     = float(adr_m.group(2))
+        result["adr_ytd"]     = float(adr_m.group(3))
+        result["adr_12mo"]    = float(adr_m.group(4))
+    if rvp_m:
+        result["revpar_current"] = float(rvp_m.group(1))
+        result["revpar_3mo"]     = float(rvp_m.group(2))
+        result["revpar_ytd"]     = float(rvp_m.group(3))
+        result["revpar_12mo"]    = float(rvp_m.group(4))
+    return result
+
+
+# Regex for annual performance rows: "2025 69.4% 1.2% $285.26 2.0% $197.90 3.2%"
+_PERF_ROW_RE = re.compile(
+    r"^(YTD|\d{4})\s+([\d.]+)%\s+([+-]?[\d.]+)%\s+\$([\d.]+)\s+([+-]?[\d.]+)%\s+\$([\d.]+)\s+([+-]?[\d.]+)%",
+    re.MULTILINE,
+)
+
+# Regex for supply/demand rows: "2025 4,219,235 37,235 0.9% 2,927,011 60,463 2.1%"
+_SD_ROW_RE = re.compile(
+    r"^(YTD|\d{4})\s+([\d,]+)\s+([\d,]+|\([\d,]+\))\s+([+-]?[\d.]+)%\s+([\d,]+)\s+([\d,]+|\([\d,]+\))\s+([+-]?[\d.]+)%",
+    re.MULTILINE,
+)
+
+
+def _extract_annual_performance(pages: list, market: str, source_file: str, report_date: str) -> list:
+    """Extract annual performance rows from 'OVERALL PERFORMANCE' appendix page.
+    Scopes extraction strictly to the OVERALL section, ignoring sub-class sections."""
+    rows = []
+    _, full_text = _find_page_text(pages, "OVERALL PERFORMANCE", "Occupancy", "ADR", "RevPAR")
+    if not full_text:
+        return rows
+
+    # Scope text to the OVERALL PERFORMANCE block only (stop at the next class header)
+    # Pattern: text between "OVERALL PERFORMANCE" and the next "PERFORMANCE" section heading
+    overall_m = re.search(r"OVERALL PERFORMANCE\s*\n", full_text)
+    if not overall_m:
+        return rows
+    start = overall_m.end()
+
+    # Find next section heading after OVERALL (e.g. "LUXURY & UPPER UPSCALE PERFORMANCE")
+    next_section = re.search(
+        r"\n[A-Z &]+PERFORMANCE\s*\n",
+        full_text[start:],
+    )
+    end = start + next_section.start() if next_section else len(full_text)
+    text = full_text[start:end]
+
+    # Find supply/demand — scope to OVERALL SUPPLY & DEMAND block similarly
+    _, sd_full = _find_page_text(pages, "OVERALL SUPPLY & DEMAND", "Available Rooms", "Occupied Rooms")
+    sd_text = sd_full or ""
+    if sd_text:
+        sd_m = re.search(r"OVERALL SUPPLY & DEMAND\s*\n", sd_text)
+        if sd_m:
+            sd_start = sd_m.end()
+            sd_next = re.search(r"\n[A-Z &]+SUPPLY & DEMAND\s*\n", sd_text[sd_start:])
+            sd_end = sd_start + sd_next.start() if sd_next else len(sd_text)
+            sd_text = sd_text[sd_start:sd_end]
+
+    # Build supply/demand lookup by year
+    sd_by_year: dict = {}
+    for m in _SD_ROW_RE.finditer(sd_text):
+        yr = m.group(1)
+        sd_by_year[yr] = {
+            "available_rooms": _parse_int(m.group(2)),
+            "occupied_rooms":  _parse_int(m.group(5)),
+        }
+
+    for m in _PERF_ROW_RE.finditer(text):
+        yr = m.group(1)
+        row = {
+            "year_label":    yr,
+            "market":        market,
+            "report_scope":  "Overall",
+            "occupancy_pct": float(m.group(2)),
+            "occ_yoy_pct":   float(m.group(3)),
+            "adr_usd":       float(m.group(4)),
+            "adr_yoy_pct":   float(m.group(5)),
+            "revpar_usd":    float(m.group(6)),
+            "revpar_yoy_pct": float(m.group(7)),
+            "source_file":   source_file,
+            "report_date":   report_date,
+        }
+        if yr in sd_by_year:
+            row.update(sd_by_year[yr])
+        rows.append(row)
+
+    return rows
+
+
+def _extract_profitability(pages: list, market: str, source_file: str) -> list:
+    """Extract full-service hotel P&L data from profitability page."""
+    rows = []
+    _, text = _find_page_text(pages, "FULL-SERVICE HOTELS PROFITABILITY", "Per Key", "POR")
+    if not text:
+        return rows
+
+    # Detect year from "2024 2023-2024 % Change" or similar header
+    year_m = re.search(r"\b(20\d{2})\b", text)
+    year_label = year_m.group(1) if year_m else "Unknown"
+
+    # Each P&L line: "Rooms 48.0% $113,098 $498.18 0.3% 0.5%"
+    line_re = re.compile(
+        r"^([\w &]+?)\s+([\d.]+)%\s+\$([\d,]+)\s+\$([\d.]+)\s+([+-]?[\d.]+)%\s+([+-]?[\d.]+)%",
+        re.MULTILINE,
+    )
+    for m in line_re.finditer(text):
+        item = m.group(1).strip()
+        if item in ("Year", "Market", ""):
+            continue
+        rows.append({
+            "year_label":     year_label,
+            "market":         market,
+            "line_item":      item,
+            "revenue_pct":    float(m.group(2)),
+            "per_key_usd":    _parse_dollar(m.group(3)),
+            "por_usd":        float(m.group(4)),
+            "per_key_yoy_pct": float(m.group(5)),
+            "por_yoy_pct":    float(m.group(6)),
+            "source_file":    source_file,
+        })
+    return rows
+
+
+def _extract_snapshot_rows(
+    overview: dict, trend: dict, annual_rows: list,
+    market: str, source_file: str, report_date: str,
+) -> list:
+    """Build costar_market_snapshot rows from PDF extracted data."""
+    rows = []
+
+    # 12-month trailing snapshot
+    if overview.get("occ_12mo") and overview.get("adr_12mo"):
+        rows.append((
+            f"{report_date[:4]}-12-31",    # report_period (approximate year-end)
+            market, "",
+            None,                          # total_supply_rooms (not available here)
+            None,
+            overview.get("occ_12mo"),
+            overview.get("adr_12mo"),
+            overview.get("revpar_12mo"),
+            None,
+            None, None, None, None, None,
+            "CoStar Hospitality Analytics",
+            f"12-Month Report {report_date[:7]}",
+            f"12-month trailing ending {report_date}; extracted from PDF",
+        ))
+
+    # YTD snapshot from trend table
+    if trend.get("occ_ytd") and trend.get("adr_ytd"):
+        rows.append((
+            f"{report_date}-YTD",
+            market, "",
+            None, None,
+            trend.get("occ_ytd"),
+            trend.get("adr_ytd"),
+            trend.get("revpar_ytd"),
+            None,
+            None, None, None, None, None,
+            "CoStar Hospitality Analytics",
+            f"YTD Report {report_date[:7]}",
+            f"YTD ending {report_date}; current occ={trend.get('occ_current')}%",
+        ))
+
+    # Add annual rows (2025, 2024, etc.) from performance table
+    for r in annual_rows:
+        if r["year_label"] == "YTD":
+            continue
+        rows.append((
+            f"{r['year_label']}-12-31",
+            market, "",
+            r.get("available_rooms"), r.get("occupied_rooms"),
+            r.get("occupancy_pct"),
+            r.get("adr_usd"),
+            r.get("revpar_usd"),
+            None,
+            r.get("occ_yoy_pct"),
+            r.get("adr_yoy_pct"),
+            r.get("revpar_yoy_pct"),
+            None, None,
+            "CoStar Hospitality Analytics",
+            f"Annual Report {r['year_label']}",
+            f"Annual {r['year_label']}; extracted from {source_file}",
+        ))
+    return rows
+
+
+def parse_costar_pdf(pdf_path: Path) -> dict:
     """
-    Attempt to extract key metrics from CoStar PDF exports in data/costar/.
-    Returns a list of dicts with any parsed overrides (keyed by table + field).
-    Falls back gracefully if pdfplumber is not installed or no PDFs found.
+    Parse a CoStar Hospitality PDF and return structured data dict.
+    Keys: annual_performance, profitability, snapshot_rows, overview, trend, market, report_type
     """
     try:
         import pdfplumber  # type: ignore
     except ImportError:
-        log("costar_pdf", "WARN", "pdfplumber not installed — skipping PDF parse. "
-            "Install with: pip install pdfplumber")
-        return []
+        return {}
 
-    pdf_files = list(COSTAR_DIR.glob("*.pdf")) + list(COSTAR_DIR.glob("*.PDF"))
+    market, report_type = _detect_scope(pdf_path.name)
+    # Extract date from filename (format: ...-2026-03-16.pdf)
+    date_m = re.search(r"(\d{4}-\d{2}-\d{2})", pdf_path.name)
+    report_date = date_m.group(1) if date_m else datetime.now().strftime("%Y-%m-%d")
+    source_file = pdf_path.name
+
+    log("costar_pdf", "OK  ", f"Parsing {source_file} ({market} / {report_type})")
+
+    try:
+        with pdfplumber.open(str(pdf_path)) as pdf:
+            pages = pdf.pages
+
+            overview = _extract_overview_kpis(pages)
+            trend    = _extract_trend_table(pages)
+            annual   = _extract_annual_performance(pages, market, source_file, report_date)
+            profit   = _extract_profitability(pages, market, source_file)
+            snaps    = _extract_snapshot_rows(overview, trend, annual, market, source_file, report_date)
+
+        n_annual = len(annual)
+        n_profit = len(profit)
+        n_snaps  = len(snaps)
+        log("costar_pdf", "OK  ",
+            f"  → {n_annual} annual perf rows, {n_profit} P&L rows, {n_snaps} snapshot rows")
+
+        return {
+            "market":              market,
+            "report_type":         report_type,
+            "source_file":         source_file,
+            "report_date":         report_date,
+            "overview":            overview,
+            "trend":               trend,
+            "annual_performance":  annual,
+            "profitability":       profit,
+            "snapshot_rows":       snaps,
+        }
+
+    except Exception as exc:
+        log("costar_pdf", "FAIL", f"  Error parsing {pdf_path.name}: {exc}")
+        return {}
+
+
+def parse_all_pdfs() -> dict:
+    """Parse all CoStar PDFs in data/costar/. Returns aggregated results."""
+    try:
+        import pdfplumber  # noqa: F401 — just check it's available
+    except ImportError:
+        log("costar_pdf", "WARN",
+            "pdfplumber not installed — skipping PDF parse (pip install pdfplumber)")
+        return {}
+
+    pdf_files = sorted(COSTAR_DIR.glob("*.pdf")) + sorted(COSTAR_DIR.glob("*.PDF"))
     if not pdf_files:
         log("costar_pdf", "INFO", "No PDFs in data/costar/ — using hardcoded baseline data")
-        return []
+        return {}
 
-    parsed = []
+    log("costar_pdf", "OK  ", f"Found {len(pdf_files)} PDF(s) to parse")
+
+    all_annual: list = []
+    all_profit: list = []
+    all_snaps:  list = []
+
     for pdf_path in pdf_files:
-        log("costar_pdf", "OK  ", f"Parsing: {pdf_path.name}")
+        result = parse_costar_pdf(pdf_path)
+        if result:
+            all_annual.extend(result.get("annual_performance", []))
+            all_profit.extend(result.get("profitability", []))
+            all_snaps.extend(result.get("snapshot_rows", []))
+
+    return {
+        "annual_performance": all_annual,
+        "profitability":      all_profit,
+        "snapshot_rows":      all_snaps,
+    }
+
+
+def _load_pdf_snapshots(cur: sqlite3.Cursor, snapshot_rows: list) -> int:
+    """Insert PDF-extracted snapshot rows into costar_market_snapshot (skip duplicates)."""
+    n = 0
+    for row in snapshot_rows:
         try:
-            with pdfplumber.open(str(pdf_path)) as pdf:
-                full_text = "\n".join(p.extract_text() or "" for p in pdf.pages)
-
-            # Extract occupancy
-            occ_m = re.search(r"Occupancy[:\s]+(\d+\.?\d*)\s*%", full_text, re.IGNORECASE)
-            adr_m = re.search(r"ADR[:\s]+\$?(\d+\.?\d*)", full_text, re.IGNORECASE)
-            rvp_m = re.search(r"RevPAR[:\s]+\$?(\d+\.?\d*)", full_text, re.IGNORECASE)
-
-            row = {"source_file": pdf_path.name}
-            if occ_m:
-                row["occupancy_pct"] = float(occ_m.group(1))
-            if adr_m:
-                row["adr_usd"] = float(adr_m.group(1))
-            if rvp_m:
-                row["revpar_usd"] = float(rvp_m.group(1))
-
-            if len(row) > 1:
-                parsed.append(row)
-                log("costar_pdf", "OK  ",
-                    f"  Extracted {len(row)-1} metrics from {pdf_path.name}")
-            else:
-                log("costar_pdf", "WARN",
-                    f"  No standard metrics found in {pdf_path.name} — using baseline")
-
-        except Exception as exc:
-            log("costar_pdf", "FAIL", f"  Error parsing {pdf_path.name}: {exc}")
-
-    return parsed
+            cur.execute("""
+                INSERT OR IGNORE INTO costar_market_snapshot (
+                    report_period, market, submarket, total_supply_rooms, total_demand_rooms,
+                    occupancy_pct, adr_usd, revpar_usd, room_revenue_usd,
+                    occ_yoy_pp, adr_yoy_pct, revpar_yoy_pct, supply_yoy_pct, demand_yoy_pct,
+                    data_source, report_type, notes
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, row)
+            if cur.rowcount:
+                n += 1
+        except Exception:
+            pass
+    return n
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -590,30 +1052,27 @@ def main() -> None:
     COSTAR_DIR.mkdir(parents=True, exist_ok=True)
     log("costar_load", "OK  ", "=== CoStar report loader start ===")
 
-    # 1. Try to parse any PDFs present
-    _pdf_data = try_parse_pdfs()
-    if _pdf_data:
-        log("costar_load", "OK  ",
-            f"Parsed {len(_pdf_data)} PDF(s) — values will supplement baseline data")
+    # 1. Parse PDFs present in data/costar/
+    pdf_data = parse_all_pdfs()
 
-    # 2. Write CSVs (intermediary layer; always refreshed from baseline)
+    # 2. Write CSVs from hardcoded baseline (intermediary reference layer)
     write_snapshot_csv()
     write_monthly_csv()
     write_pipeline_csv()
     write_chain_csv()
     write_compset_csv()
 
-    # 3. Load into SQLite
+    # 3. Load hardcoded baseline tables into SQLite
     conn = get_conn()
     cur  = conn.cursor()
 
     totals = {}
     for label, fn in [
-        ("costar_market_snapshot",    load_snapshot),
-        ("costar_monthly_performance",load_monthly),
-        ("costar_supply_pipeline",    load_pipeline),
+        ("costar_market_snapshot",       load_snapshot),
+        ("costar_monthly_performance",   load_monthly),
+        ("costar_supply_pipeline",       load_pipeline),
         ("costar_chain_scale_breakdown", load_chain),
-        ("costar_competitive_set",    load_compset),
+        ("costar_competitive_set",       load_compset),
     ]:
         try:
             n = fn(cur)
@@ -624,9 +1083,31 @@ def main() -> None:
             conn.close()
             raise
 
+    # 4. Augment with real PDF-extracted data
+    if pdf_data:
+        # Upsert annual performance rows (real data from PDFs)
+        annual_rows = pdf_data.get("annual_performance", [])
+        if annual_rows:
+            n = load_annual_performance(cur, annual_rows)
+            totals["costar_annual_performance"] = n
+
+        # Upsert profitability P&L rows
+        profit_rows = pdf_data.get("profitability", [])
+        if profit_rows:
+            n = load_profitability(cur, profit_rows)
+            totals["costar_profitability"] = n
+
+        # Augment market snapshot with PDF-extracted current period rows
+        snap_rows = pdf_data.get("snapshot_rows", [])
+        if snap_rows:
+            n = _load_pdf_snapshots(cur, snap_rows)
+            log("costar_pdf", "OK  ", f"  Added {n} new snapshot rows from PDFs")
+    else:
+        log("costar_load", "INFO", "No PDF data extracted — baseline data only loaded")
+
     conn.commit()
 
-    # 4. Log each table to load_log
+    # 5. Log each table to load_log
     for table, n in totals.items():
         cur.execute(
             "INSERT INTO load_log (source, grain, file_name, rows_inserted) "
