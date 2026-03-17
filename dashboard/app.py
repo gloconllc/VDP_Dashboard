@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 import os
 import sys
 import subprocess
+import urllib.parse as _urlparse
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -32,7 +33,7 @@ _ENV_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 # ─── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Visit Dana Point — Analytics",
+    page_title="Dana Point PULSE",
     page_icon="🌊",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -52,7 +53,7 @@ CLAUDE_MODEL = "claude-sonnet-4-6"
 # Must stay ≥ 2048 tokens (Sonnet 4.6 minimum). All static VDP domain knowledge lives here.
 # Dynamic per-query metrics are injected via the user message (see build_prompt / _base).
 SYSTEM_PROMPT = """\
-You are the VDP Analytics Brain — the AI intelligence layer for Visit Dana Point (VDP) tourism \
+You are the Dana Point PULSE — the AI intelligence layer for Visit Dana Point (VDP) tourism \
 analytics. You advise the TBID board, hotel GMs, city council, and destination marketing staff \
 with data-driven insights drawn from verified STR exports, Datafy visitor economy reports, and \
 TBID financial records.
@@ -586,6 +587,53 @@ st.markdown("""
   }
   .nlm-questions ul li::before { content: '?'; position: absolute; left: 0;
     font-weight: 800; color: #21808D; font-size: 11px; }
+
+  /* ── PULSE Score Widget ───────────────────────────────────────────────── */
+  .pulse-wrapper {
+    display: flex; align-items: center; gap: 28px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px; padding: 18px 28px; margin-bottom: 16px;
+  }
+  .pulse-circle {
+    position: relative; width: 90px; height: 90px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pulse-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 3px solid currentColor; opacity: 0.25;
+    animation: pulse-ring 2s ease-out infinite;
+  }
+  .pulse-ring-2 {
+    position: absolute; inset: -8px; border-radius: 50%;
+    border: 2px solid currentColor; opacity: 0.12;
+    animation: pulse-ring 2s ease-out infinite 0.5s;
+  }
+  .pulse-core {
+    width: 70px; height: 70px; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 900; position: relative; z-index: 1;
+    border: 2.5px solid currentColor;
+  }
+  .pulse-score { font-size: 24px; line-height: 1; letter-spacing: -.04em; }
+  .pulse-label { font-size: 8px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .1em; opacity: .7; margin-top: 2px; }
+  .pulse-info { flex: 1; }
+  .pulse-info-title {
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px;
+    font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px;
+  }
+  .pulse-info-detail { font-size: 12px; opacity: .65; line-height: 1.5; }
+  .pulse-info-status {
+    display: inline-block; margin-top: 8px; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px;
+    background: currentColor; color: #0d1117;
+  }
+  @keyframes pulse-ring {
+    0%   { transform: scale(1);   opacity: 0.25; }
+    70%  { transform: scale(1.35); opacity: 0;   }
+    100% { transform: scale(1.35); opacity: 0;   }
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -890,7 +938,7 @@ def load_vca_airport_traffic() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
-            "SELECT * FROM visit_ca_airport_traffic ORDER BY airport, month_num", conn
+            "SELECT * FROM visit_ca_airport_traffic ORDER BY airport, month", conn
         )
     except Exception:
         return pd.DataFrame()
@@ -900,7 +948,7 @@ def load_vca_intl_arrivals() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
-            "SELECT * FROM visit_ca_intl_arrivals ORDER BY year, month_num", conn
+            "SELECT * FROM visit_ca_intl_arrivals ORDER BY year, month", conn
         )
     except Exception:
         return pd.DataFrame()
@@ -2103,9 +2151,11 @@ df_vca_intl     = load_vca_intl_arrivals()
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown(
-        '<div class="sidebar-brand">🌊 Visit Dana Point</div>'
-        '<div style="font-size:12px;opacity:0.55;font-weight:500;margin-top:3px;margin-bottom:2px;">'
-        'VDP Select Portfolio &nbsp;·&nbsp; 12 Properties &nbsp;·&nbsp; Anaheim Area</div>',
+        '<div class="sidebar-brand">🌊 Dana Point PULSE</div>'
+        '<div style="font-size:11px;opacity:0.55;font-weight:500;margin-top:2px;margin-bottom:1px;">'
+        'Performance · Understanding · Leadership · Spending · Economy</div>'
+        '<div style="font-size:11px;opacity:0.45;font-weight:500;margin-top:1px;margin-bottom:2px;">'
+        'VDP Select Portfolio &nbsp;·&nbsp; 12 Properties</div>',
         unsafe_allow_html=True,
     )
     st.divider()
@@ -2167,25 +2217,33 @@ with st.sidebar:
 
     st.divider()
 
+    # ── Admin mode check (URL param ?admin=true) ────────────────────────────
+    _qp = st.query_params
+    _is_admin = str(_qp.get("admin", "")).lower() == "true"
+
     # ── AI Analyst config ──────────────────────────────────────────────────────
     st.markdown("**🤖 AI Analyst**")
-    api_key_raw = st.text_input(
-        "Anthropic API Key",
-        type="password",
-        placeholder="sk-ant-api03-…",
-        value=_ENV_API_KEY,          # pre-fills from .env if set
-        help="Loaded from .env ANTHROPIC_API_KEY · override here anytime.",
-        key="api_key_field",
-    )
+
+    # API key input: only show in admin mode; otherwise use env key silently
+    if _is_admin:
+        api_key_raw = st.text_input(
+            "Anthropic API Key",
+            type="password",
+            placeholder="sk-ant-api03-…",
+            value=_ENV_API_KEY,          # pre-fills from .env if set
+            help="Loaded from .env ANTHROPIC_API_KEY · override here anytime.",
+            key="api_key_field",
+        )
+    else:
+        api_key_raw = _ENV_API_KEY
+
     api_key       = api_key_raw.strip()
     api_key_valid = bool(api_key) and api_key.startswith("sk-ant-") and len(api_key) > 20
 
-    if api_key and not api_key_valid:
-        st.caption("⚪ Invalid key format")
-    elif api_key_valid:
-        st.caption(f"🟢 Connected · {CLAUDE_MODEL}")
+    if api_key_valid:
+        st.caption(f"🟢 AI Connected · {CLAUDE_MODEL}")
     else:
-        st.caption("⚪ Not connected — local mode active")
+        st.caption("⚪ AI — local mode active")
 
     if not ANTHROPIC_AVAILABLE:
         st.warning("`anthropic` not installed.\nRun: `pip install anthropic`", icon="⚠️")
@@ -2224,7 +2282,8 @@ with st.sidebar:
     _evts_rows = counts.get("vdp_events", 0)
     _evts_dot  = "🟢" if isinstance(_evts_rows, int) and _evts_rows > 0 else "⚫"
     _evts_label = f"{_evts_rows:,} events" if isinstance(_evts_rows, int) and _evts_rows > 0 else "Not loaded"
-    _vca_rows = sum(counts.get(t, 0) for t in ["visit_ca_travel_forecast","visit_ca_lodging_forecast","visit_ca_airport_traffic","visit_ca_intl_arrivals"] if isinstance(counts.get(t, 0), int))
+    # Use already-loaded DFs for Visit CA (immune to cache staleness)
+    _vca_rows = len(df_vca_forecast) + len(df_vca_lodging) + len(df_vca_airport) + len(df_vca_intl)
     _vca_dot  = "🟢" if _vca_rows > 0 else "⚫"
     _vca_label = f"{_vca_rows:,} rows" if _vca_rows > 0 else "No data"
     st.markdown("**Pipeline Status**")
@@ -2248,19 +2307,23 @@ with st.sidebar:
 
     st.divider()
 
-    # ── Pipeline Controls ──────────────────────────────────────────────────────
-    st.markdown("**⚙️ Pipeline Controls**")
+    # ── Pipeline Controls (admin only) ────────────────────────────────────────
+    if _is_admin:
+      st.markdown("**⚙️ Pipeline Controls**")
 
-    run_btn   = st.button(
-        "🔄 Run Pipeline",
-        use_container_width=True,
-        help="Load STR exports → compute KPIs → refresh dashboard",
-    )
-    fetch_btn = st.button(
-        "📡 Fetch External Data",
-        use_container_width=True,
-        help="CoStar · FRED · CA TOT · JWA passenger stats",
-    )
+      run_btn   = st.button(
+          "🔄 Run Pipeline",
+          use_container_width=True,
+          help="Load STR exports → compute KPIs → refresh dashboard",
+      )
+      fetch_btn = st.button(
+          "📡 Fetch External Data",
+          use_container_width=True,
+          help="CoStar · FRED · CA TOT · JWA passenger stats",
+      )
+    else:
+      run_btn = False
+      fetch_btn = False
 
     if run_btn:
         with st.spinner("Running pipeline…"):
@@ -2337,9 +2400,11 @@ else:
 st.markdown(
     f'<div class="hero-banner">'
     f'<a href="?" style="text-decoration:none;">'
-    f'<div class="hero-title">Visit Dana Point — Analytics</div>'
+    f'<div class="hero-title">Dana Point PULSE</div>'
     f'</a>'
     f'<div class="hero-subtitle">'
+    f'Performance · Understanding · Leadership · Spending · Economy'
+    f'&nbsp;&nbsp;·&nbsp;&nbsp;'
     f'VDP Select Portfolio &nbsp;·&nbsp; 12 Properties &nbsp;·&nbsp; '
     f'{range_label} &nbsp;·&nbsp; Last updated {last_upd}'
     f'</div>'
@@ -3359,9 +3424,17 @@ on pace for <strong>${tbid_ann:,.0f} annually</strong>.
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
-tab_ov, tab_tr, tab_fo, tab_ev, tab_cs, tab_dl = st.tabs(
-    ["Overview Brain", "STR & Pipeline", "Forward Outlook", "Visitor Economy", "Market Intelligence", "Data & Downloads"]
-)
+tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
+    "🧠 Overview",
+    "📈 STR & Pipeline",
+    "🔭 Forward Outlook",
+    "🗺️ Visitor Economy",
+    "🎯 Feeder Markets",
+    "📅 Event Impact",
+    "🏗️ Supply & Pipeline",
+    "🏢 Market Intelligence",
+    "📁 Data & Downloads",
+])
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — OVERVIEW
@@ -3498,11 +3571,77 @@ with tab_ov:
                 "Opens as a formatted HTML document. To save as PDF: open in browser → "
                 "File → Print → 'Save as PDF'. Optimized for A4/Letter paper."
             )
+            # Share via email button
+            _report_period = datetime.now().strftime("%B %Y")
+            _mailto_subject = f"Dana Point PULSE Board Report — {_report_period}"
+            _mailto_body = (
+                f"Please find attached the Dana Point PULSE Board Report for {_report_period}. "
+                f"Download from the dashboard and open in your browser to print to PDF."
+            )
+            _mailto_link = (
+                f"mailto:?subject={_urlparse.quote(_mailto_subject)}"
+                f"&body={_urlparse.quote(_mailto_body)}"
+            )
+            st.markdown(
+                f'<a href="{_mailto_link}" style="display:inline-block;margin-top:6px;'
+                f'font-size:12px;color:#21808D;text-decoration:none;font-weight:600;">'
+                f'📧 Share via Email</a>',
+                unsafe_allow_html=True,
+            )
 
     st.markdown("---")
 
+    # ── PULSE Score Widget ─────────────────────────────────────────────────────
+    if m:
+        _occ_score  = m.get("occ_30", 0)
+        _rvp_d_s    = m.get("revpar_delta", 0)
+        _cq_s       = m.get("comp_recent_q", 0)
+        # Score components: occupancy vs 70% baseline (max 50pts), RevPAR YOY (max 30pts), compression (max 20pts)
+        _comp_occ   = min(50, max(0, (_occ_score / 70) * 50))
+        _comp_rvp   = min(30, max(0, 15 + (_rvp_d_s * 1.5)))
+        _comp_cmp   = min(20, max(0, _cq_s * 2.0))
+        _pulse_score = int(round(_comp_occ + _comp_rvp + _comp_cmp))
+        _pulse_score = max(0, min(100, _pulse_score))
+
+        if _pulse_score >= 70:
+            _p_color  = "#21C55D"   # green
+            _p_status = "STRONG"
+            _p_detail = "Market performing above expectations. Occupancy, rate, and compression all trending positive."
+        elif _pulse_score >= 40:
+            _p_color  = "#F59E0B"   # amber
+            _p_status = "MODERATE"
+            _p_detail = "Market showing mixed signals. Some metrics above baseline; monitor rate pressure and shoulder demand."
+        else:
+            _p_color  = "#EF4444"   # red
+            _p_status = "WATCH"
+            _p_detail = "Market below baseline performance. Revenue and/or occupancy need attention — review demand drivers."
+
+        st.markdown(
+            f'<div class="pulse-wrapper" style="color:{_p_color};">'
+            f'  <div class="pulse-circle">'
+            f'    <div class="pulse-ring"></div>'
+            f'    <div class="pulse-ring-2"></div>'
+            f'    <div class="pulse-core">'
+            f'      <span class="pulse-score">{_pulse_score}</span>'
+            f'      <span class="pulse-label">PULSE</span>'
+            f'    </div>'
+            f'  </div>'
+            f'  <div class="pulse-info">'
+            f'    <div class="pulse-info-title">Dana Point Market PULSE Score</div>'
+            f'    <div class="pulse-info-detail">'
+            f'      Occ {_occ_score:.1f}% &nbsp;·&nbsp; RevPAR YOY {_rvp_d_s:+.1f}% '
+            f'      &nbsp;·&nbsp; Compression {_cq_s} nights this quarter<br>'
+            f'      {_p_detail}'
+            f'    </div>'
+            f'    <span class="pulse-info-status" style="background:{_p_color};">{_p_status}</span>'
+            f'  </div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
+
     # ── AI Analyst Panel ───────────────────────────────────────────────────────
-    with st.expander("🧠 VDP Intelligence — Interrogate your data", expanded=False):
+    with st.expander("🧠 PULSE AI Analyst — Interrogate your data", expanded=False):
         st.markdown('<span class="ai-chip">AI ANALYST</span>', unsafe_allow_html=True)
 
         PROMPTS_META = [
@@ -4124,7 +4263,7 @@ with tab_tr:
                 st.plotly_chart(style_fig(fig, height=360), use_container_width=True)
                 _peak_mon = month_order_full[rose_avg.idxmax() - 1]
                 _soft_mon = month_order_full[rose_avg.idxmin() - 1]
-                st.caption(f"Peak: {_peak_mon} (${rose_avg.max():.0f} RevPAR) · Softest: {_soft_mon} (${rose_avg.min():.0f}). "
+                st.caption(f"Peak: **{_peak_mon}** (${rose_avg.max():.0f} RevPAR) · Softest: **{_soft_mon}** (${rose_avg.min():.0f}). "
                            f"Shoulder months show the biggest rate-capture opportunity.")
             else:
                 st.markdown(empty_state("📊", "Need 6+ months.", "Load more history."), unsafe_allow_html=True)
@@ -4272,6 +4411,66 @@ with tab_fo:
 
     # Load all insights
     df_insights_all = load_insights()
+
+    # ── Key Forward Metrics ──────────────────────────────────────────────────
+    st.markdown(
+        '<div style="font-size:1.05rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:12px;">'
+        '📊 Key Forward Metrics</div>',
+        unsafe_allow_html=True,
+    )
+    _fwd_c1, _fwd_c2, _fwd_c3, _fwd_c4 = st.columns(4)
+
+    # 30-day compression forecast (Q3 = peak, reference from compression table)
+    _q3_comp = 0
+    _q1_comp = 0
+    if not df_comp.empty and "quarter" in df_comp.columns and "days_above_80_occ" in df_comp.columns:
+        _q3_row = df_comp[df_comp["quarter"].str.endswith("Q3")]
+        _q1_row = df_comp[df_comp["quarter"].str.endswith("Q1")]
+        _q3_comp = int(_q3_row["days_above_80_occ"].iloc[0]) if not _q3_row.empty else 0
+        _q1_comp = int(_q1_row["days_above_80_occ"].iloc[0]) if not _q1_row.empty else 0
+
+    _occ_fwd  = m.get("occ_30", 0) if m else 0
+    _rvp_fwd  = m.get("revpar_30", 0) if m else 0
+    _adr_fwd  = m.get("adr_30", 0) if m else 0
+    _rvp_d_fwd = m.get("revpar_delta", 0) if m else 0
+
+    with _fwd_c1:
+        _occ_vs = _occ_fwd - 70
+        _occ_vs_str = f"{_occ_vs:+.1f}pp vs 70% baseline"
+        st.metric("30-Day Occupancy", f"{_occ_fwd:.1f}%", delta=_occ_vs_str,
+                  delta_color="normal" if _occ_vs >= 0 else "inverse",
+                  help="30-day trailing avg occupancy vs 70% destination baseline")
+    with _fwd_c2:
+        st.metric("30-Day ADR", f"${_adr_fwd:,.0f}",
+                  delta=f"RevPAR ${_rvp_fwd:,.0f}",
+                  help="30-day average daily rate and RevPAR")
+    with _fwd_c3:
+        st.metric("Q3 Compression Nights", f"{_q3_comp}",
+                  delta=f"Q1: {_q1_comp} nights",
+                  delta_color="off",
+                  help="Days above 80% occupancy — Q3 peak vs Q1 shoulder. More nights = greater pricing power.")
+    with _fwd_c4:
+        # Shoulder opportunity: Q1 compression gap vs Q3
+        _shld_gap = _q3_comp - _q1_comp
+        _shld_rev_opp = _shld_gap * _rvp_fwd * 0.02 * 365 / max(_q3_comp, 1) if _rvp_fwd > 0 else 0
+        st.metric("Shoulder Opportunity", f"${_shld_rev_opp:,.0f}",
+                  delta=f"{_shld_gap} comp nights gap (Q3 vs Q1)",
+                  delta_color="off",
+                  help="Estimated incremental room revenue if shoulder season (Q1) compression nights grew toward Q3 levels")
+
+    # Campaign timing insight
+    _camp_insight = ""
+    if not df_insights_all.empty:
+        _camp_row = df_insights_all[
+            (df_insights_all["audience"] == "cross") &
+            (df_insights_all["category"] == "campaign_seasonality")
+        ]
+        if not _camp_row.empty:
+            _camp_insight = _camp_row.iloc[0].get("body", "")
+    if _camp_insight:
+        st.info(f"📡 **Campaign Timing Signal:** {_camp_insight}")
+
+    st.markdown("---")
 
     # ── Audience tabs ────────────────────────────────────────────────────────
     AUDIENCE_CONFIG = {
@@ -4920,9 +5119,445 @@ with tab_ev:
     st.markdown("---")
 
 # ══════════════════════════════════════════════════════════════════════════════
+# TAB 5 — FEEDER MARKETS
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_fm:
+    st.markdown("""
+    <div class="hero-banner">
+      <div class="hero-title">Feeder Market Intelligence</div>
+      <div class="hero-subtitle">DMA Origin Analysis · Visitor Value Matrix · Strategic Budget Allocation</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── DMA Overview ───────────────────────────────────────────────────────────
+    if not df_dfy_dma.empty:
+        _fm_period = str(df_dfy_dma.iloc[0].get("report_period_start", ""))[:4] + " Annual" if not df_dfy_dma.empty else ""
+        _dma_top10 = df_dfy_dma[df_dfy_dma["visitor_days_share_pct"].notna()].head(10).copy()
+
+        # KPI summary row
+        _total_dma_pct = _dma_top10["visitor_days_share_pct"].sum()
+        _top_mkt = _dma_top10.iloc[0]["dma"] if not _dma_top10.empty else "N/A"
+        _top_mkt_pct = _dma_top10.iloc[0]["visitor_days_share_pct"] if not _dma_top10.empty else 0
+        _high_spend_row = df_dfy_dma[df_dfy_dma["avg_spend_usd"].notna()].nlargest(1, "avg_spend_usd")
+        _high_spend_mkt = _high_spend_row.iloc[0]["dma"] if not _high_spend_row.empty else "N/A"
+        _high_spend_val = float(_high_spend_row.iloc[0]["avg_spend_usd"]) if not _high_spend_row.empty else 0
+
+        _fm_k1, _fm_k2, _fm_k3 = st.columns(3)
+        with _fm_k1:
+            st.markdown(
+                f'<div style="background:rgba(33,128,141,0.06);border:1px solid rgba(33,128,141,0.15);border-radius:10px;padding:14px 16px;">'
+                f'<div style="font-size:1.4rem;font-weight:800;color:#21808D;">{_top_mkt}</div>'
+                f'<div style="font-size:11px;font-weight:600;opacity:0.70;margin-top:2px;">Top Feeder Market</div>'
+                f'<div style="font-size:11px;color:#21808D;font-weight:600;margin-top:3px;">{_top_mkt_pct:.1f}% of visitor days</div>'
+                f'</div>', unsafe_allow_html=True)
+        with _fm_k2:
+            st.markdown(
+                f'<div style="background:rgba(230,129,97,0.06);border:1px solid rgba(230,129,97,0.15);border-radius:10px;padding:14px 16px;">'
+                f'<div style="font-size:1.4rem;font-weight:800;color:#E68161;">{_high_spend_mkt}</div>'
+                f'<div style="font-size:11px;font-weight:600;opacity:0.70;margin-top:2px;">Highest Value Market</div>'
+                f'<div style="font-size:11px;color:#E68161;font-weight:600;margin-top:3px;">${_high_spend_val:,.0f} avg spend/visitor</div>'
+                f'</div>', unsafe_allow_html=True)
+        with _fm_k3:
+            _oos_pct_fm = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
+            st.markdown(
+                f'<div style="background:rgba(33,128,141,0.06);border:1px solid rgba(33,128,141,0.15);border-radius:10px;padding:14px 16px;">'
+                f'<div style="font-size:1.4rem;font-weight:800;color:#21808D;">{_oos_pct_fm:.1f}%</div>'
+                f'<div style="font-size:11px;font-weight:600;opacity:0.70;margin-top:2px;">Out-of-State Visitor Days</div>'
+                f'<div style="font-size:11px;color:#21808D;font-weight:600;margin-top:3px;">OOS visitors generate higher ADR per trip</div>'
+                f'</div>', unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # ── Side-by-side: Visitor Days Share + Avg Spend ───────────────────────
+        _fm_c1, _fm_c2 = st.columns(2)
+
+        with _fm_c1:
+            st.markdown('<div class="chart-header">Visitor Days Share by DMA</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chart-caption">Share of visitor days by origin market · Datafy {_fm_period}</div>', unsafe_allow_html=True)
+            _dma_sorted = _dma_top10.sort_values("visitor_days_share_pct", ascending=True)
+            _max_s = _dma_sorted["visitor_days_share_pct"].max()
+            _bar_colors_fm = [
+                f"rgba(33,{int(128 + 56*(v/_max_s))},{int(141 + 57*(v/_max_s))},0.90)"
+                for v in _dma_sorted["visitor_days_share_pct"]
+            ]
+            fig_fm1 = go.Figure(go.Bar(
+                x=_dma_sorted["visitor_days_share_pct"].values,
+                y=_dma_sorted["dma"].values,
+                orientation="h",
+                marker=dict(color=_bar_colors_fm, line_width=0, cornerradius=5),
+                text=[f"{v:.1f}%" for v in _dma_sorted["visitor_days_share_pct"]],
+                textposition="outside",
+                hovertemplate="<b>%{y}</b><br>Visitor days: %{x:.1f}%<extra></extra>",
+            ))
+            fig_fm1.update_layout(xaxis_ticksuffix="%", showlegend=False)
+            st.plotly_chart(style_fig(fig_fm1, height=380), use_container_width=True)
+
+        with _fm_c2:
+            st.markdown('<div class="chart-header">Average Spend per Visitor by DMA</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chart-caption">Value per visitor trip · higher = more revenue per marketing dollar</div>', unsafe_allow_html=True)
+            _dma_spend = df_dfy_dma[df_dfy_dma["avg_spend_usd"].notna()].sort_values("avg_spend_usd", ascending=True).head(10)
+            if not _dma_spend.empty:
+                _spend_max = _dma_spend["avg_spend_usd"].max()
+                _spend_colors = [TEAL if v >= _dma_spend["avg_spend_usd"].mean() else ORANGE for v in _dma_spend["avg_spend_usd"]]
+                fig_fm2 = go.Figure(go.Bar(
+                    x=_dma_spend["avg_spend_usd"].values,
+                    y=_dma_spend["dma"].values,
+                    orientation="h",
+                    marker=dict(color=_spend_colors, line_width=0, cornerradius=5),
+                    text=[f"${v:,.0f}" for v in _dma_spend["avg_spend_usd"]],
+                    textposition="outside",
+                    hovertemplate="<b>%{y}</b><br>Avg spend: $%{x:,.0f}<extra></extra>",
+                ))
+                fig_fm2.update_layout(xaxis_tickprefix="$", showlegend=False)
+                st.plotly_chart(style_fig(fig_fm2, height=380), use_container_width=True)
+            else:
+                st.info("Avg spend data not available by DMA.")
+
+        st.markdown("---")
+
+        # ── Value Matrix Bubble Chart ──────────────────────────────────────────
+        st.markdown('<div class="chart-header">Feeder Market Value Matrix — Volume vs. Spend</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-caption">Upper-right = high volume + high spend (premium). Upper-left = high value fly markets. Bubble = volume share.</div>', unsafe_allow_html=True)
+        _bub_fm = df_dfy_dma[df_dfy_dma["visitor_days_share_pct"].notna() & df_dfy_dma["avg_spend_usd"].notna()].copy()
+        if not _bub_fm.empty:
+            _yoy_fm = _bub_fm["visitor_days_vs_compare_pct"].fillna(0)
+            _bub_colors_fm = [TEAL if v >= 0 else ORANGE for v in _yoy_fm]
+            fig_fm3 = go.Figure(go.Scatter(
+                x=_bub_fm["visitor_days_share_pct"].values,
+                y=_bub_fm["avg_spend_usd"].values,
+                mode="markers+text",
+                text=_bub_fm["dma"].values,
+                textposition="top center",
+                textfont=dict(size=10, family="Plus Jakarta Sans, Inter, sans-serif"),
+                marker=dict(
+                    size=[max(12, v * 3) for v in _bub_fm["visitor_days_share_pct"]],
+                    color=_bub_colors_fm,
+                    opacity=0.75,
+                    line=dict(width=1, color="white"),
+                ),
+                hovertemplate="<b>%{text}</b><br>Visitor day share: %{x:.1f}%<br>Avg spend: $%{y:.0f}<extra></extra>",
+            ))
+            fig_fm3.update_layout(
+                xaxis=dict(title="Share of Visitor Days (%)", ticksuffix="%"),
+                yaxis=dict(title="Avg Spend per Visitor ($)", tickprefix="$"),
+                showlegend=False,
+            )
+            st.plotly_chart(style_fig(fig_fm3, height=400), use_container_width=True)
+            st.caption("Teal = YOY growth · Orange = YOY decline. Fly markets (SLC, DFW, NYC) typically appear upper-left: lower volume but higher spend per trip.")
+
+        # ── Zartico Top Markets (historical comparison) ────────────────────────
+        if not df_zrt_markets.empty:
+            st.markdown("---")
+            st.markdown("#### Historical Feeder Markets — Zartico Reference (Q1 2025)")
+            st.caption("⚠️ Zartico data is a historical snapshot. Use for trend context only — not current performance.")
+            _zrt_top10 = df_zrt_markets.sort_values("rank").head(10)
+            fig_zrt_mkt = go.Figure(go.Bar(
+                x=_zrt_top10["pct_visitors"],
+                y=_zrt_top10["market"],
+                orientation="h",
+                marker_color=TEAL_LIGHT,
+                text=[f"{v:.1f}%" for v in _zrt_top10["pct_visitors"]],
+                textposition="outside",
+                hovertemplate="<b>%{y}</b><br>%{x:.1f}% of visitors<extra></extra>",
+            ))
+            fig_zrt_mkt.update_layout(
+                xaxis_ticksuffix="%", showlegend=False,
+                yaxis=dict(autorange="reversed"),
+            )
+            st.plotly_chart(style_fig(fig_zrt_mkt, height=320), use_container_width=True)
+
+        # ── Raw data expander ─────────────────────────────────────────────────
+        with st.expander("📊 View raw DMA data"):
+            st.dataframe(df_dfy_dma, use_container_width=True, hide_index=True)
+            _dma_csv = df_dfy_dma.to_csv(index=False).encode()
+            st.download_button("⬇️ Download DMA Data CSV", _dma_csv,
+                               file_name="datafy_dma.csv", mime="text/csv")
+    else:
+        st.markdown(empty_state(
+            "🎯", "No DMA feeder market data loaded.",
+            "Run the pipeline: `python scripts/run_pipeline.py`",
+        ), unsafe_allow_html=True)
 
 
-# TAB 4 — MARKET INTELLIGENCE (CoStar)
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 6 — EVENT IMPACT
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_ei:
+    st.markdown("""
+    <div class="hero-banner">
+      <div class="hero-title">Event Impact Analysis</div>
+      <div class="hero-subtitle">Ohana Fest · VDP Events Calendar · Zartico Event Data · ADR Lift Analysis</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Ohana Fest Benchmark Metrics ──────────────────────────────────────────
+    st.markdown('<span class="ai-chip">OHANA FEST 2025 — VERIFIED BENCHMARK</span>', unsafe_allow_html=True)
+    st.markdown(
+        '<div style="font-size:12px;opacity:0.55;margin-bottom:12px;">'
+        'Verified event-impact data · Datafy · Sep 2025 · Gold-standard reference model for all future event ROI analysis</div>',
+        unsafe_allow_html=True,
+    )
+
+    _ef_cols = st.columns(4)
+    _ohana_metrics = [
+        ("$18.4M", "Total Destination Spend", "3.2× economic multiplier"),
+        ("$14.6M", "Direct Event Expenditure", "headline spend figure"),
+        ("+$139", "ADR Lift During Event", "$542 event vs. $403 baseline"),
+        ("68%", "Out-of-State Visitors", "fly-market attendees"),
+    ]
+    for i, (val, lbl, sub) in enumerate(_ohana_metrics):
+        with _ef_cols[i]:
+            st.markdown(
+                f'<div style="background:rgba(33,128,141,0.06);border:1px solid rgba(33,128,141,0.15);'
+                f'border-radius:10px;padding:14px 16px;">'
+                f'<div style="font-size:1.5rem;font-weight:800;color:#21808D;">{val}</div>'
+                f'<div style="font-size:11px;font-weight:600;opacity:0.70;margin-top:2px;">{lbl}</div>'
+                f'<div style="font-size:10px;color:#21808D;font-weight:600;margin-top:3px;">{sub}</div>'
+                f'</div>', unsafe_allow_html=True)
+
+    _ef_cols2 = st.columns(4)
+    _ohana_metrics2 = [
+        ("$1,219", "Avg Accommodation Spend", "+53% vs. Ohana Fest 2024"),
+        ("24%", "Overnight Hotel Share", "of all attendees"),
+        ("+$140", "RevPAR Lift", "$427 event vs. $287 baseline"),
+        ("3.2×", "Spend Multiplier", "direct event expenditure"),
+    ]
+    for i, (val, lbl, sub) in enumerate(_ohana_metrics2):
+        with _ef_cols2[i]:
+            st.markdown(
+                f'<div style="background:rgba(230,129,97,0.06);border:1px solid rgba(230,129,97,0.15);'
+                f'border-radius:10px;padding:14px 16px;">'
+                f'<div style="font-size:1.5rem;font-weight:800;color:#E68161;">{val}</div>'
+                f'<div style="font-size:11px;font-weight:600;opacity:0.70;margin-top:2px;">{lbl}</div>'
+                f'<div style="font-size:10px;color:#E68161;font-weight:600;margin-top:3px;">{sub}</div>'
+                f'</div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── VDP Events Calendar ────────────────────────────────────────────────────
+    st.markdown("#### Dana Point Events Calendar")
+    if not df_vdp_events.empty:
+        _evts_display = df_vdp_events.copy()
+        if "event_date" in _evts_display.columns:
+            _evts_display["event_date"] = pd.to_datetime(_evts_display["event_date"], errors="coerce")
+            _evts_upcoming = _evts_display[_evts_display["event_date"] >= pd.Timestamp.now()].sort_values("event_date")
+            _evts_past = _evts_display[_evts_display["event_date"] < pd.Timestamp.now()].sort_values("event_date", ascending=False)
+
+            if not _evts_upcoming.empty:
+                st.markdown("**Upcoming Events**")
+                for _, ev_row in _evts_upcoming.iterrows():
+                    _ev_major = "🌟 " if ev_row.get("is_major", 0) else ""
+                    _ev_date_str = ev_row["event_date"].strftime("%B %d, %Y") if pd.notna(ev_row["event_date"]) else "TBD"
+                    st.markdown(
+                        f'<div style="background:rgba(33,128,141,0.05);border-left:3px solid #21808D;'
+                        f'border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:6px;">'
+                        f'<div style="font-weight:700;font-size:13px;">{_ev_major}{ev_row.get("event_name","Unknown")}</div>'
+                        f'<div style="font-size:11px;opacity:0.60;margin-top:2px;">'
+                        f'📅 {_ev_date_str}'
+                        f'{" · " + str(ev_row["venue"]) if ev_row.get("venue") else ""}'
+                        f'{" · " + str(int(ev_row["expected_attendance"])) + " expected" if pd.notna(ev_row.get("expected_attendance")) else ""}'
+                        f'</div></div>',
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.info("No upcoming events in the calendar.")
+        st.markdown("<br>", unsafe_allow_html=True)
+        with st.expander("📊 View full events calendar"):
+            st.dataframe(df_vdp_events, use_container_width=True, hide_index=True)
+            _evt_csv = df_vdp_events.to_csv(index=False).encode()
+            st.download_button("⬇️ Download Events CSV", _evt_csv,
+                               file_name="vdp_events.csv", mime="text/csv")
+    else:
+        st.info("No VDP events loaded. Run `python scripts/fetch_vdp_events.py`.")
+
+    st.markdown("---")
+
+    # ── Zartico Event Impact ───────────────────────────────────────────────────
+    st.markdown("#### Zartico Historical Event Impact (Jun 2025 Snapshot)")
+    st.caption("⚠️ Zartico is a historical reference. Current event data comes from Datafy.")
+
+    if not df_zrt_events.empty:
+        ze = df_zrt_events.iloc[0]
+        _ze_cols = st.columns(3)
+        with _ze_cols[0]:
+            st.markdown(kpi_card(
+                "Total Spend Lift", f"+{ze.get('change_total_spend_pct', 0):.1f}%",
+                "vs. 4-week baseline", positive=True,
+            ), unsafe_allow_html=True)
+        with _ze_cols[1]:
+            st.markdown(kpi_card(
+                "Visitor Spend Lift", f"+{ze.get('change_visitor_spend_pct', 0):.1f}%",
+                "visitor spend during event", positive=True,
+            ), unsafe_allow_html=True)
+        with _ze_cols[2]:
+            st.markdown(kpi_card(
+                "Accommodation Share", f"{ze.get('pct_accommodation_spend', 0):.0f}%",
+                "of visitor spend during event", positive=True,
+            ), unsafe_allow_html=True)
+        if df_zrt_events.shape[1] > 4:
+            with st.expander("📊 View Zartico event impact raw data"):
+                st.dataframe(df_zrt_events, use_container_width=True, hide_index=True)
+    else:
+        st.info("Run `python scripts/load_zartico_reports.py` to load Zartico event data.")
+
+    st.markdown("---")
+
+    # ── ADR Lift Visualization ─────────────────────────────────────────────────
+    st.markdown("#### Event ADR Lift — Ohana Fest Reference Model")
+    _adr_base  = 403.0
+    _adr_event = 542.0
+    _revpar_base  = 287.0
+    _revpar_event = 427.0
+    fig_lift = go.Figure()
+    fig_lift.add_trace(go.Bar(
+        x=["Baseline ADR", "Event ADR"],
+        y=[_adr_base, _adr_event],
+        marker_color=[TEAL_LIGHT, TEAL],
+        text=[f"${_adr_base:.0f}", f"${_adr_event:.0f}"],
+        textposition="outside",
+        name="ADR",
+        hovertemplate="<b>%{x}</b><br>$%{y:.0f}<extra></extra>",
+    ))
+    fig_lift.add_trace(go.Bar(
+        x=["Baseline RevPAR", "Event RevPAR"],
+        y=[_revpar_base, _revpar_event],
+        marker_color=["rgba(230,129,97,0.60)", ORANGE],
+        text=[f"${_revpar_base:.0f}", f"${_revpar_event:.0f}"],
+        textposition="outside",
+        name="RevPAR",
+        hovertemplate="<b>%{x}</b><br>$%{y:.0f}<extra></extra>",
+    ))
+    fig_lift.update_layout(
+        barmode="group", showlegend=True,
+        yaxis_tickprefix="$",
+        annotations=[
+            dict(x=0.5, y=max(_adr_event, _revpar_event) * 1.12,
+                 text=f"ADR lift: <b>+${_adr_event - _adr_base:.0f}</b> (+{(_adr_event/_adr_base - 1)*100:.0f}%)",
+                 showarrow=False, font=dict(color=TEAL, size=12)),
+        ],
+    )
+    st.plotly_chart(style_fig(fig_lift, height=300), use_container_width=True)
+    st.caption(
+        "Ohana Fest 2025 verified impact (Datafy). "
+        "**$139 ADR lift** (+45%) during event nights vs. baseline. "
+        "Major music events with high OOS draw generate genuine incremental tourism dollars — not displacement."
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 7 — SUPPLY & PIPELINE
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_sp:
+    st.markdown("""
+    <div class="hero-banner">
+      <div class="hero-title">Supply &amp; Pipeline</div>
+      <div class="hero-subtitle">CoStar Supply Pipeline · New Hotel Openings · Market Competitive Dynamics</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Pipeline summary KPIs ─────────────────────────────────────────────────
+    if not df_cs_pipe.empty:
+        _pipe_total = df_cs_pipe["rooms"].sum()
+        _under_const_sp = df_cs_pipe[df_cs_pipe["status"] == "Under Construction"]
+        _planned_sp = df_cs_pipe[df_cs_pipe["status"].isin(["Planned", "Final Planning / Permitting"])]
+        _uc_rooms_sp = _under_const_sp["rooms"].sum() if not _under_const_sp.empty else 0
+        _pl_rooms_sp = _planned_sp["rooms"].sum() if not _planned_sp.empty else 0
+
+        _sp_cols = st.columns(4)
+        _sp_kpis = [
+            (f"{_pipe_total:,}", "Total Pipeline Rooms", f"{len(df_cs_pipe)} active projects"),
+            (f"{_uc_rooms_sp:,}", "Under Construction", f"{len(_under_const_sp)} project(s) · 2025"),
+            (f"{_pl_rooms_sp:,}", "Planned / Permitting", f"{len(_planned_sp)} project(s) · 2026+"),
+            (f"{_pipe_total/5120*100:.1f}%", "Supply Growth Impact", "% of current market supply"),
+        ]
+        for i, (val, lbl, sub) in enumerate(_sp_kpis):
+            with _sp_cols[i]:
+                st.markdown(kpi_card(lbl, val, sub, positive=(i < 2), neutral=(i >= 2)),
+                            unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # ── Pipeline bar chart ────────────────────────────────────────────────
+        st.markdown('<div class="chart-header">Pipeline Projects by Room Count & Status</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-caption">CoStar supply pipeline · South OC market · hover for open date</div>', unsafe_allow_html=True)
+        _sp_status_colors = {
+            "Under Construction": TEAL,
+            "Final Planning / Permitting": ORANGE,
+            "Planned": TEAL_LIGHT,
+        }
+        _sp_pipe_colors = [_sp_status_colors.get(s, "#626C71") for s in df_cs_pipe["status"]]
+        fig_sp_pipe = go.Figure(go.Bar(
+            x=df_cs_pipe["property_name"],
+            y=df_cs_pipe["rooms"],
+            marker_color=_sp_pipe_colors,
+            text=[f"{r} rooms\n{s}" for r, s in zip(df_cs_pipe["rooms"], df_cs_pipe["status"])],
+            textposition="outside",
+            hovertemplate="<b>%{x}</b><br>Rooms: %{y}<br>Opens: %{customdata}<extra></extra>",
+            customdata=df_cs_pipe["projected_open_date"],
+        ))
+        fig_sp_pipe.update_layout(xaxis_tickangle=-20, margin=dict(t=30, b=80))
+        st.plotly_chart(style_fig(fig_sp_pipe, height=320), use_container_width=True)
+
+        # ── Pipeline detail table ─────────────────────────────────────────────
+        _sp_display = df_cs_pipe[["property_name", "city", "chain_scale", "rooms",
+                                   "status", "projected_open_date", "brand", "developer"]].copy()
+        _sp_display.columns = ["Property", "City", "Segment", "Rooms",
+                                "Status", "Opens", "Brand", "Developer"]
+        st.dataframe(_sp_display, use_container_width=True, hide_index=True)
+
+        # ── Supply impact insight ─────────────────────────────────────────────
+        _supply_impact_pct = _pipe_total / 5120 * 100
+        st.markdown(
+            insight_card(
+                f"Supply Alert: {_pipe_total:,} Rooms ({_supply_impact_pct:.1f}% of Market) in Pipeline",
+                f"**{_uc_rooms_sp:,} rooms** under active construction (opening 2025) will increase "
+                f"South OC hotel supply before year-end. Full pipeline adds **{_supply_impact_pct:.1f}%** supply growth. "
+                f"VDP member hotels should expect modest occupancy pressure as new supply absorbs demand. "
+                f"ADR discipline and loyalty programs are critical to defending RevPAR during the absorption period.",
+                kind="warning",
+            ),
+            unsafe_allow_html=True,
+        )
+
+        st.markdown("---")
+
+        # Download
+        _pipe_csv = df_cs_pipe.to_csv(index=False).encode()
+        st.download_button("⬇️ Download Pipeline CSV", _pipe_csv,
+                           file_name="costar_supply_pipeline.csv", mime="text/csv",
+                           use_container_width=True)
+
+    else:
+        st.markdown(empty_state(
+            "🏗️", "No supply pipeline data loaded.",
+            "Run scripts/load_costar_reports.py to populate the pipeline table.",
+        ), unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Annual performance context ─────────────────────────────────────────────
+    st.markdown("### Annual Market Performance Context")
+    conn_sp = get_connection()
+    try:
+        df_cs_annual = pd.read_sql_query(
+            "SELECT * FROM costar_annual_performance ORDER BY year DESC", conn_sp
+        )
+        if not df_cs_annual.empty:
+            with st.expander("📊 View CoStar Annual Performance Data"):
+                st.dataframe(df_cs_annual, use_container_width=True, hide_index=True)
+                _ann_csv = df_cs_annual.to_csv(index=False).encode()
+                st.download_button("⬇️ Download Annual Data CSV", _ann_csv,
+                                   file_name="costar_annual_performance.csv", mime="text/csv")
+        else:
+            st.info("No annual CoStar performance data loaded.")
+    except Exception:
+        st.info("CoStar annual performance table not yet populated.")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+# TAB 8 — MARKET INTELLIGENCE (CoStar)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_cs:
     st.markdown("""
@@ -5733,13 +6368,16 @@ with tab_cs:
                     if _jwa.empty:
                         _jwa = df_vca_airport.copy()
 
-                    if not _jwa.empty and "month_num" in _jwa.columns and "total_passengers" in _jwa.columns:
+                    # Support both column naming conventions
+                    _month_col = "month" if "month" in _jwa.columns else ("month_num" if "month_num" in _jwa.columns else None)
+                    _pax_col = "total_pax" if "total_pax" in _jwa.columns else ("total_passengers" if "total_passengers" in _jwa.columns else None)
+                    if not _jwa.empty and _month_col and _pax_col:
                         fig_air = go.Figure()
                         for _apt in _jwa["airport"].unique():
-                            _apt_df = _jwa[_jwa["airport"] == _apt].sort_values("month_num")
+                            _apt_df = _jwa[_jwa["airport"] == _apt].sort_values(_month_col)
                             fig_air.add_trace(go.Scatter(
-                                x=_apt_df["month_num"],
-                                y=_apt_df["total_passengers"],
+                                x=_apt_df[_month_col],
+                                y=_apt_df[_pax_col],
                                 name=_apt, mode="lines+markers",
                                 hovertemplate=f"<b>{_apt}</b><br>Month: %{{x}}<br>Passengers: %{{y:,.0f}}<extra></extra>",
                             ))
@@ -6013,3 +6651,80 @@ with tab_dl:
             "📊", "No compression data.",
             "Run compute_kpis.py to populate kpi_compression_quarterly.",
         ), unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FOOTER — GloCon Solutions LLC · Data Glossary · Data Sources
+# ══════════════════════════════════════════════════════════════════════════════
+st.markdown("---")
+
+_GLOSSARY_TERMS = {
+    "ADR": "Average Daily Rate — total room revenue divided by rooms sold on a given day. The primary rate metric in hospitality.",
+    "RevPAR": "Revenue Per Available Room — ADR × Occupancy Rate. The industry benchmark for lodging performance, combining both rate and volume.",
+    "Occupancy Rate": "Percentage of available rooms sold: Demand ÷ Supply. Expressed as a percentage (e.g., 68.8% = 688 rooms sold out of 1,000 available).",
+    "TBID": "Tourism Business Improvement District — Dana Point's assessment district. Properties pay a blended ~1.25% of room revenue (tiered: 1% ≤$199.99/night, 1.5% $200–$399.99, 2% ≥$400) to fund destination marketing.",
+    "TOT": "Transient Occupancy Tax — city hotel tax of 10% applied to room revenue. Primary lodging revenue stream for the City of Dana Point.",
+    "ROAS": "Return on Ad Spend — total attributable destination economic impact divided by media spend. A ROAS of 15× means every $1 in ads generated $15 in destination activity.",
+    "MPI": "Market Penetration Index — a property or market's fair share of occupancy vs. the competitive set. MPI > 100 = above fair share.",
+    "ARI": "Average Rate Index — ADR performance relative to the competitive set. ARI > 100 = rate premium over comp set.",
+    "RGI": "Revenue Generation Index — RevPAR performance relative to the competitive set. RGI > 100 = RevPAR outperformance. Also called RevPAR Index.",
+    "LOS": "Length of Stay — average number of nights per visitor booking. Dana Point's blended LOS (hotel + STVR) is approximately 2.0 nights.",
+    "OOS": "Out-of-State — visitors originating from outside California. OOS visitors typically generate higher per-trip spending and longer stays.",
+    "DMA": "Designated Market Area — geographic media/market region used in visitor economy analysis (e.g., Los Angeles DMA, San Francisco DMA). Defined by Nielsen.",
+    "STR": "Smith Travel Research — the primary source for hotel performance benchmarking data (occupancy, ADR, RevPAR) used throughout this platform.",
+    "Compression": "A compression day or period occurs when occupancy reaches 80%+ (or 90%+), signaling near-full demand. Compression days allow for rate premiums and justify investment.",
+    "PULSE": "Performance · Understanding · Leadership · Spending · Economy — Dana Point's analytics intelligence platform. Aggregates STR, Datafy, CoStar, Visit CA, and Zartico data into a single decision-support dashboard.",
+}
+
+_SOURCES_HTML = """
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">
+  <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);
+              border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;">
+    <div style="font-weight:700;color:#e8f4f8;margin-bottom:2px;">STR</div>
+    <div style="opacity:0.6;">Smith Travel Research · daily &amp; monthly hotel benchmarking</div>
+  </div>
+  <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);
+              border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;">
+    <div style="font-weight:700;color:#e8f4f8;margin-bottom:2px;">Datafy</div>
+    <div style="opacity:0.6;">Visitor economy platform · trips, spend, DMA attribution</div>
+  </div>
+  <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);
+              border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;">
+    <div style="font-weight:700;color:#e8f4f8;margin-bottom:2px;">CoStar</div>
+    <div style="opacity:0.6;">Market data · comp set, pipeline, profitability</div>
+  </div>
+  <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);
+              border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;">
+    <div style="font-weight:700;color:#e8f4f8;margin-bottom:2px;">Visit California</div>
+    <div style="opacity:0.6;">State forecasts · lodging, travel volume, airport traffic</div>
+  </div>
+  <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);
+              border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;">
+    <div style="font-weight:700;color:#e8f4f8;margin-bottom:2px;">Zartico</div>
+    <div style="opacity:0.6;">Historical reference · Jun 2025 snapshot · visitor trends</div>
+  </div>
+</div>
+"""
+
+_gl1, _gl2 = st.columns(2)
+with _gl1:
+    with st.expander("📖 Data Glossary", expanded=False):
+        for _term, _defn in _GLOSSARY_TERMS.items():
+            st.markdown(
+                f'<div style="margin-bottom:10px;">'
+                f'<span style="font-weight:700;color:#4FC3F7;">{_term}</span>'
+                f'<span style="opacity:0.75;font-size:13px;"> — {_defn}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+with _gl2:
+    with st.expander("🗂️ Data Sources", expanded=False):
+        st.markdown(_SOURCES_HTML, unsafe_allow_html=True)
+
+st.markdown(
+    '<div style="text-align:center;padding:18px 0 10px;font-size:12px;opacity:0.40;">'
+    'Powered by <strong>GloCon Solutions LLC</strong> &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; '
+    'Dana Point PULSE · All data is proprietary and confidential.'
+    '</div>',
+    unsafe_allow_html=True,
+)
