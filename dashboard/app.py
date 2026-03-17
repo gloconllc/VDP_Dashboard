@@ -830,27 +830,38 @@ def get_table_counts() -> dict:
         "datafy_overview_kpis", "datafy_overview_dma", "datafy_overview_demographics",
         "datafy_overview_category_spending", "datafy_overview_cluster_visitation",
         "datafy_overview_airports",
-        "datafy_attribution_website_kpis", "datafy_attribution_website_top_markets",
-        "datafy_attribution_website_dma", "datafy_attribution_website_channels",
-        "datafy_attribution_website_clusters", "datafy_attribution_website_demographics",
-        "datafy_attribution_media_kpis", "datafy_attribution_media_top_markets",
-        "datafy_social_traffic_sources", "datafy_social_audience_overview",
-        "datafy_social_top_pages",
-      for t in all_tables  ]
-    
-    for t in all_tables:
+            "datafy_attribution_media_kpis",
+     "datafy_attribution_media_top_markets",
+     "datafy_social_traffic_sources",
+     "datafy_social_audience_overview",
+     "datafy_social_top_pages",
+ ]
+ for t in all_tables:
+     try:
+         row = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()
+         counts[t] = row if row else 0
+     except Exception:
+         counts[t] = "—"
 
-    for t in ["fact_str_metrics", "kpi_daily_summary",
-              "kpi_compression_quarterly", "load_log",
-              "costar_monthly_performance", "costar_market_snapshot",
-              "costar_supply_pipeline", "costar_chain_scale_breakdown",
-              "costar_competitive_set"]:
-        try:
-            row = conn.execute(f"SELECT COUNT(*) FROM \"{t}\"").fetchone()
-            counts[t] = row[0] if row else 0
-        except Exception:
-            counts[t] = "—"
-    # Per-grain breakdowns (used by sidebar status and Data Source Health cards)
+ for t in [
+     "fact_str_metrics",
+     "kpi_daily_summary",
+     "kpi_compression_quarterly",
+     "load_log",
+     "costar_monthly_performance",
+     "costar_market_snapshot",
+     "costar_supply_pipeline",
+     "costar_chain_scale_breakdown",
+     "costar_competitive_set",
+ ]:
+     try:
+         row = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()
+         counts[t] = row if row else 0
+     except Exception:
+         counts[t] = "—"
+
+ # Per-grain breakdowns (used by sidebar status and Data Source Health cards)
+
 
 
 
