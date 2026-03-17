@@ -8,6 +8,8 @@ Owner: John Picou | Org: gloconllc | Repo: VDPDashboard
 ## Data Hierarchy (NEVER violate)
 
 - **Layer 1 — Truth:** STR daily/monthly exports, Datafy event data, TBID assessment docs. These are vetted. Always cite these first.
+- **Layer 1 (Current):** Datafy, CoStar, STR are the CURRENT data sources. Always present these as current performance.
+- **Layer 1.5 — Historical Reference:** Zartico (Jun 2025 snapshot) is historical reference only. Use for trend comparison and to tell the growth story. NEVER present Zartico as current data.
 - **Layer 2 — Context:** FRED hotel pricing index, CA State TOT data, JWA passenger counts, Visit California forecasts.
 - **Layer 3 — Color:** Media, social sentiment, competitive anecdotes. Never override Layer 1 with Layer 3.
 
@@ -274,6 +276,33 @@ After every session or error correction:
 - The AI system prompt must include full DB schema for all tables so Claude can correctly answer cross-table queries.
 - Cross-dataset (`cross` audience) insights require BOTH STR and Datafy to be loaded — they silently return empty if either is missing.
 - Always prefix cross insights with `HIDDEN SIGNAL/OPPORTUNITY/RISK/GAP` to flag them as non-obvious findings.
+- Zartico is historical reference only (Jun 2025 snapshot). NEVER present Zartico as current data. Datafy/CoStar/STR are current sources. Zartico tells the growth story.
+- The VDP events calendar is JavaScript-rendered — live scraping requires Playwright. `fetch_vdp_events.py` seeds 10 known major Dana Point events as fallback data.
+- All new Zartico tables (`zartico_*`) use `UNIQUE(month_str)` or `UNIQUE(report_date)` for safe UPSERT re-runs.
+- `vdp_events` table uses `UNIQUE(event_name, event_date)` — safe to re-run seeding.
+- `beautifulsoup4` is required in `requirements.txt` for the events scraper.
+- The app's "Suggested name" for the platform is **PULSE** (Performance, Understanding, Leadership, Spending, Economy) — catchy for Dana Point leaders.
+
+---
+
+## New Tables (2026-03-17)
+
+### Zartico Historical Reference Tables (8 tables)
+| Table | Rows | Purpose |
+|---|---|---|
+| `zartico_kpis` | 4 | Visitor economy KPIs (devices %, spend %, demographics, accommodation %) |
+| `zartico_markets` | 11 | Top visitor origin markets (rank, %, avg spend) |
+| `zartico_spending_monthly` | 11 | Monthly avg visitor spend vs benchmark (Jul 2024–May 2025) |
+| `zartico_lodging_kpis` | 1 | Hotel/STVR summary (YTD occ, ADR, LOS, ADR by day of week) |
+| `zartico_overnight_trend` | 13 | Monthly overnight visitor % trend (May 2024–May 2025) |
+| `zartico_event_impact` | 1 | Event period vs baseline spend changes |
+| `zartico_movement_monthly` | 10 | Visitor-to-resident ratio by month |
+| `zartico_future_events_summary` | 1 | YoY event + attendee growth |
+
+### VDP Events Table
+| Table | Rows | Purpose |
+|---|---|---|
+| `vdp_events` | 10 | Known major Dana Point events (scraped or seeded; `is_major` flag) |
 
 ---
 
@@ -284,3 +313,4 @@ After every session or error correction:
 | 2026-03-09 | Initial CLAUDE.md created | Claude + John Picou |
 | 2026-03-09 | CLAUDE.md installed at project root; slash commands created; home button added to dashboard title | Claude + John Picou |
 | 2026-03-16 | Full brain upgrade: insights_daily + table_relationships schema; compute_insights.py (4 audiences, 17 insight types); pipeline updated to run all 25+ tables; Forward Outlook tab added to dashboard; AI system prompt extended with full schema | Claude + John Picou |
+| 2026-03-17 | Zartico integration (8 tables, historical reference); VDP Events table (10 seeded events); CoStar filter fix; Data & Downloads dynamic row counts; Zartico section in Visitor Economy tab; 6-point Board Report; pipeline steps 7+8 added | Claude + John Picou |

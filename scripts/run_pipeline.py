@@ -9,9 +9,12 @@ Orchestrates the full VDP analytics pipeline in order:
   4. load_datafy_reports.py      — load Datafy visitor economy CSVs (skip-safe)
   5. load_costar_reports.py      — load CoStar hospitality market data (skip-safe)
   6. compute_insights.py         — generate forward-looking insights for all audiences
+  7. load_zartico_reports.py     — load Zartico historical reference data (skip-safe)
+  8. fetch_vdp_events.py         — scrape VDP event calendar (skip-safe)
 
-Steps 4 and 5 are SKIP-SAFE: if input files are absent, the step logs a warning
-and continues (exit code 0). Steps 1, 2, 3, 6 are FAIL-FAST: any failure aborts.
+Steps 4, 5, 7, 8 are SKIP-SAFE: if input files are absent or the script fails,
+the step logs a warning and continues (exit code 0). Steps 1, 2, 3, 6 are
+FAIL-FAST: any failure aborts.
 
 Each step is logged to logs/pipeline.log as:
   YYYY-MM-DD HH:MM:SS | STEP                 | OK/FAIL | message
@@ -43,6 +46,8 @@ STEPS = [
     ("load_datafy",       os.path.join(BASE_DIR, "load_datafy_reports.py"),     False),
     ("load_costar",       os.path.join(BASE_DIR, "load_costar_reports.py"),     False),
     ("compute_insights",  os.path.join(BASE_DIR, "compute_insights.py"),        True),
+    ("load_zartico",      os.path.join(BASE_DIR, "load_zartico_reports.py"),    False),
+    ("fetch_vdp_events",  os.path.join(BASE_DIR, "fetch_vdp_events.py"),        False),
 ]
 
 

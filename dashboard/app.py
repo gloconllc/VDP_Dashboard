@@ -864,6 +864,79 @@ def load_costar_compset() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+
+# ── Zartico historical data loaders ──────────────────────────────────────────
+
+@st.cache_data(ttl=300)
+def load_zartico_kpis() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM zartico_kpis ORDER BY report_date DESC", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_zartico_markets() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM zartico_markets ORDER BY report_date DESC, rank ASC", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_zartico_spending() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM zartico_spending_monthly ORDER BY month_str", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_zartico_lodging() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM zartico_lodging_kpis ORDER BY report_date DESC", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_zartico_overnight() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM zartico_overnight_trend ORDER BY month_str", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_zartico_events() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM zartico_event_impact ORDER BY event_start", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_zartico_movement() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM zartico_movement_monthly ORDER BY month_str", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_vdp_events() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        df = pd.read_sql_query(
+            "SELECT * FROM vdp_events ORDER BY event_date ASC", conn
+        )
+        if not df.empty:
+            df["event_date"] = pd.to_datetime(df["event_date"], errors="coerce")
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
 @st.cache_data(ttl=300)
 def load_insights(audience: str | None = None) -> pd.DataFrame:
     """Load today's (or most recent) forward-looking insights from insights_daily."""
@@ -1027,6 +1100,15 @@ def get_table_counts() -> dict:
         "costar_competitive_set",
         "costar_annual_performance",
         "costar_profitability",
+        "zartico_kpis",
+        "zartico_markets",
+        "zartico_spending_monthly",
+        "zartico_lodging_kpis",
+        "zartico_overnight_trend",
+        "zartico_event_impact",
+        "zartico_movement_monthly",
+        "zartico_future_events_summary",
+        "vdp_events",
     ]:
         try:
             row = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()
@@ -1958,6 +2040,15 @@ df_dfy_media   = load_datafy_media_kpis()
 df_dfy_web     = load_datafy_website_kpis()
 df_dfy_mktmkt  = load_datafy_media_markets()
 df_insights    = load_insights()          # Forward-looking insights (all audiences)
+# Zartico historical reference data (Jun 2025 snapshot — for trend comparison only)
+df_zrt_kpis    = load_zartico_kpis()
+df_zrt_markets = load_zartico_markets()
+df_zrt_spend   = load_zartico_spending()
+df_zrt_lodging = load_zartico_lodging()
+df_zrt_overnight = load_zartico_overnight()
+df_zrt_events  = load_zartico_events()
+df_zrt_movement = load_zartico_movement()
+df_vdp_events  = load_vdp_events()
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -2077,11 +2168,19 @@ with st.sidebar:
     _dfy_rows = counts.get("datafy_overview_kpis", 0)
     _dfy_dot  = "🟢" if isinstance(_dfy_rows, int) and _dfy_rows > 0 else "⚫"
     _dfy_label = f"{_dfy_rows:,} report(s)" if isinstance(_dfy_rows, int) and _dfy_rows > 0 else "No data"
+    _zrt_rows = sum(counts.get(t, 0) for t in ["zartico_kpis","zartico_markets","zartico_spending_monthly","zartico_lodging_kpis","zartico_overnight_trend"] if isinstance(counts.get(t, 0), int))
+    _zrt_dot  = "🟢" if _zrt_rows > 0 else "⚫"
+    _zrt_label = f"{_zrt_rows:,} rows (historical)" if _zrt_rows > 0 else "No data"
+    _evts_rows = counts.get("vdp_events", 0)
+    _evts_dot  = "🟢" if isinstance(_evts_rows, int) and _evts_rows > 0 else "⚫"
+    _evts_label = f"{_evts_rows:,} events" if isinstance(_evts_rows, int) and _evts_rows > 0 else "Not loaded"
     st.markdown("**Pipeline Status**")
     st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {_d_label}")
     st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_label}")
     st.markdown(f"{_cs_dot} CoStar Market &nbsp;·&nbsp; {_cs_label}")
     st.markdown(f"{_dfy_dot} Datafy &nbsp;·&nbsp; {_dfy_label}")
+    st.markdown(f"{_zrt_dot} Zartico (Hist.) &nbsp;·&nbsp; {_zrt_label}")
+    st.markdown(f"{_evts_dot} VDP Events &nbsp;·&nbsp; {_evts_label}")
     st.caption(f"Last ETL run: {last_log}")
 
     if not df_daily.empty:
@@ -3240,6 +3339,22 @@ with tab_ov:
             _dir_arrow = "▲" if _rvp_d >= 0 else "▼"
             _dir_color = "#21808D" if _rvp_d >= 0 else "#c0152f"
 
+            # Zartico historical context for board report
+            _zrt_ctx = "Visitor devices share: 21.2% · Visitor spend share: 48.0% · Avg. visitor spend peaked at $204 in Jul 2024. OOS visitor rate: 23%."
+            if not df_zrt_kpis.empty:
+                _zk = df_zrt_kpis.iloc[0]
+                _zrt_ctx = (
+                    f"Visitor devices: {_zk.get('pct_devices_visitors', 21.2):.1f}% of local devices · "
+                    f"Visitor spend: {_zk.get('pct_spend_visitors', 48.0):.1f}% of total · "
+                    f"Accommodation spend: {_zk.get('pct_accommodation_spend_visitors', 76.0):.0f}% from visitors. "
+                    f"Top feeder: LA ({df_zrt_markets[df_zrt_markets['rank']==1]['pct_visitors'].values[0]:.1f}% of visits) · "
+                    "Peak avg. spend $204/visitor (Jul 2024)."
+                ) if not df_zrt_markets.empty else (
+                    f"Visitor devices: {_zk.get('pct_devices_visitors', 21.2):.1f}% · "
+                    f"Visitor spend: {_zk.get('pct_spend_visitors', 48.0):.1f}% · "
+                    f"Accommodation: {_zk.get('pct_accommodation_spend_visitors', 76.0):.0f}%."
+                )
+
             # Source badge row
             _src_row = (
                 '<span class="nlm-tag nlm-tag-str">STR</span>'
@@ -3290,6 +3405,12 @@ with tab_ov:
   <strong>Market Positioning</strong> <span class="nlm-tag nlm-tag-ai">CoStar</span><br>
   Dana Point/South OC market ADR forecast: $285+ through 2025. VDP portfolio maintains premium positioning above market average.
   <br><em style="opacity:.72">→ Present updated comp set analysis at next board meeting; request approval for rate strategy review.</em>
+</div>
+
+<div class="nlm-point">
+  <strong>Historical Context (Zartico 2024–25)</strong> <span class="nlm-tag" style="background:rgba(121,82,179,0.15);color:#7952b3;">Zartico</span><br>
+  {_zrt_ctx}
+  <br><em style="opacity:.72">→ Zartico historical data provides independent validation of Datafy trends; present alongside for board credibility.</em>
 </div>
 </div>
 """, unsafe_allow_html=True)
@@ -4632,6 +4753,118 @@ with tab_ev:
                 "Day trippers concentrate in dining — capturing even 5% as overnight stays = significant room revenue."
             )
 
+    st.markdown("---")
+
+    # ── Zartico Historical Reference ─────────────────────────────────────────
+    st.markdown("### 📚 Zartico Historical Reference (Jun 2025 Snapshot)")
+    st.caption("⚠️ Zartico data represents a historical snapshot (last updated Jun 2025). "
+               "Use for trend comparison only. Current performance data comes from Datafy, CoStar, and STR.")
+
+    if not df_zrt_kpis.empty or not df_zrt_spend.empty:
+        zrt_col1, zrt_col2, zrt_col3 = st.columns(3)
+
+        if not df_zrt_kpis.empty:
+            zk = df_zrt_kpis.iloc[0]
+            with zrt_col1:
+                st.markdown(kpi_card(
+                    "Visitor Device Share",
+                    f"{zk.get('pct_devices_visitors', 0):.1f}%",
+                    "% of all local devices that are visitors",
+                    positive=True,
+                ), unsafe_allow_html=True)
+            with zrt_col2:
+                st.markdown(kpi_card(
+                    "Visitor Spend Share",
+                    f"{zk.get('pct_spend_visitors', 0):.1f}%",
+                    "% of total spend from visitors",
+                    positive=True,
+                ), unsafe_allow_html=True)
+            with zrt_col3:
+                st.markdown(kpi_card(
+                    "Accommodation Spend %",
+                    f"{zk.get('pct_accommodation_spend_visitors', 0):.0f}%",
+                    "% of accommodation spend from visitors",
+                    positive=True,
+                ), unsafe_allow_html=True)
+
+        if not df_zrt_spend.empty:
+            st.markdown("#### Monthly Avg. Visitor Spend vs. Benchmark (Jul 2024–May 2025)")
+            import plotly.graph_objects as go
+            fig_zrt = go.Figure()
+            fig_zrt.add_trace(go.Scatter(
+                x=df_zrt_spend["month_str"], y=df_zrt_spend["avg_visitor_spend"],
+                name="Dana Point Avg. Spend", line=dict(color="#21808D", width=2.5),
+                mode="lines+markers",
+                hovertemplate="<b>%{x}</b><br>Dana Point: $%{y:.0f}<extra></extra>",
+            ))
+            if "benchmark_avg_spend" in df_zrt_spend.columns and df_zrt_spend["benchmark_avg_spend"].notna().any():
+                fig_zrt.add_trace(go.Scatter(
+                    x=df_zrt_spend["month_str"], y=df_zrt_spend["benchmark_avg_spend"],
+                    name="Zartico Benchmark", line=dict(color="#E68161", width=1.5, dash="dot"),
+                    mode="lines+markers",
+                    hovertemplate="<b>%{x}</b><br>Benchmark: $%{y:.0f}<extra></extra>",
+                ))
+            fig_zrt.update_layout(
+                height=280, margin=dict(l=0, r=0, t=20, b=20),
+                yaxis_title="Avg. Visitor Spend ($)", xaxis_title=None,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            )
+            st.plotly_chart(fig_zrt, use_container_width=True)
+
+        if not df_zrt_overnight.empty:
+            st.markdown("#### Monthly Overnight Visitor % Trend (Zartico Historical)")
+            fig_ov = go.Figure()
+            fig_ov.add_trace(go.Bar(
+                x=df_zrt_overnight["month_str"], y=df_zrt_overnight["pct_overnight"],
+                marker_color="#21808D", name="Overnight %",
+                hovertemplate="<b>%{x}</b><br>Overnight: %{y:.1f}%<extra></extra>",
+            ))
+            fig_ov.update_layout(
+                height=240, margin=dict(l=0, r=0, t=20, b=20),
+                yaxis_title="Overnight %", yaxis_ticksuffix="%",
+            )
+            st.plotly_chart(fig_ov, use_container_width=True)
+
+        if not df_zrt_markets.empty:
+            st.markdown("#### Top Visitor Origin Markets (Zartico Q1 2025)")
+            _zrt_top = df_zrt_markets.sort_values("rank").head(10)
+            fig_mkt = go.Figure(go.Bar(
+                x=_zrt_top["pct_visitors"],
+                y=_zrt_top["market"],
+                orientation="h",
+                marker_color="#21808D",
+                hovertemplate="<b>%{y}</b><br>%{x:.1f}% of visitors<extra></extra>",
+            ))
+            fig_mkt.update_layout(
+                height=320, margin=dict(l=0, r=0, t=20, b=20),
+                xaxis_title="% of Visitors", yaxis=dict(autorange="reversed"),
+            )
+            st.plotly_chart(fig_mkt, use_container_width=True)
+
+        if not df_zrt_events.empty:
+            st.markdown("#### Event Impact Analysis (Zartico Historical)")
+            ze = df_zrt_events.iloc[0]
+            ev_c1, ev_c2, ev_c3 = st.columns(3)
+            with ev_c1:
+                st.markdown(kpi_card(
+                    "Total Spend Lift", f"+{ze.get('change_total_spend_pct',0):.1f}%",
+                    "vs. 4-week baseline", positive=True,
+                ), unsafe_allow_html=True)
+            with ev_c2:
+                st.markdown(kpi_card(
+                    "Visitor Spend Lift", f"+{ze.get('change_visitor_spend_pct',0):.1f}%",
+                    "visitor spend increase during event", positive=True,
+                ), unsafe_allow_html=True)
+            with ev_c3:
+                st.markdown(kpi_card(
+                    "Accommodation Share", f"{ze.get('pct_accommodation_spend',0):.0f}%",
+                    "of visitor spend during event", positive=True,
+                ), unsafe_allow_html=True)
+    else:
+        st.info("Run `python scripts/load_zartico_reports.py` to load Zartico historical data.")
+
+    st.markdown("---")
+
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -4764,7 +4997,17 @@ with tab_cs:
     st.markdown("### South OC Market Overview (2024)")
 
     if not df_cs_snap.empty:
-        snap_df = df_cs_snap[df_cs_snap["report_period"] == "2024-12-31"]
+        # Prefer South OC or Newport Beach/Dana Point 2024 annual data
+        snap_df = df_cs_snap[
+            (df_cs_snap["report_period"] == "2024-12-31") &
+            (df_cs_snap["market"].isin(["South Orange County CA", "Newport Beach/Dana Point"]))
+        ]
+        if snap_df.empty:
+            snap_df = df_cs_snap[df_cs_snap["report_period"] == "2024-12-31"]
+        if snap_df.empty:
+            snap_df = df_cs_snap[
+                df_cs_snap["market"].isin(["South Orange County CA", "Newport Beach/Dana Point"])
+            ]
         if snap_df.empty:
             snap_df = df_cs_snap.iloc[0:1]
         snap_df = snap_df.fillna(0)
@@ -5415,10 +5658,30 @@ with tab_dl:
             f"{len(_dfy_tables)} tables · visitor economy data",
             f"{_dfy_total:,}" if _dfy_total > 0 else "—",
         ), unsafe_allow_html=True)
+        _cs_tables = [t for t in counts if t.startswith("costar_")]
+        _cs_total  = sum(counts[t] for t in _cs_tables if isinstance(counts[t], int))
+        _cs_src_dot = "🟢" if _cs_total > 0 else "⚫"
         st.markdown(source_card(
-            "⚫", "CoStar", "source=costar · pending export", "—",
+            _cs_src_dot, "CoStar Market Intelligence",
+            f"{len(_cs_tables)} tables · hospitality analytics",
+            f"{_cs_total:,}" if _cs_total > 0 else "—",
         ), unsafe_allow_html=True)
     with _sc4:
+        _zrt_tables = [t for t in counts if t.startswith("zartico_")]
+        _zrt_total  = sum(counts[t] for t in _zrt_tables if isinstance(counts[t], int))
+        _zrt_src_dot = "🟢" if _zrt_total > 0 else "⚫"
+        st.markdown(source_card(
+            _zrt_src_dot, "Zartico Historical Reference",
+            f"{len(_zrt_tables)} tables · historical visitor data (Jun 2025)",
+            f"{_zrt_total:,}" if _zrt_total > 0 else "—",
+        ), unsafe_allow_html=True)
+        _evt_ct  = counts.get("vdp_events", 0)
+        _evt_dot = "🟢" if isinstance(_evt_ct, int) and _evt_ct > 0 else "⚫"
+        st.markdown(source_card(
+            _evt_dot, "VDP Event Calendar",
+            "vdp_events · scraped from visitdanapoint.com",
+            f"{_evt_ct:,}" if isinstance(_evt_ct, int) and _evt_ct > 0 else "—",
+        ), unsafe_allow_html=True)
         st.markdown(source_card(
             "⚫", "FRED / CA TOT / JWA", "external context · not yet loaded", "—",
         ), unsafe_allow_html=True)
