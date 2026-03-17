@@ -152,7 +152,7 @@ Formula: `TOT Revenue = Room Revenue × 0.10`
 - **Framework:** Streamlit (wide layout)
 - **DB connection:** `sqlite3` with `?mode=ro` (read-only)
 - **Caching:** `@st.cache_data(ttl=300)` on all data loaders
-- **Tabs:** Overview, Trends, Forward Outlook, Event Impact, Data Log
+- **Tabs (9):** Overview Brain, STR & Pipeline, Forward Outlook, Visitor Economy, Feeder Markets, Event Impact, Supply & Pipeline, Market Intelligence, Data & Downloads
 - **AI Analyst panel:** Server-side Claude API call via `ANTHROPIC_API_KEY` env var. Key never exposed in UI.
 - **Home button:** Dashboard title "VDP Analytics" in the header is a clickable link that resets to Overview tab.
 - **AI system prompt:** Includes full DB schema for all 25+ tables — AI is aware of every table.
@@ -223,8 +223,8 @@ python scripts/run_pipeline.py
 # Full refresh + latest code from GitHub
 git pull origin main && python scripts/run_pipeline.py
 
-# Deploy
-git add . && git commit -m "description" && git push
+# Deploy — ALWAYS commit directly to main, never create feature branches
+git add <specific files> && git commit -m "description" && git push origin main
 # Streamlit Cloud auto-redeploys from main branch
 ```
 
@@ -250,6 +250,7 @@ git add . && git commit -m "description" && git push
 - ALWAYS run `python scripts/run_pipeline.py` after schema changes
 - ALWAYS reference this CLAUDE.md before making changes
 - Dashboard is customer-facing — no API key fields, no debug output
+- Admin-only features (API key field, Pipeline Controls) are gated by `st.query_params.get("admin","").lower() == "true"` — append `?admin=true` to URL to access. Never expose to customers.
 - The Anthropic API key is set server-side via `ANTHROPIC_API_KEY` env var only
 - After every code change, verify the app still runs: `streamlit run dashboard/app.py`
 - `compute_insights.py` must run on every pipeline execution — it is the brain's daily self-update
@@ -281,7 +282,10 @@ After every session or error correction:
 - All new Zartico tables (`zartico_*`) use `UNIQUE(month_str)` or `UNIQUE(report_date)` for safe UPSERT re-runs.
 - `vdp_events` table uses `UNIQUE(event_name, event_date)` — safe to re-run seeding.
 - `beautifulsoup4` is required in `requirements.txt` for the events scraper.
-- The app's "Suggested name" for the platform is **PULSE** (Performance, Understanding, Leadership, Spending, Economy) — catchy for Dana Point leaders.
+- Platform is branded **PULSE** (Performance, Understanding, Leadership, Spending, Economy). Page title, sidebar, and AI system prompt all use "Dana Point PULSE" — this is live, not just a suggestion.
+- `visit_ca_airport_traffic` and `visit_ca_intl_arrivals` use column `month` (not `month_num`) — wrong name causes silent exception → empty DataFrame → ⚫ sidebar indicator.
+- Data loaders use `try/except: return pd.DataFrame()` — a ⚫ indicator means the loader threw silently. Diagnose by running SQL directly: `python3 -c "import sqlite3,pandas as pd; print(pd.read_sql_query('SELECT * FROM <table> LIMIT 1', sqlite3.connect('data/analytics.sqlite')))"`.
+- ALWAYS commit directly to `main` — never create feature branches. User explicitly requires this.
 
 ---
 
@@ -314,3 +318,4 @@ After every session or error correction:
 | 2026-03-09 | CLAUDE.md installed at project root; slash commands created; home button added to dashboard title | Claude + John Picou |
 | 2026-03-16 | Full brain upgrade: insights_daily + table_relationships schema; compute_insights.py (4 audiences, 17 insight types); pipeline updated to run all 25+ tables; Forward Outlook tab added to dashboard; AI system prompt extended with full schema | Claude + John Picou |
 | 2026-03-17 | Zartico integration (8 tables, historical reference); VDP Events table (10 seeded events); CoStar filter fix; Data & Downloads dynamic row counts; Zartico section in Visitor Economy tab; 6-point Board Report; pipeline steps 7+8 added | Claude + John Picou |
+| 2026-03-17 | Rebrand to Dana Point PULSE; 9-tab layout (+ Feeder Markets, Event Impact, Supply & Pipeline); Visit California ⚫ bug fix; admin mode (?admin=true); PULSE Score widget; footer with GloCon branding + glossary; direct-to-main commit workflow | Claude + John Picou |
