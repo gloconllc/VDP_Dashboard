@@ -158,7 +158,8 @@ def load_snapshot(cur: sqlite3.Cursor) -> int:
         data_source        TEXT,
         report_type        TEXT,
         notes              TEXT,
-        loaded_at          TEXT DEFAULT (datetime('now'))
+        loaded_at          TEXT DEFAULT (datetime('now')),
+        UNIQUE(report_period, market, report_type)
     );
     """)
     n = 0
@@ -170,6 +171,14 @@ def load_snapshot(cur: sqlite3.Cursor) -> int:
                 occ_yoy_pp, adr_yoy_pct, revpar_yoy_pct, supply_yoy_pct, demand_yoy_pct,
                 data_source, report_type, notes
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(report_period, market, report_type) DO UPDATE SET
+                occupancy_pct  = excluded.occupancy_pct,
+                adr_usd        = excluded.adr_usd,
+                revpar_usd     = excluded.revpar_usd,
+                occ_yoy_pp     = excluded.occ_yoy_pp,
+                adr_yoy_pct    = excluded.adr_yoy_pct,
+                revpar_yoy_pct = excluded.revpar_yoy_pct,
+                loaded_at      = datetime('now')
         """, row)
         n += 1
     print(f"  ✓ costar_market_snapshot ({n} rows)")
@@ -1025,17 +1034,25 @@ def parse_all_pdfs() -> dict:
 
 
 def _load_pdf_snapshots(cur: sqlite3.Cursor, snapshot_rows: list) -> int:
-    """Insert PDF-extracted snapshot rows into costar_market_snapshot (skip duplicates)."""
+    """Upsert PDF-extracted snapshot rows into costar_market_snapshot (no duplicates)."""
     n = 0
     for row in snapshot_rows:
         try:
             cur.execute("""
-                INSERT OR IGNORE INTO costar_market_snapshot (
+                INSERT INTO costar_market_snapshot (
                     report_period, market, submarket, total_supply_rooms, total_demand_rooms,
                     occupancy_pct, adr_usd, revpar_usd, room_revenue_usd,
                     occ_yoy_pp, adr_yoy_pct, revpar_yoy_pct, supply_yoy_pct, demand_yoy_pct,
                     data_source, report_type, notes
                 ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(report_period, market, report_type) DO UPDATE SET
+                    occupancy_pct  = excluded.occupancy_pct,
+                    adr_usd        = excluded.adr_usd,
+                    revpar_usd     = excluded.revpar_usd,
+                    occ_yoy_pp     = excluded.occ_yoy_pp,
+                    adr_yoy_pct    = excluded.adr_yoy_pct,
+                    revpar_yoy_pct = excluded.revpar_yoy_pct,
+                    loaded_at      = datetime('now')
             """, row)
             if cur.rowcount:
                 n += 1

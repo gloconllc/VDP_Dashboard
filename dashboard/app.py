@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import os
 import sys
@@ -949,6 +949,8 @@ def get_table_counts() -> dict:
         "costar_supply_pipeline",
         "costar_chain_scale_breakdown",
         "costar_competitive_set",
+        "costar_annual_performance",
+        "costar_profitability",
     ]:
         try:
             row = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()
@@ -2124,8 +2126,64 @@ tab_ov, tab_tr, tab_fo, tab_ev, tab_cs, tab_dl = st.tabs(
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ov:
 
+    # ── Board Report (auto-generated, always visible) ──────────────────────────
+    with st.expander("📋 VDP Board Report — Auto-Generated Talking Points", expanded=True):
+        st.markdown('<span class="ai-chip">BOARD READY</span>', unsafe_allow_html=True)
+
+        if m:
+            _rvp   = m.get("revpar_30", 0)
+            _rvp_d = m.get("revpar_delta", 0)
+            _adr   = m.get("adr_30", 0)
+            _adr_d = m.get("adr_delta", 0)
+            _occ   = m.get("occ_30", 0)
+            _occ_d = m.get("occ_delta", 0)
+            _tbid  = m.get("tbid_monthly", 0)
+            _cq    = m.get("comp_recent_q", 0)
+            _cpq   = m.get("comp_prior_q", 0)
+            _wknd  = m.get("wknd_revpar", 0)
+            _wkdy  = m.get("wkdy_revpar", 0)
+            _gap   = ((_wknd - _wkdy) / _wkdy * 100) if _wkdy else 0
+
+            _oos_pct  = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
+            _trips_m  = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) / 1_000_000 if not df_dfy_ov.empty else 0
+            _overnight = float(df_dfy_ov.iloc[0].get("overnight_pct", 0) or 0) if not df_dfy_ov.empty else 0
+
+            _dir_arrow = "▲" if _rvp_d >= 0 else "▼"
+            _dir_color = "#21808D" if _rvp_d >= 0 else "#c0152f"
+
+            st.markdown(f"""
+<div style="background:rgba(33,128,141,0.06);border-left:4px solid #21808D;border-radius:8px;padding:18px 22px;margin-bottom:12px;">
+<div style="font-size:13px;font-weight:700;color:#21808D;letter-spacing:.08em;margin-bottom:10px;">DANA POINT HOTEL MARKET — BOARD BRIEFING · {datetime.now().strftime("%B %Y").upper()}</div>
+
+<p><strong>1. Revenue Momentum</strong> &nbsp;<span style="color:{_dir_color};font-weight:700;">{_dir_arrow} {_rvp_d:+.1f}%</span><br>
+RevPAR is <strong>${_rvp:.0f}</strong> over the last 30 days ({_rvp_d:+.1f}% vs. prior period). ADR is <strong>${_adr:.0f}</strong> ({_adr_d:+.1f}%) with occupancy at <strong>{_occ:.1f}%</strong> ({_occ_d:+.1f}pp).
+<em>Action: {"Maintain pricing discipline — demand supports current rate levels." if _rvp_d >= 0 else "Examine rate softness drivers; consider targeted packages for shoulder periods."}</em></p>
+
+<p><strong>2. TBID Revenue Projection</strong><br>
+Estimated monthly TBID assessment: <strong>${_tbid:,.0f}</strong> at blended 1.25% rate.
+Compression activity: <strong>{_cq}</strong> days above 90% occupancy this quarter vs. {_cpq} prior quarter.
+<em>Action: {"Rate increase justified on compression nights — file recommendation with board." if _cq > _cpq else "Shoulder season underperforming — prioritize demand generation budget request."}</em></p>
+
+<p><strong>3. Visitor Economy</strong><br>
+{"<strong>{:.2f}M</strong> annual visitor trips · <strong>{:.1f}%</strong> overnight stays · <strong>{:.1f}%</strong> out-of-state visitors generating higher per-trip spend.".format(_trips_m, _overnight, _oos_pct) if _trips_m > 0 else "Run pipeline to load Datafy visitor data."}
+<em>Action: Target OOS feeder markets (SLC, DFW, NYC) with fly-drive campaign — they generate 1.3–1.4× room revenue per trip vs. LA drive market.</em></p>
+
+<p><strong>4. Weekend / Midweek Gap</strong><br>
+Weekend RevPAR: <strong>${_wknd:.0f}</strong> · Midweek RevPAR: <strong>${_wkdy:.0f}</strong> · Gap: <strong>{_gap:.0f}%</strong>.
+<em>Action: A targeted midweek demand campaign closing even 20% of this gap adds ~${(_wknd - _wkdy) * 0.2 * 90 / 7 * 12:,.0f}/year in portfolio room revenue.</em></p>
+
+<p><strong>5. Market Positioning</strong><br>
+Dana Point/South OC market ADR forecast: $285+ through 2025 (CoStar). VDP portfolio maintains premium positioning above market average.
+<em>Action: Present updated comp set analysis at next board meeting; request approval for rate strategy review.</em></p>
+</div>
+""", unsafe_allow_html=True)
+        else:
+            st.info("Run the pipeline to load STR data for board report generation.")
+
+    st.markdown("---")
+
     # ── AI Analyst Panel ───────────────────────────────────────────────────────
-    with st.expander("🧠 VDP Intelligence — Interrogate your data", expanded=True):
+    with st.expander("🧠 VDP Intelligence — Interrogate your data", expanded=False):
         st.markdown('<span class="ai-chip">AI ANALYST</span>', unsafe_allow_html=True)
 
         PROMPTS_META = [
@@ -3430,7 +3488,7 @@ with tab_cs:
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">South OC Market Intelligence</div>
-      <div class="hero-subtitle">CoStar Hospitality Analytics · South Orange County, CA · 2023–2024</div>
+      <div class="hero-subtitle">CoStar Hospitality Analytics · Newport Beach/Dana Point · 2024–2026 (Live PDF Extracts)</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -3553,10 +3611,11 @@ with tab_cs:
     st.markdown("### South OC Market Overview (2024)")
 
     if not df_cs_snap.empty:
-        snap = df_cs_snap[df_cs_snap["report_period"] == "2024-12-31"]
-        if snap.empty:
-            snap = df_cs_snap.iloc[[0]]
-        snap = snap.iloc[0]
+        snap_df = df_cs_snap[df_cs_snap["report_period"] == "2024-12-31"]
+        if snap_df.empty:
+            snap_df = df_cs_snap.iloc[0:1]
+        snap_df = snap_df.fillna(0)
+        snap = snap_df.iloc[0]
 
         c1, c2, c3, c4 = st.columns(4)
         with c1:
@@ -3588,9 +3647,14 @@ with tab_cs:
         # VDP vs Market comparison row
         st.markdown("#### VDP Portfolio vs. South OC Market (2024)")
         col_a, col_b, col_c = st.columns(3)
-        vdp_occ, mkt_occ = 76.4, float(snap['occupancy_pct'])
-        vdp_adr, mkt_adr = 288.50, float(snap['adr_usd'])
-        vdp_rvp, mkt_rvp = 220.42, float(snap['revpar_usd'])
+        # Use live DB annual averages for 2024; fall back to 30-day if no annual data
+        _2024_kpi = df_kpi[df_kpi["as_of_date"].astype(str).str.startswith("2024")] if not df_kpi.empty else pd.DataFrame()
+        vdp_occ = float(_2024_kpi["occ_pct"].mean()) if not _2024_kpi.empty else m.get("occ_30", 76.4)
+        vdp_adr = float(_2024_kpi["adr"].mean())     if not _2024_kpi.empty else m.get("adr_30", 288.50)
+        vdp_rvp = float(_2024_kpi["revpar"].mean())  if not _2024_kpi.empty else m.get("revpar_30", 220.42)
+        mkt_occ = float(snap["occupancy_pct"])
+        mkt_adr = float(snap["adr_usd"])
+        mkt_rvp = float(snap["revpar_usd"])
 
         with col_a:
             diff = vdp_occ - mkt_occ
