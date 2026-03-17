@@ -510,6 +510,82 @@ st.markdown("""
     font-family: 'Plus Jakarta Sans', sans-serif !important;
     font-weight: 600 !important;
   }
+
+  /* ── NotebookLM-inspired: inline source citation tags ────────────────── */
+  .nlm-tag {
+    display: inline-flex; align-items: center;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 9px; font-weight: 800; letter-spacing: .06em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 4px;
+    vertical-align: middle; margin: 0 2px; line-height: 1;
+  }
+  .nlm-tag-str    { background: rgba(37,99,235,.12);  color: #2563eb; }
+  .nlm-tag-datafy { background: rgba(22,163,74,.12);  color: #16a34a; }
+  .nlm-tag-costar { background: rgba(124,58,237,.12); color: #7c3aed; }
+  .nlm-tag-ai     { background: rgba(217,119,6,.12);  color: #b45309; }
+
+  /* ── NotebookLM-inspired: intelligence briefing box ─────────────────── */
+  .nlm-briefing {
+    background: rgba(33,128,141,0.06);
+    border: 1px solid rgba(33,128,141,0.18);
+    border-left: 4px solid #21808D;
+    border-radius: 14px; padding: 18px 22px; margin-bottom: 14px;
+    position: relative;
+  }
+  .nlm-briefing-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 10px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .10em; color: #21808D; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .nlm-point {
+    font-size: 13px; line-height: 1.65; margin-bottom: 10px;
+    padding-left: 16px; position: relative;
+  }
+  .nlm-point::before {
+    content: '▸'; position: absolute; left: 0;
+    color: #21808D; font-size: 11px; top: 2px;
+  }
+  .nlm-point:last-child { margin-bottom: 0; }
+
+  /* ── NotebookLM-inspired: Q&A insight blocks ─────────────────────────── */
+  .nlm-qa-q {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12.5px; font-weight: 700; margin-bottom: 5px;
+    display: flex; align-items: flex-start; gap: 7px;
+  }
+  .nlm-qa-mark {
+    width: 18px; height: 18px; min-width: 18px;
+    background: rgba(33,128,141,0.14); border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 900; color: #21808D; flex-shrink: 0; margin-top: 1px;
+  }
+  .nlm-qa-a { font-size: 12px; opacity: 0.70; line-height: 1.65; padding-left: 25px; }
+
+  /* ── NotebookLM-inspired: source attribution row ─────────────────────── */
+  .nlm-source-row {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    margin-top: 10px; padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+  }
+
+  /* ── Questions answered box ──────────────────────────────────────────── */
+  .nlm-questions {
+    background: rgba(33,128,141,0.05);
+    border: 1px solid rgba(33,128,141,0.14);
+    border-radius: 12px; padding: 16px 20px; margin-bottom: 14px;
+  }
+  .nlm-questions-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 10px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .09em; opacity: .55; margin-bottom: 10px;
+  }
+  .nlm-questions ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .nlm-questions ul li {
+    font-size: 12px; opacity: .80; padding-left: 14px; position: relative;
+  }
+  .nlm-questions ul li::before { content: '?'; position: absolute; left: 0;
+    font-weight: 800; color: #21808D; font-size: 11px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -2130,7 +2206,7 @@ def generate_board_report_html(
     df_insights_in: "pd.DataFrame",
     df_dfy_media_in: "pd.DataFrame",
 ) -> str:
-    """Return a complete, self-contained HTML board report string."""
+    """Return a complete, self-contained NotebookLM-style HTML board report."""
     now = datetime.now()
     report_date = now.strftime("%B %d, %Y")
     period_label = now.strftime("%B %Y")
@@ -2187,23 +2263,669 @@ def generate_board_report_html(
         for _, r in df_dfy_dma_in.nlargest(5, "visitor_days_share_pct").iterrows():
             dma_rows += f"<tr><td>{r.get('dma','—')}</td><td style='text-align:center'>{float(r.get('visitor_days_share_pct',0)):.1f}%</td><td style='text-align:right'>${float(r.get('avg_spend_usd',0)):,.0f}</td></tr>"
 
-    # Insights (DMO audience)
+    # Insights (DMO audience) — Q&A format
     dmo_insights = df_insights_in[df_insights_in["audience"] == "dmo"].head(3) if not df_insights_in.empty else pd.DataFrame()
     insight_rows = ""
     for _, row in dmo_insights.iterrows():
+        cat = str(row.get("category", "—")).replace("_", " ").title()
+        hl = row.get("headline", "")
+        body_raw = str(row.get("body", ""))
+        body_text = body_raw[:380] + ("…" if len(body_raw) > 380 else "")
         insight_rows += f"""
-        <div class="insight-block">
-          <div class="insight-cat">{str(row.get('category','—')).replace('_',' ').upper()}</div>
-          <div class="insight-hl">{row.get('headline','')}</div>
-          <div class="insight-body">{str(row.get('body',''))[:320]}{'…' if len(str(row.get('body',''))) > 320 else ''}</div>
-        </div>"""
+    <div class="nlm-card">
+      <div class="qa-block">
+        <div class="qa-q"><span class="qa-q-mark">Q</span>{cat}: What does the data signal?</div>
+        <div class="qa-a"><strong>{hl}</strong><br>
+          <span style="margin-top:5px;display:block;font-size:9pt">{body_text}</span>
+        </div>
+      </div>
+      <div class="concepts" style="margin-top:10px">
+        <span class="src-badge src-ai">AI Insight</span>
+        <span class="concept-chip">{cat}</span>
+        <span class="concept-chip">DMO Audience</span>
+      </div>
+    </div>"""
 
-    # Color helpers
-    def _clr(v): return "#1a7a5e" if v >= 0 else "#b91c1c"
+    # Color + arrow helpers
+    def _clr(v): return "#188038" if v >= 0 else "#b91c1c"
     def _arr(v): return "▲" if v >= 0 else "▼"
-    def _idx_clr(v): return "#1a7a5e" if v >= 100 else "#b91c1c"
+    def _idx_clr(v): return "#188038" if v >= 100 else "#b91c1c"
 
     tbid_ann = tbid * 12
+    midweek_opp = (wknd - wkdy) * 0.2 * 90 / 7 * 12
+
+    # Pre-computed conditional strings (keeps HTML f-string clean)
+    comp_sentence = (
+        f"Compression activity rose to <strong>{cq} nights above 90% occupancy</strong> "
+        f"this quarter vs. {cpq} prior — data supports rate increases."
+        if (cq >= cpq and cq > 0) else
+        f"Compression moderated to <strong>{cq} nights above 90% occupancy</strong> "
+        f"this quarter vs. {cpq} prior — shoulder-season demand programs are warranted."
+        if cq > 0 else
+        "Compression tracking in progress — load latest STR data for current quarter stats."
+    )
+    visitor_sentence = (
+        f"Dana Point welcomed <strong>{trips_m:.2f}M annual visitor trips</strong>, with "
+        f"<strong>{overnight:.0f}%</strong> overnight stays and <strong>{oos_pct:.0f}%</strong> "
+        f"out-of-state visitors driving disproportionate room revenue per trip."
+        if trips_m > 0 else
+        "Run <code>python scripts/run_pipeline.py</code> to load Datafy visitor economy data."
+    )
+    revenue_action = (
+        f"Approve rate increase on compression nights (90%+ occ). "
+        f"Proposed floor: ADR +${int(adr * 0.10)} on peak nights. "
+        f"Rationale: {cq} compression nights QTD vs. {cpq} prior."
+        if cq > 0 else
+        "Authorize $50K shoulder-season demand generation campaign targeting midweek bookings."
+    )
+    tbid_direction = (
+        "Trending above prior period — budget assumptions may be revised upward."
+        if rvp_d >= 0 else
+        "Monitor for sustained softness; consider revised budget assumptions if trend persists 60+ days."
+    )
+    media_action = (
+        f"Authorize increased media budget for fly markets (SLC, DFW, NYC, ORD). "
+        f"These DMAs generate 1.3–1.4× room revenue per trip vs. LA drive. "
+        f"Current ROAS: {roas:.1f}× on media attribution tracking."
+        if roas > 0 else
+        "Approve Datafy attribution study to quantify media ROAS — required for next budget cycle."
+    )
+    costar_action = (
+        f"Present updated CoStar comp set analysis. Portfolio at RGI {rgi:.0f} vs. "
+        f"South OC market. Discuss rate ladder strategy for Upper Upscale opportunities."
+        if mkt_rvp > 0 else
+        "Request CoStar market report subscription renewal for 2026. "
+        "Current data: Newport Beach/Dana Point submarket."
+    )
+    demand_risk_class = "risk-green" if rvp_d >= 0 else "risk-red"
+    demand_risk_icon  = "✅" if rvp_d >= 0 else "🔴"
+    demand_risk_msg   = (
+        "Demand trajectory supports current pricing strategy."
+        if rvp_d >= 0 else
+        "Softening demand warrants review of rate strategy and demand generation effectiveness."
+    )
+    supply_risk_msg = (
+        "Active supply pipeline adds rooms to South OC market. "
+        "New competitive supply may pressure occupancy for mid-tier segments in 2025–2026."
+        if not df_cs_snap_in.empty else
+        "Monitor CoStar supply pipeline data for new competitive hotel openings in South OC."
+    )
+    roas_val        = f"{roas:.1f}×" if roas > 0 else "N/A"
+    roas_trips_lbl  = f"{attr_trips:,} trips" if attr_trips > 0 else "load media data"
+    roas_impact_sub = f"${total_impact/1e6:.1f}M total impact" if total_impact > 0 else "Datafy media attribution"
+
+    # Index bar helper (CoStar section)
+    def _idx_bar(label, val):
+        fill = min(int(val), 100)
+        clr  = _idx_clr(val)
+        return (
+            f'<div class="index-bar">'
+            f'<span class="bar-label">{label}</span>'
+            f'<div class="bar-wrap"><div class="bar-fill" style="width:{fill}%;background:{clr}"></div></div>'
+            f'<span class="bar-val" style="color:{clr}">{val:.0f}</span>'
+            f'</div>'
+        )
+
+    costar_section = (
+        f"<div class='qa-block'>"
+        f"<div class='qa-q'><span class='qa-q-mark'>Q</span>How does VDP rank vs. the market?</div>"
+        f"<div class='qa-a'>South OC market 2024: <strong>Occ {mkt_occ:.1f}%</strong> · "
+        f"ADR <strong>${mkt_adr:.0f}</strong> · RevPAR <strong>${mkt_rvp:.0f}</strong>.</div>"
+        f"</div>"
+        f"{_idx_bar('MPI (Occ)', mpi)}"
+        f"{_idx_bar('ARI (Rate)', ari)}"
+        f"{_idx_bar('RGI (RevPAR)', rgi)}"
+        f"<div class='key-number'><div class='kn-num'>{rgi:.0f}</div>"
+        f"<div class='kn-desc'>RGI — VDP portfolio RevPAR index vs. South OC market. "
+        f"{'Above 100 = outperforming.' if rgi >= 100 else 'Below 100 = underperforming.'}</div></div>"
+        if mkt_rvp > 0 else
+        "<p style='color:#5f6368;font-size:9.5pt'>Load CoStar PDFs via the pipeline to see market comparison.</p>"
+    )
+    visitor_profile_section = (
+        f"<div class='qa-block'>"
+        f"<div class='qa-q'><span class='qa-q-mark'>Q</span>What does the visitor profile look like?</div>"
+        f"<div class='qa-a'>Dana Point welcomed <strong>{trips_m:.2f}M annual visitor trips</strong>. "
+        f"<strong>{overnight:.0f}%</strong> stayed overnight (avg {avg_los:.1f} nights), "
+        f"<strong>{100-overnight:.0f}%</strong> were same-day visitors. "
+        f"<strong>{oos_pct:.0f}%</strong> of visitor days came from out-of-state markets.</div>"
+        f"</div>"
+        f"<div class='key-number'><div class='kn-num'>{oos_pct:.0f}%</div>"
+        f"<div class='kn-desc'>Out-of-state visitors — fly-market travelers generate 1.3–1.4× "
+        f"room revenue per trip vs. LA drive market.</div></div>"
+        if trips_m > 0 else
+        "<p style='color:#5f6368;font-size:9.5pt'>Load Datafy visitor economy CSVs via the pipeline to see visitor profile.</p>"
+    )
+    dma_table = (
+        f"<table><thead><tr><th>Market (DMA)</th>"
+        f"<th style='text-align:center'>Visitor Days %</th>"
+        f"<th style='text-align:right'>Avg Spend</th></tr></thead>"
+        f"<tbody>{dma_rows}</tbody></table>"
+        if dma_rows else
+        "<p style='color:#5f6368;font-size:9.5pt'>DMA breakdown will appear after Datafy data is loaded.</p>"
+    )
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VDP Intelligence Briefing — {period_label}</title>
+<style>
+  *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, system-ui, sans-serif;
+    font-size: 11pt; color: #202124; background: #f8f9fa; line-height: 1.6;
+  }}
+  a {{ color: #21808D; text-decoration: none; }}
+
+  /* Layout */
+  .page {{ max-width: 920px; margin: 0 auto; padding: 32px 40px; }}
+  .section {{ margin-bottom: 26px; }}
+  .col2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }}
+  .stat-grid {{ display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 14px; }}
+
+  /* Header */
+  .nlm-header {{
+    background: #202124; color: white;
+    padding: 30px 36px 26px; border-radius: 14px; margin-bottom: 20px;
+    position: relative; overflow: hidden;
+  }}
+  .nlm-header::before {{
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #21808D, #32B8C6, #E68161);
+  }}
+  .nlm-header .org {{
+    font-size: 10pt; font-weight: 600; letter-spacing: .14em;
+    text-transform: uppercase; opacity: .65; margin-bottom: 10px;
+  }}
+  .nlm-header h1 {{
+    font-size: 24pt; font-weight: 800; letter-spacing: -.025em;
+    line-height: 1.15; margin-bottom: 14px;
+  }}
+  .nlm-header .src-row {{ display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }}
+  .nlm-header .meta {{ font-size: 9pt; opacity: .58; }}
+
+  /* Source badges */
+  .src-badge {{
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 8.5pt; font-weight: 800; letter-spacing: .05em;
+    padding: 3px 10px; border-radius: 99px; text-transform: uppercase;
+  }}
+  .src-str    {{ background: rgba(11,87,208,.18); color: #0b57d0; border: 1px solid rgba(11,87,208,.3); }}
+  .src-datafy {{ background: rgba(24,128,56,.18); color: #188038; border: 1px solid rgba(24,128,56,.3); }}
+  .src-costar {{ background: rgba(123,31,162,.18); color: #7b1fa2; border: 1px solid rgba(123,31,162,.3); }}
+  .src-ai     {{ background: rgba(180,83,9,.18); color: #b45309; border: 1px solid rgba(180,83,9,.3); }}
+  .src-tbid   {{ background: rgba(33,128,141,.18); color: #21808D; border: 1px solid rgba(33,128,141,.3); }}
+
+  /* Inline cite tags */
+  .cite {{
+    display: inline-flex; align-items: center;
+    font-size: 7pt; font-weight: 800; letter-spacing: .04em;
+    padding: 1px 5px; border-radius: 3px; vertical-align: middle; margin: 0 2px;
+    text-transform: uppercase;
+  }}
+  .cite-str    {{ background: rgba(11,87,208,.10); color: #0b57d0; }}
+  .cite-datafy {{ background: rgba(24,128,56,.10); color: #188038; }}
+  .cite-costar {{ background: rgba(123,31,162,.10); color: #7b1fa2; }}
+  .cite-ai     {{ background: rgba(180,83,9,.10); color: #b45309; }}
+
+  /* Questions box */
+  .q-box {{
+    background: #fff; border: 1px solid #e8eaed; border-radius: 12px;
+    padding: 18px 22px; margin-bottom: 18px;
+  }}
+  .q-box-title {{
+    font-size: 9pt; font-weight: 800; color: #5f6368; letter-spacing: .09em;
+    text-transform: uppercase; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }}
+  .q-box ol {{
+    list-style: none; counter-reset: qc;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }}
+  .q-box ol li {{
+    counter-increment: qc; font-size: 10pt; color: #202124; line-height: 1.5;
+    padding: 8px 12px; background: #f8f9fa; border-radius: 8px;
+    border-left: 3px solid #21808D;
+  }}
+  .q-box ol li::before {{ content: counter(qc) ". "; font-weight: 700; color: #21808D; }}
+
+  /* Audio/intelligence briefing box */
+  .audio-box {{
+    background: linear-gradient(135deg, #202124 0%, #2a3240 100%);
+    color: white; border-radius: 14px; padding: 22px 28px;
+    margin-bottom: 20px; position: relative; overflow: hidden;
+  }}
+  .audio-box::before {{
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, #21808D, #32B8C6, #E68161);
+  }}
+  .audio-title {{
+    font-size: 9pt; font-weight: 800; letter-spacing: .10em; text-transform: uppercase;
+    opacity: .65; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }}
+  .audio-pts {{ list-style: none; display: flex; flex-direction: column; gap: 11px; }}
+  .audio-pts li {{
+    font-size: 10.5pt; line-height: 1.65; opacity: .92;
+    padding-left: 20px; position: relative;
+  }}
+  .audio-pts li::before {{ content: '▸'; position: absolute; left: 0; color: #32B8C6; }}
+  .audio-pts li strong {{ color: #32B8C6; }}
+
+  /* Pull stats */
+  .pull-stat {{
+    background: white; border: 1px solid #e8eaed;
+    border-radius: 12px; padding: 16px 18px; position: relative; overflow: hidden;
+  }}
+  .pull-stat.featured {{ border-color: #21808D; border-width: 2px; }}
+  .pull-stat .ps-src {{ position: absolute; top: 10px; right: 10px; }}
+  .pull-stat .ps-label {{
+    font-size: 8pt; font-weight: 700; color: #5f6368; letter-spacing: .07em;
+    text-transform: uppercase; margin-bottom: 8px; padding-right: 40px;
+  }}
+  .pull-stat .ps-val {{
+    font-size: 21pt; font-weight: 800; color: #202124;
+    letter-spacing: -.03em; line-height: 1.1; margin-bottom: 4px;
+  }}
+  .pull-stat.featured .ps-val {{ color: #21808D; }}
+  .pull-stat .ps-delta {{ font-size: 9.5pt; font-weight: 700; margin-bottom: 2px; }}
+  .pull-stat .ps-sub {{ font-size: 8.5pt; color: #5f6368; }}
+
+  /* Section heading */
+  .s-head {{
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #e8eaed;
+  }}
+  .s-head h2 {{ font-size: 12pt; font-weight: 700; color: #202124; letter-spacing: -.01em; }}
+  .s-num {{
+    width: 22px; height: 22px; background: #21808D; color: white;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 9pt; font-weight: 800; flex-shrink: 0;
+  }}
+
+  /* NLM card */
+  .nlm-card {{
+    background: white; border: 1px solid #e8eaed;
+    border-radius: 12px; padding: 18px 22px; margin-bottom: 12px;
+  }}
+  .card-label {{
+    font-size: 8.5pt; font-weight: 700; color: #5f6368;
+    letter-spacing: .08em; text-transform: uppercase;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  }}
+  .nlm-card p {{ font-size: 10pt; line-height: 1.7; margin-bottom: 8px; }}
+  .nlm-card p:last-child {{ margin-bottom: 0; }}
+
+  /* Key number callout */
+  .key-number {{
+    background: #f8f9fa; border-radius: 8px; padding: 12px 16px; margin: 10px 0;
+    border-left: 4px solid #21808D; display: flex; align-items: center; gap: 14px;
+  }}
+  .kn-num {{ font-size: 18pt; font-weight: 800; color: #21808D; letter-spacing: -.02em; white-space: nowrap; }}
+  .kn-desc {{ font-size: 9.5pt; color: #5f6368; line-height: 1.5; }}
+
+  /* Q&A */
+  .qa-block {{ margin-bottom: 14px; }}
+  .qa-q {{
+    font-size: 10pt; font-weight: 700; color: #202124;
+    margin-bottom: 6px; display: flex; gap: 8px; align-items: flex-start;
+  }}
+  .qa-q-mark {{
+    width: 18px; height: 18px; background: #f1f3f4; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8.5pt; font-weight: 800; color: #5f6368; flex-shrink: 0; margin-top: 1px;
+  }}
+  .qa-a {{ font-size: 9.5pt; color: #5f6368; line-height: 1.65; padding-left: 26px; }}
+  .qa-a strong {{ color: #202124; }}
+
+  /* Index bars */
+  .index-bar {{ display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }}
+  .bar-label {{ width: 90px; color: #5f6368; font-size: 9pt; flex-shrink: 0; }}
+  .bar-wrap {{ flex: 1; background: #f1f3f4; border-radius: 4px; height: 8px; }}
+  .bar-fill {{ height: 8px; border-radius: 4px; }}
+  .bar-val {{ font-weight: 800; font-size: 9.5pt; width: 36px; text-align: right; }}
+
+  /* Table */
+  table {{ width: 100%; border-collapse: collapse; font-size: 9.5pt; }}
+  th {{
+    background: #f8f9fa; color: #5f6368; padding: 8px 10px; text-align: left;
+    font-weight: 700; font-size: 8.5pt; letter-spacing: .04em;
+    border-bottom: 2px solid #e8eaed;
+  }}
+  td {{ padding: 7px 10px; border-bottom: 1px solid #f1f5f9; }}
+  tr:last-child td {{ border-bottom: none; }}
+
+  /* Concept chips */
+  .concepts {{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }}
+  .concept-chip {{
+    background: #f1f3f4; color: #5f6368; font-size: 8.5pt; font-weight: 600;
+    padding: 3px 10px; border-radius: 99px; border: 1px solid #e8eaed;
+  }}
+
+  /* Action checklist */
+  .action-list {{ list-style: none; display: flex; flex-direction: column; gap: 8px; }}
+  .action-item {{
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 16px; background: white; border: 1px solid #e8eaed; border-radius: 10px;
+  }}
+  .action-check {{
+    width: 18px; height: 18px; min-width: 18px; border: 2px solid #21808D;
+    border-radius: 4px; margin-top: 2px; flex-shrink: 0;
+  }}
+  .action-body {{ flex: 1; font-size: 10pt; line-height: 1.55; color: #202124; }}
+  .action-body strong {{
+    font-size: 8pt; color: #21808D; letter-spacing: .06em;
+    text-transform: uppercase; display: block; margin-bottom: 2px;
+  }}
+
+  /* Risk flags */
+  .risk-item {{
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 12px 16px; border-radius: 10px; margin-bottom: 8px;
+    font-size: 9.5pt; border: 1px solid;
+  }}
+  .risk-amber {{ background: #fffbeb; border-color: #fcd34d; }}
+  .risk-red   {{ background: #fef2f2; border-color: #fca5a5; }}
+  .risk-green {{ background: #f0fdf4; border-color: #86efac; }}
+  .risk-icon  {{ font-size: 14pt; line-height: 1; flex-shrink: 0; }}
+  .risk-body  {{ flex: 1; }}
+  .risk-body strong {{ display: block; font-size: 9.5pt; margin-bottom: 2px; color: #202124; }}
+  .risk-body span   {{ color: #5f6368; line-height: 1.55; display: block; }}
+
+  /* Footer */
+  .nlm-footer {{
+    margin-top: 30px; padding: 16px 0; border-top: 1px solid #e8eaed;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    font-size: 8.5pt; color: #9aa0a6;
+  }}
+
+  /* Print */
+  @media print {{
+    body {{ background: white; font-size: 10pt; }}
+    .page {{ padding: 0; max-width: 100%; background: white; }}
+    .section {{ page-break-inside: avoid; }}
+    .audio-box, .nlm-header {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+    @page {{ margin: 18mm 16mm; }}
+  }}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- HEADER -->
+<div class="nlm-header">
+  <div class="org">Visit Dana Point &nbsp;·&nbsp; TBID Analytics &nbsp;·&nbsp; Intelligence Briefing</div>
+  <h1>VDP Portfolio Board Report</h1>
+  <div class="src-row">
+    <span class="src-badge src-str">● STR</span>
+    <span class="src-badge src-datafy">● Datafy</span>
+    <span class="src-badge src-costar">● CoStar</span>
+    <span class="src-badge src-ai">● AI Insights</span>
+    <span class="src-badge src-tbid">● TBID</span>
+  </div>
+  <div class="meta">Generated {report_date} &nbsp;·&nbsp; Dana Point, CA — South Orange County &nbsp;·&nbsp; 12-Property Select Portfolio</div>
+</div>
+
+<!-- QUESTIONS THIS REPORT ANSWERS -->
+<div class="section">
+<div class="q-box">
+  <div class="q-box-title">📑 Questions This Report Answers</div>
+  <ol>
+    <li>What is RevPAR doing and is it on pace vs. prior year?</li>
+    <li>How much TBID revenue is the portfolio generating?</li>
+    <li>Where are our highest-value visitors coming from?</li>
+    <li>Are we gaining or losing ground vs. the comp set?</li>
+    <li>What actions should the board authorize today?</li>
+    <li>What are the top risks to destination revenue?</li>
+  </ol>
+</div>
+</div>
+
+<!-- INTELLIGENCE BRIEFING -->
+<div class="audio-box">
+  <div class="audio-title">🎙 Intelligence Briefing — 3 Key Points</div>
+  <ul class="audio-pts">
+    <li>RevPAR is <strong>${rvp:.0f}</strong> over the last 30 days (<strong>{rvp_d:+.1f}%</strong> vs. prior period), with ADR at <strong>${adr:.0f}</strong> and occupancy at <strong>{occ:.1f}%</strong>. Estimated monthly TBID assessment: <strong>${tbid:,.0f}</strong> — on pace for ${tbid_ann:,.0f} annually.</li>
+    <li>{comp_sentence} Weekend RevPAR (<strong>${wknd:.0f}</strong>) exceeds midweek (<strong>${wkdy:.0f}</strong>) by {wkgap:.0f}% — closing 20% of this gap adds ~${midweek_opp:,.0f}/year.</li>
+    <li>{visitor_sentence}</li>
+  </ul>
+</div>
+
+<!-- PERFORMANCE SNAPSHOT -->
+<div class="section">
+<div class="s-head"><div class="s-num">1</div><h2>Performance Snapshot — Last 30 Days</h2></div>
+<div class="stat-grid">
+  <div class="pull-stat featured">
+    <div class="ps-src"><span class="cite cite-str">STR</span></div>
+    <div class="ps-label">RevPAR</div>
+    <div class="ps-val">${rvp:.0f}</div>
+    <div class="ps-delta" style="color:{_clr(rvp_d)}">{_arr(rvp_d)} {rvp_d:+.1f}%</div>
+    <div class="ps-sub">vs. prior 30 days</div>
+  </div>
+  <div class="pull-stat">
+    <div class="ps-src"><span class="cite cite-str">STR</span></div>
+    <div class="ps-label">ADR</div>
+    <div class="ps-val">${adr:.0f}</div>
+    <div class="ps-delta" style="color:{_clr(adr_d)}">{_arr(adr_d)} {adr_d:+.1f}%</div>
+    <div class="ps-sub">avg daily rate</div>
+  </div>
+  <div class="pull-stat">
+    <div class="ps-src"><span class="cite cite-str">STR</span></div>
+    <div class="ps-label">Occupancy</div>
+    <div class="ps-val">{occ:.1f}%</div>
+    <div class="ps-delta" style="color:{_clr(occ_d)}">{_arr(occ_d)} {occ_d:+.1f}pp</div>
+    <div class="ps-sub">room demand</div>
+  </div>
+  <div class="pull-stat">
+    <div class="ps-src"><span class="cite cite-tbid">TBID</span></div>
+    <div class="ps-label">Monthly TBID Est.</div>
+    <div class="ps-val">${tbid:,.0f}</div>
+    <div class="ps-delta" style="color:#21808D">${tbid_ann:,.0f}/yr</div>
+    <div class="ps-sub">blended 1.25% rate</div>
+  </div>
+</div>
+<div class="stat-grid">
+  <div class="pull-stat">
+    <div class="ps-src"><span class="cite cite-str">STR</span></div>
+    <div class="ps-label">Compression Days (QTD)</div>
+    <div class="ps-val">{cq}</div>
+    <div class="ps-delta" style="color:{_clr(cq - cpq)}">{_arr(cq - cpq)} vs. {cpq} prior Q</div>
+    <div class="ps-sub">nights above 90% occ</div>
+  </div>
+  <div class="pull-stat">
+    <div class="ps-src"><span class="cite cite-str">STR</span></div>
+    <div class="ps-label">Weekend RevPAR</div>
+    <div class="ps-val">${wknd:.0f}</div>
+    <div class="ps-delta" style="color:#5f6368">vs. ${wkdy:.0f} midweek</div>
+    <div class="ps-sub">{wkgap:.0f}% weekend premium</div>
+  </div>
+  <div class="pull-stat">
+    <div class="ps-src"><span class="cite cite-datafy">Datafy</span></div>
+    <div class="ps-label">Annual Visitor Trips</div>
+    <div class="ps-val">{"N/A" if trips_m == 0 else f"{trips_m:.2f}M"}</div>
+    <div class="ps-delta" style="color:#188038">{overnight:.0f}% overnight</div>
+    <div class="ps-sub">{oos_pct:.0f}% out-of-state</div>
+  </div>
+  <div class="pull-stat">
+    <div class="ps-src"><span class="cite cite-datafy">Datafy</span></div>
+    <div class="ps-label">Marketing ROAS</div>
+    <div class="ps-val">{roas_val}</div>
+    <div class="ps-delta" style="color:#188038">{roas_trips_lbl}</div>
+    <div class="ps-sub">{roas_impact_sub}</div>
+  </div>
+</div>
+</div>
+
+<!-- REVENUE ANALYSIS -->
+<div class="section">
+<div class="s-head">
+  <div class="s-num">2</div>
+  <h2>Revenue Analysis <span class="cite cite-str">STR</span> <span class="cite cite-costar">CoStar</span></h2>
+</div>
+<div class="col2">
+  <div class="nlm-card">
+    <div class="card-label">Revenue Story</div>
+    <div class="qa-block">
+      <div class="qa-q"><span class="qa-q-mark">Q</span>How is portfolio revenue trending?</div>
+      <div class="qa-a">RevPAR of <strong>${rvp:.0f}</strong> is {"trending upward" if rvp_d >= 0 else "softening"} at {rvp_d:+.1f}% vs. prior period <span class="cite cite-str">STR</span>. ADR of <strong>${adr:.0f}</strong> reflects {"strong rate discipline" if adr_d >= 0 else "rate pressure that warrants review"}. Full-year 2024: Occ <strong>{vdp_occ_ann:.1f}%</strong> · ADR <strong>${vdp_adr_ann:.0f}</strong> · RevPAR <strong>${vdp_rvp_ann:.0f}</strong>.</div>
+    </div>
+    <div class="qa-block">
+      <div class="qa-q"><span class="qa-q-mark">Q</span>What is the weekend/midweek opportunity?</div>
+      <div class="qa-a">Weekend RevPAR (<strong>${wknd:.0f}</strong>) exceeds midweek (<strong>${wkdy:.0f}</strong>) by {wkgap:.0f}% <span class="cite cite-str">STR</span>. Closing 20% of this gap via midweek programs adds approximately <strong>${midweek_opp:,.0f}/year</strong> in portfolio room revenue.</div>
+    </div>
+    <div class="concepts">
+      <span class="concept-chip">Rate Discipline</span>
+      <span class="concept-chip">Compression Events</span>
+      <span class="concept-chip">Midweek Gap</span>
+    </div>
+  </div>
+  <div class="nlm-card">
+    <div class="card-label">Market Context <span class="cite cite-costar">CoStar</span></div>
+    {costar_section}
+  </div>
+</div>
+</div>
+
+<!-- VISITOR INTELLIGENCE -->
+<div class="section">
+<div class="s-head">
+  <div class="s-num">3</div>
+  <h2>Visitor Intelligence <span class="cite cite-datafy">Datafy</span></h2>
+</div>
+<div class="col2">
+  <div class="nlm-card">
+    <div class="card-label">Visitor Profile</div>
+    {visitor_profile_section}
+  </div>
+  <div class="nlm-card">
+    <div class="card-label">Top Feeder Markets <span class="cite cite-datafy">Datafy</span></div>
+    {dma_table}
+  </div>
+</div>
+</div>
+
+<!-- FORWARD OUTLOOK -->
+<div class="section">
+<div class="s-head">
+  <div class="s-num">4</div>
+  <h2>Forward Outlook <span class="cite cite-ai">AI Insights</span></h2>
+</div>
+{insight_rows if insight_rows else '<div class="nlm-card"><p style="color:#5f6368;font-size:10pt">Run <code>python scripts/run_pipeline.py</code> to generate forward-looking AI insights.</p></div>'}
+</div>
+
+<!-- BOARD ACTIONS -->
+<div class="section">
+<div class="s-head"><div class="s-num">5</div><h2>Board Action Items</h2></div>
+<ul class="action-list">
+  <li class="action-item">
+    <div class="action-check"></div>
+    <div class="action-body"><strong>Revenue Strategy</strong>{revenue_action}</div>
+  </li>
+  <li class="action-item">
+    <div class="action-check"></div>
+    <div class="action-body"><strong>TBID Projection</strong>At current pace, annual TBID revenue estimated at <strong>${tbid_ann:,.0f}</strong> (blended 1.25%). {tbid_direction}</div>
+  </li>
+  <li class="action-item">
+    <div class="action-check"></div>
+    <div class="action-body"><strong>Fly-Market Investment</strong>{media_action}</div>
+  </li>
+  <li class="action-item">
+    <div class="action-check"></div>
+    <div class="action-body"><strong>Midweek Demand Program</strong>Authorize feasibility review. Closing 20% of the weekend/midweek gap (${wknd:.0f} → ${wkdy:.0f}) adds approximately <strong>${midweek_opp:,.0f}/year</strong> in portfolio room revenue.</div>
+  </li>
+  <li class="action-item">
+    <div class="action-check"></div>
+    <div class="action-body"><strong>Market Intelligence</strong>{costar_action}</div>
+  </li>
+</ul>
+</div>
+
+<!-- RISK RADAR -->
+<div class="section">
+<div class="s-head"><div class="s-num">6</div><h2>Risk Radar</h2></div>
+<div class="risk-item risk-amber">
+  <span class="risk-icon">⚠️</span>
+  <div class="risk-body">
+    <strong>Labor Cost Pressure</strong>
+    <span>Regional hotel labor agreement (2024) drives wage increases through 2028. Margins compress even as RevPAR grows. Monitor GOP margins and adjust TBID projection models annually.</span>
+  </div>
+</div>
+<div class="risk-item risk-amber">
+  <span class="risk-icon">⚠️</span>
+  <div class="risk-body">
+    <strong>Supply Pipeline</strong>
+    <span>{supply_risk_msg}</span>
+  </div>
+</div>
+<div class="risk-item {demand_risk_class}">
+  <span class="risk-icon">{demand_risk_icon}</span>
+  <div class="risk-body">
+    <strong>Demand Trajectory</strong>
+    <span>RevPAR {rvp_d:+.1f}% vs. prior period <span class="cite cite-str">STR</span>. {demand_risk_msg}</span>
+  </div>
+</div>
+</div>
+
+<!-- DATA PROVENANCE -->
+<div class="section">
+<div class="s-head"><div class="s-num">7</div><h2>Data Provenance</h2></div>
+<div class="nlm-card">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:9.5pt;">
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span class="src-badge src-str">STR</span>
+        <span style="color:#5f6368;font-weight:600">Smith Travel Research</span>
+      </div>
+      <div style="color:#9aa0a6;font-size:8.5pt;line-height:1.5">Hotel performance data (occ, ADR, RevPAR) for VDP Select Portfolio — 12 properties, South Orange County. Daily/monthly exports.</div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span class="src-badge src-datafy">Datafy</span>
+        <span style="color:#5f6368;font-weight:600">Visitor Economy Intelligence</span>
+      </div>
+      <div style="color:#9aa0a6;font-size:8.5pt;line-height:1.5">Visitor trips, DMA feeder profiles, spending by category, media attribution and ROAS. Annual/seasonal report periods.</div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span class="src-badge src-costar">CoStar</span>
+        <span style="color:#5f6368;font-weight:600">CoStar Hospitality Analytics</span>
+      </div>
+      <div style="color:#9aa0a6;font-size:8.5pt;line-height:1.5">Market-level benchmarks for Newport Beach/Dana Point submarket. Supply pipeline, chain scale, profitability.</div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span class="src-badge src-ai">AI</span>
+        <span style="color:#5f6368;font-weight:600">Claude AI Insights Engine</span>
+      </div>
+      <div style="color:#9aa0a6;font-size:8.5pt;line-height:1.5">Forward-looking insights generated daily from all Layer 1 data. 4 audience tracks: DMO, City, Visitor, Resident.</div>
+    </div>
+  </div>
+  <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e8eaed;font-size:8.5pt;color:#9aa0a6">
+    <strong>TBID Revenue</strong> estimated at blended 1.25% assessment rate (Tier 1: 1.0%, Tier 2: 1.5%). &nbsp;·&nbsp; Refresh: <code>python scripts/run_pipeline.py</code>
+  </div>
+</div>
+</div>
+
+<!-- FOOTER -->
+<div class="nlm-footer">
+  <div>
+    <div style="font-weight:700;color:#5f6368;margin-bottom:6px">Visit Dana Point — VDP Analytics Platform</div>
+    <div style="display:flex;gap:6px">
+      <span class="src-badge src-str">STR</span>
+      <span class="src-badge src-datafy">Datafy</span>
+      <span class="src-badge src-costar">CoStar</span>
+      <span class="src-badge src-ai">AI</span>
+    </div>
+  </div>
+  <div style="text-align:right">
+    <div>Generated: {report_date}</div>
+    <div>Confidential — Board Use Only</div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>"""
+    return html
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -2515,30 +3237,57 @@ with tab_ov:
             _dir_arrow = "▲" if _rvp_d >= 0 else "▼"
             _dir_color = "#21808D" if _rvp_d >= 0 else "#c0152f"
 
+            # Source badge row
+            _src_row = (
+                '<span class="nlm-tag nlm-tag-str">STR</span>'
+                + (' <span class="nlm-tag nlm-tag-datafy">Datafy</span>' if _trips_m > 0 else '')
+                + ' <span class="nlm-tag nlm-tag-ai">AI Insights</span>'
+            )
+            _midweek_opp_lbl = f"${(_wknd - _wkdy) * 0.2 * 90 / 7 * 12:,.0f}/year"
+            _visitor_lbl = (
+                f"<strong>{_trips_m:.2f}M</strong> annual visitor trips · "
+                f"<strong>{_overnight:.1f}%</strong> overnight stays · "
+                f"<strong>{_oos_pct:.1f}%</strong> out-of-state visitors generating higher per-trip spend."
+                if _trips_m > 0 else "Run pipeline to load Datafy visitor data."
+            )
             st.markdown(f"""
-<div style="background:rgba(33,128,141,0.06);border-left:4px solid #21808D;border-radius:8px;padding:18px 22px;margin-bottom:12px;">
-<div style="font-size:13px;font-weight:700;color:#21808D;letter-spacing:.08em;margin-bottom:10px;">DANA POINT HOTEL MARKET — BOARD BRIEFING · {datetime.now().strftime("%B %Y").upper()}</div>
+<div class="nlm-briefing">
+<div class="nlm-briefing-title">
+  🎙 Dana Point Hotel Market — Intelligence Briefing &nbsp;·&nbsp; {datetime.now().strftime("%B %Y").upper()}
+  &nbsp; {_src_row}
+</div>
 
-<p><strong>1. Revenue Momentum</strong> &nbsp;<span style="color:{_dir_color};font-weight:700;">{_dir_arrow} {_rvp_d:+.1f}%</span><br>
-RevPAR is <strong>${_rvp:.0f}</strong> over the last 30 days ({_rvp_d:+.1f}% vs. prior period). ADR is <strong>${_adr:.0f}</strong> ({_adr_d:+.1f}%) with occupancy at <strong>{_occ:.1f}%</strong> ({_occ_d:+.1f}pp).
-<em>Action: {"Maintain pricing discipline — demand supports current rate levels." if _rvp_d >= 0 else "Examine rate softness drivers; consider targeted packages for shoulder periods."}</em></p>
+<div class="nlm-point">
+  <strong>Revenue Momentum</strong> &nbsp;<span style="color:{_dir_color};font-weight:700;">{_dir_arrow} {_rvp_d:+.1f}%</span><br>
+  RevPAR is <strong>${_rvp:.0f}</strong> over the last 30 days ({_rvp_d:+.1f}% vs. prior period).
+  ADR is <strong>${_adr:.0f}</strong> ({_adr_d:+.1f}%) · Occupancy at <strong>{_occ:.1f}%</strong> ({_occ_d:+.1f}pp).
+  <br><em style="opacity:.72">→ {"Maintain pricing discipline — demand supports current rate levels." if _rvp_d >= 0 else "Examine rate softness drivers; consider targeted packages for shoulder periods."}</em>
+</div>
 
-<p><strong>2. TBID Revenue Projection</strong><br>
-Estimated monthly TBID assessment: <strong>${_tbid:,.0f}</strong> at blended 1.25% rate.
-Compression activity: <strong>{_cq}</strong> days above 90% occupancy this quarter vs. {_cpq} prior quarter.
-<em>Action: {"Rate increase justified on compression nights — file recommendation with board." if _cq > _cpq else "Shoulder season underperforming — prioritize demand generation budget request."}</em></p>
+<div class="nlm-point">
+  <strong>TBID Revenue Projection</strong> <span class="nlm-tag nlm-tag-str">STR</span><br>
+  Monthly TBID assessment: <strong>${_tbid:,.0f}</strong> (blended 1.25% rate).
+  Compression: <strong>{_cq}</strong> nights above 90% occ this quarter vs. {_cpq} prior.
+  <br><em style="opacity:.72">→ {"Rate increase justified on compression nights — file recommendation with board." if _cq > _cpq else "Shoulder season underperforming — prioritize demand generation budget request."}</em>
+</div>
 
-<p><strong>3. Visitor Economy</strong><br>
-{"<strong>{:.2f}M</strong> annual visitor trips · <strong>{:.1f}%</strong> overnight stays · <strong>{:.1f}%</strong> out-of-state visitors generating higher per-trip spend.".format(_trips_m, _overnight, _oos_pct) if _trips_m > 0 else "Run pipeline to load Datafy visitor data."}
-<em>Action: Target OOS feeder markets (SLC, DFW, NYC) with fly-drive campaign — they generate 1.3–1.4× room revenue per trip vs. LA drive market.</em></p>
+<div class="nlm-point">
+  <strong>Visitor Economy</strong> <span class="nlm-tag nlm-tag-datafy">Datafy</span><br>
+  {_visitor_lbl}
+  <br><em style="opacity:.72">→ Target OOS feeder markets (SLC, DFW, NYC) with fly-drive campaign — 1.3–1.4× room revenue per trip vs. LA drive market.</em>
+</div>
 
-<p><strong>4. Weekend / Midweek Gap</strong><br>
-Weekend RevPAR: <strong>${_wknd:.0f}</strong> · Midweek RevPAR: <strong>${_wkdy:.0f}</strong> · Gap: <strong>{_gap:.0f}%</strong>.
-<em>Action: A targeted midweek demand campaign closing even 20% of this gap adds ~${(_wknd - _wkdy) * 0.2 * 90 / 7 * 12:,.0f}/year in portfolio room revenue.</em></p>
+<div class="nlm-point">
+  <strong>Weekend / Midweek Gap</strong> <span class="nlm-tag nlm-tag-str">STR</span><br>
+  Weekend RevPAR: <strong>${_wknd:.0f}</strong> · Midweek: <strong>${_wkdy:.0f}</strong> · Gap: <strong>{_gap:.0f}%</strong>.
+  <br><em style="opacity:.72">→ Closing 20% of this gap adds ~{_midweek_opp_lbl} in incremental portfolio room revenue.</em>
+</div>
 
-<p><strong>5. Market Positioning</strong><br>
-Dana Point/South OC market ADR forecast: $285+ through 2025 (CoStar). VDP portfolio maintains premium positioning above market average.
-<em>Action: Present updated comp set analysis at next board meeting; request approval for rate strategy review.</em></p>
+<div class="nlm-point">
+  <strong>Market Positioning</strong> <span class="nlm-tag nlm-tag-ai">CoStar</span><br>
+  Dana Point/South OC market ADR forecast: $285+ through 2025. VDP portfolio maintains premium positioning above market average.
+  <br><em style="opacity:.72">→ Present updated comp set analysis at next board meeting; request approval for rate strategy review.</em>
+</div>
 </div>
 """, unsafe_allow_html=True)
         else:
@@ -3386,13 +4135,22 @@ with tab_fo:
             rows = df_aud.to_dict("records")
             col_pairs = [rows[i:i+2] for i in range(0, len(rows), 2)]
 
+            # Source tags by audience
+            _aud_tags = {
+                "dmo":      '<span class="nlm-tag nlm-tag-str">STR</span><span class="nlm-tag nlm-tag-datafy">Datafy</span>',
+                "city":     '<span class="nlm-tag nlm-tag-str">STR</span><span class="nlm-tag nlm-tag-datafy">Datafy</span>',
+                "visitor":  '<span class="nlm-tag nlm-tag-datafy">Datafy</span><span class="nlm-tag nlm-tag-str">STR</span>',
+                "resident": '<span class="nlm-tag nlm-tag-str">STR</span>',
+                "cross":    '<span class="nlm-tag nlm-tag-str">STR</span><span class="nlm-tag nlm-tag-datafy">Datafy</span>',
+            }
+            _src_tags_html = _aud_tags.get(audience, '<span class="nlm-tag nlm-tag-ai">AI</span>')
+
             for pair in col_pairs:
                 cols = st.columns(len(pair))
                 for col, row in zip(cols, pair):
                     style_cls = PRIORITY_STYLE.get(row.get("priority", 5), "insight-info")
                     horizon   = row.get("horizon_days", 30)
                     category  = row.get("category", "").replace("_", " ").title()
-                    sources   = row.get("data_sources", "")
                     as_of     = row.get("as_of_date", "")
 
                     with col:
@@ -3400,13 +4158,13 @@ with tab_fo:
                             f'<div class="insight-card {style_cls}">'
                             f'<div class="insight-title">{row["headline"]}</div>'
                             f'<p class="insight-body">{row["body"]}</p>'
-                            f'<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
-                            f'<span style="font-size:10px;opacity:0.5;background:rgba(255,255,255,0.07);'
+                            f'<div class="nlm-source-row">'
+                            f'{_src_tags_html}'
+                            f'<span style="font-size:10px;opacity:0.45;background:rgba(255,255,255,0.07);'
                             f'padding:2px 8px;border-radius:99px;">{category}</span>'
-                            f'<span style="font-size:10px;opacity:0.5;background:rgba(255,255,255,0.07);'
-                            f'padding:2px 8px;border-radius:99px;">⏱ {horizon}d outlook</span>'
-                            f'<span style="font-size:10px;opacity:0.40;'
-                            f'padding:2px 4px;">as of {as_of}</span>'
+                            f'<span style="font-size:10px;opacity:0.45;background:rgba(255,255,255,0.07);'
+                            f'padding:2px 8px;border-radius:99px;">⏱ {horizon}d</span>'
+                            f'<span style="font-size:10px;opacity:0.35;padding:2px 4px;">as of {as_of}</span>'
                             f'</div>'
                             f'</div>',
                             unsafe_allow_html=True,
