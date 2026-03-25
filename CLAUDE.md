@@ -11,6 +11,7 @@ Owner: John Picou | Org: gloconllc | Repo: VDPDashboard
 - **Layer 1 (Current):** Datafy, CoStar, STR are the CURRENT data sources. Always present these as current performance.
 - **Layer 1.5 — Historical Reference:** Zartico (Jun 2025 snapshot) is historical reference only. Use for trend comparison and to tell the growth story. NEVER present Zartico as current data.
 - **Layer 2 — Context:** FRED hotel pricing index, CA State TOT data, JWA passenger counts, Visit California forecasts.
+- **Layer 2.5 — Social Performance:** Later.com social media exports (Instagram, Facebook, TikTok). Current social data. Use for digital/social narrative alongside STR and Datafy. Files in `data/later/IG/`, `data/later/FB/`, `data/later/TikTok/`. Parsed by `load_later_reports.py` into 12 `later_*` tables.
 - **Layer 3 — Color:** Media, social sentiment, competitive anecdotes. Never override Layer 1 with Layer 3.
 
 ---
@@ -38,6 +39,7 @@ VDP_Dashboard/                      (project root)
 │   ├── fetch_fred_data.py          ← External context pull
 │   ├── fetch_ca_tot.py
 │   ├── fetch_jwa_stats.py
+│   ├── load_later_reports.py       ← Later.com social media (IG/FB/TikTok) → 12 tables (STEP 10, non-fatal)
 │   └── init_sqlite_db.py           ← DB initialization
 ├── logs/
 │   └── pipeline.log
@@ -319,3 +321,4 @@ After every session or error correction:
 | 2026-03-16 | Full brain upgrade: insights_daily + table_relationships schema; compute_insights.py (4 audiences, 17 insight types); pipeline updated to run all 25+ tables; Forward Outlook tab added to dashboard; AI system prompt extended with full schema | Claude + John Picou |
 | 2026-03-17 | Zartico integration (8 tables, historical reference); VDP Events table (10 seeded events); CoStar filter fix; Data & Downloads dynamic row counts; Zartico section in Visitor Economy tab; 6-point Board Report; pipeline steps 7+8 added | Claude + John Picou |
 | 2026-03-17 | Rebrand to Dana Point PULSE; 9-tab layout (+ Feeder Markets, Event Impact, Supply & Pipeline); Visit California ⚫ bug fix; admin mode (?admin=true); PULSE Score widget; footer with GloCon branding + glossary; direct-to-main commit workflow | Claude + John Picou |
+| 2026-03-25 | Later.com social media integration (IG/FB/TikTok → 12 tables); Pipeline step 10; Pipeline Status dot; Data & Downloads card; Datafy GA4 summary in Board Report; Performance Command Center card+chart pairs; PULSE Score whitespace fix + scale readability; STR chart animations; Key Forward Metrics date references | Claude + John Picou |

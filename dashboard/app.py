@@ -1296,6 +1296,83 @@ def load_datafy_social_audience() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=300)
+def load_later_ig_profile() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM later_ig_profile_growth ORDER BY data_date DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_later_ig_posts() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM later_ig_posts ORDER BY posted_at DESC LIMIT 200", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_later_ig_reels() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM later_ig_reels ORDER BY posted_at DESC LIMIT 200", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_later_ig_demographics() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM later_ig_audience_demographics", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_later_fb_profile() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM later_fb_profile_growth ORDER BY data_date DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_later_fb_posts() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM later_fb_posts ORDER BY posted_at DESC LIMIT 200", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_later_tk_profile() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM later_tk_profile_growth ORDER BY data_date DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_later_tk_demographics() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM later_tk_audience_demographics", conn)
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
 def load_datafy_clusters() -> pd.DataFrame:
     conn = get_connection()
     try:
@@ -1322,6 +1399,15 @@ def get_table_counts() -> dict:
         "datafy_social_traffic_sources",
         "datafy_social_audience_overview",
         "datafy_social_top_pages",
+        "later_ig_profile_growth",
+        "later_ig_posts",
+        "later_ig_reels",
+        "later_ig_audience_demographics",
+        "later_fb_profile_growth",
+        "later_fb_posts",
+        "later_fb_profile_interactions",
+        "later_tk_profile_growth",
+        "later_tk_audience_demographics",
     ]
     for t in all_tables:
         try:
@@ -2393,6 +2479,15 @@ df_vca_forecast = load_vca_travel_forecast()
 df_vca_lodging  = load_vca_lodging_forecast()
 df_vca_airport  = load_vca_airport_traffic()
 df_vca_intl     = load_vca_intl_arrivals()
+# Later.com social media data (IG, FB, TikTok)
+df_later_ig_profile  = load_later_ig_profile()
+df_later_ig_posts    = load_later_ig_posts()
+df_later_ig_reels    = load_later_ig_reels()
+df_later_ig_demo     = load_later_ig_demographics()
+df_later_fb_profile  = load_later_fb_profile()
+df_later_fb_posts    = load_later_fb_posts()
+df_later_tk_profile  = load_later_tk_profile()
+df_later_tk_demo     = load_later_tk_demographics()
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -2547,6 +2642,13 @@ with st.sidebar:
             pass
     _vca_dot  = "🟢" if _vca_rows > 0 else "⚫"
     _vca_label = f"{_vca_rows:,} rows" if _vca_rows > 0 else "No data"
+    # Later.com social media counts
+    _later_ig_rows = len(df_later_ig_profile) + len(df_later_ig_posts) + len(df_later_ig_reels)
+    _later_fb_rows = len(df_later_fb_profile) + len(df_later_fb_posts)
+    _later_tk_rows = len(df_later_tk_profile)
+    _later_total   = _later_ig_rows + _later_fb_rows + _later_tk_rows
+    _later_dot     = "🟢" if _later_total > 0 else "⚫"
+    _later_label   = f"IG·FB·TK &nbsp;·&nbsp; {_later_total:,} rows" if _later_total > 0 else "No data"
     st.markdown("**Pipeline Status**")
     st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {_d_label}")
     st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_label}")
@@ -2555,6 +2657,7 @@ with st.sidebar:
     st.markdown(f"{_zrt_dot} Zartico (Hist.) &nbsp;·&nbsp; {_zrt_label}")
     st.markdown(f"{_evts_dot} VDP Events &nbsp;·&nbsp; {_evts_label}")
     st.markdown(f"{_vca_dot} Visit California &nbsp;·&nbsp; {_vca_label}")
+    st.markdown(f"{_later_dot} Social (Later) &nbsp;·&nbsp; {_later_label}")
     st.caption(f"Last ETL run: {last_log}")
 
     if not df_daily.empty:
@@ -3750,6 +3853,18 @@ with tab_ov:
                 + ' <span class="nlm-tag nlm-tag-ai">AI Insights</span>'
             )
             _midweek_opp_lbl = f"${(_wknd - _wkdy) * 0.2 * 90 / 7 * 12:,.0f}/year"
+            # Datafy GA4 web analytics summary
+            if not df_dfy_social_aud.empty:
+                _ga4_sessions = int(df_dfy_social_aud.iloc[0].get("total_sessions", 0) or 0)
+                _ga4_eng      = float(df_dfy_social_aud.iloc[0].get("engagement_rate", 0) or 0)
+                _ga4_top_page = df_dfy_social_pages.iloc[0].get("page_path", "—") if not df_dfy_social_pages.empty else "—"
+                _ga4_lbl = (
+                    f"Website sessions: <strong>{_ga4_sessions:,}</strong> &nbsp;·&nbsp; "
+                    f"Engagement rate: <strong>{_ga4_eng:.1f}%</strong> &nbsp;·&nbsp; "
+                    f"Top page: <strong>{_ga4_top_page}</strong>."
+                )
+            else:
+                _ga4_lbl = "Run pipeline to load Datafy GA4 web analytics data."
             _visitor_lbl = (
                 f"<strong>{_trips_m:.2f}M</strong> annual visitor trips · "
                 f"<strong>{_overnight:.1f}%</strong> overnight stays · "
@@ -3781,6 +3896,12 @@ with tab_ov:
   <strong>Visitor Economy</strong> <span class="nlm-tag nlm-tag-datafy">Datafy</span><br>
   {_visitor_lbl}
   <br><em style="opacity:.72">→ Target OOS feeder markets (SLC, DFW, NYC) with fly-drive campaign — 1.3–1.4× room revenue per trip vs. LA drive market.</em>
+</div>
+
+<div class="nlm-point">
+  <strong>Digital & Social Performance</strong> <span class="nlm-tag nlm-tag-datafy">Datafy GA4</span><br>
+  {_ga4_lbl}
+  <br><em style="opacity:.72">→ Digital engagement reflects destination intent; top pages signal content demand for campaign alignment.</em>
 </div>
 
 <div class="nlm-point">
@@ -3937,9 +4058,14 @@ with tab_ov:
         _gauge_fig = go.Figure(go.Indicator(
             mode="gauge+number",
             value=_pulse_score,
-            title={"text": "Dana Point Market PULSE Score", "font": {"size": 14}},
+            title={"text": "PULSE Score", "font": {"size": 12}},
             gauge={
-                "axis": {"range": [0, 100], "tickwidth": 1, "tickcolor": "rgba(255,255,255,0.3)"},
+                "axis": {
+                    "range": [0, 100], "tickwidth": 1,
+                    "tickcolor": "rgba(255,255,255,0.5)",
+                    "tickfont": {"size": 11},
+                    "nticks": 6,
+                },
                 "bar": {"color": _p_color, "thickness": 0.28},
                 "bgcolor": "rgba(0,0,0,0)",
                 "borderwidth": 0,
@@ -3959,12 +4085,12 @@ with tab_ov:
         ))
         _gauge_fig.update_layout(
             height=200,
-            margin=dict(l=30, r=30, t=40, b=10),
+            margin=dict(l=20, r=20, t=10, b=0),
             paper_bgcolor="rgba(0,0,0,0)",
             font=dict(family="Plus Jakarta Sans, Inter, system-ui, sans-serif", color="rgba(255,255,255,0.75)"),
         )
 
-        _pulse_col1, _pulse_col2 = st.columns([2, 1])
+        _pulse_col1, _pulse_col2 = st.columns([3, 2])
         with _pulse_col1:
             st.markdown(
                 f'<div class="pulse-wrapper" style="color:{_p_color};">'
@@ -4001,7 +4127,6 @@ with tab_ov:
             '</div>',
             unsafe_allow_html=True,
         )
-        st.markdown("<br>", unsafe_allow_html=True)
 
     # ── AI Analyst Panel ───────────────────────────────────────────────────────
     with st.expander("🧠 PULSE AI Analyst — Interrogate your data", expanded=False):
@@ -4115,16 +4240,46 @@ with tab_ov:
             'font-weight:700;letter-spacing:-0.01em;margin-bottom:8px;">Performance Command Center</div>',
             unsafe_allow_html=True,
         )
-        cols = st.columns(3)
-        for i, k in enumerate(kpis):
-            with cols[i % 3]:
-                st.markdown(
-                    kpi_card(k["label"], k["value"], k["delta"],
-                             k.get("positive", True), k.get("neutral", False),
-                             "", k.get("date_label", ""), k.get("raw_value", 0.0),
-                             k.get("sparkline")),
-                    unsafe_allow_html=True,
-                )
+        # Render each KPI as [card | mini sparkline chart] pairs, 2 per row
+        def _mini_spark_fig(values, positive=True):
+            if not values:
+                return None
+            _color = TEAL if positive else ORANGE
+            _fill  = "rgba(33,128,141,0.12)" if positive else "rgba(245,158,11,0.12)"
+            _fig = go.Figure(go.Scatter(
+                y=values, mode="lines",
+                line=dict(color=_color, width=2),
+                fill="tozeroy", fillcolor=_fill,
+            ))
+            _fig.update_layout(
+                height=72, margin=dict(l=0, r=0, t=4, b=0),
+                xaxis=dict(visible=False), yaxis=dict(visible=False),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                showlegend=False, transition={"duration": 500},
+            )
+            return _fig
+
+        _kpi_rows = [kpis[i:i+2] for i in range(0, len(kpis), 2)]
+        for _row_kpis in _kpi_rows:
+            _rcols = st.columns([1.1, 1.0, 0.05, 1.1, 1.0])
+            for _idx, _k in enumerate(_row_kpis):
+                # Use columns at indices 0,1 for first KPI and 3,4 for second
+                _card_col  = _rcols[0 if _idx == 0 else 3]
+                _chart_col = _rcols[1 if _idx == 0 else 4]
+                with _card_col:
+                    st.markdown(
+                        kpi_card(_k["label"], _k["value"], _k["delta"],
+                                 _k.get("positive", True), _k.get("neutral", False),
+                                 "", _k.get("date_label", ""), _k.get("raw_value", 0.0),
+                                 []),  # no sparkline in HTML — shown as Plotly chart
+                        unsafe_allow_html=True,
+                    )
+                with _chart_col:
+                    _spk = _k.get("sparkline") or []
+                    _sfig = _mini_spark_fig(_spk, _k.get("positive", True))
+                    if _sfig:
+                        st.plotly_chart(_sfig, use_container_width=True,
+                                        config={"displayModeBar": False})
 
         # ── Monthly Performance Strip ──────────────────────────────────────────
         if m.get("monthly_data_available") and not df_monthly.empty:
@@ -4184,16 +4339,26 @@ with tab_ov:
                  "delta": "blended 1.25%", "positive": True, "neutral": True,
                  "date_label": _mo_lbl, "raw_value": _m12_tbd, "sparkline": _m12_spark("revenue")},
             ]
-            _m_cols = st.columns(3)
-            for i, k in enumerate(_m_kpis):
-                with _m_cols[i % 3]:
-                    st.markdown(
-                        kpi_card(k["label"], k["value"], k["delta"],
-                                 k.get("positive", True), k.get("neutral", False),
-                                 "", k.get("date_label", ""), k.get("raw_value", 0.0),
-                                 k.get("sparkline")),
-                        unsafe_allow_html=True,
-                    )
+            _m_kpi_rows = [_m_kpis[i:i+2] for i in range(0, len(_m_kpis), 2)]
+            for _m_row in _m_kpi_rows:
+                _mrc = st.columns([1.1, 1.0, 0.05, 1.1, 1.0])
+                for _mi, _mk in enumerate(_m_row):
+                    _mc  = _mrc[0 if _mi == 0 else 3]
+                    _mcc = _mrc[1 if _mi == 0 else 4]
+                    with _mc:
+                        st.markdown(
+                            kpi_card(_mk["label"], _mk["value"], _mk["delta"],
+                                     _mk.get("positive", True), _mk.get("neutral", False),
+                                     "", _mk.get("date_label", ""), _mk.get("raw_value", 0.0),
+                                     []),
+                            unsafe_allow_html=True,
+                        )
+                    with _mcc:
+                        _mspk = _mk.get("sparkline") or []
+                        _msfig = _mini_spark_fig(_mspk, _mk.get("positive", True))
+                        if _msfig:
+                            st.plotly_chart(_msfig, use_container_width=True,
+                                            config={"displayModeBar": False})
 
         # ── Bullet Chart: KPI vs Benchmark ────────────────────────────────────
         if kpis and not df_cs_snap.empty:
@@ -4638,7 +4803,8 @@ with tab_tr:
                     f"<b>%{{x}}</b><br>YOY {_str_metric_label}: %{{y:+.1f}}%<extra></extra>"
                 ),
             ))
-            fig.update_layout(yaxis_ticksuffix="%", showlegend=False)
+            fig.update_layout(yaxis_ticksuffix="%", showlegend=False,
+                              transition={"duration": 800, "easing": "cubic-in-out"})
             st.plotly_chart(style_fig(fig, height=300), use_container_width=True)
 
         st.markdown("---")
@@ -4710,7 +4876,8 @@ with tab_tr:
                     marker=dict(color=TEAL, line_width=0, cornerradius=5),
                     hovertemplate="<b>%{x}</b><br>Est. TBID: $%{y:.2f}M<extra></extra>",
                 ))
-                fig.update_layout(yaxis_tickprefix="$", yaxis_ticksuffix="M", showlegend=False)
+                fig.update_layout(yaxis_tickprefix="$", yaxis_ticksuffix="M", showlegend=False,
+                                  transition={"duration": 700, "easing": "cubic-in-out"})
                 st.plotly_chart(style_fig(fig), use_container_width=True)
             else:
                 st.markdown(empty_state(
@@ -4738,7 +4905,8 @@ with tab_tr:
                 hovertemplate="<b>%{x}</b><br>Days ≥ 90%%: %{y}<br>"
                               "<i>High compression — rate increases justified</i><extra></extra>",
             ))
-            fig.update_layout(barmode="group")
+            fig.update_layout(barmode="group",
+                              transition={"duration": 700, "easing": "cubic-in-out"})
             st.plotly_chart(style_fig(fig, height=260), use_container_width=True)
         else:
             st.markdown(empty_state(
@@ -4863,30 +5031,44 @@ with tab_fo:
     _rvp_fwd  = m.get("revpar_30", 0) if m else 0
     _adr_fwd  = m.get("adr_30", 0) if m else 0
     _rvp_d_fwd = m.get("revpar_delta", 0) if m else 0
+    # Date reference labels for forward metrics
+    _fwd_as_of   = datetime.now().strftime("%b %d, %Y")
+    _fwd_30d_end = datetime.now().strftime("%b %d")
+    _fwd_30d_lbl = f"30-day trailing · as of {_fwd_as_of}"
+    # Resolve which quarter Q3/Q1 labels refer to
+    _fwd_q3_label = "Q3 (Jul–Sep)"
+    _fwd_q1_label = "Q1 (Jan–Mar)"
+    if not df_comp.empty and "quarter" in df_comp.columns:
+        _q3_rows = df_comp[df_comp["quarter"].str.endswith("Q3")]
+        _q1_rows = df_comp[df_comp["quarter"].str.endswith("Q1")]
+        if not _q3_rows.empty:
+            _fwd_q3_label = f"Q3 {_q3_rows.iloc[0]['quarter'][:4]}"
+        if not _q1_rows.empty:
+            _fwd_q1_label = f"Q1 {_q1_rows.iloc[0]['quarter'][:4]}"
 
     with _fwd_c1:
         _occ_vs = _occ_fwd - 70
         _occ_vs_str = f"{_occ_vs:+.1f}pp vs 70% baseline"
-        st.metric("30-Day Occupancy", f"{_occ_fwd:.1f}%", delta=_occ_vs_str,
+        st.metric(f"Occupancy — {_fwd_30d_lbl}", f"{_occ_fwd:.1f}%", delta=_occ_vs_str,
                   delta_color="normal" if _occ_vs >= 0 else "inverse",
-                  help="30-day trailing avg occupancy vs 70% destination baseline")
+                  help=f"30-day trailing avg occupancy as of {_fwd_as_of} vs 70% destination baseline")
     with _fwd_c2:
-        st.metric("30-Day ADR", f"${_adr_fwd:,.0f}",
+        st.metric(f"ADR — {_fwd_30d_lbl}", f"${_adr_fwd:,.0f}",
                   delta=f"RevPAR ${_rvp_fwd:,.0f}",
-                  help="30-day average daily rate and RevPAR")
+                  help=f"30-day average daily rate and RevPAR as of {_fwd_as_of}")
     with _fwd_c3:
-        st.metric("Q3 Compression Nights", f"{_q3_comp}",
-                  delta=f"Q1: {_q1_comp} nights",
+        st.metric(f"Compression Nights — {_fwd_q3_label}", f"{_q3_comp}",
+                  delta=f"{_fwd_q1_label}: {_q1_comp} nights",
                   delta_color="off",
-                  help="Days above 80% occupancy — Q3 peak vs Q1 shoulder. More nights = greater pricing power.")
+                  help=f"Days above 80% occupancy — {_fwd_q3_label} peak vs {_fwd_q1_label} shoulder. More nights = greater pricing power.")
     with _fwd_c4:
         # Shoulder opportunity: Q1 compression gap vs Q3
         _shld_gap = _q3_comp - _q1_comp
         _shld_rev_opp = _shld_gap * _rvp_fwd * 0.02 * 365 / max(_q3_comp, 1) if _rvp_fwd > 0 else 0
-        st.metric("Shoulder Opportunity", f"${_shld_rev_opp:,.0f}",
-                  delta=f"{_shld_gap} comp nights gap (Q3 vs Q1)",
+        st.metric("Shoulder Revenue Opportunity", f"${_shld_rev_opp:,.0f}",
+                  delta=f"{_shld_gap} comp nights gap ({_fwd_q3_label} vs {_fwd_q1_label})",
                   delta_color="off",
-                  help="Estimated incremental room revenue if shoulder season (Q1) compression nights grew toward Q3 levels")
+                  help=f"Estimated incremental room revenue if shoulder ({_fwd_q1_label}) compression nights grew toward peak ({_fwd_q3_label}) levels. Based on {_fwd_as_of} RevPAR.")
 
     # Campaign timing insight
     _camp_insight = ""
@@ -8075,6 +8257,16 @@ with tab_dl:
             f"{len(_vca_tables)} tables · statewide travel & lodging forecasts",
             f"{_vca_total:,}" if _vca_total > 0 else "—",
         ), unsafe_allow_html=True)
+        _later_ig_ct = sum(counts.get(t, 0) for t in ["later_ig_profile_growth","later_ig_posts","later_ig_reels"] if isinstance(counts.get(t, 0), int))
+        _later_fb_ct = sum(counts.get(t, 0) for t in ["later_fb_profile_growth","later_fb_posts","later_fb_profile_interactions"] if isinstance(counts.get(t, 0), int))
+        _later_tk_ct = sum(counts.get(t, 0) for t in ["later_tk_profile_growth","later_tk_audience_demographics"] if isinstance(counts.get(t, 0), int))
+        _later_dl_total = _later_ig_ct + _later_fb_ct + _later_tk_ct
+        _later_dl_dot   = "🟢" if _later_dl_total > 0 else "⚫"
+        st.markdown(source_card(
+            _later_dl_dot, "Later.com Social Media",
+            "Instagram · Facebook · TikTok · 3 platforms · 12 tables",
+            f"{_later_dl_total:,}" if _later_dl_total > 0 else "—",
+        ), unsafe_allow_html=True)
         st.markdown(source_card(
             "⚫", "FRED / CA TOT / JWA", "external context · not yet loaded", "—",
         ), unsafe_allow_html=True)
@@ -8258,6 +8450,15 @@ with tab_dl:
             "costar_supply_pipeline":              "CoStar supply pipeline",
             "costar_chain_scale_breakdown":        "CoStar chain scale breakdown",
             "costar_competitive_set":              "CoStar competitive set",
+            "later_ig_profile_growth":             "Instagram profile growth (Later.com)",
+            "later_ig_posts":                      "Instagram post performance (Later.com)",
+            "later_ig_reels":                      "Instagram Reels performance (Later.com)",
+            "later_ig_audience_demographics":      "Instagram audience demographics (Later.com)",
+            "later_fb_profile_growth":             "Facebook page growth (Later.com)",
+            "later_fb_posts":                      "Facebook post performance (Later.com)",
+            "later_fb_profile_interactions":       "Facebook profile interactions (Later.com)",
+            "later_tk_profile_growth":             "TikTok profile growth (Later.com)",
+            "later_tk_audience_demographics":      "TikTok audience demographics (Later.com)",
         }
         _brain_rows = [
             {"Table": t, "Description": d, "Row Count": counts.get(t, "—")}
