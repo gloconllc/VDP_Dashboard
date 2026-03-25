@@ -5746,42 +5746,52 @@ with tab_fm:
                 })
         if _map_rows:
             _map_df = pd.DataFrame(_map_rows)
-            fig_fm_map = go.Figure(go.Scattergeo(
-                lat=_map_df["lat"],
-                lon=_map_df["lon"],
-                text=_map_df["dma"],
-                customdata=_map_df[["visitor_days_share_pct", "avg_spend_usd", "spending_share_pct"]].values,
-                hovertemplate=(
-                    "<b>%{text}</b><br>"
-                    "Visitor days: %{customdata[0]:.1f}%<br>"
-                    "Avg spend: $%{customdata[1]:,.0f}<br>"
-                    "Spending share: %{customdata[2]:.1f}%<extra></extra>"
-                ),
-                mode="markers+text",
-                textposition="top center",
-                textfont=dict(size=9, family="Plus Jakarta Sans, Inter, sans-serif", color="#21808D"),
-                marker=dict(
-                    size=[max(8, v * 4) for v in _map_df["visitor_days_share_pct"]],
-                    color=_map_df["avg_spend_usd"],
-                    colorscale=[[0, "#B7D7DC"], [0.5, "#21808D"], [1.0, "#E68161"]],
-                    showscale=True,
-                    colorbar=dict(title="Avg Spend ($)", tickprefix="$", len=0.6),
-                    opacity=0.85,
-                    line=dict(width=1, color="white"),
-                ),
-            ))
-            fig_fm_map.update_layout(
-                geo=dict(
-                    scope="usa",
-                    projection_type="albers usa",
-                    showland=True, landcolor="rgba(240,240,240,0.6)",
-                    showlakes=True, lakecolor="rgba(200,220,255,0.4)",
-                    showcoastlines=True, coastlinecolor="rgba(0,0,0,0.15)",
-                    showstates=True, statecolor="rgba(0,0,0,0.08)",
-                ),
-                margin=dict(l=0, r=0, t=0, b=0),
-            )
-            st.plotly_chart(style_fig(fig_fm_map, height=420), use_container_width=True)
+            try:
+                fig_fm_map = go.Figure(go.Scattergeo(
+                    lat=_map_df["lat"],
+                    lon=_map_df["lon"],
+                    text=_map_df["dma"],
+                    customdata=_map_df[["visitor_days_share_pct", "avg_spend_usd", "spending_share_pct"]].values,
+                    hovertemplate=(
+                        "<b>%{text}</b><br>"
+                        "Visitor days: %{customdata[0]:.1f}%<br>"
+                        "Avg spend: $%{customdata[1]:,.0f}<br>"
+                        "Spending share: %{customdata[2]:.1f}%<extra></extra>"
+                    ),
+                    mode="markers+text",
+                    textposition="top center",
+                    textfont=dict(size=9, family="Plus Jakarta Sans, Inter, sans-serif", color="#21808D"),
+                    marker=dict(
+                        size=[max(8, v * 4) for v in _map_df["visitor_days_share_pct"]],
+                        color=_map_df["avg_spend_usd"],
+                        colorscale=[[0, "#B7D7DC"], [0.5, "#21808D"], [1.0, "#E68161"]],
+                        showscale=True,
+                        colorbar=dict(title="Avg Spend ($)", tickprefix="$", len=0.6),
+                        opacity=0.85,
+                        line=dict(width=1, color="white"),
+                    ),
+                ))
+                fig_fm_map.update_layout(
+                    geo=dict(
+                        scope="usa",
+                        projection_type="albers usa",
+                        showland=True,    landcolor="rgba(240,240,240,0.6)",
+                        showlakes=True,   lakecolor="rgba(200,220,255,0.4)",
+                        showcoastlines=True, coastlinecolor="rgba(0,0,0,0.15)",
+                        showsubunits=True, subunitcolor="rgba(0,0,0,0.10)",
+                    ),
+                    margin=dict(l=0, r=0, t=0, b=0),
+                )
+                st.plotly_chart(style_fig(fig_fm_map, height=420), use_container_width=True)
+            except Exception as _map_err:
+                st.warning(f"Map rendering unavailable: {_map_err}")
+                # Fallback: simple table of top markets
+                st.dataframe(
+                    _map_df[["dma", "visitor_days_share_pct", "avg_spend_usd"]]
+                    .rename(columns={"dma": "Market", "visitor_days_share_pct": "Visitor Days %", "avg_spend_usd": "Avg Spend $"})
+                    .sort_values("Visitor Days %", ascending=False),
+                    use_container_width=True, hide_index=True,
+                )
         else:
             st.info("No mappable DMA coordinates found in current data.")
 
