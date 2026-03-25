@@ -12,8 +12,9 @@ Orchestrates the full VDP analytics pipeline in order:
   7. load_zartico_reports.py     — load Zartico historical reference data (skip-safe)
   8. fetch_vdp_events.py         — scrape VDP event calendar (skip-safe)
   9. load_visit_ca.py            — load Visit California state context data (skip-safe)
+ 10. audit_data.py               — data-quality audit; prints summary to stdout (skip-safe)
 
-Steps 4, 5, 7, 8, 9 are SKIP-SAFE: if input files are absent or the script fails,
+Steps 4, 5, 7, 8, 9, 10 are SKIP-SAFE: if input files are absent or the script fails,
 the step logs a warning and continues (exit code 0). Steps 1, 2, 3, 6 are
 FAIL-FAST: any failure aborts.
 
@@ -49,7 +50,8 @@ STEPS = [
     ("compute_insights",  os.path.join(BASE_DIR, "compute_insights.py"),        True),
     ("load_zartico",      os.path.join(BASE_DIR, "load_zartico_reports.py"),    False),
     ("fetch_vdp_events",  os.path.join(BASE_DIR, "fetch_vdp_events.py"),        False),
-    ("load_visit_ca",     os.path.join(BASE_DIR, "load_visit_ca.py"),            False),
+    ("load_visit_ca",     os.path.join(BASE_DIR, "load_visit_ca.py"),           False),
+    ("audit_data",        os.path.join(BASE_DIR, "audit_data.py"),              False),
 ]
 
 
