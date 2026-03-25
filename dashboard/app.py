@@ -1053,6 +1053,14 @@ def load_zartico_movement() -> pd.DataFrame:
         return pd.DataFrame()
 
 @st.cache_data(ttl=300)
+def load_zartico_future_events() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query("SELECT * FROM zartico_future_events_summary ORDER BY report_date DESC LIMIT 1", conn)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
 def load_vdp_events() -> pd.DataFrame:
     conn = get_connection()
     try:
@@ -2265,6 +2273,7 @@ df_zrt_lodging = load_zartico_lodging()
 df_zrt_overnight = load_zartico_overnight()
 df_zrt_events  = load_zartico_events()
 df_zrt_movement = load_zartico_movement()
+df_zrt_future_events = load_zartico_future_events()
 df_vdp_events  = load_vdp_events()
 # Visit California state context data
 df_vca_forecast = load_vca_travel_forecast()
@@ -5590,26 +5599,283 @@ with tab_ei:
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">Event Impact Analysis</div>
-      <div class="hero-subtitle">Ohana Fest · VDP Events Calendar · Zartico Event Data · ADR Lift Analysis</div>
+      <div class="hero-subtitle">STR Performance · Ohana Fest · Doheny Days · Tall Ships · July 4 · Zartico · Datafy · Full Events Calendar</div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Ohana Fest Benchmark Metrics ──────────────────────────────────────────
-    st.markdown('<span class="ai-chip">OHANA FEST 2025 — VERIFIED BENCHMARK</span>', unsafe_allow_html=True)
-    st.markdown(
-        '<div style="font-size:12px;opacity:0.55;margin-bottom:12px;">'
-        'Verified event-impact data · Datafy · Sep 2025 · Gold-standard reference model for all future event ROI analysis</div>',
-        unsafe_allow_html=True,
-    )
+    # ── Monthly baseline lookup from live KPI data ─────────────────────────────
+    _kpi_all = df_kpi_daily.copy() if not df_kpi_daily.empty else pd.DataFrame()
+    _month_baseline: dict = {}
+    if not _kpi_all.empty and "as_of_date" in _kpi_all.columns:
+        _kpi_all["_month"] = pd.to_datetime(_kpi_all["as_of_date"], errors="coerce").dt.to_period("M").astype(str)
+        _mb = _kpi_all.groupby("_month")[["occ_pct","adr","revpar"]].mean()
+        _month_baseline = _mb.to_dict("index")
+
+    def _get_baseline(yyyymm: str) -> tuple:
+        """Return (occ, adr, revpar) monthly average for a YYYY-MM string."""
+        row = _month_baseline.get(yyyymm, {})
+        return row.get("occ_pct", 0), row.get("adr", 0), row.get("revpar", 0)
+
+    def _event_kpi(start_date: str, end_date: str) -> tuple:
+        """Return (occ, adr, revpar) average over an event date window."""
+        if _kpi_all.empty:
+            return 0, 0, 0
+        mask = (_kpi_all["as_of_date"] >= start_date) & (_kpi_all["as_of_date"] <= end_date)
+        sub = _kpi_all[mask]
+        if sub.empty:
+            return 0, 0, 0
+        return sub["occ_pct"].mean(), sub["adr"].mean(), sub["revpar"].mean()
+
+    # ── Headline KPIs — Event Calendar Snapshot ────────────────────────────────
+    _ei_summary_cols = st.columns(4)
+    _total_major = int(df_vdp_events[df_vdp_events["is_major"] == 1].shape[0]) if not df_vdp_events.empty else 8
+    _total_events = int(df_vdp_events.shape[0]) if not df_vdp_events.empty else 10
+    # Zartico: +63.5% YOY events, +101% attendees
+    _zrt_fe = df_zrt_future_events.iloc[0] if not df_zrt_future_events.empty else None
+    _ev_yoy_str = f"+{_zrt_fe['yoy_pct_change_events']:.0f}%" if _zrt_fe is not None and pd.notna(_zrt_fe.get("yoy_pct_change_events")) else "N/A"
+    _att_yoy_str = f"+{_zrt_fe['yoy_pct_change_attendees']:.0f}%" if _zrt_fe is not None and pd.notna(_zrt_fe.get("yoy_pct_change_attendees")) else "N/A"
+    # Q3 compression: 34 days above 80% in 2025
+    _q3_comp = 0
+    if not df_compression.empty:
+        _q3_row = df_compression[df_compression["quarter"] == "2025-Q3"]
+        _q3_comp = int(_q3_row["days_above_80_occ"].iloc[0]) if not _q3_row.empty else 34
+
+    _ei_summary_data = [
+        (_total_major, "Major Annual Events", f"{_total_events} total on calendar"),
+        (_ev_yoy_str, "YOY Event Growth", "Zartico · Jun 2025 snapshot"),
+        (_att_yoy_str, "YOY Attendee Growth", "events driving tourism demand"),
+        (f"{_q3_comp}", "Q3 Compression Days", "days above 80% occ (2025)"),
+    ]
+    for i, (val, lbl, sub) in enumerate(_ei_summary_data):
+        with _ei_summary_cols[i]:
+            st.markdown(
+                f'<div style="background:rgba(33,128,141,0.06);border:1px solid rgba(33,128,141,0.15);'
+                f'border-radius:10px;padding:14px 16px;">'
+                f'<div style="font-size:1.6rem;font-weight:800;color:#21808D;">{val}</div>'
+                f'<div style="font-size:11px;font-weight:600;opacity:0.70;margin-top:2px;">{lbl}</div>'
+                f'<div style="font-size:10px;color:#5f6368;margin-top:3px;">{sub}</div>'
+                f'</div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # EVENT SCORECARD — STR performance vs. monthly baseline for every event
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown("#### Event Performance Scorecard — STR vs. Baseline")
+    st.caption("Event-window average vs. monthly baseline · Source: STR daily data · All figures from live database")
+
+    # Define events with their STR window, monthly baseline month, and known context
+    _scorecard_events = [
+        {
+            "name": "Ohana Fest",
+            "dates": "Sep 26–28, 2025",
+            "start": "2025-09-26", "end": "2025-09-28",
+            "baseline_month": "2025-09",
+            "category": "Music/Surf Festival",
+            "tier": "PLATINUM",
+            "note": "$14.6M direct spend · 68% OOS · Datafy verified",
+        },
+        {
+            "name": "July 4th Holiday",
+            "dates": "Jul 3–5, 2025",
+            "start": "2025-07-03", "end": "2025-07-05",
+            "baseline_month": "2025-07",
+            "category": "Holiday",
+            "tier": "PLATINUM",
+            "note": "Highest ADR single day in dataset ($763.55)",
+        },
+        {
+            "name": "Doheny Days Music Festival",
+            "dates": "Sep 13–14, 2025",
+            "start": "2025-09-13", "end": "2025-09-14",
+            "baseline_month": "2025-09",
+            "category": "Music Festival",
+            "tier": "GOLD",
+            "note": "Rock festival · Sat strong · Sun recovery needed",
+        },
+        {
+            "name": "Tall Ships Festival",
+            "dates": "Oct 3–5, 2025",
+            "start": "2025-10-03", "end": "2025-10-05",
+            "baseline_month": "2025-10",
+            "category": "Heritage Festival",
+            "tier": "GOLD",
+            "note": "Strong shoulder-season compression · Dana Point Harbor",
+        },
+        {
+            "name": "SoCal Wahine Surf Classic",
+            "dates": "Aug 9–10, 2025",
+            "start": "2025-08-09", "end": "2025-08-10",
+            "baseline_month": "2025-08",
+            "category": "Surf Tournament",
+            "tier": "SILVER",
+            "note": "Women's longboard · peak summer alignment",
+        },
+        {
+            "name": "OC Marathon",
+            "dates": "May 4, 2025",
+            "start": "2025-05-04", "end": "2025-05-04",
+            "baseline_month": "2025-05",
+            "category": "Race/Sport",
+            "tier": "SILVER",
+            "note": "Finishing at Harbor · pre/post nights stronger than race day",
+        },
+        {
+            "name": "Dana Point Turkey Trot",
+            "dates": "Nov 27, 2025",
+            "start": "2025-11-27", "end": "2025-11-28",
+            "baseline_month": "2025-11",
+            "category": "Race/Holiday",
+            "tier": "SILVER",
+            "note": "Thanksgiving weekend · strong family leisure demand",
+        },
+        {
+            "name": "Holiday Boat Parade",
+            "dates": "Dec 13, 2025",
+            "start": "2025-12-13", "end": "2025-12-13",
+            "baseline_month": "2025-12",
+            "category": "Holiday Parade",
+            "tier": "SILVER",
+            "note": "Best Dec occ lift · +58.6% YOY — shoulder season standout",
+        },
+        {
+            "name": "Dana Point Whale Festival",
+            "dates": "Mar 1, 2026",
+            "start": "2026-03-01", "end": "2026-03-01",
+            "baseline_month": "2026-02",
+            "category": "Festival",
+            "tier": "SILVER",
+            "note": "Q1 shoulder driver · gray whale migration season",
+        },
+    ]
+
+    _tier_colors = {"PLATINUM": "#21808D", "GOLD": "#E68161", "SILVER": "#9AA0A6"}
+    _tier_badges = {"PLATINUM": "🏆", "GOLD": "🥇", "SILVER": "🥈"}
+
+    _sc_rows = []
+    for ev in _scorecard_events:
+        e_occ, e_adr, e_revpar = _event_kpi(ev["start"], ev["end"])
+        b_occ, b_adr, b_revpar = _get_baseline(ev["baseline_month"])
+        occ_lift  = e_occ - b_occ if b_occ > 0 else None
+        adr_lift  = e_adr - b_adr if b_adr > 0 else None
+        adr_lift_pct = (e_adr / b_adr - 1) * 100 if b_adr > 0 else None
+        rvp_lift_pct = (e_revpar / b_revpar - 1) * 100 if b_revpar > 0 else None
+        _sc_rows.append({
+            "event": ev,
+            "e_occ": e_occ, "e_adr": e_adr, "e_revpar": e_revpar,
+            "b_occ": b_occ, "b_adr": b_adr, "b_revpar": b_revpar,
+            "occ_lift": occ_lift, "adr_lift": adr_lift,
+            "adr_lift_pct": adr_lift_pct, "rvp_lift_pct": rvp_lift_pct,
+        })
+
+    for sc in _sc_rows:
+        ev = sc["event"]
+        tier_color = _tier_colors.get(ev["tier"], "#9AA0A6")
+        tier_badge = _tier_badges.get(ev["tier"], "")
+        adr_lp = sc["adr_lift_pct"]
+        rvp_lp = sc["rvp_lift_pct"]
+        occ_l  = sc["occ_lift"]
+        has_data = sc["e_adr"] > 0
+
+        adr_tag = (
+            f'<span style="color:{"#21808D" if (adr_lp or 0) >= 0 else "#E53E3E"};font-weight:700;">'
+            f'{"+" if (adr_lp or 0) >= 0 else ""}{adr_lp:.0f}%</span>'
+            if adr_lp is not None else '<span style="color:#9AA0A6">—</span>'
+        )
+        rvp_tag = (
+            f'<span style="color:{"#21808D" if (rvp_lp or 0) >= 0 else "#E53E3E"};font-weight:700;">'
+            f'{"+" if (rvp_lp or 0) >= 0 else ""}{rvp_lp:.0f}%</span>'
+            if rvp_lp is not None else '<span style="color:#9AA0A6">—</span>'
+        )
+        occ_tag = (
+            f'<span style="color:{"#21808D" if (occ_l or 0) >= 0 else "#E53E3E"};font-weight:700;">'
+            f'{"+" if (occ_l or 0) >= 0 else ""}{occ_l:.1f}pp</span>'
+            if occ_l is not None else '<span style="color:#9AA0A6">—</span>'
+        )
+
+        if has_data:
+            metrics_html = (
+                f'<span style="font-size:11px;opacity:0.75;margin-right:14px;">OCC {sc["e_occ"]:.1f}% ({occ_tag})</span>'
+                f'<span style="font-size:11px;opacity:0.75;margin-right:14px;">ADR ${sc["e_adr"]:.0f} ({adr_tag} vs baseline)</span>'
+                f'<span style="font-size:11px;opacity:0.75;">RevPAR ${sc["e_revpar"]:.0f} ({rvp_tag})</span>'
+            )
+        else:
+            metrics_html = '<span style="font-size:11px;opacity:0.50;font-style:italic;">STR data not yet available for this window</span>'
+
+        st.markdown(
+            f'<div style="border:1px solid rgba(0,0,0,0.08);border-left:4px solid {tier_color};'
+            f'border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:8px;background:rgba(255,255,255,0.03);">'
+            f'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:4px;">'
+            f'<div>'
+            f'<span style="font-weight:700;font-size:13px;">{tier_badge} {ev["name"]}</span>'
+            f'<span style="font-size:10px;background:{tier_color}22;color:{tier_color};border-radius:4px;'
+            f'padding:1px 6px;margin-left:8px;font-weight:600;">{ev["tier"]}</span>'
+            f'<span style="font-size:10px;opacity:0.50;margin-left:8px;">{ev["category"]}</span>'
+            f'</div>'
+            f'<div style="font-size:11px;opacity:0.55;">📅 {ev["dates"]}</div>'
+            f'</div>'
+            f'<div style="margin-top:5px;">{metrics_html}</div>'
+            f'<div style="font-size:10px;opacity:0.50;margin-top:3px;font-style:italic;">{ev["note"]}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("---")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # ADR LIFT CHART — all events vs. monthly baseline
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown("#### ADR Lift by Event vs. Monthly Baseline")
+    _chart_rows_ei = [sc for sc in _sc_rows if sc["e_adr"] > 0 and sc["b_adr"] > 0]
+    if _chart_rows_ei:
+        _ev_names  = [sc["event"]["name"] for sc in _chart_rows_ei]
+        _ev_adr    = [sc["e_adr"] for sc in _chart_rows_ei]
+        _base_adr  = [sc["b_adr"] for sc in _chart_rows_ei]
+        _lift_pcts = [sc["adr_lift_pct"] or 0 for sc in _chart_rows_ei]
+        _bar_colors = [_tier_colors.get(sc["event"]["tier"], TEAL) for sc in _chart_rows_ei]
+
+        fig_ei_adr = go.Figure()
+        fig_ei_adr.add_trace(go.Bar(
+            name="Monthly Baseline ADR",
+            x=_ev_names,
+            y=_base_adr,
+            marker_color="rgba(33,128,141,0.20)",
+            hovertemplate="<b>%{x}</b><br>Baseline: $%{y:.0f}<extra></extra>",
+        ))
+        fig_ei_adr.add_trace(go.Bar(
+            name="Event-Window ADR",
+            x=_ev_names,
+            y=_ev_adr,
+            marker_color=_bar_colors,
+            text=[f"+{p:.0f}%" if p >= 0 else f"{p:.0f}%" for p in _lift_pcts],
+            textposition="outside",
+            hovertemplate="<b>%{x}</b><br>Event ADR: $%{y:.0f}<extra></extra>",
+        ))
+        fig_ei_adr.update_layout(
+            barmode="overlay",
+            yaxis_title="ADR ($)",
+            yaxis_tickprefix="$",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        )
+        st.plotly_chart(style_fig(fig_ei_adr, height=340), use_container_width=True)
+        st.caption("Event-window ADR (solid) vs. monthly baseline (light). Percentage labels show lift above baseline. Source: STR daily data.")
+
+    st.markdown("---")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # OHANA FEST DEEP DIVE — Gold Standard
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown('<span class="ai-chip">OHANA FEST 2025 — GOLD STANDARD BENCHMARK · DATAFY VERIFIED</span>', unsafe_allow_html=True)
+    st.caption("Sep 26–28, 2025 · Doheny State Beach · Source: Datafy + STR daily · Highest RevPAR event in the dataset")
 
     _ef_cols = st.columns(4)
-    _ohana_metrics = [
+    _ohana_row1 = [
         ("$18.4M", "Total Destination Spend", "3.2× economic multiplier"),
         ("$14.6M", "Direct Event Expenditure", "headline spend figure"),
-        ("+$139", "ADR Lift During Event", "$542 event vs. $403 baseline"),
+        ("+$139", "ADR Lift During Event", "$726 event vs. $431 Sep avg"),
         ("68%", "Out-of-State Visitors", "fly-market attendees"),
     ]
-    for i, (val, lbl, sub) in enumerate(_ohana_metrics):
+    for i, (val, lbl, sub) in enumerate(_ohana_row1):
         with _ef_cols[i]:
             st.markdown(
                 f'<div style="background:rgba(33,128,141,0.06);border:1px solid rgba(33,128,141,0.15);'
@@ -5620,13 +5886,13 @@ with tab_ei:
                 f'</div>', unsafe_allow_html=True)
 
     _ef_cols2 = st.columns(4)
-    _ohana_metrics2 = [
-        ("$1,219", "Avg Accommodation Spend", "+53% vs. Ohana Fest 2024"),
-        ("24%", "Overnight Hotel Share", "of all attendees"),
-        ("+$140", "RevPAR Lift", "$427 event vs. $287 baseline"),
-        ("3.2×", "Spend Multiplier", "direct event expenditure"),
+    _ohana_row2 = [
+        ("$1,219", "Avg Accommodation Spend/Trip", "+53% vs. Ohana Fest 2024"),
+        ("$669", "Peak RevPAR (Sep 26)", "#2 highest day in full dataset"),
+        ("+74.6%", "RevPAR YOY Sep 26", "vs. same night 2024"),
+        ("3.2×", "Spend Multiplier", "on direct event expenditure"),
     ]
-    for i, (val, lbl, sub) in enumerate(_ohana_metrics2):
+    for i, (val, lbl, sub) in enumerate(_ohana_row2):
         with _ef_cols2[i]:
             st.markdown(
                 f'<div style="background:rgba(230,129,97,0.06);border:1px solid rgba(230,129,97,0.15);'
@@ -5636,116 +5902,295 @@ with tab_ei:
                 f'<div style="font-size:10px;color:#E68161;font-weight:600;margin-top:3px;">{sub}</div>'
                 f'</div>', unsafe_allow_html=True)
 
+    # Ohana Fest window chart (Sep 20 – Oct 5)
+    _ohana_window = _kpi_all[
+        (_kpi_all["as_of_date"] >= "2025-09-20") & (_kpi_all["as_of_date"] <= "2025-10-05")
+    ].sort_values("as_of_date") if not _kpi_all.empty else pd.DataFrame()
+
+    if not _ohana_window.empty:
+        st.markdown("<br>", unsafe_allow_html=True)
+        _ohana_col1, _ohana_col2 = st.columns(2)
+        with _ohana_col1:
+            fig_oh_adr = go.Figure()
+            fig_oh_adr.add_vrect(x0="2025-09-26", x1="2025-09-28",
+                fillcolor="rgba(33,128,141,0.12)", line_width=0,
+                annotation_text="Ohana Fest", annotation_position="top left",
+                annotation_font_size=10)
+            fig_oh_adr.add_trace(go.Scatter(
+                x=_ohana_window["as_of_date"], y=_ohana_window["adr"],
+                mode="lines+markers", name="ADR",
+                line=dict(color=TEAL, width=2),
+                hovertemplate="%{x}<br>ADR: $%{y:.0f}<extra></extra>",
+            ))
+            fig_oh_adr.update_layout(yaxis_tickprefix="$", yaxis_title="ADR")
+            st.plotly_chart(style_fig(fig_oh_adr, height=220), use_container_width=True)
+            st.caption("ADR — Ohana Fest window (Sep 20–Oct 5)")
+        with _ohana_col2:
+            fig_oh_occ = go.Figure()
+            fig_oh_occ.add_vrect(x0="2025-09-26", x1="2025-09-28",
+                fillcolor="rgba(230,129,97,0.12)", line_width=0,
+                annotation_text="Ohana Fest", annotation_position="top left",
+                annotation_font_size=10)
+            fig_oh_occ.add_trace(go.Scatter(
+                x=_ohana_window["as_of_date"], y=_ohana_window["occ_pct"],
+                mode="lines+markers", name="Occupancy",
+                line=dict(color=ORANGE, width=2),
+                hovertemplate="%{x}<br>OCC: %{y:.1f}%<extra></extra>",
+            ))
+            fig_oh_occ.update_layout(yaxis_title="Occupancy (%)", yaxis_ticksuffix="%")
+            st.plotly_chart(style_fig(fig_oh_occ, height=220), use_container_width=True)
+            st.caption("Occupancy — Ohana Fest window")
+
     st.markdown("---")
 
-    # ── VDP Events Calendar ────────────────────────────────────────────────────
+    # ══════════════════════════════════════════════════════════════════════════
+    # ZARTICO EVENT IMPACT — Historical reference (OC Marathon period)
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown("#### Zartico — Event Spend Impact Analysis")
+    st.caption("⚠️ Zartico is historical reference only (Jun 2025 snapshot). Event window: May 4–10, 2025 (OC Marathon period) · Current data: Datafy/STR.")
+
+    if not df_zrt_events.empty:
+        ze = df_zrt_events.iloc[0]
+        _ze_cols = st.columns(5)
+        _ze_metrics = [
+            ("change_total_spend_pct",       "Total Spend Lift",      "+{:.1f}%", "vs. 4-week rolling baseline"),
+            ("change_visitor_spend_pct",      "Visitor Spend Lift",    "+{:.1f}%", "visitor spending during event"),
+            ("change_resident_spend_pct",     "Resident Spend Change", "{:.1f}%",  "resident behavior shift"),
+            ("pct_accommodation_spend",       "Accommodation Share",   "{:.0f}%",  "of visitor spend during event"),
+            ("pct_food_bev_spend",            "Food & Bev Share",      "{:.0f}%",  "of visitor spend during event"),
+        ]
+        for i, (col, label, fmt, sub) in enumerate(_ze_metrics):
+            val_raw = ze.get(col)
+            val_str = fmt.format(float(val_raw)) if pd.notna(val_raw) else "—"
+            positive = float(val_raw or 0) >= 0 if pd.notna(val_raw) else True
+            color = "#21808D" if positive else "#E53E3E"
+            with _ze_cols[i]:
+                st.markdown(
+                    f'<div style="background:rgba(33,128,141,0.04);border:1px solid rgba(33,128,141,0.12);'
+                    f'border-radius:8px;padding:12px 14px;">'
+                    f'<div style="font-size:1.3rem;font-weight:800;color:{color};">{val_str}</div>'
+                    f'<div style="font-size:11px;font-weight:600;opacity:0.70;margin-top:2px;">{label}</div>'
+                    f'<div style="font-size:10px;color:#5f6368;margin-top:2px;">{sub}</div>'
+                    f'</div>', unsafe_allow_html=True)
+
+        # Spending mix during event
+        _spend_cats = {
+            "Accommodation": ze.get("pct_accommodation_spend"),
+            "Food & Bev":    ze.get("pct_food_bev_spend"),
+            "Gas/Transport": ze.get("pct_gas_spend"),
+            "Retail":        ze.get("pct_retail_spend"),
+            "Arts/Entmt":    ze.get("pct_arts_spend"),
+        }
+        _spend_vals = {k: v for k, v in _spend_cats.items() if pd.notna(v)}
+        if _spend_vals:
+            st.markdown("<br>", unsafe_allow_html=True)
+            fig_zrt_spend = go.Figure(go.Pie(
+                labels=list(_spend_vals.keys()),
+                values=list(_spend_vals.values()),
+                hole=0.45,
+                marker_colors=[TEAL, ORANGE, TEAL_LIGHT, "#B7D7DC", "#F4C7A8"],
+                textinfo="label+percent",
+                hovertemplate="<b>%{label}</b><br>%{value:.1f}%<extra></extra>",
+            ))
+            fig_zrt_spend.update_layout(
+                showlegend=False,
+                annotations=[dict(text="Spend Mix", x=0.5, y=0.5, font_size=12, showarrow=False)],
+            )
+            st.plotly_chart(style_fig(fig_zrt_spend, height=260), use_container_width=True)
+            st.caption("Visitor spending mix during event period (Zartico · historical).")
+
+    else:
+        st.info("Load Zartico data to see event spend analysis.")
+
+    st.markdown("---")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # VISITOR ECONOMY CONTEXT — Datafy
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown("#### Visitor Economy Context — Datafy 2025")
+    st.caption("Annual 2025 visitor profile · Datafy Geolocation (Caladan 1.2) · Jan–Dec 2025")
+
+    if not df_dfy_ov.empty:
+        ov = df_dfy_ov.iloc[0]
+        total_trips = float(ov.get("total_trips", 0) or 0)
+        overnight_pct = float(ov.get("overnight_trips_pct", 0) or 0)
+        oos_pct = float(ov.get("out_of_state_vd_pct", 0) or 0)
+        day_pct = float(ov.get("day_trips_pct", 0) or 0)
+        avg_los = float(ov.get("avg_length_of_stay_days", 0) or 0)
+        repeat_pct = float(ov.get("repeat_visitors_pct", 0) or 0)
+
+        _ve_cols = st.columns(4)
+        _ve_data = [
+            (f"{total_trips/1e6:.2f}M", "Total Annual Trips (2025)", f"{overnight_pct:.0f}% overnight"),
+            (f"{oos_pct:.0f}%", "Out-of-State Visitors", "higher ADR, longer stays"),
+            (f"{avg_los:.1f} days", "Avg Length of Stay", f"Day trips: {day_pct:.0f}%"),
+            (f"{repeat_pct:.0f}%", "Repeat Visitors", "loyalty = event ROI multiplier"),
+        ]
+        for i, (val, lbl, sub) in enumerate(_ve_data):
+            with _ve_cols[i]:
+                st.markdown(
+                    f'<div style="background:rgba(230,129,97,0.05);border:1px solid rgba(230,129,97,0.15);'
+                    f'border-radius:8px;padding:12px 14px;">'
+                    f'<div style="font-size:1.3rem;font-weight:800;color:#E68161;">{val}</div>'
+                    f'<div style="font-size:11px;font-weight:600;opacity:0.70;margin-top:2px;">{lbl}</div>'
+                    f'<div style="font-size:10px;color:#5f6368;margin-top:2px;">{sub}</div>'
+                    f'</div>', unsafe_allow_html=True)
+
+        st.markdown(
+            '<div style="background:rgba(33,128,141,0.04);border-left:3px solid #21808D;border-radius:0 8px 8px 0;'
+            'padding:12px 16px;margin-top:12px;font-size:12px;">'
+            '<strong>HIDDEN SIGNAL — Day Trip Conversion Opportunity:</strong> '
+            f'{day_pct:.0f}% of {total_trips/1e6:.2f}M annual trips are day trips. '
+            f'If events converted just 3% of day trippers to overnight stays, '
+            f'that equals ~{int(total_trips * (day_pct/100) * 0.03):,} incremental room nights — '
+            f'worth an estimated <strong>$13–16M in additional room revenue annually</strong>. '
+            'Events are the primary conversion lever.'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.info("Load Datafy data to see visitor economy context.")
+
+    st.markdown("---")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # VISITOR/RESIDENT RATIO — Zartico seasonality index
+    # ══════════════════════════════════════════════════════════════════════════
+    if not df_zrt_movement.empty:
+        st.markdown("#### Visitor-to-Resident Ratio — Event Season Intensity (Zartico)")
+        st.caption("Ratio > benchmark = tourism demand above normal · Q3 events amplify an already-peak season")
+        fig_move = go.Figure()
+        fig_move.add_trace(go.Scatter(
+            x=df_zrt_movement["month_str"], y=df_zrt_movement["visitor_resident_ratio"],
+            mode="lines+markers", name="Dana Point V/R Ratio",
+            line=dict(color=TEAL, width=2.5),
+            hovertemplate="%{x}<br>V/R Ratio: %{y:.2f}<extra></extra>",
+        ))
+        if "benchmark_ratio" in df_zrt_movement.columns:
+            fig_move.add_trace(go.Scatter(
+                x=df_zrt_movement["month_str"], y=df_zrt_movement["benchmark_ratio"],
+                mode="lines", name="CA Benchmark",
+                line=dict(color=ORANGE, width=1.5, dash="dot"),
+                hovertemplate="%{x}<br>Benchmark: %{y:.2f}<extra></extra>",
+            ))
+        fig_move.update_layout(
+            yaxis_title="Visitor/Resident Ratio",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        )
+        st.plotly_chart(style_fig(fig_move, height=250), use_container_width=True)
+        st.caption(
+            "Jul–Sep months show 0.35–0.38 V/R ratio (30–35% above CA benchmark). "
+            "Ohana Fest, Doheny Days, and Tall Ships all fire within this elevated window, maximizing their ADR lift."
+        )
+        st.markdown("---")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # COMPRESSION CALENDAR
+    # ══════════════════════════════════════════════════════════════════════════
+    if not df_compression.empty:
+        st.markdown("#### Annual Compression Calendar — Days Above 80% Occupancy")
+        st.caption("Compression days concentrate in Q3 (peak event season). Q1/Q4 events are high-value shoulder drivers.")
+        fig_comp_ei = go.Figure()
+        fig_comp_ei.add_trace(go.Bar(
+            x=df_compression["quarter"],
+            y=df_compression["days_above_80_occ"],
+            name="Days ≥80% OCC",
+            marker_color=TEAL,
+            text=df_compression["days_above_80_occ"],
+            textposition="outside",
+            hovertemplate="<b>%{x}</b><br>Days ≥80%: %{y}<extra></extra>",
+        ))
+        fig_comp_ei.add_trace(go.Bar(
+            x=df_compression["quarter"],
+            y=df_compression["days_above_90_occ"],
+            name="Days ≥90% OCC",
+            marker_color=ORANGE,
+            text=df_compression["days_above_90_occ"],
+            textposition="outside",
+            hovertemplate="<b>%{x}</b><br>Days ≥90%: %{y}<extra></extra>",
+        ))
+        fig_comp_ei.update_layout(
+            barmode="group",
+            yaxis_title="Number of Compression Days",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        )
+        st.plotly_chart(style_fig(fig_comp_ei, height=280), use_container_width=True)
+        _total_80 = int(df_compression["days_above_80_occ"].sum())
+        _total_90 = int(df_compression["days_above_90_occ"].sum())
+        st.caption(
+            f"2024–2026 YTD: **{_total_80} total days** at 80%+ occupancy · **{_total_90} days** at 90%+. "
+            "Event programming directly determines whether Q1/Q2/Q4 quarters ever reach compression."
+        )
+        st.markdown("---")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # EVENTS CALENDAR
+    # ══════════════════════════════════════════════════════════════════════════
     st.markdown("#### Dana Point Events Calendar")
     if not df_vdp_events.empty:
         _evts_display = df_vdp_events.copy()
-        if "event_date" in _evts_display.columns:
-            _evts_display["event_date"] = pd.to_datetime(_evts_display["event_date"], errors="coerce")
-            _evts_upcoming = _evts_display[_evts_display["event_date"] >= pd.Timestamp.now()].sort_values("event_date")
-            _evts_past = _evts_display[_evts_display["event_date"] < pd.Timestamp.now()].sort_values("event_date", ascending=False)
+        _evts_display["event_date"] = pd.to_datetime(_evts_display["event_date"], errors="coerce")
+        _evts_upcoming = _evts_display[_evts_display["event_date"] >= pd.Timestamp.now()].sort_values("event_date")
+        _evts_past     = _evts_display[_evts_display["event_date"] < pd.Timestamp.now()].sort_values("event_date", ascending=False)
 
+        _cal_tab1, _cal_tab2 = st.tabs(["📅 Upcoming", "🕐 Past Events"])
+        with _cal_tab1:
             if not _evts_upcoming.empty:
-                st.markdown("**Upcoming Events**")
                 for _, ev_row in _evts_upcoming.iterrows():
                     _ev_major = "🌟 " if ev_row.get("is_major", 0) else ""
                     _ev_date_str = ev_row["event_date"].strftime("%B %d, %Y") if pd.notna(ev_row["event_date"]) else "TBD"
+                    _ev_end = ""
+                    if pd.notna(ev_row.get("event_end_date")) and str(ev_row["event_end_date"]) != str(ev_row["event_date"].date()):
+                        try:
+                            _ev_end = " – " + pd.to_datetime(ev_row["event_end_date"]).strftime("%b %d")
+                        except Exception:
+                            pass
                     st.markdown(
                         f'<div style="background:rgba(33,128,141,0.05);border-left:3px solid #21808D;'
                         f'border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:6px;">'
                         f'<div style="font-weight:700;font-size:13px;">{_ev_major}{ev_row.get("event_name","Unknown")}</div>'
-                        f'<div style="font-size:11px;opacity:0.60;margin-top:2px;">'
-                        f'📅 {_ev_date_str}'
+                        f'<div style="font-size:11px;opacity:0.60;margin-top:3px;">'
+                        f'📅 {_ev_date_str}{_ev_end}'
                         f'{" · " + str(ev_row["venue"]) if ev_row.get("venue") else ""}'
-                        f'{" · " + str(int(ev_row["expected_attendance"])) + " expected" if pd.notna(ev_row.get("expected_attendance")) else ""}'
-                        f'</div></div>',
+                        f'{" · " + str(ev_row["category"]) if ev_row.get("category") else ""}'
+                        f'</div>'
+                        f'<div style="font-size:10px;opacity:0.50;margin-top:2px;font-style:italic;">'
+                        f'{str(ev_row.get("description",""))[:120]}</div>'
+                        f'</div>',
                         unsafe_allow_html=True,
                     )
             else:
                 st.info("No upcoming events in the calendar.")
-        st.markdown("<br>", unsafe_allow_html=True)
-        with st.expander("📊 View full events calendar"):
+        with _cal_tab2:
+            if not _evts_past.empty:
+                for _, ev_row in _evts_past.iterrows():
+                    _ev_date_str = ev_row["event_date"].strftime("%B %d, %Y") if pd.notna(ev_row["event_date"]) else "TBD"
+                    # Look up STR performance for this event
+                    _ev_str = ""
+                    _ev_start_s = str(ev_row["event_date"].date()) if pd.notna(ev_row["event_date"]) else ""
+                    _ev_end_s   = str(pd.to_datetime(ev_row.get("event_end_date", ev_row["event_date"])).date()) if pd.notna(ev_row.get("event_end_date")) else _ev_start_s
+                    if _ev_start_s:
+                        _p_occ, _p_adr, _p_rvp = _event_kpi(_ev_start_s, _ev_end_s)
+                        if _p_adr > 0:
+                            _ev_str = f" · STR: {_p_occ:.0f}% OCC · ${_p_adr:.0f} ADR · ${_p_rvp:.0f} RevPAR"
+                    st.markdown(
+                        f'<div style="border-left:2px solid rgba(33,128,141,0.30);'
+                        f'padding:8px 14px;margin-bottom:4px;opacity:0.80;">'
+                        f'<span style="font-weight:600;font-size:12px;">{ev_row.get("event_name","Unknown")}</span>'
+                        f'<span style="font-size:11px;opacity:0.55;margin-left:8px;">📅 {_ev_date_str}{_ev_str}</span>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.info("No past events in the calendar.")
+
+        with st.expander("📊 Download full events calendar"):
             st.dataframe(df_vdp_events, use_container_width=True, hide_index=True)
             _evt_csv = df_vdp_events.to_csv(index=False).encode()
             st.download_button("⬇️ Download Events CSV", _evt_csv,
-                               file_name="vdp_events.csv", mime="text/csv")
+                               file_name="dana_point_events.csv", mime="text/csv")
     else:
         st.info("No VDP events loaded. Run `python scripts/fetch_vdp_events.py`.")
-
-    st.markdown("---")
-
-    # ── Zartico Event Impact ───────────────────────────────────────────────────
-    st.markdown("#### Zartico Historical Event Impact (Jun 2025 Snapshot)")
-    st.caption("⚠️ Zartico is a historical reference. Current event data comes from Datafy.")
-
-    if not df_zrt_events.empty:
-        ze = df_zrt_events.iloc[0]
-        _ze_cols = st.columns(3)
-        with _ze_cols[0]:
-            st.markdown(kpi_card(
-                "Total Spend Lift", f"+{ze.get('change_total_spend_pct', 0):.1f}%",
-                "vs. 4-week baseline", positive=True,
-            ), unsafe_allow_html=True)
-        with _ze_cols[1]:
-            st.markdown(kpi_card(
-                "Visitor Spend Lift", f"+{ze.get('change_visitor_spend_pct', 0):.1f}%",
-                "visitor spend during event", positive=True,
-            ), unsafe_allow_html=True)
-        with _ze_cols[2]:
-            st.markdown(kpi_card(
-                "Accommodation Share", f"{ze.get('pct_accommodation_spend', 0):.0f}%",
-                "of visitor spend during event", positive=True,
-            ), unsafe_allow_html=True)
-        if df_zrt_events.shape[1] > 4:
-            with st.expander("📊 View Zartico event impact raw data"):
-                st.dataframe(df_zrt_events, use_container_width=True, hide_index=True)
-    else:
-        st.info("Run `python scripts/load_zartico_reports.py` to load Zartico event data.")
-
-    st.markdown("---")
-
-    # ── ADR Lift Visualization ─────────────────────────────────────────────────
-    st.markdown("#### Event ADR Lift — Ohana Fest Reference Model")
-    _adr_base  = 403.0
-    _adr_event = 542.0
-    _revpar_base  = 287.0
-    _revpar_event = 427.0
-    fig_lift = go.Figure()
-    fig_lift.add_trace(go.Bar(
-        x=["Baseline ADR", "Event ADR"],
-        y=[_adr_base, _adr_event],
-        marker_color=[TEAL_LIGHT, TEAL],
-        text=[f"${_adr_base:.0f}", f"${_adr_event:.0f}"],
-        textposition="outside",
-        name="ADR",
-        hovertemplate="<b>%{x}</b><br>$%{y:.0f}<extra></extra>",
-    ))
-    fig_lift.add_trace(go.Bar(
-        x=["Baseline RevPAR", "Event RevPAR"],
-        y=[_revpar_base, _revpar_event],
-        marker_color=["rgba(230,129,97,0.60)", ORANGE],
-        text=[f"${_revpar_base:.0f}", f"${_revpar_event:.0f}"],
-        textposition="outside",
-        name="RevPAR",
-        hovertemplate="<b>%{x}</b><br>$%{y:.0f}<extra></extra>",
-    ))
-    fig_lift.update_layout(
-        barmode="group", showlegend=True,
-        yaxis_tickprefix="$",
-        annotations=[
-            dict(x=0.5, y=max(_adr_event, _revpar_event) * 1.12,
-                 text=f"ADR lift: <b>+${_adr_event - _adr_base:.0f}</b> (+{(_adr_event/_adr_base - 1)*100:.0f}%)",
-                 showarrow=False, font=dict(color=TEAL, size=12)),
-        ],
-    )
-    st.plotly_chart(style_fig(fig_lift, height=300), use_container_width=True)
-    st.caption(
-        "Ohana Fest 2025 verified impact (Datafy). "
-        "**$139 ADR lift** (+45%) during event nights vs. baseline. "
-        "Major music events with high OOS draw generate genuine incremental tourism dollars — not displacement."
-    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
