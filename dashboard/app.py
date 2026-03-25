@@ -4240,46 +4240,81 @@ with tab_ov:
             'font-weight:700;letter-spacing:-0.01em;margin-bottom:8px;">Performance Command Center</div>',
             unsafe_allow_html=True,
         )
+        # ── Per-metric color palette (cutting-edge, distinct) ─────────────────
+        _METRIC_COLORS = {
+            "RevPAR":        ("#00C4CC", "rgba(0,196,204,0.18)"),
+            "ADR":           ("#8B5CF6", "rgba(139,92,246,0.18)"),
+            "Occupancy":     ("#0EA5E9", "rgba(14,165,233,0.18)"),
+            "Room Revenue":  ("#10B981", "rgba(16,185,129,0.18)"),
+            "Rooms Sold":    ("#F97316", "rgba(249,115,22,0.18)"),
+            "Est. TBID Rev": ("#F59E0B", "rgba(245,158,11,0.18)"),
+            "TBID":          ("#F59E0B", "rgba(245,158,11,0.18)"),
+            "Demand":        ("#F97316", "rgba(249,115,22,0.18)"),
+            "Supply":        ("#6366F1", "rgba(99,102,241,0.18)"),
+            "Revenue":       ("#10B981", "rgba(16,185,129,0.18)"),
+        }
+        def _metric_color(label, positive=True):
+            for k, v in _METRIC_COLORS.items():
+                if k.lower() in label.lower():
+                    return v
+            return ("#00C4CC", "rgba(0,196,204,0.18)") if positive else ("#F97316", "rgba(249,115,22,0.18)")
+
         # Render each KPI as [card | mini sparkline chart] pairs, 2 per row
-        def _mini_spark_fig(values, positive=True):
-            if not values:
-                return None
-            _color = TEAL if positive else ORANGE
-            _fill  = "rgba(33,128,141,0.12)" if positive else "rgba(245,158,11,0.12)"
-            _fig = go.Figure(go.Scatter(
-                y=values, mode="lines",
-                line=dict(color=_color, width=2),
-                fill="tozeroy", fillcolor=_fill,
+        def _mini_spark_fig(values, label="", positive=True, chart_key=""):
+            # Always render — if no data, show placeholder flat line
+            if not values or len(values) < 2:
+                values = [0, 0]
+            _line_color, _fill_color = _metric_color(label, positive)
+            _fig = go.Figure()
+            _fig.add_trace(go.Scatter(
+                y=values,
+                mode="lines",
+                line=dict(color=_line_color, width=2.5, shape="spline", smoothing=0.8),
+                fill="tozeroy",
+                fillcolor=_fill_color,
+                hoverinfo="skip",
+            ))
+            # Accent dot at latest value
+            _fig.add_trace(go.Scatter(
+                x=[len(values) - 1], y=[values[-1]],
+                mode="markers",
+                marker=dict(color=_line_color, size=6, line=dict(color="white", width=1.5)),
+                hoverinfo="skip",
             ))
             _fig.update_layout(
-                height=72, margin=dict(l=0, r=0, t=4, b=0),
-                xaxis=dict(visible=False), yaxis=dict(visible=False),
+                height=88, margin=dict(l=2, r=2, t=2, b=2),
+                xaxis=dict(visible=False, fixedrange=True),
+                yaxis=dict(visible=False, fixedrange=True),
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                showlegend=False, transition={"duration": 500},
+                showlegend=False,
+                transition={"duration": 500, "easing": "cubic-in-out"},
             )
             return _fig
 
         _kpi_rows = [kpis[i:i+2] for i in range(0, len(kpis), 2)]
-        for _row_kpis in _kpi_rows:
+        for _ri, _row_kpis in enumerate(_kpi_rows):
             _rcols = st.columns([1.1, 1.0, 0.05, 1.1, 1.0])
             for _idx, _k in enumerate(_row_kpis):
                 # Use columns at indices 0,1 for first KPI and 3,4 for second
                 _card_col  = _rcols[0 if _idx == 0 else 3]
                 _chart_col = _rcols[1 if _idx == 0 else 4]
+                _chart_key = f"kpi30_spark_{_ri}_{_idx}_{_k['label'].replace(' ','_').replace('.','')}"
                 with _card_col:
                     st.markdown(
                         kpi_card(_k["label"], _k["value"], _k["delta"],
                                  _k.get("positive", True), _k.get("neutral", False),
                                  "", _k.get("date_label", ""), _k.get("raw_value", 0.0),
-                                 []),  # no sparkline in HTML — shown as Plotly chart
+                                 []),  # sparkline shown as Plotly chart instead
                         unsafe_allow_html=True,
                     )
                 with _chart_col:
                     _spk = _k.get("sparkline") or []
-                    _sfig = _mini_spark_fig(_spk, _k.get("positive", True))
-                    if _sfig:
-                        st.plotly_chart(_sfig, use_container_width=True,
-                                        config={"displayModeBar": False})
+                    st.plotly_chart(
+                        _mini_spark_fig(_spk, _k["label"], _k.get("positive", True)),
+                        use_container_width=True,
+                        config={"displayModeBar": False},
+                        key=_chart_key,
+                    )
 
         # ── Monthly Performance Strip ──────────────────────────────────────────
         if m.get("monthly_data_available") and not df_monthly.empty:
@@ -4340,11 +4375,12 @@ with tab_ov:
                  "date_label": _mo_lbl, "raw_value": _m12_tbd, "sparkline": _m12_spark("revenue")},
             ]
             _m_kpi_rows = [_m_kpis[i:i+2] for i in range(0, len(_m_kpis), 2)]
-            for _m_row in _m_kpi_rows:
+            for _mri, _m_row in enumerate(_m_kpi_rows):
                 _mrc = st.columns([1.1, 1.0, 0.05, 1.1, 1.0])
                 for _mi, _mk in enumerate(_m_row):
                     _mc  = _mrc[0 if _mi == 0 else 3]
                     _mcc = _mrc[1 if _mi == 0 else 4]
+                    _mk_key = f"m12_spark_{_mri}_{_mi}_{_mk['label'].replace(' ','_').replace('.','')}"
                     with _mc:
                         st.markdown(
                             kpi_card(_mk["label"], _mk["value"], _mk["delta"],
@@ -4355,10 +4391,12 @@ with tab_ov:
                         )
                     with _mcc:
                         _mspk = _mk.get("sparkline") or []
-                        _msfig = _mini_spark_fig(_mspk, _mk.get("positive", True))
-                        if _msfig:
-                            st.plotly_chart(_msfig, use_container_width=True,
-                                            config={"displayModeBar": False})
+                        st.plotly_chart(
+                            _mini_spark_fig(_mspk, _mk["label"], _mk.get("positive", True)),
+                            use_container_width=True,
+                            config={"displayModeBar": False},
+                            key=_mk_key,
+                        )
 
         # ── Bullet Chart: KPI vs Benchmark ────────────────────────────────────
         if kpis and not df_cs_snap.empty:
@@ -4759,10 +4797,28 @@ with tab_tr:
         )
         if _main_col in monthly.columns and not monthly[_main_col].isna().all():
             _avg_main = monthly[_main_col].mean()
-            _bar_clrs = [GREEN if v >= _avg_main else RED for v in monthly[_main_col]]
+            # Continuous color gradient: low values = coral, high = vivid teal
+            _vals_norm = monthly[_main_col].fillna(_avg_main)
+            _v_min, _v_max = float(_vals_norm.min()), float(_vals_norm.max())
+            _v_range = _v_max - _v_min if _v_max != _v_min else 1
+            def _grad_color(v):
+                t = (float(v) - _v_min) / _v_range  # 0..1
+                if t >= 0.5:
+                    # teal to bright cyan
+                    r = int(33  + (0   - 33)  * (t - 0.5) * 2)
+                    g = int(128 + (196 - 128) * (t - 0.5) * 2)
+                    b = int(141 + (204 - 141) * (t - 0.5) * 2)
+                else:
+                    # red to teal
+                    r = int(192 + (33  - 192) * t * 2)
+                    g = int(21  + (128 - 21)  * t * 2)
+                    b = int(47  + (141 - 47)  * t * 2)
+                return f"rgb({max(0,min(255,r))},{max(0,min(255,g))},{max(0,min(255,b))})"
+            _bar_clrs = [_grad_color(v) for v in _vals_norm]
             fig = go.Figure(go.Bar(
                 x=monthly["month_label"], y=monthly[_main_col],
-                marker=dict(color=_bar_clrs, line_width=0, cornerradius=5),
+                marker=dict(color=_bar_clrs, line_width=0, cornerradius=6,
+                            line=dict(width=0)),
                 hovertemplate=f"<b>%{{x}}</b><br>{_str_metric_label}: {_tick_pfx}%{{y:.1f}}{_tick_sfx}<extra></extra>",
             ))
             fig.add_hline(y=_avg_main, line_dash="dash",
@@ -4792,10 +4848,10 @@ with tab_tr:
                 "Load more data to unlock year-over-year charts.",
             ), unsafe_allow_html=True)
         else:
-            bar_colors = [GREEN if v >= 0 else RED for v in yoy[_yoy_metric_col]]
+            bar_colors = ["#00C49A" if v >= 0 else "#FF4757" for v in yoy[_yoy_metric_col]]
             fig = go.Figure(go.Bar(
                 x=yoy["month_label"], y=yoy[_yoy_metric_col],
-                marker=dict(color=bar_colors, line_width=0, cornerradius=5),
+                marker=dict(color=bar_colors, line_width=0, cornerradius=6),
                 text=[f"{v:+.1f}%" for v in yoy[_yoy_metric_col]],
                 textposition="outside",
                 textfont=dict(size=10, family="Plus Jakarta Sans, Inter, sans-serif"),
@@ -4871,9 +4927,15 @@ with tab_tr:
                 mrev = tmp.groupby("month")["revenue"].sum().reset_index()
                 mrev["month_label"] = mrev["month"].dt.strftime("%b %Y")
                 mrev["tbid_m"] = mrev["revenue"] * 0.0125 / 1e6
+                _tbid_vals = mrev["tbid_m"].tolist()
+                _tbid_max  = max(_tbid_vals) if _tbid_vals else 1
+                _tbid_clrs = [
+                    f"rgba(245,158,11,{0.55 + 0.45 * v / _tbid_max:.2f})"
+                    for v in _tbid_vals
+                ]
                 fig = go.Figure(go.Bar(
                     x=mrev["month_label"], y=mrev["tbid_m"],
-                    marker=dict(color=TEAL, line_width=0, cornerradius=5),
+                    marker=dict(color=_tbid_clrs, line_width=0, cornerradius=6),
                     hovertemplate="<b>%{x}</b><br>Est. TBID: $%{y:.2f}M<extra></extra>",
                 ))
                 fig.update_layout(yaxis_tickprefix="$", yaxis_ticksuffix="M", showlegend=False,
@@ -4895,13 +4957,13 @@ with tab_tr:
             fig.add_trace(go.Bar(
                 name="Days ≥ 80% Occ",
                 x=df_comp["quarter"], y=df_comp["days_above_80_occ"],
-                marker=dict(color=TEAL, line_width=0, cornerradius=5),
+                marker=dict(color="#00B4C6", line_width=0, cornerradius=6),
                 hovertemplate="<b>%{x}</b><br>Days ≥ 80%%: %{y}<extra></extra>",
             ))
             fig.add_trace(go.Bar(
                 name="Days ≥ 90% Occ",
                 x=df_comp["quarter"], y=df_comp["days_above_90_occ"],
-                marker=dict(color=TEAL_LIGHT, line_width=0, cornerradius=5),
+                marker=dict(color="#6366F1", line_width=0, cornerradius=6),
                 hovertemplate="<b>%{x}</b><br>Days ≥ 90%%: %{y}<br>"
                               "<i>High compression — rate increases justified</i><extra></extra>",
             ))
