@@ -1756,7 +1756,7 @@ def stream_claude_response(prompt: str, api_key: str):
 
 # ─── SVG Icon Library ─────────────────────────────────────────────────────────
 
-def kpi_metric_svg(label: str, positive: bool = True, raw_value: float = 0.0) -> str:
+def kpi_metric_svg(label: str, positive: bool = True, raw_value: float = 0.0, sparkline_values: list = None) -> str:
     """Return SMIL-animated SVG infographic for each KPI card."""
     c  = "#21808D" if positive else "#C0152F"
     bg = "rgba(33,128,141,0.10)" if positive else "rgba(192,21,47,0.08)"
@@ -1769,9 +1769,30 @@ def kpi_metric_svg(label: str, positive: bool = True, raw_value: float = 0.0) ->
             f'{inner}</svg>'
         )
 
+    def _real_pts(vals: list):
+        """Derive 6 SVG polyline points from actual sparkline data scaled to 42x42 space."""
+        try:
+            v = [float(x) for x in vals if x is not None and x == x]
+            if len(v) < 2:
+                return None
+            idx = [int(i * (len(v) - 1) / 5) for i in range(6)]
+            v6  = [v[i] for i in idx]
+            mn, mx = min(v6), max(v6)
+            rng = mx - mn or 1
+            xs  = [5, 11, 17, 23, 29, 37]
+            ys  = [round(37 - (vv - mn) / rng * 30, 1) for vv in v6]
+            return " ".join(f"{x},{y}" for x, y in zip(xs, ys))
+        except Exception:
+            return None
+
     if label == "RevPAR":
-        pts = "5,32 11,24 17,27 23,17 29,12 37,7" if positive else "5,10 11,18 17,15 23,25 29,30 37,35"
-        tip_y = "7" if positive else "35"
+        _spark_pts = _real_pts(sparkline_values) if sparkline_values else None
+        pts    = _spark_pts or ("5,32 11,24 17,27 23,17 29,12 37,7" if positive else "5,10 11,18 17,15 23,25 29,30 37,35")
+        if _spark_pts:
+            _last_y = float(_spark_pts.split()[-1].split(",")[1])
+            tip_y   = str(round(_last_y))
+        else:
+            tip_y = "7" if positive else "35"
         return wrap(
             f'<polyline points="{pts}" stroke="{c}" stroke-width="2.3" fill="none"'
             f' stroke-linecap="round" stroke-linejoin="round"'
@@ -2111,7 +2132,7 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
     css      = "kpi-delta-neutral" if neutral else ("kpi-delta-pos" if positive else "kpi-delta-neg")
     arrow    = "" if neutral else ("▲ " if positive else "▼ ")
     date_html = f'<div class="kpi-date">📅 {date_label}</div>' if date_label else ""
-    svg      = kpi_metric_svg(label, positive, raw_value)
+    svg      = kpi_metric_svg(label, positive, raw_value, sparkline_values)
     spark_html = sparkline_svg(sparkline_values, positive) if sparkline_values else ""
     return (
         f'<div class="kpi-card">'
@@ -4511,6 +4532,9 @@ with tab_tr:
         _agg_spec = {"revpar": ("revpar", "mean"), "adr": ("adr", "mean")}
         if _occ_agg:
             _agg_spec["occ_pct"] = (_occ_agg, "mean")
+        for _mc in ["supply", "demand", "revenue"]:
+            if _mc in _tmp_tr.columns:
+                _agg_spec[_mc] = (_mc, "sum")
         monthly = (
             _tmp_tr.groupby("month")
             .agg(**_agg_spec)
@@ -4519,8 +4543,13 @@ with tab_tr:
         )
         if "occ_pct" not in monthly.columns:
             monthly["occ_pct"] = np.nan
-        # YOY from monthly series (shift 12)
-        monthly["revpar_yoy"] = (monthly["revpar"] / monthly["revpar"].shift(12) - 1) * 100
+        for _mc in ["supply", "demand", "revenue"]:
+            if _mc not in monthly.columns:
+                monthly[_mc] = np.nan
+        # YOY for all metrics (shift 12)
+        for _mc in ["revpar", "adr", "occ_pct", "supply", "demand", "revenue"]:
+            if _mc in monthly.columns:
+                monthly[f"{_mc}_yoy"] = (monthly[_mc] / monthly[_mc].shift(12) - 1) * 100
         monthly["month_label"] = monthly["month"].dt.strftime("%b %Y")
         _trends_ok = True
     elif not df_kpi.empty:
@@ -4588,25 +4617,25 @@ with tab_tr:
             ), unsafe_allow_html=True)
 
         st.markdown("---")
-        st.markdown('<div class="chart-header">YOY RevPAR Change</div>', unsafe_allow_html=True)
-        st.markdown('<div class="chart-caption">Year-over-year % change by month &nbsp;·&nbsp; teal = growth &nbsp;·&nbsp; red = decline</div>', unsafe_allow_html=True)
-        yoy = monthly.dropna(subset=["revpar_yoy"])
+        st.markdown(f'<div class="chart-header">YOY {_str_metric_label} Change</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="chart-caption">Year-over-year % change by month &nbsp;·&nbsp; metric: {_str_metric_label} &nbsp;·&nbsp; teal = growth &nbsp;·&nbsp; red = decline</div>', unsafe_allow_html=True)
+        _yoy_metric_col = f"{_str_metric_col}_yoy"
+        yoy = monthly.dropna(subset=[_yoy_metric_col]) if _yoy_metric_col in monthly.columns else pd.DataFrame()
         if yoy.empty:
             st.markdown(empty_state(
-                "📊", "YOY requires 12+ months of history.",
-                "Load more data and re-run compute_kpis.py to unlock year-over-year charts.",
+                "📊", f"YOY {_str_metric_label} requires 12+ months of history.",
+                "Load more data to unlock year-over-year charts.",
             ), unsafe_allow_html=True)
         else:
-            bar_colors = [GREEN if v >= 0 else RED for v in yoy["revpar_yoy"]]
+            bar_colors = [GREEN if v >= 0 else RED for v in yoy[_yoy_metric_col]]
             fig = go.Figure(go.Bar(
-                x=yoy["month_label"], y=yoy["revpar_yoy"],
+                x=yoy["month_label"], y=yoy[_yoy_metric_col],
                 marker=dict(color=bar_colors, line_width=0, cornerradius=5),
-                text=[f"{v:+.1f}%" for v in yoy["revpar_yoy"]],
+                text=[f"{v:+.1f}%" for v in yoy[_yoy_metric_col]],
                 textposition="outside",
                 textfont=dict(size=10, family="Plus Jakarta Sans, Inter, sans-serif"),
                 hovertemplate=(
-                    "<b>%{x}</b><br>YOY RevPAR: %{y:+.1f}%<br>"
-                    "<i>Use 'Board Talking Points' for AI narrative</i><extra></extra>"
+                    f"<b>%{{x}}</b><br>YOY {_str_metric_label}: %{{y:+.1f}}%<extra></extra>"
                 ),
             ))
             fig.update_layout(yaxis_ticksuffix="%", showlegend=False)
@@ -4616,15 +4645,18 @@ with tab_tr:
         c1, c2 = st.columns(2)
 
         with c1:
-            st.markdown('<div class="chart-header">Seasonal Demand Rose — Monthly RevPAR Compass</div>', unsafe_allow_html=True)
-            st.markdown('<div class="chart-caption">Petal length = avg RevPAR · longer petals = stronger months · reveals true seasonality shape</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chart-header">Seasonal Demand Rose — Monthly {_str_metric_label} Compass</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chart-caption">Petal length = avg {_str_metric_label} · longer petals = stronger months · reveals true seasonality shape</div>', unsafe_allow_html=True)
             if len(monthly) >= 6:
                 month_order_full = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
                 _tmp_rose = df_monthly.copy()
                 _tmp_rose["mon_num"] = _tmp_rose["as_of_date"].dt.month
                 _tmp_rose["mon_lbl"] = _tmp_rose["as_of_date"].dt.strftime("%b")
-                rose_avg = _tmp_rose.groupby("mon_num")["revpar"].mean().reindex(range(1, 13))
+                _rose_col = _str_metric_col if _str_metric_col in _tmp_rose.columns else "revpar"
+                rose_avg = _tmp_rose.groupby("mon_num")[_rose_col].mean().reindex(range(1, 13))
                 rose_avg = rose_avg.fillna(0)
+                _rose_tick_pfx = _tick_pfx
+                _rose_tick_sfx = _tick_sfx
                 # Polar bar chart (rose plot)
                 _rose_colors = [
                     TEAL if v >= rose_avg.mean() else TEAL_LIGHT
@@ -4638,13 +4670,13 @@ with tab_tr:
                         line=dict(color="white", width=1),
                         opacity=0.85,
                     ),
-                    hovertemplate="<b>%{theta}</b><br>Avg RevPAR: $%{r:.0f}<extra></extra>",
+                    hovertemplate=f"<b>%{{theta}}</b><br>{_str_metric_label}: {_rose_tick_pfx}%{{r:.0f}}{_rose_tick_sfx}<extra></extra>",
                 ))
                 fig.update_layout(
                     polar=dict(
                         radialaxis=dict(
                             visible=True,
-                            tickprefix="$",
+                            tickprefix=_rose_tick_pfx,
                             gridcolor="rgba(167,169,169,0.2)",
                             linecolor="rgba(167,169,169,0.2)",
                         ),
@@ -4659,7 +4691,7 @@ with tab_tr:
                 st.plotly_chart(style_fig(fig, height=360), use_container_width=True)
                 _peak_mon = month_order_full[rose_avg.idxmax() - 1]
                 _soft_mon = month_order_full[rose_avg.idxmin() - 1]
-                st.caption(f"Peak: **{_peak_mon}** (${rose_avg.max():.0f} RevPAR) · Softest: **{_soft_mon}** (${rose_avg.min():.0f}). "
+                st.caption(f"Peak: **{_peak_mon}** ({_tick_pfx}{rose_avg.max():.0f}{_tick_sfx} {_str_metric_label}) · Softest: **{_soft_mon}** ({_tick_pfx}{rose_avg.min():.0f}{_tick_sfx}). "
                            f"Shoulder months show the biggest rate-capture opportunity.")
             else:
                 st.markdown(empty_state("📊", "Need 6+ months.", "Load more history."), unsafe_allow_html=True)
@@ -4717,7 +4749,7 @@ with tab_tr:
         st.markdown("---")
 
         # ── Full history line chart ─────────────────────────────────────────────
-        st.markdown('<div class="chart-header">RevPAR / ADR / Occupancy — Full History</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="chart-header">Full History — RevPAR / ADR / Occupancy ({_str_metric_label} highlighted)</div>', unsafe_allow_html=True)
         src_label = "monthly STR exports" if grain == "Monthly" else "kpi_daily_summary"
         st.markdown(f'<div class="chart-caption">Monthly averages &nbsp;·&nbsp; all available data &nbsp;·&nbsp; source: {src_label}</div>', unsafe_allow_html=True)
         fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -4741,10 +4773,10 @@ with tab_tr:
         # ── Beeswarm: Daily RevPAR Distribution ───────────────────────────────
         if not df_daily.empty and len(df_daily) >= 30:
             st.markdown("---")
-            st.markdown('<div class="chart-header">Daily RevPAR Distribution — Beeswarm</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chart-header">Daily {_str_metric_label} Distribution — Beeswarm</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="chart-caption">Each dot = one day · spread by RevPAR value · '
-                'color = quarter · reveals compression clusters and soft-period gaps</div>',
+                f'<div class="chart-caption">Each dot = one day · spread by {_str_metric_label} · '
+                f'color = quarter · reveals compression clusters and soft-period gaps</div>',
                 unsafe_allow_html=True,
             )
             _bsw = df_daily.copy().tail(365)
@@ -4752,16 +4784,18 @@ with tab_tr:
             _bsw["year"] = _bsw["as_of_date"].dt.year
             _q_colors = {1: "#A7D5D9", 2: TEAL_LIGHT, 3: TEAL, 4: "#1A6470"}
             _bsw["color"] = _bsw["quarter"].map(_q_colors)
-            # Jitter y-axis to create beeswarm effect
+            # Use selected metric column (fall back to revpar if not in daily data)
+            _bsw_col = _str_metric_col if _str_metric_col in _bsw.columns else "revpar"
+            _bsw_label = _str_metric_label
             np.random.seed(42)
             _bsw["jitter"] = np.random.uniform(-0.4, 0.4, len(_bsw))
             fig = go.Figure()
             for q in [1, 2, 3, 4]:
-                _sub = _bsw[_bsw["quarter"] == q]
+                _sub = _bsw[_bsw["quarter"] == q].dropna(subset=[_bsw_col])
                 if _sub.empty:
                     continue
                 fig.add_trace(go.Scatter(
-                    x=_sub["revpar"],
+                    x=_sub[_bsw_col],
                     y=_sub["jitter"],
                     mode="markers",
                     name=f"Q{q}",
@@ -4772,24 +4806,24 @@ with tab_tr:
                         line=dict(width=0.5, color="white"),
                     ),
                     hovertemplate=(
-                        "<b>%{customdata[0]|%b %d, %Y}</b><br>"
-                        "RevPAR: $%{x:.0f}<br>Q%{customdata[1]}<extra></extra>"
+                        f"<b>%{{customdata[0]|%b %d, %Y}}</b><br>"
+                        f"{_bsw_label}: {_tick_pfx}%{{x:.1f}}{_tick_sfx}<br>Q%{{customdata[1]}}<extra></extra>"
                     ),
                     customdata=_sub[["as_of_date", "quarter"]].values,
                 ))
-            _bsw_avg = _bsw["revpar"].mean()
+            _bsw_avg = _bsw[_bsw_col].dropna().mean() if _bsw_col in _bsw.columns else 0
             fig.add_vline(x=_bsw_avg, line_dash="dash",
                           line_color="rgba(167,169,169,0.6)",
-                          annotation_text=f"Avg ${_bsw_avg:.0f}",
+                          annotation_text=f"Avg {_tick_pfx}{_bsw_avg:.0f}{_tick_sfx}",
                           annotation_position="top")
             fig.update_layout(
                 yaxis=dict(visible=False, range=[-1, 1]),
-                xaxis=dict(title="RevPAR ($)", tickprefix="$"),
+                xaxis=dict(title=f"{_bsw_label} ({_tick_pfx or _tick_sfx or 'value'})", tickprefix=_tick_pfx, ticksuffix=_tick_sfx),
                 showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             )
             st.plotly_chart(style_fig(fig, height=280), use_container_width=True)
-            st.caption("Density clusters reveal seasonal compression. Q3 (dark teal) dots pushed right = peak pricing power. Spread = rate variability risk.")
+            st.caption(f"Density clusters reveal seasonal patterns. Q3 (dark teal) = peak season. Spread = {_str_metric_label} variability. Filter metric above to switch views.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — FORWARD OUTLOOK
@@ -5126,13 +5160,17 @@ with tab_ev:
                     hovertemplate="<b>%{label}</b><br>%{value:.1f}% of spend<extra></extra>",
                 ))
                 fig.update_layout(
-                    legend=dict(font_size=10, orientation="v",
-                                font=dict(family="Plus Jakarta Sans, Inter, sans-serif")),
+                    legend=dict(
+                        font_size=10, orientation="h",
+                        font=dict(family="Plus Jakarta Sans, Inter, sans-serif"),
+                        yanchor="top", y=-0.08, xanchor="center", x=0.5,
+                    ),
+                    margin=dict(l=10, r=10, t=20, b=80),
                     annotations=[dict(text="Spend<br>Mix", x=0.5, y=0.5, font_size=13,
                                       font_family="Plus Jakarta Sans, sans-serif",
                                       font_color="#21808D", showarrow=False)],
                 )
-                st.plotly_chart(style_fig(fig, height=360), use_container_width=True)
+                st.plotly_chart(style_fig(fig, height=400), use_container_width=True)
             else:
                 st.info("Spending data not available. Run the pipeline.")
 
@@ -5751,6 +5789,17 @@ with tab_fm:
                 textposition="outside",
                 hovertemplate="<b>%{y}</b><br>Visitor days: %{x:.1f}%<extra></extra>",
             ))
+            _top_vol_dma = _dma_sorted.iloc[-1]
+            fig_fm1.add_annotation(
+                y=_top_vol_dma["dma"],
+                x=float(_top_vol_dma["visitor_days_share_pct"]) * 1.02,
+                text="👑 Top Volume",
+                showarrow=False,
+                xanchor="left",
+                font=dict(size=10, color="#21808D", family="Plus Jakarta Sans, Inter, sans-serif"),
+                bgcolor="rgba(33,128,141,0.08)",
+                borderpad=3,
+            )
             fig_fm1.update_layout(xaxis_ticksuffix="%", showlegend=False)
             st.plotly_chart(style_fig(fig_fm1, height=380), use_container_width=True)
 
@@ -5770,6 +5819,17 @@ with tab_fm:
                     textposition="outside",
                     hovertemplate="<b>%{y}</b><br>Avg spend: $%{x:,.0f}<extra></extra>",
                 ))
+                _top_val_dma = _dma_spend.iloc[-1]
+                fig_fm2.add_annotation(
+                    y=_top_val_dma["dma"],
+                    x=float(_top_val_dma["avg_spend_usd"]) * 1.02,
+                    text="⭐ Highest Value",
+                    showarrow=False,
+                    xanchor="left",
+                    font=dict(size=10, color="#E68161", family="Plus Jakarta Sans, Inter, sans-serif"),
+                    bgcolor="rgba(230,129,97,0.08)",
+                    borderpad=3,
+                )
                 fig_fm2.update_layout(xaxis_tickprefix="$", showlegend=False)
                 st.plotly_chart(style_fig(fig_fm2, height=380), use_container_width=True)
             else:
