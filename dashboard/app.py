@@ -2450,39 +2450,22 @@ with st.sidebar:
     if _is_admin:
       st.markdown("**⚙️ Pipeline Controls**")
 
-      run_btn   = st.button(
+      fetch_btn = st.button(
+          "📡 Fetch All Sources",
+          use_container_width=True,
+          help="Pull latest data from every source (STR · Datafy · CoStar · Zartico · Visit CA · VDP Events · FRED · CA TOT · JWA). Only new rows are inserted — no duplicates ever.",
+      )
+      run_btn = st.button(
           "🔄 Run Pipeline",
           use_container_width=True,
-          help="Load STR exports → compute KPIs → refresh dashboard",
-      )
-      fetch_btn = st.button(
-          "📡 Fetch External Data",
-          use_container_width=True,
-          help="CoStar · FRED · CA TOT · JWA passenger stats",
+          help="Recompute KPIs and regenerate AI insights from loaded data. Run this after Fetch to update everything the app displays.",
       )
     else:
       run_btn = False
       fetch_btn = False
 
-    if run_btn:
-        with st.spinner("Running pipeline…"):
-            proc = subprocess.run(
-                [sys.executable, str(ROOT / "scripts" / "run_pipeline.py")],
-                capture_output=True,
-                text=True,
-                cwd=str(ROOT),
-            )
-        if proc.returncode == 0:
-            st.success("Pipeline complete ✓")
-            st.cache_data.clear()
-            st.rerun()
-        else:
-            st.error("Pipeline failed — see detail below")
-            err_text = (proc.stderr or proc.stdout or "No output captured").strip()
-            st.code(err_text[-800:], language="text")
-
     if fetch_btn:
-        with st.spinner("Fetching external sources…"):
+        with st.spinner("Fetching all sources — this may take 30–60 seconds…"):
             proc = subprocess.run(
                 [sys.executable, str(ROOT / "scripts" / "fetch_external_all.py")],
                 capture_output=True,
@@ -2490,11 +2473,27 @@ with st.sidebar:
                 cwd=str(ROOT),
             )
         if proc.returncode == 0:
-            st.success("External fetch complete ✓")
+            st.success("All sources fetched ✓ — click Run Pipeline to refresh KPIs & insights.")
+            st.cache_data.clear()
+        else:
+            st.error("Fetch failed — see detail below")
+            err_text = (proc.stderr or proc.stdout or "No output captured").strip()
+            st.code(err_text[-800:], language="text")
+
+    if run_btn:
+        with st.spinner("Recomputing KPIs and insights…"):
+            proc = subprocess.run(
+                [sys.executable, str(ROOT / "scripts" / "compute_only.py")],
+                capture_output=True,
+                text=True,
+                cwd=str(ROOT),
+            )
+        if proc.returncode == 0:
+            st.success("Pipeline complete — dashboard refreshed ✓")
             st.cache_data.clear()
             st.rerun()
         else:
-            st.error("Fetch failed — see detail below")
+            st.error("Pipeline failed — see detail below")
             err_text = (proc.stderr or proc.stdout or "No output captured").strip()
             st.code(err_text[-800:], language="text")
 

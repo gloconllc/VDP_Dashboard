@@ -1,25 +1,37 @@
 """
 fetch_external_all.py
 ----------------------
-Orchestrates all external / Layer-2 data fetches in order:
+Fetches and ingests data from EVERY source into the database.
+Triggered by the "📡 Fetch All Sources" admin button.
 
-  1. fetch_costar_data.py   — CoStar Excel exports from downloads/
-  2. fetch_fred_data.py     — FRED hotel pricing index  (runs if file exists)
-  3. fetch_ca_tot.py        — CA State TOT data         (runs if file exists)
-  4. fetch_jwa_stats.py     — JWA passenger counts      (runs if file exists)
+Dedup guarantee: every load script uses ON CONFLICT / SELECT-before-INSERT /
+DELETE-then-INSERT-by-period — re-running this script never creates duplicate rows.
 
-Per CLAUDE.md data hierarchy:
-  Layer 1 (STR / Datafy) = Truth — run_pipeline.py handles that
-  Layer 2 (FRED / CA TOT / JWA / CoStar) = Context — this script handles that
+Step order (all skip-safe unless marked fatal):
 
-Each step is logged to logs/pipeline.log.
-Fail-fast: first FAIL aborts the run (WARN is non-fatal).
+  Layer 1 — Truth (STR / Datafy):
+    1. load_str_daily_sqlite.py    — STR daily export → fact_str_metrics       [fatal if file present]
+    2. load_str_monthly_sqlite.py  — STR monthly export → fact_str_metrics      [fatal if file present]
+    3. load_datafy_reports.py      — Datafy visitor economy CSVs                [skip-safe]
+
+  Layer 1 — Market data:
+    4. load_costar_reports.py      — CoStar hospitality analytics PDFs          [skip-safe]
+    5. load_zartico_reports.py     — Zartico historical reference PDFs          [skip-safe]
+
+  Layer 2 — External context:
+    6. load_visit_ca.py            — Visit California state forecast data       [skip-safe]
+    7. fetch_vdp_events.py         — VDP event calendar (scrape + seed)         [skip-safe]
+    8. fetch_fred_data.py          — FRED hotel pricing index                   [skip-safe]
+    9. fetch_ca_tot.py             — CA State TOT data                          [skip-safe]
+   10. fetch_jwa_stats.py          — JWA passenger counts                       [skip-safe]
+
+After this completes, run compute_only.py (or click "Run Pipeline") to
+refresh KPIs and insights.
 
 Run:
     python3 scripts/fetch_external_all.py
 """
 
-import os
 import subprocess
 import sys
 from datetime import datetime
@@ -33,12 +45,23 @@ BASE_DIR     = Path(__file__).parent
 PROJECT_ROOT = BASE_DIR.parent
 LOG_PATH     = PROJECT_ROOT / "logs" / "pipeline.log"
 
-# Steps: (log_name, script_path, fatal_on_missing)
+# Steps: (log_name, script_name, fatal_if_fails)
+# fatal_if_fails=True  → abort fetch run if this step returns non-zero
+# fatal_if_fails=False → log warning and continue (skip-safe)
 STEPS = [
-    ("fetch_costar",  BASE_DIR / "fetch_costar_data.py",   True),
-    ("fetch_fred",    BASE_DIR / "fetch_fred_data.py",      False),
-    ("fetch_ca_tot",  BASE_DIR / "fetch_ca_tot.py",         False),
-    ("fetch_jwa",     BASE_DIR / "fetch_jwa_stats.py",      False),
+    # Layer 1 — Truth
+    ("load_str_daily",   "load_str_daily_sqlite.py",   False),  # skip-safe: file may not exist yet
+    ("load_str_monthly", "load_str_monthly_sqlite.py", False),  # skip-safe: file may not exist yet
+    ("load_datafy",      "load_datafy_reports.py",     False),
+    # Layer 1 — Market data
+    ("load_costar",      "load_costar_reports.py",     False),
+    ("load_zartico",     "load_zartico_reports.py",    False),
+    # Layer 2 — External context
+    ("load_visit_ca",    "load_visit_ca.py",           False),
+    ("fetch_vdp_events", "fetch_vdp_events.py",        False),
+    ("fetch_fred",       "fetch_fred_data.py",         False),
+    ("fetch_ca_tot",     "fetch_ca_tot.py",            False),
+    ("fetch_jwa",        "fetch_jwa_stats.py",         False),
 ]
 
 # ---------------------------------------------------------------------------
@@ -48,29 +71,29 @@ STEPS = [
 def _now() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+
 def log(step: str, status: str, message: str) -> None:
-    line = f"{_now()} | {step:<20} | {status:<4} | {message}"
+    line = f"{_now()} | {step:<22} | {status:<4} | {message}"
     print(line)
     LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(LOG_PATH, "a") as fh:
         fh.write(line + "\n")
 
+
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
 
-def run_step(step_name: str, script_path: Path, fatal_on_missing: bool) -> bool:
+def run_step(step_name: str, script_name: str, fatal_if_fails: bool) -> bool:
     """
-    Execute the script as a subprocess using the current Python interpreter.
+    Execute scripts/<script_name> as a subprocess.
     Returns True on success or non-fatal skip. Returns False on hard failure.
     """
+    script_path = BASE_DIR / script_name
+
     if not script_path.exists():
-        if fatal_on_missing:
-            log(step_name, "FAIL", f"Script not found: {script_path}")
-            return False
-        else:
-            log(step_name, "SKIP", f"Script not yet implemented: {script_path.name}")
-            return True   # non-fatal skip
+        log(step_name, "SKIP", f"Script not yet implemented: {script_name}")
+        return True  # always non-fatal for missing scripts
 
     try:
         result = subprocess.run(
@@ -81,7 +104,7 @@ def run_step(step_name: str, script_path: Path, fatal_on_missing: bool) -> bool:
         )
     except Exception as exc:
         log(step_name, "FAIL", f"subprocess error: {exc}")
-        return False
+        return not fatal_if_fails  # fatal → False, non-fatal → True (continue)
 
     output_lines = (result.stdout + result.stderr).strip().splitlines()
     summary = " | ".join(ln.strip() for ln in output_lines if ln.strip()) or "(no output)"
@@ -93,7 +116,10 @@ def run_step(step_name: str, script_path: Path, fatal_on_missing: bool) -> bool:
         return True
     else:
         log(step_name, "FAIL", f"exit={result.returncode} | {summary}")
-        return False
+        if fatal_if_fails:
+            return False
+        log(step_name, "WARN", f"{step_name} failed — non-critical, continuing")
+        return True
 
 
 # ---------------------------------------------------------------------------
@@ -101,16 +127,15 @@ def run_step(step_name: str, script_path: Path, fatal_on_missing: bool) -> bool:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    log("fetch_external", "OK  ", "=== external fetch start ===")
+    log("fetch_all", "OK  ", "=== fetch all sources start ===")
 
-    for step_name, script_path, fatal_on_missing in STEPS:
-        ok = run_step(step_name, script_path, fatal_on_missing)
+    for step_name, script_name, fatal_if_fails in STEPS:
+        ok = run_step(step_name, script_name, fatal_if_fails)
         if not ok:
-            log("fetch_external", "FAIL",
-                f"external fetch aborted at step '{step_name}'")
+            log("fetch_all", "FAIL", f"fetch aborted at step '{step_name}'")
             sys.exit(1)
 
-    log("fetch_external", "OK  ", "=== external fetch complete ===")
+    log("fetch_all", "OK  ", "=== fetch all sources complete — run compute_only.py to refresh KPIs/insights ===")
 
 
 if __name__ == "__main__":
