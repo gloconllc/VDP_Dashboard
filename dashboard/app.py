@@ -5956,8 +5956,8 @@ with tab_ei:
     _att_yoy_str = f"+{_zrt_fe['yoy_pct_change_attendees']:.0f}%" if _zrt_fe is not None and pd.notna(_zrt_fe.get("yoy_pct_change_attendees")) else "N/A"
     # Q3 compression: 34 days above 80% in 2025
     _q3_comp = 0
-    if not df_compression.empty:
-        _q3_row = df_compression[df_compression["quarter"] == "2025-Q3"]
+    if not df_comp.empty:
+        _q3_row = df_comp[df_comp["quarter"] == "2025-Q3"]
         _q3_comp = int(_q3_row["days_above_80_occ"].iloc[0]) if not _q3_row.empty else 34
 
     _ei_summary_data = [
@@ -6492,25 +6492,25 @@ with tab_ei:
     # ══════════════════════════════════════════════════════════════════════════
     # COMPRESSION CALENDAR
     # ══════════════════════════════════════════════════════════════════════════
-    if not df_compression.empty:
+    if not df_comp.empty:
         st.markdown("#### Annual Compression Calendar — Days Above 80% Occupancy")
         st.caption("Compression days concentrate in Q3 (peak event season). Q1/Q4 events are high-value shoulder drivers.")
         fig_comp_ei = go.Figure()
         fig_comp_ei.add_trace(go.Bar(
-            x=df_compression["quarter"],
-            y=df_compression["days_above_80_occ"],
+            x=df_comp["quarter"],
+            y=df_comp["days_above_80_occ"],
             name="Days ≥80% OCC",
             marker_color=TEAL,
-            text=df_compression["days_above_80_occ"],
+            text=df_comp["days_above_80_occ"],
             textposition="outside",
             hovertemplate="<b>%{x}</b><br>Days ≥80%: %{y}<extra></extra>",
         ))
         fig_comp_ei.add_trace(go.Bar(
-            x=df_compression["quarter"],
-            y=df_compression["days_above_90_occ"],
+            x=df_comp["quarter"],
+            y=df_comp["days_above_90_occ"],
             name="Days ≥90% OCC",
             marker_color=ORANGE,
-            text=df_compression["days_above_90_occ"],
+            text=df_comp["days_above_90_occ"],
             textposition="outside",
             hovertemplate="<b>%{x}</b><br>Days ≥90%: %{y}<extra></extra>",
         ))
@@ -6520,8 +6520,8 @@ with tab_ei:
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
         st.plotly_chart(style_fig(fig_comp_ei, height=280), use_container_width=True)
-        _total_80 = int(df_compression["days_above_80_occ"].sum())
-        _total_90 = int(df_compression["days_above_90_occ"].sum())
+        _total_80 = int(df_comp["days_above_80_occ"].sum())
+        _total_90 = int(df_comp["days_above_90_occ"].sum())
         st.caption(
             f"2024–2026 YTD: **{_total_80} total days** at 80%+ occupancy · **{_total_90} days** at 90%+. "
             "Event programming directly determines whether Q1/Q2/Q4 quarters ever reach compression."
