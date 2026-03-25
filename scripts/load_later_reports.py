@@ -184,6 +184,26 @@ CREATE TABLE IF NOT EXISTS later_tk_audience_engagement (
     loaded_at   TEXT DEFAULT (datetime('now')),
     UNIQUE(hour_24, day_label)
 );
+
+CREATE TABLE IF NOT EXISTS later_ig_stories (
+    id              INTEGER PRIMARY KEY,
+    posted_at       TEXT,
+    views           INTEGER,
+    reach           INTEGER,
+    replies         INTEGER,
+    completion_rate REAL,
+    avg_views_user  REAL,
+    loaded_at       TEXT DEFAULT (datetime('now')),
+    UNIQUE(posted_at)
+);
+
+CREATE TABLE IF NOT EXISTS later_tk_interactions (
+    id          INTEGER PRIMARY KEY,
+    data_date   TEXT,
+    views       INTEGER,
+    loaded_at   TEXT DEFAULT (datetime('now')),
+    UNIQUE(data_date)
+);
 """
 
 TABLE_RELATIONSHIPS = [
@@ -192,6 +212,8 @@ TABLE_RELATIONSHIPS = [
     ("later_ig_posts",           "later_fb_posts",            "cross_platform", "posted_at",   "Cross-platform post performance (IG vs FB)"),
     ("later_ig_audience_demographics", "datafy_overview_demographics", "context", "—",        "Social audience age/gender vs visitor demographics"),
     ("later_ig_profile_growth",  "kpi_daily_summary",         "context",        "data_date",   "Instagram reach growth vs hotel demand seasonality"),
+    ("later_ig_stories",         "later_ig_posts",            "enriches",       "posted_at",   "Instagram stories vs post performance comparison"),
+    ("later_tk_interactions",    "later_tk_profile_growth",   "enriches",       "data_date",   "TikTok daily interactions vs follower growth"),
 ]
 
 
@@ -692,6 +714,68 @@ def load_tk_audience_engagement(conn) -> int:
     return rows_total
 
 
+def load_ig_stories(conn) -> int:
+    files = _find_files(IG_DIR, "IG_Detailed_Story_Performance")
+    if not files:
+        print(f"{ts()} [IG Stories] No files found — skipping")
+        return 0
+    rows_total = 0
+    for f in files:
+        df = _read_csv(f)
+        inserted = 0
+        for _, row in df.iterrows():
+            posted_at = _parse_datetime(row.get("Time Posted") or row.get("time posted"))
+            if not posted_at:
+                continue
+            comp_raw = str(row.get("Completion Rate") or "0").replace("%", "").strip()
+            try:
+                comp = float(comp_raw)
+            except Exception:
+                comp = None
+            conn.execute(
+                "INSERT OR REPLACE INTO later_ig_stories"
+                "(posted_at, views, reach, replies, completion_rate, avg_views_user) "
+                "VALUES(?,?,?,?,?,?)",
+                (
+                    posted_at,
+                    _safe_int(row.get("Views")),
+                    _safe_int(row.get("Reach")),
+                    _safe_int(row.get("Replies")),
+                    comp,
+                    _safe_float(row.get("Avg. Views/User")),
+                ),
+            )
+            inserted += 1
+        log_load(conn, "later_ig_stories", f.name, inserted)
+        rows_total += inserted
+        print(f"{ts()} [IG Stories] {f.name} → {inserted} rows")
+    return rows_total
+
+
+def load_tk_interactions(conn) -> int:
+    files = _find_files(TK_DIR, "TK_Profile_Interactions")
+    if not files:
+        print(f"{ts()} [TK Interactions] No files found — skipping")
+        return 0
+    rows_total = 0
+    for f in files:
+        df = _read_csv(f)
+        inserted = 0
+        for _, row in df.iterrows():
+            d = _parse_date(row.get("Date") or row.get("date"))
+            if not d:
+                continue
+            conn.execute(
+                "INSERT OR REPLACE INTO later_tk_interactions(data_date, views) VALUES(?,?)",
+                (d, _safe_int(row.get("Views"))),
+            )
+            inserted += 1
+        log_load(conn, "later_tk_interactions", f.name, inserted)
+        rows_total += inserted
+        print(f"{ts()} [TK Interactions] {f.name} → {inserted} rows")
+    return rows_total
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -728,6 +812,10 @@ def main():
     tk_total += load_tk_profile_growth(conn)
     tk_total += load_tk_audience_demographics(conn)
     tk_total += load_tk_audience_engagement(conn)
+
+    # Additional tables
+    ig_total += load_ig_stories(conn)
+    tk_total += load_tk_interactions(conn)
 
     seed_table_relationships(conn)
     conn.commit()

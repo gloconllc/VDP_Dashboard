@@ -326,6 +326,68 @@ def load_social_overview(conn: sqlite3.Connection) -> dict[str, Any]:
         return {}
 
 
+def load_later_social(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Return aggregated social metrics from Later.com tables."""
+    result: dict[str, Any] = {}
+    try:
+        df_ig = pd.read_sql_query(
+            "SELECT followers, reach FROM later_ig_profile_growth "
+            "ORDER BY data_date DESC LIMIT 1",
+            conn,
+        )
+        if not df_ig.empty:
+            result["ig_followers"] = int(df_ig.iloc[0].get("ig_followers") or df_ig.iloc[0].get("followers") or 0)
+    except Exception:
+        pass
+    try:
+        df_ig_row = pd.read_sql_query(
+            "SELECT followers FROM later_ig_profile_growth ORDER BY data_date DESC LIMIT 1",
+            conn,
+        )
+        if not df_ig_row.empty:
+            result["ig_followers"] = int(df_ig_row.iloc[0]["followers"] or 0)
+    except Exception:
+        pass
+    try:
+        df_fb = pd.read_sql_query(
+            "SELECT page_followers FROM later_fb_profile_growth ORDER BY data_date DESC LIMIT 1",
+            conn,
+        )
+        if not df_fb.empty:
+            result["fb_followers"] = int(df_fb.iloc[0]["page_followers"] or 0)
+    except Exception:
+        pass
+    try:
+        df_tk = pd.read_sql_query(
+            "SELECT followers FROM later_tk_profile_growth ORDER BY data_date DESC LIMIT 1",
+            conn,
+        )
+        if not df_tk.empty:
+            result["tk_followers"] = int(df_tk.iloc[0]["followers"] or 0)
+    except Exception:
+        pass
+    try:
+        df_eng = pd.read_sql_query(
+            "SELECT engagement_rate FROM later_ig_posts WHERE engagement_rate IS NOT NULL",
+            conn,
+        )
+        if not df_eng.empty:
+            result["ig_avg_engagement_rate"] = round(float(df_eng["engagement_rate"].mean()), 2)
+            result["ig_post_count"] = len(df_eng)
+    except Exception:
+        pass
+    try:
+        df_reach = pd.read_sql_query(
+            "SELECT SUM(reach) as total_reach FROM later_ig_profile_growth",
+            conn,
+        )
+        if not df_reach.empty and df_reach.iloc[0]["total_reach"]:
+            result["ig_total_reach"] = int(df_reach.iloc[0]["total_reach"])
+    except Exception:
+        pass
+    return result
+
+
 def load_all_dmas(conn: sqlite3.Connection) -> pd.DataFrame:
     """All DMA rows including spend efficiency calculation."""
     try:
@@ -1511,6 +1573,53 @@ def gen_cross_compression_daytrip(comp: pd.DataFrame, overview: dict) -> dict:
     )
 
 
+def gen_dmo_social_reach(social: dict[str, Any]) -> dict:
+    """
+    Later.com social data: IG/FB/TK follower counts + IG engagement rate.
+    Surfaces social channel performance as a DMO board-level insight.
+    """
+    if not social:
+        return {}
+    ig_fol  = social.get("ig_followers", 0)
+    fb_fol  = social.get("fb_followers", 0)
+    tk_fol  = social.get("tk_followers", 0)
+    eng_avg = social.get("ig_avg_engagement_rate", 0.0)
+    posts   = social.get("ig_post_count", 0)
+    total_fol = ig_fol + fb_fol + tk_fol
+    if total_fol == 0:
+        return {}
+    ig_reach = social.get("ig_total_reach", 0)
+    headline = (
+        f"Cross-platform social audience: {total_fol:,} followers "
+        f"(IG {ig_fol:,} · FB {fb_fol:,} · TK {tk_fol:,}); "
+        f"IG avg engagement {eng_avg:.1f}%"
+    )
+    eng_benchmark = "above industry benchmark (1–3%)" if eng_avg > 3.0 else "at industry standard (1–3%)" if eng_avg >= 1.0 else "below industry benchmark — review content mix"
+    body = (
+        f"Visit Dana Point's social channels reach {total_fol:,} combined followers: "
+        f"Instagram {ig_fol:,}, Facebook {fb_fol:,}, TikTok {tk_fol:,}. "
+        f"Instagram average post engagement rate is {eng_avg:.1f}% ({eng_benchmark}) across {posts} posts tracked. "
+        f"Cumulative Instagram reach is {ig_reach:,} impressions. "
+        f"Social performance is a leading indicator of destination awareness — "
+        f"high engagement on TikTok and Instagram correlates with increased website sessions and trip intent."
+        + _5wh(
+            who="VDP marketing team and TBID board",
+            what=f"{total_fol:,} total followers, IG engagement {eng_avg:.1f}%, {posts} posts",
+            when="Ongoing — review monthly against campaign spend",
+            where="Instagram, Facebook, TikTok (Later.com analytics)",
+            why="Social reach is the top-of-funnel driver of destination awareness and visitor intent",
+            how="Benchmark IG engagement >3%; shift content mix toward Reels and TikTok for organic reach growth",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=3, horizon_days=30,
+        data_sources="later_ig_profile_growth,later_ig_posts,later_fb_profile_growth,later_tk_profile_growth",
+        metric_basis={"ig_followers": ig_fol, "fb_followers": fb_fol, "tk_followers": tk_fol,
+                      "total_followers": total_fol, "ig_avg_engagement_rate": eng_avg,
+                      "ig_post_count": posts, "ig_total_reach": ig_reach},
+    )
+
+
 # ---------------------------------------------------------------------------
 # Main orchestrator
 # ---------------------------------------------------------------------------
@@ -1544,12 +1653,14 @@ def main() -> None:
         media_kpis  = load_media_kpis(conn)
         web_kpis    = load_website_kpis(conn)
         channels    = load_attribution_channels(conn)
+        social_data = load_later_social(conn)
 
         print(f"  KPI rows: {len(kpi_recent)} (90d) | {len(kpi_all)} (all)")
         print(f"  Compression quarters: {len(comp)}")
         print(f"  STR revenue rows (90d): {len(str_rev)}")
         print(f"  Datafy overview KPIs: {'loaded' if overview else 'empty'}")
         print(f"  All DMA rows: {len(all_dmas)} | Attribution channels: {len(channels)}")
+        print(f"  Later.com social: IG {social_data.get('ig_followers',0):,} followers")
 
         # ── Generate insights ────────────────────────────────────────────────
         generators = {
@@ -1559,6 +1670,7 @@ def main() -> None:
             ("dmo", "feeder_market"):     lambda: gen_dmo_feeder_market(top_dmas, web_kpis, media_kpis),
             ("dmo", "compression_outlook"): lambda: gen_dmo_compression_outlook(comp, kpi_recent),
             ("dmo", "event_roi"):         lambda: gen_dmo_event_roi(media_kpis, web_kpis),
+            ("dmo", "social_reach"):      lambda: gen_dmo_social_reach(social_data),
 
             # City
             ("city", "tot_revenue"):      lambda: gen_city_tot_revenue(str_rev, kpi_recent),

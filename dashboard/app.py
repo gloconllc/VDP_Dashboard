@@ -1371,6 +1371,26 @@ def load_later_tk_demographics() -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
 
+@st.cache_data(ttl=300)
+def load_later_ig_stories() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM later_ig_stories ORDER BY posted_at DESC LIMIT 200", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_later_tk_interactions() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM later_tk_interactions ORDER BY data_date DESC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
 
 @st.cache_data(ttl=300)
 def load_datafy_clusters() -> pd.DataFrame:
@@ -1408,6 +1428,8 @@ def get_table_counts() -> dict:
         "later_fb_profile_interactions",
         "later_tk_profile_growth",
         "later_tk_audience_demographics",
+        "later_ig_stories",
+        "later_tk_interactions",
     ]
     for t in all_tables:
         try:
@@ -2488,6 +2510,8 @@ df_later_fb_profile  = load_later_fb_profile()
 df_later_fb_posts    = load_later_fb_posts()
 df_later_tk_profile  = load_later_tk_profile()
 df_later_tk_demo     = load_later_tk_demographics()
+df_later_ig_stories  = load_later_ig_stories()
+df_later_tk_inter    = load_later_tk_interactions()
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -2642,13 +2666,22 @@ with st.sidebar:
             pass
     _vca_dot  = "🟢" if _vca_rows > 0 else "⚫"
     _vca_label = f"{_vca_rows:,} rows" if _vca_rows > 0 else "No data"
-    # Later.com social media counts
+    # Later.com social media — per-platform detail
+    _ig_followers = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
+    _fb_followers = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
+    _tk_followers = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
     _later_ig_rows = len(df_later_ig_profile) + len(df_later_ig_posts) + len(df_later_ig_reels)
     _later_fb_rows = len(df_later_fb_profile) + len(df_later_fb_posts)
     _later_tk_rows = len(df_later_tk_profile)
     _later_total   = _later_ig_rows + _later_fb_rows + _later_tk_rows
     _later_dot     = "🟢" if _later_total > 0 else "⚫"
-    _later_label   = f"IG·FB·TK &nbsp;·&nbsp; {_later_total:,} rows" if _later_total > 0 else "No data"
+    if _later_total > 0:
+        _ig_fmt = f"{_ig_followers/1000:.1f}K" if _ig_followers >= 1000 else str(_ig_followers)
+        _fb_fmt = f"{_fb_followers/1000:.1f}K" if _fb_followers >= 1000 else str(_fb_followers)
+        _tk_fmt = f"{_tk_followers/1000:.1f}K" if _tk_followers >= 1000 else str(_tk_followers)
+        _later_label = f"IG {_ig_fmt} · FB {_fb_fmt} · TK {_tk_fmt}"
+    else:
+        _later_label = "No data"
     st.markdown("**Pipeline Status**")
     st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {_d_label}")
     st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_label}")
@@ -3865,6 +3898,25 @@ with tab_ov:
                 )
             else:
                 _ga4_lbl = "Run pipeline to load Datafy GA4 web analytics data."
+            # Later.com social stats for board report
+            _ig_fol = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
+            _fb_fol = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
+            _tk_fol = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
+            _ig_posts_ct = len(df_later_ig_posts)
+            _ig_eng_avg  = float(df_later_ig_posts["engagement_rate"].mean()) if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns else 0.0
+            _social_reach_total = (
+                int(df_later_ig_profile["reach"].sum()) if not df_later_ig_profile.empty and "reach" in df_later_ig_profile.columns else 0
+            ) + (
+                int(df_later_fb_profile["reach"].sum()) if not df_later_fb_profile.empty and "reach" in df_later_fb_profile.columns else 0
+            )
+            _social_lbl = (
+                f"IG: <strong>{_ig_fol:,}</strong> followers · "
+                f"FB: <strong>{_fb_fol:,}</strong> followers · "
+                f"TK: <strong>{_tk_fol:,}</strong> followers. "
+                f"Avg engagement rate: <strong>{_ig_eng_avg:.1f}%</strong> · "
+                f"{_ig_posts_ct} IG posts this period · "
+                f"Total cross-platform reach: <strong>{_social_reach_total:,}</strong>."
+            ) if _ig_fol + _fb_fol > 0 else _ga4_lbl
             _visitor_lbl = (
                 f"<strong>{_trips_m:.2f}M</strong> annual visitor trips · "
                 f"<strong>{_overnight:.1f}%</strong> overnight stays · "
@@ -3899,8 +3951,9 @@ with tab_ov:
 </div>
 
 <div class="nlm-point">
-  <strong>Digital & Social Performance</strong> <span class="nlm-tag nlm-tag-datafy">Datafy GA4</span><br>
-  {_ga4_lbl}
+  <strong>Digital & Social Performance</strong> <span class="nlm-tag nlm-tag-datafy">Datafy GA4</span> <span class="nlm-tag" style="background:rgba(225,48,108,0.12);color:#e1306c;">Instagram</span><br>
+  {_ga4_lbl}<br>
+  {_social_lbl}
   <br><em style="opacity:.72">→ Digital engagement reflects destination intent; top pages signal content demand for campaign alignment.</em>
 </div>
 
@@ -5848,6 +5901,192 @@ with tab_ev:
                 with _aud_cols[_ai % len(_aud_cols)]:
                     _disp = f"{float(_av):,.0f}" if isinstance(_av, (int,float)) else str(_av)
                     st.metric(_ak.replace("_"," ").title(), _disp)
+
+    # ── Social Media Command Center (Later.com) ───────────────────────────────
+    st.markdown("---")
+    st.markdown("### 📲 Social Media Command Center — Later.com")
+    st.caption("Source: Later.com Analytics Export · Instagram · Facebook · TikTok · Layer 2.5 Social Performance")
+
+    _smc_c1, _smc_c2, _smc_c3 = st.columns(3)
+
+    # IG follower trend
+    with _smc_c1:
+        st.markdown('<div class="chart-header">Instagram — Follower Growth</div>', unsafe_allow_html=True)
+        if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns:
+            _ig_p = df_later_ig_profile.sort_values("data_date").tail(30).copy()
+            _ig_cur = int(_ig_p["followers"].iloc[-1]) if len(_ig_p) else 0
+            _ig_prev = int(_ig_p["followers"].iloc[0]) if len(_ig_p) else _ig_cur
+            _ig_delta = _ig_cur - _ig_prev
+            st.metric("Followers", f"{_ig_cur:,}", delta=f"{_ig_delta:+,} (30d)")
+            fig_ig = go.Figure(go.Scatter(
+                x=_ig_p["data_date"], y=_ig_p["followers"],
+                mode="lines", fill="tozeroy",
+                line=dict(color="#E1306C", width=2.5, shape="spline", smoothing=0.8),
+                fillcolor="rgba(225,48,108,0.12)",
+                hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
+            ))
+            fig_ig.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
+                xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)),
+                yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                showlegend=False)
+            st.plotly_chart(fig_ig, use_container_width=True, config={"displayModeBar": False}, key="social_ig_followers")
+        else:
+            st.info("No Instagram profile data.")
+
+    # FB follower trend
+    with _smc_c2:
+        st.markdown('<div class="chart-header">Facebook — Follower Growth</div>', unsafe_allow_html=True)
+        if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns:
+            _fb_p = df_later_fb_profile.sort_values("data_date").tail(30).copy()
+            _fb_cur = int(_fb_p["page_followers"].iloc[-1]) if len(_fb_p) else 0
+            _fb_prev = int(_fb_p["page_followers"].iloc[0]) if len(_fb_p) else _fb_cur
+            _fb_delta = _fb_cur - _fb_prev
+            st.metric("Followers", f"{_fb_cur:,}", delta=f"{_fb_delta:+,} (30d)")
+            fig_fb = go.Figure(go.Scatter(
+                x=_fb_p["data_date"], y=_fb_p["page_followers"],
+                mode="lines", fill="tozeroy",
+                line=dict(color="#1877F2", width=2.5, shape="spline", smoothing=0.8),
+                fillcolor="rgba(24,119,242,0.12)",
+                hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
+            ))
+            fig_fb.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
+                xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)),
+                yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                showlegend=False)
+            st.plotly_chart(fig_fb, use_container_width=True, config={"displayModeBar": False}, key="social_fb_followers")
+        else:
+            st.info("No Facebook profile data.")
+
+    # TikTok follower trend
+    with _smc_c3:
+        st.markdown('<div class="chart-header">TikTok — Follower Growth</div>', unsafe_allow_html=True)
+        if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns:
+            _tk_p = df_later_tk_profile.sort_values("data_date").tail(30).copy()
+            _tk_cur = int(_tk_p["followers"].iloc[-1]) if len(_tk_p) else 0
+            _tk_prev = int(_tk_p["followers"].iloc[0]) if len(_tk_p) else _tk_cur
+            _tk_delta = _tk_cur - _tk_prev
+            st.metric("Followers", f"{_tk_cur:,}", delta=f"{_tk_delta:+,} (30d)")
+            fig_tk = go.Figure(go.Scatter(
+                x=_tk_p["data_date"], y=_tk_p["followers"],
+                mode="lines", fill="tozeroy",
+                line=dict(color="#010101", width=2.5, shape="spline", smoothing=0.8),
+                fillcolor="rgba(1,1,1,0.10)",
+                hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
+            ))
+            fig_tk.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
+                xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)),
+                yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                showlegend=False)
+            st.plotly_chart(fig_tk, use_container_width=True, config={"displayModeBar": False}, key="social_tk_followers")
+        else:
+            st.info("No TikTok profile data.")
+
+    # IG Post Engagement chart
+    if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns:
+        st.markdown('<div class="chart-header">Instagram — Post Engagement Rate (Last 30 Posts)</div>', unsafe_allow_html=True)
+        _igp = df_later_ig_posts.head(30).copy()
+        _igp["label"] = pd.to_datetime(_igp["posted_at"], errors="coerce").dt.strftime("%b %d")
+        _igp["eng_num"] = pd.to_numeric(_igp["engagement_rate"], errors="coerce")
+        _igp = _igp.dropna(subset=["eng_num"]).sort_values("posted_at")
+        if not _igp.empty:
+            _avg_eng = _igp["eng_num"].mean()
+            _eng_colors = ["#E1306C" if v >= _avg_eng else "rgba(225,48,108,0.4)" for v in _igp["eng_num"]]
+            fig_eng = go.Figure(go.Bar(
+                x=_igp["label"], y=_igp["eng_num"],
+                marker=dict(color=_eng_colors, cornerradius=5),
+                hovertemplate="<b>%{x}</b><br>Engagement Rate: %{y:.1f}%<extra></extra>",
+            ))
+            fig_eng.add_hline(y=_avg_eng, line_dash="dot", line_color="rgba(0,0,0,0.3)",
+                              annotation_text=f"Avg {_avg_eng:.1f}%", annotation_position="top right")
+            fig_eng.update_layout(height=240, margin=dict(l=0,r=0,t=20,b=40),
+                yaxis_title="Engagement Rate %",
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)))
+            st.plotly_chart(style_fig(fig_eng, height=240), use_container_width=True, config={"displayModeBar": False}, key="social_ig_eng_rate")
+
+    # FB Reach vs IG Reach comparison
+    _smc2_c1, _smc2_c2 = st.columns(2)
+    with _smc2_c1:
+        st.markdown('<div class="chart-header">Facebook — Reach Trend (90d)</div>', unsafe_allow_html=True)
+        if not df_later_fb_profile.empty and "reach" in df_later_fb_profile.columns:
+            _fbr = df_later_fb_profile.sort_values("data_date").tail(90).copy()
+            fig_fbr = go.Figure(go.Scatter(
+                x=_fbr["data_date"], y=_fbr["reach"],
+                mode="lines", fill="tozeroy",
+                line=dict(color="#1877F2", width=1.8),
+                fillcolor="rgba(24,119,242,0.10)",
+                hovertemplate="<b>%{x}</b><br>Reach: %{y:,}<extra></extra>",
+            ))
+            fig_fbr.update_layout(height=200, margin=dict(l=0,r=0,t=4,b=20),
+                yaxis_title="Reach",
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                xaxis=dict(tickangle=-30, tickfont=dict(size=9)))
+            st.plotly_chart(style_fig(fig_fbr, height=200), use_container_width=True, config={"displayModeBar": False}, key="social_fb_reach")
+        else:
+            st.info("No Facebook reach data.")
+
+    with _smc2_c2:
+        st.markdown('<div class="chart-header">TikTok — Video Views Trend</div>', unsafe_allow_html=True)
+        if not df_later_tk_profile.empty and "video_views" in df_later_tk_profile.columns:
+            _tkv = df_later_tk_profile.sort_values("data_date").tail(90).copy()
+            _tkv_clean = _tkv.dropna(subset=["video_views"])
+            if not _tkv_clean.empty:
+                fig_tkv = go.Figure(go.Bar(
+                    x=_tkv_clean["data_date"], y=_tkv_clean["video_views"],
+                    marker=dict(color="#010101", opacity=0.75, cornerradius=3),
+                    hovertemplate="<b>%{x}</b><br>Video Views: %{y:,}<extra></extra>",
+                ))
+                fig_tkv.update_layout(height=200, margin=dict(l=0,r=0,t=4,b=20),
+                    yaxis_title="Video Views",
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    xaxis=dict(tickangle=-30, tickfont=dict(size=9)))
+                st.plotly_chart(style_fig(fig_tkv, height=200), use_container_width=True, config={"displayModeBar": False}, key="social_tk_views")
+            else:
+                st.info("No TikTok video view data available.")
+        else:
+            st.info("No TikTok profile data.")
+
+    # IG Demographics
+    if not df_later_ig_demo.empty:
+        st.markdown('<div class="chart-header">Instagram — Audience Demographics</div>', unsafe_allow_html=True)
+        _dem_c1, _dem_c2 = st.columns(2)
+        with _dem_c1:
+            # Gender pie
+            _gd = df_later_ig_demo[["gender","total_pct"]].dropna()
+            if not _gd.empty:
+                fig_gd = go.Figure(go.Pie(
+                    labels=_gd["gender"], values=_gd["total_pct"],
+                    hole=0.45,
+                    marker=dict(colors=["#E1306C","#833AB4","#FD1D1D"]),
+                    textinfo="label+percent",
+                    hovertemplate="<b>%{label}</b><br>%{percent}<extra></extra>",
+                ))
+                fig_gd.update_layout(height=220, margin=dict(l=0,r=0,t=20,b=0),
+                    paper_bgcolor="rgba(0,0,0,0)", showlegend=True)
+                st.plotly_chart(fig_gd, use_container_width=True, config={"displayModeBar": False}, key="social_ig_gender")
+        with _dem_c2:
+            # Age breakdown stacked bar
+            _age_cols = [c for c in df_later_ig_demo.columns if c.startswith("age_")]
+            if _age_cols:
+                _age_labels = [c.replace("age_","").replace("_"," ").replace("plus","65+") for c in _age_cols]
+                _female = df_later_ig_demo[df_later_ig_demo["gender"].str.lower()=="female"]
+                _male   = df_later_ig_demo[df_later_ig_demo["gender"].str.lower()=="male"]
+                fig_age = go.Figure()
+                if not _female.empty:
+                    fig_age.add_trace(go.Bar(name="Female", x=_age_labels,
+                        y=[float(_female.iloc[0].get(c, 0) or 0) for c in _age_cols],
+                        marker_color="#E1306C"))
+                if not _male.empty:
+                    fig_age.add_trace(go.Bar(name="Male", x=_age_labels,
+                        y=[float(_male.iloc[0].get(c, 0) or 0) for c in _age_cols],
+                        marker_color="#833AB4"))
+                fig_age.update_layout(barmode="group", height=220, margin=dict(l=0,r=0,t=20,b=0),
+                    yaxis_title="% of Audience",
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                st.plotly_chart(fig_age, use_container_width=True, config={"displayModeBar": False}, key="social_ig_age")
 
     st.markdown("---")
 
