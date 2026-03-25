@@ -1877,6 +1877,57 @@ def kpi_metric_svg(label: str, positive: bool = True, raw_value: float = 0.0) ->
     return '<svg width="42" height="42" viewBox="0 0 42 42"></svg>'
 
 
+def sparkline_svg(values: list, positive: bool = True, width: int = 120, height: int = 28) -> str:
+    """Return a compact animated inline SVG sparkline from a list of numeric values."""
+    if not values or len(values) < 2:
+        return ""
+    try:
+        v = [float(x) for x in values if x is not None and not (isinstance(x, float) and x != x)]
+        if len(v) < 2:
+            return ""
+        mn, mx = min(v), max(v)
+        rng = mx - mn or 1
+        pad = 3
+        xs = [round(pad + i * (width - 2 * pad) / (len(v) - 1), 2) for i in range(len(v))]
+        ys = [round(height - pad - (val - mn) / rng * (height - 2 * pad), 2) for val in v]
+        pts = " ".join(f"{x},{y}" for x, y in zip(xs, ys))
+        c   = "#21808D" if positive else "#C0152F"
+        fc  = "rgba(33,128,141,0.10)" if positive else "rgba(192,21,47,0.07)"
+        area = (
+            f"M{xs[0]},{height} "
+            + " ".join(f"L{x},{y}" for x, y in zip(xs, ys))
+            + f" L{xs[-1]},{height} Z"
+        )
+        total_len = sum(
+            ((xs[i+1]-xs[i])**2 + (ys[i+1]-ys[i])**2)**0.5
+            for i in range(len(xs)-1)
+        )
+        dash = max(int(total_len) + 20, 200)
+        return (
+            f'<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(0,0,0,0.06);">'
+            f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
+            f'style="display:block;width:100%;overflow:visible;" xmlns="http://www.w3.org/2000/svg">'
+            f'<path d="{area}" fill="{fc}"/>'
+            f'<polyline points="{pts}" stroke="{c}" stroke-width="1.8" fill="none" '
+            f'stroke-linecap="round" stroke-linejoin="round" '
+            f'stroke-dasharray="{dash}" stroke-dashoffset="{dash}">'
+            f'<animate attributeName="stroke-dashoffset" from="{dash}" to="0" '
+            f'dur="1.0s" fill="freeze" begin="0.3s" calcMode="spline" keySplines="0.25,0.46,0.45,0.94"/>'
+            f'</polyline>'
+            f'<circle cx="{xs[-1]}" cy="{ys[-1]}" r="2.8" fill="{c}" opacity="0">'
+            f'<animate attributeName="opacity" from="0" to="1" dur="0.2s" fill="freeze" begin="1.2s"/>'
+            f'<animate attributeName="r" values="2.8;4.0;2.8" dur="2.4s" repeatCount="indefinite" begin="1.5s"/>'
+            f'</circle>'
+            f'</svg>'
+            f'<div style="display:flex;justify-content:space-between;font-size:9px;opacity:0.38;'
+            f'font-family:system-ui,sans-serif;margin-top:2px;">'
+            f'<span>← {len(v)}pt trend</span><span>latest →</span>'
+            f'</div></div>'
+        )
+    except Exception:
+        return ""
+
+
 def insight_icon_svg(kind: str, icon_key: str) -> str:
     """Animated SVG icon for insight cards (20px)."""
     color_map = {"positive": "#21808D", "negative": "#C0152F", "warning": "#E68161", "info": "#21808D"}
@@ -2055,11 +2106,13 @@ def event_icon_svg(icon_key: str) -> str:
 # ─── UI helpers ───────────────────────────────────────────────────────────────
 
 def kpi_card(label, value, delta, positive=True, neutral=False,
-             icon: str = "", date_label: str = "", raw_value: float = 0.0) -> str:
+             icon: str = "", date_label: str = "", raw_value: float = 0.0,
+             sparkline_values: list = None) -> str:
     css      = "kpi-delta-neutral" if neutral else ("kpi-delta-pos" if positive else "kpi-delta-neg")
     arrow    = "" if neutral else ("▲ " if positive else "▼ ")
     date_html = f'<div class="kpi-date">📅 {date_label}</div>' if date_label else ""
     svg      = kpi_metric_svg(label, positive, raw_value)
+    spark_html = sparkline_svg(sparkline_values, positive) if sparkline_values else ""
     return (
         f'<div class="kpi-card">'
         f'<div class="kpi-header">'
@@ -2069,6 +2122,7 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
         f'<div class="kpi-value">{value}</div>'
         f'<div class="{css}">{arrow}{delta}</div>'
         f'{date_html}'
+        f'{spark_html}'
         f'</div>'
     )
 
@@ -2155,19 +2209,28 @@ def compute_overview_kpis(df: pd.DataFrame, grain: str = "Daily") -> list[dict]:
     rec_start = rec["as_of_date"].min().strftime(_fmt)
     rec_end   = rec["as_of_date"].max().strftime(_fmt)
     date_lbl  = f"{rec_start} – {rec_end}"
+    # Sparklines: last 30 data points per metric
+    _sp = df.tail(30)
+    def _spark(col):
+        return [v for v in _sp[col].tolist() if pd.notna(v)] if col in _sp.columns else []
+    spark_rvp = _spark("revpar")
+    spark_adr = _spark("adr")
+    spark_occ = _spark("occupancy")
+    spark_rev = _spark("revenue")
+    spark_dem = _spark("demand")
     return [
         {"label":"RevPAR",        "value":f"${r_rvp:.2f}",
-         "delta":f"{pct_delta(r_rvp,p_rvp):+.1f}% vs. prior",  "positive":r_rvp>=p_rvp, "date_label":date_lbl, "raw_value":r_rvp},
+         "delta":f"{pct_delta(r_rvp,p_rvp):+.1f}% vs. prior",  "positive":r_rvp>=p_rvp, "date_label":date_lbl, "raw_value":r_rvp, "sparkline":spark_rvp},
         {"label":"ADR",           "value":f"${r_adr:.2f}",
-         "delta":f"{pct_delta(r_adr,p_adr):+.1f}% vs. prior",  "positive":r_adr>=p_adr, "date_label":date_lbl, "raw_value":r_adr},
+         "delta":f"{pct_delta(r_adr,p_adr):+.1f}% vs. prior",  "positive":r_adr>=p_adr, "date_label":date_lbl, "raw_value":r_adr, "sparkline":spark_adr},
         {"label":"Occupancy",     "value":f"{r_occ:.1f}%",
-         "delta":f"{pct_delta(r_occ,p_occ):+.1f}pp vs. prior", "positive":r_occ>=p_occ, "date_label":date_lbl, "raw_value":r_occ},
+         "delta":f"{pct_delta(r_occ,p_occ):+.1f}pp vs. prior", "positive":r_occ>=p_occ, "date_label":date_lbl, "raw_value":r_occ, "sparkline":spark_occ},
         {"label":"Room Revenue",  "value":f"${r_rev/1e6:.2f}M",
-         "delta":f"{pct_delta(r_rev,p_rev):+.1f}% vs. prior",  "positive":r_rev>=p_rev, "date_label":date_lbl, "raw_value":r_rev},
+         "delta":f"{pct_delta(r_rev,p_rev):+.1f}% vs. prior",  "positive":r_rev>=p_rev, "date_label":date_lbl, "raw_value":r_rev, "sparkline":spark_rev},
         {"label":"Rooms Sold",    "value":f"{r_dem:,.0f}",
-         "delta":f"{pct_delta(r_dem,p_dem):+.1f}% vs. prior",  "positive":r_dem>=p_dem, "date_label":date_lbl, "raw_value":r_dem},
+         "delta":f"{pct_delta(r_dem,p_dem):+.1f}% vs. prior",  "positive":r_dem>=p_dem, "date_label":date_lbl, "raw_value":r_dem, "sparkline":spark_dem},
         {"label":"Est. TBID Rev", "value":f"${tbid/1e3:.0f}K",
-         "delta":"blended 1.25%", "positive":True, "neutral":True, "date_label":date_lbl, "raw_value":tbid},
+         "delta":"blended 1.25%", "positive":True, "neutral":True, "date_label":date_lbl, "raw_value":tbid, "sparkline":spark_rev},
     ]
 
 
@@ -4037,7 +4100,8 @@ with tab_ov:
                 st.markdown(
                     kpi_card(k["label"], k["value"], k["delta"],
                              k.get("positive", True), k.get("neutral", False),
-                             "", k.get("date_label", ""), k.get("raw_value", 0.0)),
+                             "", k.get("date_label", ""), k.get("raw_value", 0.0),
+                             k.get("sparkline")),
                     unsafe_allow_html=True,
                 )
 
@@ -4072,30 +4136,32 @@ with tab_ov:
                 f'Layer 1 verified data &nbsp;·&nbsp; {_mo_lbl} &nbsp;·&nbsp; vs. prior 12 months</div>',
                 unsafe_allow_html=True,
             )
+            def _m12_spark(col):
+                return [v for v in _m12[col].tolist() if pd.notna(v)] if col in _m12.columns else []
             _m_kpis = [
                 {"label": "RevPAR",       "value": f"${_m12_rvp:.2f}",
                  "delta": f"{pct_delta(_m12_rvp,_mp_rvp):+.1f}% YOY",
                  "positive": _m12_rvp >= _mp_rvp, "neutral": False,
-                 "date_label": _mo_lbl, "raw_value": _m12_rvp},
+                 "date_label": _mo_lbl, "raw_value": _m12_rvp, "sparkline": _m12_spark("revpar")},
                 {"label": "ADR",          "value": f"${_m12_adr:.2f}",
                  "delta": f"{pct_delta(_m12_adr,_mp_adr):+.1f}% YOY",
                  "positive": _m12_adr >= _mp_adr, "neutral": False,
-                 "date_label": _mo_lbl, "raw_value": _m12_adr},
+                 "date_label": _mo_lbl, "raw_value": _m12_adr, "sparkline": _m12_spark("adr")},
                 {"label": "Occupancy",    "value": f"{_m12_occ:.1f}%",
                  "delta": f"{pct_delta(_m12_occ,_mp_occ):+.1f}pp YOY",
                  "positive": _m12_occ >= _mp_occ, "neutral": False,
-                 "date_label": _mo_lbl, "raw_value": _m12_occ},
+                 "date_label": _mo_lbl, "raw_value": _m12_occ, "sparkline": _m12_spark("occupancy") if _occ_col else []},
                 {"label": "Room Revenue", "value": f"${_m12_rev/1e6:.2f}M",
                  "delta": f"{pct_delta(_m12_rev,_mp_rev):+.1f}% YOY",
                  "positive": _m12_rev >= _mp_rev, "neutral": False,
-                 "date_label": _mo_lbl, "raw_value": _m12_rev},
+                 "date_label": _mo_lbl, "raw_value": _m12_rev, "sparkline": _m12_spark("revenue")},
                 {"label": "Rooms Sold",   "value": f"{_m12_dem:,.0f}",
                  "delta": f"{pct_delta(_m12_dem,_mp_dem):+.1f}% YOY",
                  "positive": _m12_dem >= _mp_dem, "neutral": False,
-                 "date_label": _mo_lbl, "raw_value": _m12_dem},
+                 "date_label": _mo_lbl, "raw_value": _m12_dem, "sparkline": _m12_spark("demand")},
                 {"label": "Est. TBID Rev","value": f"${_m12_tbd/1e3:.0f}K",
                  "delta": "blended 1.25%", "positive": True, "neutral": True,
-                 "date_label": _mo_lbl, "raw_value": _m12_tbd},
+                 "date_label": _mo_lbl, "raw_value": _m12_tbd, "sparkline": _m12_spark("revenue")},
             ]
             _m_cols = st.columns(3)
             for i, k in enumerate(_m_kpis):
@@ -4103,7 +4169,8 @@ with tab_ov:
                     st.markdown(
                         kpi_card(k["label"], k["value"], k["delta"],
                                  k.get("positive", True), k.get("neutral", False),
-                                 "", k.get("date_label", ""), k.get("raw_value", 0.0)),
+                                 "", k.get("date_label", ""), k.get("raw_value", 0.0),
+                                 k.get("sparkline")),
                         unsafe_allow_html=True,
                     )
 
