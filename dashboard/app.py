@@ -18,6 +18,20 @@ import subprocess
 import urllib.parse as _urlparse
 from pathlib import Path
 from dotenv import load_dotenv
+import re as _re
+
+
+def md_to_html(text: str) -> str:
+    """Convert basic markdown to HTML for use in unsafe_allow_html contexts."""
+    if not text:
+        return text
+    # Bold: **text** → <strong>text</strong>
+    text = _re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+    # Italic: *text* → <em>text</em>
+    text = _re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
+    # Newlines → <br>
+    text = text.replace('\n', '<br>')
+    return text
 
 # Load .env from the project root (one level above dashboard/)
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -630,7 +644,7 @@ st.markdown("""
     font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px;
     font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px;
   }
-  .pulse-info-detail { font-size: 12px; opacity: .65; line-height: 1.5; }
+  .pulse-info-detail { font-size: 12px; opacity: 1; line-height: 1.5; }
   .pulse-info-status {
     display: inline-block; margin-top: 8px; font-size: 11px; font-weight: 700;
     padding: 3px 10px; border-radius: 20px;
@@ -652,7 +666,7 @@ st.markdown("""
     padding: 13px 20px !important; border-radius: 10px !important;
     margin: 22px 0 12px 0 !important;
     border-left: 5px solid var(--sh-accent, #21808D) !important;
-    background: rgba(0,0,0,0.28) !important;
+    background: rgba(255,255,255,0.05) !important;
     border-top: 1px solid rgba(255,255,255,0.06) !important;
     border-right: 1px solid rgba(255,255,255,0.04) !important;
     border-bottom: 1px solid rgba(255,255,255,0.04) !important;
@@ -662,9 +676,10 @@ st.markdown("""
   }
   .sh-title {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 15px !important; font-weight: 900 !important;
+    font-size: 16px !important; font-weight: 900 !important;
     letter-spacing: -.02em !important; line-height: 1.2 !important;
-    color: var(--sh-accent, #32B8C6) !important;
+    color: #ffffff !important;
+    text-shadow: 0 0 20px var(--sh-accent, #32B8C6) !important;
   }
   .sh-tag {
     margin-left: auto !important; font-size: 9px !important;
@@ -672,7 +687,7 @@ st.markdown("""
     text-transform: uppercase !important; padding: 3px 9px !important;
     border-radius: 20px !important; white-space: nowrap !important;
     background: rgba(255,255,255,0.08) !important;
-    color: rgba(255,255,255,0.55) !important;
+    color: rgba(255,255,255,0.85) !important;
     border: 1px solid rgba(255,255,255,0.12) !important;
   }
   /* color variants — accent color drives the left border + title text */
@@ -696,24 +711,9 @@ st.markdown("""
   .pulse-info-detail {
     color: rgba(255,255,255,0.92) !important;
     font-size: 12.5px !important; line-height: 1.6 !important;
+    opacity: 1 !important;
   }
 
-  /* ── Back-to-top button ──────────────────────────────────────────────────── */
-  #back-to-top-btn {
-    position: fixed; bottom: 28px; right: 24px; z-index: 9999;
-    width: 40px; height: 40px; border-radius: 50%;
-    background: linear-gradient(135deg, #21808D, #32B8C6);
-    border: none; cursor: pointer; display: flex;
-    align-items: center; justify-content: center;
-    box-shadow: 0 4px 14px rgba(33,128,141,0.45);
-    opacity: 0; transition: opacity .25s ease, transform .2s ease;
-    pointer-events: none;
-  }
-  #back-to-top-btn.visible {
-    opacity: 1; pointer-events: auto;
-  }
-  #back-to-top-btn:hover { transform: translateY(-3px); }
-  #back-to-top-btn svg { width: 18px; height: 18px; fill: #fff; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -808,55 +808,79 @@ st.markdown("""
 
 st.markdown("""
 <style>
-  /* ── Key Forward Metrics — allow label wrapping ───────────────────── */
-  [data-testid="stMetricLabel"] {
+  /* ── Metric component — full label wrap fix ───────────────────────── */
+  [data-testid="stMetricLabel"],
+  [data-testid="stMetricLabel"] > div,
+  [data-testid="stMetricLabel"] label,
+  [data-testid="stMetricLabel"] p,
+  div[data-testid="metric-container"] > label {
     font-size: 11px !important;
     white-space: normal !important;
     overflow: visible !important;
     text-overflow: unset !important;
     line-height: 1.35 !important;
     min-height: 2.5em !important;
+    display: block !important;
+    max-height: none !important;
+    height: auto !important;
+    -webkit-line-clamp: unset !important;
+    -webkit-box-orient: unset !important;
   }
-  [data-testid="stMetricValue"] {
-    font-size: clamp(1.2rem, 2.5vw, 1.8rem) !important;
+  [data-testid="stMetricValue"],
+  div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    font-size: clamp(1.1rem, 2.2vw, 1.7rem) !important;
+    letter-spacing: -0.02em !important;
   }
   [data-testid="stMetricDelta"] {
     font-size: 11px !important;
   }
+  div[data-testid="metric-container"] {
+    padding-top: 4px !important;
+  }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Back-to-top button (injected once at top-level)
+# ── Back-to-top button (always visible as fixed action button)
 st.markdown("""
-<button id="back-to-top-btn" title="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+<style>
+  #back-to-top-btn {
+    position: fixed; bottom: 24px; right: 20px; z-index: 99999;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, #21808D, #32B8C6);
+    border: 2px solid rgba(255,255,255,0.2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(33,128,141,0.55);
+    opacity: 0.85; transition: opacity .2s, transform .2s;
+  }
+  #back-to-top-btn:hover { opacity: 1; transform: translateY(-3px) scale(1.05); }
+  #back-to-top-btn svg { width: 20px; height: 20px; fill: #fff; pointer-events: none; }
+</style>
+<button id="back-to-top-btn" title="Back to top">
   <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
 </button>
 <script>
 (function(){
-  var btn = document.getElementById('back-to-top-btn');
-  if(!btn) return;
-  function onScroll(e){
-    var scroller = e ? e.target : window;
-    var scrollTop = scroller.scrollTop !== undefined ? scroller.scrollTop : window.scrollY;
-    if(scrollTop > 300){ btn.classList.add('visible'); }
-    else { btn.classList.remove('visible'); }
+  function attachBtn(){
+    var btn = document.getElementById('back-to-top-btn');
+    if(!btn) return;
+    btn.addEventListener('click', function(){
+      // Try all possible Streamlit scroll containers
+      var targets = [
+        document.querySelector('[data-testid="stAppViewContainer"]'),
+        document.querySelector('[data-testid="stMain"]'),
+        document.querySelector('.main'),
+        document.querySelector('section.main'),
+        document.documentElement,
+        document.body
+      ];
+      targets.forEach(function(t){ if(t){ t.scrollTop = 0; } });
+      window.scrollTo({top:0, behavior:'smooth'});
+    });
   }
-  // Listen on both window and Streamlit's scroll container
-  window.addEventListener('scroll', onScroll, {passive:true});
-  // Also attach to Streamlit's main scroll container when it mounts
-  setTimeout(function(){
-    var stScroll = document.querySelector('[data-testid="stAppViewContainer"]') ||
-                   document.querySelector('.main') ||
-                   document.querySelector('section.main');
-    if(stScroll){ stScroll.addEventListener('scroll', onScroll, {passive:true}); }
-  }, 800);
-  // Update scroll target on click
-  btn.onclick = function(){
-    var stScroll = document.querySelector('[data-testid="stAppViewContainer"]') ||
-                   document.querySelector('.main');
-    if(stScroll){ stScroll.scrollTop = 0; }
-    window.scrollTo({top:0, behavior:'smooth'});
-  };
+  // Try immediately and after delay
+  attachBtn();
+  setTimeout(attachBtn, 500);
+  setTimeout(attachBtn, 1500);
 })();
 </script>
 """, unsafe_allow_html=True)
@@ -2482,8 +2506,8 @@ def insight_card(title, body, kind="info", icon: str = "", date_label: str = "")
     )
     return (
         f'<div class="insight-card insight-{kind}">'
-        f'<div class="insight-title">{icon_html}{title}</div>'
-        f'<p class="insight-body">{body}</p>'
+        f'<div class="insight-title">{icon_html}{md_to_html(title)}</div>'
+        f'<p class="insight-body">{md_to_html(body)}</p>'
         f'{date_html}'
         f'</div>'
     )
@@ -2517,9 +2541,9 @@ def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
             bgcolor="rgba(0,0,0,0)", borderwidth=0,
         ),
         hoverlabel=dict(
-            bgcolor="rgba(18,24,30,0.90)",
-            bordercolor="rgba(33,128,141,0.45)",
-            font=dict(size=12, family=_font, color="#ffffff"),
+            bgcolor="rgba(13,17,23,0.95)",
+            bordercolor="rgba(255,255,255,0.15)",
+            font=dict(size=12, family="Plus Jakarta Sans, Inter, sans-serif", color="white"),
         ),
     )
     fig.update_xaxes(
@@ -2760,6 +2784,15 @@ df_later_tk_profile  = load_later_tk_profile()
 df_later_tk_demo     = load_later_tk_demographics()
 df_later_ig_stories  = load_later_ig_stories()
 df_later_tk_inter    = load_later_tk_interactions()
+
+# Global Plotly chart config — drill-down ready
+PLOTLY_CONFIG = {
+    "displayModeBar": True,
+    "displaylogo": False,
+    "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+    "toImageButtonOptions": {"format": "png", "filename": "dana_point_pulse_chart", "scale": 2},
+    "responsive": True,
+}
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 # GloCon Solutions LLC — Dana Point PULSE sidebar with VDP branding + images
@@ -3220,8 +3253,8 @@ def generate_board_report_html(
     <div class="nlm-card">
       <div class="qa-block">
         <div class="qa-q"><span class="qa-q-mark">Q</span>{cat}: What does the data signal?</div>
-        <div class="qa-a"><strong>{hl}</strong><br>
-          <span style="margin-top:5px;display:block;font-size:9pt">{body_text}</span>
+        <div class="qa-a"><strong>{md_to_html(str(hl))}</strong><br>
+          <span style="margin-top:5px;display:block;font-size:9pt">{md_to_html(body_text)}</span>
         </div>
       </div>
       <div class="concepts" style="margin-top:10px">
@@ -4901,13 +4934,10 @@ with tab_ov:
                                 "Demand": 1, "Supply": 1, "Revenue": 1}
                     _tab_idx = next((v for k,v in _tab_map.items() if k.lower() in _k["label"].lower()), 1)
                     st.markdown(
-                        f'<div onclick="(function(){{var tabs=document.querySelectorAll(\'button[data-baseweb=\"tab\"]\');'
-                        f'if(tabs[{_tab_idx}]){{tabs[{_tab_idx}].click();window.scrollTo({{top:0,behavior:\'smooth\'}});}}}})();" '
-                        f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;" '
-                        f'onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(33,128,141,0.20)\'" '
-                        f'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
+                        f'<div class="pcc-card-link" data-tab-idx="{_tab_idx}" '
+                        f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;border-radius:12px;">'
                         f'{_card_html}'
-                        f'<div style="font-size:9px;opacity:0.45;text-align:right;padding:2px 4px 0 0;font-weight:600;letter-spacing:.04em;">→ VIEW DETAIL</div>'
+                        f'<div style="font-size:9px;color:#32B8C6;text-align:right;padding:2px 4px 0 0;font-weight:700;letter-spacing:.04em;">→ VIEW DETAIL</div>'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
@@ -4995,13 +5025,10 @@ with tab_ov:
                                        "Demand": 1, "Supply": 1, "Revenue": 1}
                         _mk_tab_idx = next((v for k,v in _mk_tab_map.items() if k.lower() in _mk["label"].lower()), 1)
                         st.markdown(
-                            f'<div onclick="(function(){{var tabs=document.querySelectorAll(\'button[data-baseweb=\"tab\"]\');'
-                            f'if(tabs[{_mk_tab_idx}]){{tabs[{_mk_tab_idx}].click();window.scrollTo({{top:0,behavior:\'smooth\'}});}}}})();" '
-                            f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;" '
-                            f'onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(33,128,141,0.20)\'" '
-                            f'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
+                            f'<div class="pcc-card-link" data-tab-idx="{_mk_tab_idx}" '
+                            f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;border-radius:12px;">'
                             f'{_mk_card_html}'
-                            f'<div style="font-size:9px;opacity:0.45;text-align:right;padding:2px 4px 0 0;font-weight:600;letter-spacing:.04em;">→ VIEW DETAIL</div>'
+                            f'<div style="font-size:9px;color:#32B8C6;text-align:right;padding:2px 4px 0 0;font-weight:700;letter-spacing:.04em;">→ VIEW DETAIL</div>'
                             f'</div>',
                             unsafe_allow_html=True,
                         )
@@ -5013,6 +5040,36 @@ with tab_ov:
                             config={"displayModeBar": False},
                             key=_mk_key,
                         )
+
+        # ── PCC card navigation script (injected once after all cards) ──────────
+        st.markdown("""
+<script>
+(function(){
+  function attachPCC(){
+    document.querySelectorAll('.pcc-card-link').forEach(function(card){
+      if(card._pccBound) return;
+      card._pccBound = true;
+      card.addEventListener('mouseenter', function(){ this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(33,128,141,0.25)'; });
+      card.addEventListener('mouseleave', function(){ this.style.transform=''; this.style.boxShadow=''; });
+      card.addEventListener('click', function(){
+        var idx = parseInt(this.getAttribute('data-tab-idx') || '1');
+        var tabs = document.querySelectorAll('button[data-baseweb="tab"]');
+        if(tabs[idx]){ tabs[idx].click(); }
+        setTimeout(function(){ window.scrollTo({top:0,behavior:'smooth'}); }, 100);
+      });
+    });
+  }
+  attachPCC();
+  setTimeout(attachPCC, 800);
+  setTimeout(attachPCC, 2000);
+  // Re-attach after any DOM mutations
+  if(window.MutationObserver){
+    var obs = new MutationObserver(function(){ attachPCC(); });
+    obs.observe(document.body, {childList:true, subtree:true});
+  }
+})();
+</script>
+""", unsafe_allow_html=True)
 
         # ── Bullet Chart: KPI vs Benchmark ────────────────────────────────────
         if kpis and not df_cs_snap.empty:
@@ -5091,7 +5148,7 @@ with tab_ov:
                 height=200,
                 margin=dict(l=10, r=10, t=10, b=10),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
             st.caption("Gray band = market ±15%. Dashed teal line = 5% above market target. Colored bar = VDP actual. Source: STR (portfolio) + CoStar (market).")
             st.markdown("<br>", unsafe_allow_html=True)
 
@@ -5151,7 +5208,7 @@ with tab_ov:
                     ),
                 ))
             fig.update_layout(yaxis_tickprefix="$")
-            st.plotly_chart(style_fig(fig), use_container_width=True)
+            st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
 
         with c2:
             st.markdown('<div class="chart-header">Occupancy vs. ADR</div>', unsafe_allow_html=True)
@@ -5170,7 +5227,7 @@ with tab_ov:
             fig.update_yaxes(title_text="Occ %", ticksuffix="%", secondary_y=False)
             fig.update_yaxes(title_text="ADR $", tickprefix="$",
                              secondary_y=True, showgrid=False)
-            st.plotly_chart(style_fig(fig), use_container_width=True)
+            st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
 
         # ── Row 2: Day-of-Week  |  Supply vs Demand ───────────────────────────
         c3, c4 = st.columns(2)
@@ -5197,7 +5254,7 @@ with tab_ov:
                               annotation_text=f"Avg ${ov_avg:.0f}", annotation_position="top right",
                               annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
                 fig.update_layout(yaxis_tickprefix="$", showlegend=False)
-                st.plotly_chart(style_fig(fig), use_container_width=True)
+                st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 # Monthly grain → show calendar-month seasonality using all monthly history
                 st.markdown('<div class="chart-header">Month-of-Year Seasonality</div>', unsafe_allow_html=True)
@@ -5221,7 +5278,7 @@ with tab_ov:
                               annotation_text=f"Avg ${ov_avg:.0f}", annotation_position="top right",
                               annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
                 fig.update_layout(yaxis_tickprefix="$", showlegend=False)
-                st.plotly_chart(style_fig(fig), use_container_width=True)
+                st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
 
         with c4:
             st.markdown('<div class="chart-header">Supply vs. Demand</div>', unsafe_allow_html=True)
@@ -5240,7 +5297,7 @@ with tab_ov:
                 fillcolor="rgba(33,128,141,0.10)",
                 name="Demand", mode="lines",
             ))
-            st.plotly_chart(style_fig(fig), use_container_width=True)
+            st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
 
         # ── Row 3: Monthly RevPAR & ADR trend (always-on from monthly STR) ────
         if not df_monthly.empty and len(df_monthly) >= 6:
@@ -5265,7 +5322,7 @@ with tab_ov:
                               annotation_position="top right",
                               annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
                 fig.update_layout(yaxis_tickprefix="$", showlegend=False)
-                st.plotly_chart(style_fig(fig, height=260), use_container_width=True)
+                st.plotly_chart(style_fig(fig, height=260), use_container_width=True, config=PLOTLY_CONFIG)
 
             with cb:
                 st.markdown('<div class="chart-header">Monthly ADR vs. Occupancy — Last 24 Months</div>', unsafe_allow_html=True)
@@ -5288,7 +5345,7 @@ with tab_ov:
                 if _occ_col:
                     fig2.update_yaxes(title_text="Occ %", ticksuffix="%",
                                       secondary_y=True, showgrid=False)
-                st.plotly_chart(style_fig(fig2, height=260), use_container_width=True)
+                st.plotly_chart(style_fig(fig2, height=260), use_container_width=True, config=PLOTLY_CONFIG)
 
         # ── Row 4: Datafy Visitor Economy Summary ─────────────────────────────
         if not df_dfy_ov.empty:
@@ -5509,7 +5566,7 @@ with tab_tr:
                 yaxis_tickprefix=_tick_pfx, yaxis_ticksuffix=_tick_sfx,
                 showlegend=False, transition={"duration": 800},
             )
-            st.plotly_chart(style_fig(fig, height=300), use_container_width=True)
+            st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
         else:
             st.markdown(empty_state(
                 "📊", f"No data for {_str_metric_label}.",
@@ -5540,7 +5597,7 @@ with tab_tr:
             ))
             fig.update_layout(yaxis_ticksuffix="%", showlegend=False,
                               transition={"duration": 800, "easing": "cubic-in-out"})
-            st.plotly_chart(style_fig(fig, height=300), use_container_width=True)
+            st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
 
         st.markdown("---")
         c1, c2 = st.columns(2)
@@ -5589,7 +5646,7 @@ with tab_tr:
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
                 )
-                st.plotly_chart(style_fig(fig, height=360), use_container_width=True)
+                st.plotly_chart(style_fig(fig, height=360), use_container_width=True, config=PLOTLY_CONFIG)
                 _peak_mon = month_order_full[rose_avg.idxmax() - 1]
                 _soft_mon = month_order_full[rose_avg.idxmin() - 1]
                 st.caption(f"Peak: **{_peak_mon}** ({_tick_pfx}{rose_avg.max():.0f}{_tick_sfx} {_str_metric_label}) · Softest: **{_soft_mon}** ({_tick_pfx}{rose_avg.min():.0f}{_tick_sfx}). "
@@ -5619,7 +5676,7 @@ with tab_tr:
                 ))
                 fig.update_layout(yaxis_tickprefix="$", yaxis_ticksuffix="M", showlegend=False,
                                   transition={"duration": 700, "easing": "cubic-in-out"})
-                st.plotly_chart(style_fig(fig), use_container_width=True)
+                st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.markdown(empty_state(
                     "💰", "No revenue data loaded.",
@@ -5648,7 +5705,7 @@ with tab_tr:
             ))
             fig.update_layout(barmode="group",
                               transition={"duration": 700, "easing": "cubic-in-out"})
-            st.plotly_chart(style_fig(fig, height=260), use_container_width=True)
+            st.plotly_chart(style_fig(fig, height=260), use_container_width=True, config=PLOTLY_CONFIG)
         else:
             st.markdown(empty_state(
                 "📦", "No compression data.",
@@ -5677,7 +5734,7 @@ with tab_tr:
         fig.update_yaxes(title_text="RevPAR / ADR ($)", tickprefix="$", secondary_y=False)
         fig.update_yaxes(title_text="Occ %", ticksuffix="%",
                          secondary_y=True, showgrid=False)
-        st.plotly_chart(style_fig(fig, height=300), use_container_width=True)
+        st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
 
         # ── Beeswarm: Daily RevPAR Distribution ───────────────────────────────
         if not df_daily.empty and len(df_daily) >= 30:
@@ -5731,7 +5788,7 @@ with tab_tr:
                 showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             )
-            st.plotly_chart(style_fig(fig, height=280), use_container_width=True)
+            st.plotly_chart(style_fig(fig, height=280), use_container_width=True, config=PLOTLY_CONFIG)
             st.caption(f"Density clusters reveal seasonal patterns. Q3 (dark teal) = peak season. Spread = {_str_metric_label} variability. Filter metric above to switch views.")
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -5854,7 +5911,7 @@ with tab_fo:
                     ))
                 _fo_bar_fig.update_layout(barmode="stack", showlegend=True,
                                           transition={"duration": 600})
-                st.plotly_chart(style_fig(_fo_bar_fig, height=280), use_container_width=True)
+                st.plotly_chart(style_fig(_fo_bar_fig, height=280), use_container_width=True, config=PLOTLY_CONFIG)
 
         with _fo_ch2:
             st.markdown('<div class="chart-header">Insight Horizon — Planning Timeline</div>', unsafe_allow_html=True)
@@ -5882,7 +5939,7 @@ with tab_fo:
                 _hz_fig.update_layout(barmode="overlay", showlegend=True,
                                       xaxis_title="Horizon (days)",
                                       transition={"duration": 600})
-                st.plotly_chart(style_fig(_hz_fig, height=280), use_container_width=True)
+                st.plotly_chart(style_fig(_hz_fig, height=280), use_container_width=True, config=PLOTLY_CONFIG)
 
         st.markdown("---")
 
@@ -5947,8 +6004,8 @@ with tab_fo:
                     with col:
                         st.markdown(
                             f'<div class="insight-card {style_cls}">'
-                            f'<div class="insight-title">{row["headline"]}</div>'
-                            f'<p class="insight-body">{row["body"]}</p>'
+                            f'<div class="insight-title">{md_to_html(str(row["headline"]))}</div>'
+                            f'<p class="insight-body">{md_to_html(str(row["body"]))}</p>'
                             f'<div class="nlm-source-row">'
                             f'{_src_tags_html}'
                             f'<span style="font-size:10px;opacity:0.45;background:rgba(255,255,255,0.07);'
@@ -5985,18 +6042,24 @@ with tab_ev:
 
     _ve_img_c1, _ve_img_c2, _ve_img_c3 = st.columns(3)
     _vdp_spots = [
-        ("🏔️", "Dana Point Harbor", "16.1% visitor share", "#21808D"),
-        ("🏖️", "Doheny State Beach", "11.2% visitor share", "#32B8C6"),
-        ("🐋", "Whale Watching", "Seasonal attraction", "#E68161"),
+        ("🌊", "Dana Point Harbor", "16.1% visitor share · Marina & Harbor District",
+         "linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)", "#bae6fd"),
+        ("🏖️", "Doheny State Beach", "11.2% visitor share · Surf & Beach Recreation",
+         "linear-gradient(135deg, #f59e0b 0%, #b45309 100%)", "#fef3c7"),
+        ("🐋", "Dana Point Ocean", "Premier whale watching · Seasonal migrations",
+         "linear-gradient(135deg, #21808D 0%, #0f4c75 100%)", "#a5f3fc"),
     ]
-    for _vic, (_icon, _vcap, _vsub, _vclr) in zip([_ve_img_c1, _ve_img_c2, _ve_img_c3], _vdp_spots):
+    for _vic, (_icon, _vcap, _vsub, _vgrad, _vtxt) in zip([_ve_img_c1, _ve_img_c2, _ve_img_c3], _vdp_spots):
         with _vic:
             st.markdown(
-                f'<div style="background:linear-gradient(145deg,rgba(33,128,141,0.10) 0%,rgba(33,128,141,0.04) 100%);'
-                f'border:1px solid rgba(33,128,141,0.18);border-radius:12px;padding:18px 14px;text-align:center;margin-bottom:8px;">'
-                f'<div style="font-size:32px;margin-bottom:6px;">{_icon}</div>'
-                f'<div style="font-size:13px;font-weight:700;color:{_vclr};">{_vcap}</div>'
-                f'<div style="font-size:11px;opacity:0.55;margin-top:3px;">{_vsub}</div>'
+                f'<div style="background:{_vgrad};border-radius:14px;padding:24px 16px 20px;'
+                f'text-align:center;margin-bottom:8px;position:relative;overflow:hidden;'
+                f'box-shadow:0 4px 20px rgba(0,0,0,0.25);">'
+                f'<div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;'
+                f'border-radius:50%;background:rgba(255,255,255,0.08);"></div>'
+                f'<div style="font-size:38px;margin-bottom:8px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));">{_icon}</div>'
+                f'<div style="font-size:14px;font-weight:800;color:#fff;letter-spacing:-.01em;">{_vcap}</div>'
+                f'<div style="font-size:10px;color:{_vtxt};margin-top:4px;font-weight:500;opacity:0.9;">{_vsub}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -6078,7 +6141,7 @@ with tab_ev:
                     hovertemplate="%{customdata}",
                 ))
                 fig.update_layout(xaxis_ticksuffix="%", showlegend=False)
-                st.plotly_chart(style_fig(fig, height=360), use_container_width=True)
+                st.plotly_chart(style_fig(fig, height=360), use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.info("DMA data not available. Run the pipeline.")
 
@@ -6113,7 +6176,7 @@ with tab_ev:
                                       font_family="Plus Jakarta Sans, sans-serif",
                                       font_color="#21808D", showarrow=False)],
                 )
-                st.plotly_chart(style_fig(fig, height=400), use_container_width=True)
+                st.plotly_chart(style_fig(fig, height=400), use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.info("Spending data not available. Run the pipeline.")
 
@@ -6146,7 +6209,7 @@ with tab_ev:
                     ))
                     fig.update_layout(yaxis_ticksuffix="%", showlegend=False,
                                       xaxis_title="Age Group", yaxis_title="Share (%)")
-                    st.plotly_chart(style_fig(fig, height=300), use_container_width=True)
+                    st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
                 else:
                     st.info("Age data not available.")
             else:
@@ -6172,7 +6235,7 @@ with tab_ev:
                     hovertemplate="<b>%{y}</b><br>%{x:.1f}% of fly-market passengers<extra></extra>",
                 ))
                 fig.update_layout(xaxis_ticksuffix="%", showlegend=False)
-                st.plotly_chart(style_fig(fig, height=300), use_container_width=True)
+                st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.info("Airport data not available.")
 
@@ -6301,7 +6364,7 @@ with tab_ev:
                     yaxis=dict(title="Avg Spend per Visitor ($)", tickprefix="$"),
                     showlegend=False,
                 )
-                st.plotly_chart(style_fig(fig, height=380), use_container_width=True)
+                st.plotly_chart(style_fig(fig, height=380), use_container_width=True, config=PLOTLY_CONFIG)
                 st.caption(
                     "🟢 Teal = YOY growth · 🟠 Orange = YOY decline. "
                     "Bubble size = share of visitor days. "
@@ -6376,7 +6439,7 @@ with tab_ev:
                 ),
             ))
             fig.update_layout(font=dict(family="Plus Jakarta Sans, Inter, sans-serif", size=12))
-            st.plotly_chart(style_fig(fig, height=400), use_container_width=True)
+            st.plotly_chart(style_fig(fig, height=400), use_container_width=True, config=PLOTLY_CONFIG)
             st.caption(
                 "Flow width = proportional visitor share. Overnight stays dominate accommodation spend. "
                 "Day trippers concentrate in dining — capturing even 5% as overnight stays = significant room revenue."
@@ -6403,7 +6466,7 @@ with tab_ev:
                     hovertemplate="<b>%{y}</b><br>Sessions: %{x:,}<extra></extra>",
                 ))
                 fig_ch.update_layout(xaxis_title="Sessions", yaxis_title=None, margin=dict(l=0,r=0,t=20,b=20), height=220)
-                st.plotly_chart(style_fig(fig_ch, height=220), use_container_width=True)
+                st.plotly_chart(style_fig(fig_ch, height=220), use_container_width=True, config=PLOTLY_CONFIG)
                 with st.expander("📊 View raw channel data"):
                     st.dataframe(_ch[_ch_cols].reset_index(drop=True), use_container_width=True)
                     st.download_button("⬇️ Download", _ch[_ch_cols].to_csv(index=False), "website_channels.csv", "text/csv", key="dl_web_ch")
@@ -6429,7 +6492,7 @@ with tab_ev:
                     hovertemplate=f"<b>%{{y}}</b><br>{_x_col}: %{{x:,}}<extra></extra>",
                 ))
                 fig_wm.update_layout(xaxis_title=_x_col.replace("_"," ").title(), yaxis_title=None, margin=dict(l=0,r=0,t=20,b=20), height=220)
-                st.plotly_chart(style_fig(fig_wm, height=220), use_container_width=True)
+                st.plotly_chart(style_fig(fig_wm, height=220), use_container_width=True, config=PLOTLY_CONFIG)
                 with st.expander("📊 View raw top markets data"):
                     st.dataframe(_wm[_wm_cols].reset_index(drop=True), use_container_width=True)
                     st.download_button("⬇️ Download", _wm[_wm_cols].to_csv(index=False), "website_top_markets.csv", "text/csv", key="dl_web_mkts")
@@ -6454,8 +6517,25 @@ with tab_ev:
                     fig_cmp = go.Figure()
                     fig_cmp.add_trace(go.Bar(name="Website Trip Share (Q3)", x=_dmas, y=_comp[_merge_col].values, marker_color=TEAL))
                     fig_cmp.add_trace(go.Bar(name="Overall Visitor Days (Annual)", x=_dmas, y=_comp[_od_col].values, marker_color=ORANGE, opacity=0.7))
-                    fig_cmp.update_layout(barmode="group", xaxis_tickangle=-30, height=300, margin=dict(l=0,r=0,t=20,b=60), legend=dict(orientation="h",y=1.08))
-                    st.plotly_chart(style_fig(fig_cmp, height=300), use_container_width=True)
+                    fig_cmp.update_layout(
+                        barmode="group",
+                        xaxis=dict(
+                            tickangle=-45,
+                            tickfont=dict(size=10),
+                            automargin=True,
+                        ),
+                        yaxis=dict(
+                            title="Share (%)",
+                            ticksuffix="%",
+                            gridcolor="rgba(255,255,255,0.07)",
+                        ),
+                        height=340,
+                        margin=dict(l=40, r=10, t=30, b=120),
+                        legend=dict(orientation="h", y=1.05, x=0, font=dict(size=11)),
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        plot_bgcolor="rgba(0,0,0,0)",
+                    )
+                    st.plotly_chart(style_fig(fig_cmp, height=300), use_container_width=True, config=PLOTLY_CONFIG)
 
     # ── Visitor Cluster Visitation ─────────────────────────────────────────────
     if not df_dfy_clusters.empty:
@@ -6473,7 +6553,7 @@ with tab_ev:
                 hovertemplate="<b>%{y}</b><br>Share: %{x:.1f}%<extra></extra>",
             ))
             fig_cl.update_layout(xaxis_title="Visitation Share (%)", xaxis_ticksuffix="%", height=280, margin=dict(l=0,r=0,t=20,b=20))
-            st.plotly_chart(style_fig(fig_cl, height=280), use_container_width=True)
+            st.plotly_chart(style_fig(fig_cl, height=280), use_container_width=True, config=PLOTLY_CONFIG)
             with st.expander("📊 View raw cluster data"):
                 st.dataframe(_cl.reset_index(drop=True), use_container_width=True)
 
@@ -6498,7 +6578,7 @@ with tab_ev:
                     hovertemplate="<b>%{x}</b><br>Sessions: %{y:,}<extra></extra>",
                 ))
                 fig_st.update_layout(xaxis_tickangle=-35, yaxis_title="Sessions", height=260, margin=dict(l=0,r=0,t=20,b=60))
-                st.plotly_chart(style_fig(fig_st, height=260), use_container_width=True)
+                st.plotly_chart(style_fig(fig_st, height=260), use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.dataframe(_st.reset_index(drop=True), use_container_width=True)
             with st.expander("📊 View raw traffic source data"):
@@ -6524,7 +6604,7 @@ with tab_ev:
                     hovertemplate="<b>%{y}</b><br>Views: %{x:,}<extra></extra>",
                 ))
                 fig_pg.update_layout(xaxis_title="Page Views", height=310, margin=dict(l=0,r=0,t=20,b=20), yaxis=dict(autorange="reversed"))
-                st.plotly_chart(style_fig(fig_pg, height=310), use_container_width=True)
+                st.plotly_chart(style_fig(fig_pg, height=310), use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.dataframe(_pg.reset_index(drop=True), use_container_width=True)
             with st.expander("📊 View raw top pages data"):
@@ -6572,7 +6652,7 @@ with tab_ev:
                 yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 showlegend=False)
-            st.plotly_chart(fig_ig, use_container_width=True, config={"displayModeBar": False}, key="social_ig_followers")
+            st.plotly_chart(fig_ig, use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_followers")
         else:
             st.info("No Instagram profile data.")
 
@@ -6597,7 +6677,7 @@ with tab_ev:
                 yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 showlegend=False)
-            st.plotly_chart(fig_fb, use_container_width=True, config={"displayModeBar": False}, key="social_fb_followers")
+            st.plotly_chart(fig_fb, use_container_width=True, config=PLOTLY_CONFIG, key="social_fb_followers")
         else:
             st.info("No Facebook profile data.")
 
@@ -6622,7 +6702,7 @@ with tab_ev:
                 yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 showlegend=False)
-            st.plotly_chart(fig_tk, use_container_width=True, config={"displayModeBar": False}, key="social_tk_followers")
+            st.plotly_chart(fig_tk, use_container_width=True, config=PLOTLY_CONFIG, key="social_tk_followers")
         else:
             st.info("No TikTok profile data.")
 
@@ -6647,7 +6727,7 @@ with tab_ev:
                 yaxis_title="Engagement Rate %",
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)))
-            st.plotly_chart(style_fig(fig_eng, height=240), use_container_width=True, config={"displayModeBar": False}, key="social_ig_eng_rate")
+            st.plotly_chart(style_fig(fig_eng, height=240), use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_eng_rate")
 
     # FB Reach vs IG Reach comparison
     _smc2_c1, _smc2_c2 = st.columns(2)
@@ -6666,7 +6746,7 @@ with tab_ev:
                 yaxis_title="Reach",
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 xaxis=dict(tickangle=-30, tickfont=dict(size=9)))
-            st.plotly_chart(style_fig(fig_fbr, height=200), use_container_width=True, config={"displayModeBar": False}, key="social_fb_reach")
+            st.plotly_chart(style_fig(fig_fbr, height=200), use_container_width=True, config=PLOTLY_CONFIG, key="social_fb_reach")
         else:
             st.info("No Facebook reach data.")
 
@@ -6685,7 +6765,7 @@ with tab_ev:
                     yaxis_title="Video Views",
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     xaxis=dict(tickangle=-30, tickfont=dict(size=9)))
-                st.plotly_chart(style_fig(fig_tkv, height=200), use_container_width=True, config={"displayModeBar": False}, key="social_tk_views")
+                st.plotly_chart(style_fig(fig_tkv, height=200), use_container_width=True, config=PLOTLY_CONFIG, key="social_tk_views")
             else:
                 st.info("No TikTok video view data available.")
         else:
@@ -6708,7 +6788,7 @@ with tab_ev:
                 ))
                 fig_gd.update_layout(height=220, margin=dict(l=0,r=0,t=20,b=0),
                     paper_bgcolor="rgba(0,0,0,0)", showlegend=True)
-                st.plotly_chart(fig_gd, use_container_width=True, config={"displayModeBar": False}, key="social_ig_gender")
+                st.plotly_chart(fig_gd, use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_gender")
         with _dem_c2:
             # Age breakdown stacked bar
             _age_cols = [c for c in df_later_ig_demo.columns if c.startswith("age_")]
@@ -6728,7 +6808,7 @@ with tab_ev:
                 fig_age.update_layout(barmode="group", height=220, margin=dict(l=0,r=0,t=20,b=0),
                     yaxis_title="% of Audience",
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                st.plotly_chart(fig_age, use_container_width=True, config={"displayModeBar": False}, key="social_ig_age")
+                st.plotly_chart(fig_age, use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_age")
 
     st.markdown("---")
 
@@ -6787,7 +6867,7 @@ with tab_ev:
                 yaxis_title="Avg. Visitor Spend ($)", xaxis_title=None,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             )
-            st.plotly_chart(fig_zrt, use_container_width=True)
+            st.plotly_chart(fig_zrt, use_container_width=True, config=PLOTLY_CONFIG)
 
         if not df_zrt_overnight.empty:
             st.markdown("#### Monthly Overnight Visitor % Trend (Zartico Historical)")
@@ -6801,7 +6881,7 @@ with tab_ev:
                 height=240, margin=dict(l=0, r=0, t=20, b=20),
                 yaxis_title="Overnight %", yaxis_ticksuffix="%",
             )
-            st.plotly_chart(fig_ov, use_container_width=True)
+            st.plotly_chart(fig_ov, use_container_width=True, config=PLOTLY_CONFIG)
 
         if not df_zrt_markets.empty:
             st.markdown("#### Top Visitor Origin Markets (Zartico Q1 2025)")
@@ -6817,7 +6897,7 @@ with tab_ev:
                 height=320, margin=dict(l=0, r=0, t=20, b=20),
                 xaxis_title="% of Visitors", yaxis=dict(autorange="reversed"),
             )
-            st.plotly_chart(fig_mkt, use_container_width=True)
+            st.plotly_chart(fig_mkt, use_container_width=True, config=PLOTLY_CONFIG)
 
         if not df_zrt_events.empty:
             st.markdown("#### Event Impact Analysis (Zartico Historical)")
@@ -6927,7 +7007,7 @@ with tab_fm:
                 borderpad=3,
             )
             fig_fm1.update_layout(xaxis_ticksuffix="%", showlegend=False)
-            st.plotly_chart(style_fig(fig_fm1, height=380), use_container_width=True)
+            st.plotly_chart(style_fig(fig_fm1, height=380), use_container_width=True, config=PLOTLY_CONFIG)
 
         with _fm_c2:
             st.markdown('<div class="chart-header">Average Spend per Visitor by DMA</div>', unsafe_allow_html=True)
@@ -6957,7 +7037,7 @@ with tab_fm:
                     borderpad=3,
                 )
                 fig_fm2.update_layout(xaxis_tickprefix="$", showlegend=False)
-                st.plotly_chart(style_fig(fig_fm2, height=380), use_container_width=True)
+                st.plotly_chart(style_fig(fig_fm2, height=380), use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.info("Avg spend data not available by DMA.")
 
@@ -7035,7 +7115,7 @@ with tab_fm:
                     ),
                     margin=dict(l=0, r=0, t=0, b=0),
                 )
-                st.plotly_chart(style_fig(fig_fm_map, height=420), use_container_width=True)
+                st.plotly_chart(style_fig(fig_fm_map, height=420), use_container_width=True, config=PLOTLY_CONFIG)
             except Exception as _map_err:
                 st.warning(f"Map rendering unavailable: {_map_err}")
                 # Fallback: simple table of top markets
@@ -7100,7 +7180,7 @@ with tab_fm:
                 yaxis=dict(title="Avg Spend per Visitor ($)", tickprefix="$"),
                 showlegend=False,
             )
-            st.plotly_chart(style_fig(fig_fm3, height=420), use_container_width=True)
+            st.plotly_chart(style_fig(fig_fm3, height=420), use_container_width=True, config=PLOTLY_CONFIG)
             st.caption("Teal = YOY growth · Orange = YOY decline · Bubble size = spending share. Upper-left: low volume, high spend per trip — prime fly-market targets.")
 
             # ── Fly-Market Correlation Insight ────────────────────────────────
@@ -7157,7 +7237,7 @@ with tab_fm:
                               annotation_font_size=10)
             fig_eff.update_layout(xaxis_title="Spend Efficiency Index", showlegend=False)
             st.plotly_chart(style_fig(fig_eff, height=360), use_container_width=True,
-                            config={"displayModeBar": False}, key="fm_efficiency_index")
+                            config=PLOTLY_CONFIG, key="fm_efficiency_index")
             # Insight callout
             _over_idx = _eff_df[_eff_df["efficiency_index"] > 1.2]
             _under_idx = _eff_df[_eff_df["efficiency_index"] < 0.85]
@@ -7203,7 +7283,7 @@ with tab_fm:
                               annotation_font_size=10)
             fig_los.update_layout(xaxis_title="Avg Length of Stay (days)", showlegend=False)
             st.plotly_chart(style_fig(fig_los, height=260), use_container_width=True,
-                            config={"displayModeBar": False}, key="fm_los_chart")
+                            config=PLOTLY_CONFIG, key="fm_los_chart")
 
         # ── Campaign Attribution: Top Markets ─────────────────────────────────
         if not df_dfy_mktmkt.empty:
@@ -7227,7 +7307,7 @@ with tab_fm:
                 fig_cam.update_layout(xaxis_title="Est. Campaign Impact ($)", xaxis_tickprefix="$",
                                       showlegend=False)
                 st.plotly_chart(style_fig(fig_cam, height=300), use_container_width=True,
-                                config={"displayModeBar": False}, key="fm_campaign_impact")
+                                config=PLOTLY_CONFIG, key="fm_campaign_impact")
 
         # ── Website Attribution DMA ───────────────────────────────────────────
         if not df_dfy_web_dma.empty:
@@ -7252,7 +7332,7 @@ with tab_fm:
                 ))
                 fig_wdma.update_layout(xaxis_title="Attributed Trips", showlegend=False)
                 st.plotly_chart(style_fig(fig_wdma, height=320), use_container_width=True,
-                                config={"displayModeBar": False}, key="fm_web_dma_trips")
+                                config=PLOTLY_CONFIG, key="fm_web_dma_trips")
             with _wa_c2:
                 st.markdown('<div class="chart-header">🛏 Website Attribution — Avg LOS by Origin Market</div>', unsafe_allow_html=True)
                 st.markdown('<div class="chart-caption">Longer LOS from website visitors = higher room night value</div>', unsafe_allow_html=True)
@@ -7275,7 +7355,7 @@ with tab_fm:
                     fig_wlos.add_vline(x=_wlos_avg, line_dash="dot", line_color="rgba(0,0,0,0.2)")
                     fig_wlos.update_layout(xaxis_title="Avg Length of Stay (days)", showlegend=False)
                     st.plotly_chart(style_fig(fig_wlos, height=320), use_container_width=True,
-                                    config={"displayModeBar": False}, key="fm_web_dma_los")
+                                    config=PLOTLY_CONFIG, key="fm_web_dma_los")
 
         # ── Complete Market Intelligence Table ────────────────────────────────
         st.markdown("---")
@@ -7326,7 +7406,7 @@ with tab_fm:
                 xaxis_ticksuffix="%", showlegend=False,
                 yaxis=dict(autorange="reversed"),
             )
-            st.plotly_chart(style_fig(fig_zrt_mkt, height=320), use_container_width=True)
+            st.plotly_chart(style_fig(fig_zrt_mkt, height=320), use_container_width=True, config=PLOTLY_CONFIG)
 
         # ── Raw data expander ─────────────────────────────────────────────────
         with st.expander("📊 View raw DMA data"):
@@ -7486,7 +7566,7 @@ with tab_ei:
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
         )
-        st.plotly_chart(style_fig(_cal_fig2, height=200), use_container_width=True)
+        st.plotly_chart(style_fig(_cal_fig2, height=200), use_container_width=True, config=PLOTLY_CONFIG)
         st.caption(f"🟦 Teal = Major events  ·  ⚫ Gray = Standard events  ·  {_total_major} major, {_total_events} total on calendar")
     else:
         st.info("No events loaded from vdp_events table. Run `python scripts/fetch_vdp_events.py` to seed the calendar.")
@@ -7692,7 +7772,7 @@ with tab_ei:
             yaxis_tickprefix="$",
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
-        st.plotly_chart(style_fig(fig_ei_adr, height=340), use_container_width=True)
+        st.plotly_chart(style_fig(fig_ei_adr, height=340), use_container_width=True, config=PLOTLY_CONFIG)
         st.caption("Event-window ADR (solid) vs. monthly baseline (light). Percentage labels show lift above baseline. Source: STR daily data.")
 
     st.markdown("---")
@@ -7758,7 +7838,7 @@ with tab_ei:
                 hovertemplate="%{x}<br>ADR: $%{y:.0f}<extra></extra>",
             ))
             fig_oh_adr.update_layout(yaxis_tickprefix="$", yaxis_title="ADR")
-            st.plotly_chart(style_fig(fig_oh_adr, height=220), use_container_width=True)
+            st.plotly_chart(style_fig(fig_oh_adr, height=220), use_container_width=True, config=PLOTLY_CONFIG)
             st.caption("ADR — Ohana Fest window (Sep 20–Oct 5)")
         with _ohana_col2:
             fig_oh_occ = go.Figure()
@@ -7773,7 +7853,7 @@ with tab_ei:
                 hovertemplate="%{x}<br>OCC: %{y:.1f}%<extra></extra>",
             ))
             fig_oh_occ.update_layout(yaxis_title="Occupancy (%)", yaxis_ticksuffix="%")
-            st.plotly_chart(style_fig(fig_oh_occ, height=220), use_container_width=True)
+            st.plotly_chart(style_fig(fig_oh_occ, height=220), use_container_width=True, config=PLOTLY_CONFIG)
             st.caption("Occupancy — Ohana Fest window")
 
     st.markdown("---")
@@ -7832,7 +7912,7 @@ with tab_ei:
                 showlegend=False,
                 annotations=[dict(text="Spend Mix", x=0.5, y=0.5, font_size=12, showarrow=False)],
             )
-            st.plotly_chart(style_fig(fig_zrt_spend, height=260), use_container_width=True)
+            st.plotly_chart(style_fig(fig_zrt_spend, height=260), use_container_width=True, config=PLOTLY_CONFIG)
             st.caption("Visitor spending mix during event period (Zartico · historical).")
 
     else:
@@ -7914,7 +7994,7 @@ with tab_ei:
             yaxis_title="Visitor/Resident Ratio",
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
-        st.plotly_chart(style_fig(fig_move, height=250), use_container_width=True)
+        st.plotly_chart(style_fig(fig_move, height=250), use_container_width=True, config=PLOTLY_CONFIG)
         st.caption(
             "Jul–Sep months show 0.35–0.38 V/R ratio (30–35% above CA benchmark). "
             "Ohana Fest, Doheny Days, and Tall Ships all fire within this elevated window, maximizing their ADR lift."
@@ -7951,7 +8031,7 @@ with tab_ei:
             yaxis_title="Number of Compression Days",
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
-        st.plotly_chart(style_fig(fig_comp_ei, height=280), use_container_width=True)
+        st.plotly_chart(style_fig(fig_comp_ei, height=280), use_container_width=True, config=PLOTLY_CONFIG)
         _total_80 = int(df_comp["days_above_80_occ"].sum())
         _total_90 = int(df_comp["days_above_90_occ"].sum())
         st.caption(
@@ -8024,7 +8104,7 @@ with tab_ei:
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                 bargap=0.3,
             )
-            st.plotly_chart(style_fig(fig_gantt, height=max(280, len(_gantt_rows) * 28)), use_container_width=True)
+            st.plotly_chart(style_fig(fig_gantt, height=max(280, len(_gantt_rows) * 28)), use_container_width=True, config=PLOTLY_CONFIG)
             st.caption("Teal = major events · Gray = regular events. Source: Visit Dana Point official calendar.")
 
         st.markdown("---")
@@ -8180,7 +8260,7 @@ with tab_ei:
                         yaxis_title="Value",
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                     )
-                    st.plotly_chart(style_fig(fig_ei_sel, height=300), use_container_width=True)
+                    st.plotly_chart(style_fig(fig_ei_sel, height=300), use_container_width=True, config=PLOTLY_CONFIG)
                     st.caption(f"Event-window averages vs. monthly baseline · {_sel_start_s} to {_sel_end_s} · Source: STR daily data")
 
         st.markdown("---")
@@ -8298,7 +8378,7 @@ with tab_sp:
             customdata=df_cs_pipe["projected_open_date"],
         ))
         fig_sp_pipe.update_layout(xaxis_tickangle=-20, margin=dict(t=30, b=80))
-        st.plotly_chart(style_fig(fig_sp_pipe, height=320), use_container_width=True)
+        st.plotly_chart(style_fig(fig_sp_pipe, height=320), use_container_width=True, config=PLOTLY_CONFIG)
 
         # ── Pipeline detail table ─────────────────────────────────────────────
         _sp_display = df_cs_pipe[["property_name", "city", "chain_scale", "rooms",
@@ -8603,7 +8683,7 @@ with tab_cs:
                                   tickformat=".0f", ticksuffix="%")
             fig_cs1.update_yaxes(title_text="ADR $", secondary_y=True,
                                   tickformat="$,.0f")
-            st.plotly_chart(style_fig(fig_cs1, height=300), use_container_width=True)
+            st.plotly_chart(style_fig(fig_cs1, height=300), use_container_width=True, config=PLOTLY_CONFIG)
 
         with col_right:
             st.markdown('<div class="chart-header">Market RevPAR Trend</div>',
@@ -8635,7 +8715,7 @@ with tab_cs:
                 ), secondary_y=True)
             fig_cs2.update_yaxes(title_text="RevPAR $", secondary_y=False, tickformat="$,.0f")
             fig_cs2.update_yaxes(title_text="YOY %", secondary_y=True, ticksuffix="%")
-            st.plotly_chart(style_fig(fig_cs2, height=300), use_container_width=True)
+            st.plotly_chart(style_fig(fig_cs2, height=300), use_container_width=True, config=PLOTLY_CONFIG)
 
         # Seasonality insight
         if len(cs_plot) >= 12:
@@ -8688,7 +8768,7 @@ with tab_cs:
                 textposition="outside",
                 hovertemplate="<b>%{x}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
             ))
-            st.plotly_chart(style_fig(fig_ch1, height=280), use_container_width=True)
+            st.plotly_chart(style_fig(fig_ch1, height=280), use_container_width=True, config=PLOTLY_CONFIG)
 
         with col_ch2:
             st.markdown('<div class="chart-header">Market Share by Chain Scale (RevPAR)</div>',
@@ -8707,7 +8787,7 @@ with tab_cs:
                 legend=dict(font=dict(size=11)),
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             )
-            st.plotly_chart(fig_ch2, use_container_width=True)
+            st.plotly_chart(fig_ch2, use_container_width=True, config=PLOTLY_CONFIG)
 
         # Chain scale data table
         _chain_display = chain_2024[["chain_scale","num_properties","supply_rooms",
@@ -8797,7 +8877,7 @@ with tab_cs:
             xaxis_tickangle=-20, margin=dict(t=30, b=80),
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         )
-        st.plotly_chart(style_fig(fig_pipe, height=320), use_container_width=True)
+        st.plotly_chart(style_fig(fig_pipe, height=320), use_container_width=True, config=PLOTLY_CONFIG)
 
         # Pipeline table
         _pipe_display = df_cs_pipe[["property_name","city","chain_scale","rooms",
@@ -8862,7 +8942,7 @@ with tab_cs:
                 xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.07)"),
                 yaxis=dict(autorange="reversed"),
             )
-            st.plotly_chart(style_fig(fig_rgi, height=360), use_container_width=True)
+            st.plotly_chart(style_fig(fig_rgi, height=360), use_container_width=True, config=PLOTLY_CONFIG)
 
         with col_rk2:
             st.markdown('<div class="chart-header">ADR vs. Occupancy Scatter</div>',
@@ -8903,7 +8983,7 @@ with tab_cs:
                            gridcolor="rgba(255,255,255,0.07)"),
                 margin=dict(t=10, b=30, l=10, r=10),
             )
-            st.plotly_chart(style_fig(fig_scat, height=360), use_container_width=True)
+            st.plotly_chart(style_fig(fig_scat, height=360), use_container_width=True, config=PLOTLY_CONFIG)
 
         # Comp set table
         _comp_display = comp_sorted[["property_name","chain_scale","rooms",
@@ -8973,7 +9053,7 @@ with tab_cs:
                         yaxis=dict(tickprefix="$", gridcolor="rgba(255,255,255,0.07)"),
                         xaxis=dict(gridcolor="rgba(255,255,255,0.07)"),
                     )
-                    st.plotly_chart(style_fig(fig_corr, height=280), use_container_width=True)
+                    st.plotly_chart(style_fig(fig_corr, height=280), use_container_width=True, config=PLOTLY_CONFIG)
 
                 with col_corr2:
                     st.markdown('<div class="chart-header">Portfolio ADR vs. Market ADR</div>',
@@ -9001,7 +9081,7 @@ with tab_cs:
                         yaxis=dict(tickprefix="$", gridcolor="rgba(255,255,255,0.07)"),
                         xaxis=dict(gridcolor="rgba(255,255,255,0.07)"),
                     )
-                    st.plotly_chart(style_fig(fig_adr, height=280), use_container_width=True)
+                    st.plotly_chart(style_fig(fig_adr, height=280), use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.info("Need at least 6 months of overlapping STR + CoStar data for correlation analysis.")
         else:
@@ -9131,7 +9211,7 @@ with tab_cs:
                     height=420, margin=dict(l=10, r=10, t=40, b=10),
                     font=dict(family="Plus Jakarta Sans, sans-serif", size=11),
                 )
-                st.plotly_chart(fig_lodge, use_container_width=True)
+                st.plotly_chart(fig_lodge, use_container_width=True, config=PLOTLY_CONFIG)
 
         # ── Row 3: CA travel volume forecast trend ─────────────────────────────
         if not df_vca_forecast.empty and "year" in df_vca_forecast.columns:
@@ -9165,7 +9245,7 @@ with tab_cs:
                         height=300, margin=dict(l=10, r=10, t=20, b=10),
                         font=dict(family="Plus Jakarta Sans, sans-serif", size=11),
                     )
-                    st.plotly_chart(fig_fcast, use_container_width=True)
+                    st.plotly_chart(fig_fcast, use_container_width=True, config=PLOTLY_CONFIG)
 
             with _col_vca2:
                 st.markdown("#### JWA / SNA Airport Traffic (2025)")
@@ -9202,7 +9282,7 @@ with tab_cs:
                             height=300, margin=dict(l=10, r=10, t=20, b=10),
                             font=dict(family="Plus Jakarta Sans, sans-serif", size=11),
                         )
-                        st.plotly_chart(fig_air, use_container_width=True)
+                        st.plotly_chart(fig_air, use_container_width=True, config=PLOTLY_CONFIG)
                     else:
                         st.info("Airport traffic data loaded — no monthly breakdown available.")
                 else:
@@ -9275,7 +9355,7 @@ with tab_cs:
                 yaxis=dict(showticklabels=False),
             )
             st.plotly_chart(_sc_fig, use_container_width=True,
-                            config={"displayModeBar": False}, key="cs_leadership_scorecard")
+                            config=PLOTLY_CONFIG, key="cs_leadership_scorecard")
         else:
             st.info("Load STR and CoStar data to populate the Leadership Scorecard.")
     except Exception as _sc_err:
