@@ -3980,23 +3980,27 @@ with tab_ov:
         _exec_rev12  = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
         _exec_tbid12 = _exec_rev12 * 0.0125
         _exec_tot12  = _exec_rev12 * 0.10
-        # Social reach — with direct DB fallback (same guard as sidebar)
-        _exec_ig_fol = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
-        _exec_fb_fol = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
-        _exec_tk_fol = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
-        if _exec_ig_fol + _exec_fb_fol + _exec_tk_fol == 0:
-            try:
-                _s_conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
-                _r = _s_conn.execute("SELECT followers FROM later_ig_profile_growth ORDER BY data_date DESC LIMIT 1").fetchone()
-                if _r: _exec_ig_fol = int(_r[0] or 0)
-                _r = _s_conn.execute("SELECT page_followers FROM later_fb_profile_growth ORDER BY data_date DESC LIMIT 1").fetchone()
-                if _r: _exec_fb_fol = int(_r[0] or 0)
-                _r = _s_conn.execute("SELECT followers FROM later_tk_profile_growth ORDER BY data_date DESC LIMIT 1").fetchone()
-                if _r: _exec_tk_fol = int(_r[0] or 0)
-                _s_conn.close()
-            except Exception:
-                pass
-        _exec_social_total = _exec_ig_fol + _exec_fb_fol + _exec_tk_fol
+        # Social audience — from Later.com exports (later_ig/fb/tk_profile_growth tables)
+        # Shown here and in Social Media Command Center. Source: Later.com CSV exports.
+        _exec_ig_fol = 0; _exec_fb_fol = 0; _exec_tk_fol = 0; _exec_social_total = 0
+        try:
+            _conn_s = sqlite3.connect(DB_PATH)
+            _ig_row = pd.read_sql_query(
+                "SELECT followers FROM later_ig_profile_growth ORDER BY data_date DESC LIMIT 1", _conn_s
+            )
+            _fb_row = pd.read_sql_query(
+                "SELECT page_followers FROM later_fb_profile_growth ORDER BY data_date DESC LIMIT 1", _conn_s
+            )
+            _tk_row = pd.read_sql_query(
+                "SELECT followers FROM later_tk_profile_growth ORDER BY data_date DESC LIMIT 1", _conn_s
+            )
+            _conn_s.close()
+            if not _ig_row.empty: _exec_ig_fol = int(_ig_row.iloc[0,0] or 0)
+            if not _fb_row.empty: _exec_fb_fol = int(_fb_row.iloc[0,0] or 0)
+            if not _tk_row.empty: _exec_tk_fol = int(_tk_row.iloc[0,0] or 0)
+            _exec_social_total = _exec_ig_fol + _exec_fb_fol + _exec_tk_fol
+        except Exception:
+            pass
         # Datafy media attribution — ROAS / impact / trips
         _exec_roas         = 0.0
         _exec_attr_trips   = 0
@@ -4059,7 +4063,7 @@ with tab_ov:
             + _exec_kpi("12-Mo TOT Est.", _tot12_fmt, "at 10% rate")
             + _exec_kpi("Annual Visitor Trips", _trips_fmt, f"{_exec_overnight:.0f}% overnight" if _exec_overnight > 0 else "Datafy")
             + _exec_kpi("Campaign ROAS", _roas_fmt, _roas_sub)
-            + _exec_kpi("Social Audience", _social_fmt, "IG + FB + TikTok")
+            + _exec_kpi("Social Audience", _social_fmt, f"IG · FB · TikTok" if _exec_social_total > 0 else "Later.com exports")
             + '</div></div>'
         )
         st.markdown(_banner_html, unsafe_allow_html=True)
