@@ -648,35 +648,91 @@ st.markdown("""
 <style>
   /* ── Section Header Blocks ─────────────────────────────────────────────── */
   .sh-block {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 16px; border-radius: 10px; margin: 18px 0 10px 0;
-    border-left: 4px solid var(--sh-accent, #21808D);
-    background: var(--sh-bg, rgba(33,128,141,0.08));
+    display: flex !important; align-items: center !important; gap: 14px !important;
+    padding: 13px 20px !important; border-radius: 10px !important;
+    margin: 22px 0 12px 0 !important;
+    border-left: 5px solid var(--sh-accent, #21808D) !important;
+    background: rgba(0,0,0,0.28) !important;
+    border-top: 1px solid rgba(255,255,255,0.06) !important;
+    border-right: 1px solid rgba(255,255,255,0.04) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
   }
-  .sh-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
+  .sh-icon {
+    font-size: 20px !important; line-height: 1 !important; flex-shrink: 0 !important;
+  }
   .sh-title {
-    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px;
-    font-weight: 800; letter-spacing: -.02em;
-    color: rgba(255,255,255,0.92);
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 15px !important; font-weight: 900 !important;
+    letter-spacing: -.02em !important; line-height: 1.2 !important;
+    color: var(--sh-accent, #32B8C6) !important;
   }
   .sh-tag {
-    margin-left: auto; font-size: 9px; font-weight: 700; letter-spacing: .07em;
-    text-transform: uppercase; padding: 2px 8px; border-radius: 20px;
-    background: var(--sh-tag-bg, rgba(33,128,141,0.20));
-    color: var(--sh-accent, #21808D);
+    margin-left: auto !important; font-size: 9px !important;
+    font-weight: 800 !important; letter-spacing: .08em !important;
+    text-transform: uppercase !important; padding: 3px 9px !important;
+    border-radius: 20px !important; white-space: nowrap !important;
+    background: rgba(255,255,255,0.08) !important;
+    color: rgba(255,255,255,0.55) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
   }
-  /* color variants */
-  .sh-teal   { --sh-accent:#21808D; --sh-bg:rgba(33,128,141,0.09); --sh-tag-bg:rgba(33,128,141,0.18); }
-  .sh-blue   { --sh-accent:#0EA5E9; --sh-bg:rgba(14,165,233,0.09); --sh-tag-bg:rgba(14,165,233,0.18); }
-  .sh-green  { --sh-accent:#10B981; --sh-bg:rgba(16,185,129,0.09); --sh-tag-bg:rgba(16,185,129,0.18); }
-  .sh-purple { --sh-accent:#8B5CF6; --sh-bg:rgba(139,92,246,0.09); --sh-tag-bg:rgba(139,92,246,0.18); }
-  .sh-orange { --sh-accent:#F97316; --sh-bg:rgba(249,115,22,0.09); --sh-tag-bg:rgba(249,115,22,0.18); }
-  .sh-amber  { --sh-accent:#F59E0B; --sh-bg:rgba(245,158,11,0.09); --sh-tag-bg:rgba(245,158,11,0.18); }
-  .sh-indigo { --sh-accent:#6366F1; --sh-bg:rgba(99,102,241,0.09); --sh-tag-bg:rgba(99,102,241,0.18); }
-  .sh-coral  { --sh-accent:#E68161; --sh-bg:rgba(230,129,97,0.09); --sh-tag-bg:rgba(230,129,97,0.18); }
-  .sh-gray   { --sh-accent:#94A3B8; --sh-bg:rgba(148,163,184,0.07); --sh-tag-bg:rgba(148,163,184,0.14); }
-  .sh-gold   { --sh-accent:#EAB308; --sh-bg:rgba(234,179,8,0.09); --sh-tag-bg:rgba(234,179,8,0.18); }
+  /* color variants — accent color drives the left border + title text */
+  .sh-teal   { --sh-accent: #32B8C6; }
+  .sh-blue   { --sh-accent: #38BDF8; }
+  .sh-green  { --sh-accent: #34D399; }
+  .sh-purple { --sh-accent: #A78BFA; }
+  .sh-orange { --sh-accent: #FB923C; }
+  .sh-amber  { --sh-accent: #FCD34D; }
+  .sh-indigo { --sh-accent: #818CF8; }
+  .sh-coral  { --sh-accent: #F87171; }
+  .sh-gray   { --sh-accent: #94A3B8; }
+  .sh-gold   { --sh-accent: #FDE68A; }
+
+  /* ── PULSE Score text overrides ─────────────────────────────────────────── */
+  .pulse-info-title {
+    color: #ffffff !important; font-size: 15px !important;
+    font-weight: 800 !important; letter-spacing: -.02em !important;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5) !important;
+  }
+  .pulse-info-detail {
+    color: rgba(255,255,255,0.72) !important;
+    font-size: 12px !important; line-height: 1.55 !important;
+  }
+
+  /* ── Back-to-top button ──────────────────────────────────────────────────── */
+  #back-to-top-btn {
+    position: fixed; bottom: 28px; right: 24px; z-index: 9999;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, #21808D, #32B8C6);
+    border: none; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(33,128,141,0.45);
+    opacity: 0; transition: opacity .25s ease, transform .2s ease;
+    pointer-events: none;
+  }
+  #back-to-top-btn.visible {
+    opacity: 1; pointer-events: auto;
+  }
+  #back-to-top-btn:hover { transform: translateY(-3px); }
+  #back-to-top-btn svg { width: 18px; height: 18px; fill: #fff; }
 </style>
+""", unsafe_allow_html=True)
+
+# ── Back-to-top button (injected once at top-level)
+st.markdown("""
+<button id="back-to-top-btn" title="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+</button>
+<script>
+(function(){
+  var btn = document.getElementById('back-to-top-btn');
+  if(!btn) return;
+  function onScroll(){
+    if(window.scrollY > 300){ btn.classList.add('visible'); }
+    else { btn.classList.remove('visible'); }
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+})();
+</script>
 """, unsafe_allow_html=True)
 
 # ─── Day / Night auto-background ─────────────────────────────────────────────
@@ -4077,16 +4133,16 @@ with tab_ov:
         def _c(v): return _up if v >= 0 else _down
         def _arr(v): return "▲" if v >= 0 else "▼"
         # Build banner HTML
-        def _exec_kpi(label, value, sub="", color="#111"):
+        def _exec_kpi(label, value, sub="", color="#00C49A"):
             return (
                 f'<div style="flex:1;min-width:140px;padding:14px 18px;'
-                f'background:rgba(255,255,255,0.05);'
-                f'border-radius:12px;border:1px solid rgba(255,255,255,0.10);'
-                f'box-shadow:0 1px 4px rgba(0,0,0,0.12);">'
-                f'<div style="font-size:11px;font-weight:600;letter-spacing:.06em;'
-                f'text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:4px;">{label}</div>'
-                f'<div style="font-size:22px;font-weight:800;letter-spacing:-.03em;color:{color};">{value}</div>'
-                + (f'<div style="font-size:11px;font-weight:500;margin-top:3px;color:rgba(255,255,255,0.5);">{sub}</div>' if sub else '')
+                f'background:rgba(0,0,0,0.30);'
+                f'border-radius:12px;border:1px solid rgba(255,255,255,0.12);'
+                f'box-shadow:0 2px 8px rgba(0,0,0,0.25);">'
+                f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;'
+                f'text-transform:uppercase;color:rgba(255,255,255,0.75);margin-bottom:5px;">{label}</div>'
+                f'<div style="font-size:22px;font-weight:900;letter-spacing:-.03em;color:{color};">{value}</div>'
+                + (f'<div style="font-size:11px;font-weight:600;margin-top:4px;color:rgba(255,255,255,0.60);">{sub}</div>' if sub else '')
                 + '</div>'
             )
         _rev12_fmt  = f"${_exec_rev12/1e6:.1f}M" if _exec_rev12 > 0 else "—"
@@ -4098,13 +4154,12 @@ with tab_ov:
                        else "Datafy media attr.")
         _social_fmt = f"{_exec_social_total/1e3:.0f}K" if _exec_social_total >= 1000 else (str(_exec_social_total) if _exec_social_total > 0 else "—")
         _banner_html = (
-            f'<div style="margin-bottom:18px;background:rgba(33,128,141,0.06);border-radius:14px;'
-            f'border:1px solid rgba(33,128,141,0.15);padding:16px 18px;">'
-            f'<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:11px;font-weight:700;'
-            f'letter-spacing:.08em;text-transform:uppercase;color:#32B8C6;margin-bottom:12px;'
-            f'display:flex;align-items:center;gap:8px;">'
-            f'<span style="display:inline-block;width:3px;height:14px;background:#32B8C6;border-radius:2px;"></span>'
-            f'Board Executive Summary &nbsp;·&nbsp; {datetime.now().strftime("%B %Y").upper()}</div>'
+            f'<div style="margin-bottom:20px;background:rgba(0,0,0,0.35);border-radius:14px;'
+            f'border:1px solid rgba(255,255,255,0.10);border-left:5px solid #32B8C6;padding:18px 20px;">'
+            f'<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:11px;font-weight:800;'
+            f'letter-spacing:.10em;text-transform:uppercase;color:#32B8C6;margin-bottom:14px;'
+            f'display:flex;align-items:center;gap:10px;">'
+            f'📊 &nbsp;Board Executive Summary &nbsp;·&nbsp; {datetime.now().strftime("%B %Y").upper()}</div>'
             f'<div style="display:flex;flex-wrap:wrap;gap:10px;font-family:\'Plus Jakarta Sans\',sans-serif;">'
             + _exec_kpi("RevPAR (30d)", f"${_exec_rvp:.0f}", f'{_arr(_exec_rvp_d)} {abs(_exec_rvp_d):.1f}% vs prior', _c(_exec_rvp_d))
             + _exec_kpi("ADR (30d)", f"${_exec_adr:.0f}", f'{_arr(_exec_adr_d)} {abs(_exec_adr_d):.1f}% vs prior', _c(_exec_adr_d))
@@ -4439,8 +4494,8 @@ with tab_ov:
                 f'    </div>'
                 f'  </div>'
                 f'  <div class="pulse-info">'
-                f'    <div class="pulse-info-title" style="color:rgba(255,255,255,0.95);">Dana Point Market PULSE Score</div>'
-                f'    <div class="pulse-info-detail" style="color:rgba(255,255,255,0.65);">'
+                f'    <div class="pulse-info-title">Dana Point Market PULSE Score</div>'
+                f'    <div class="pulse-info-detail">'
                 f'      Occ {_occ_score:.1f}% &nbsp;·&nbsp; RevPAR YOY {_rvp_d_s:+.1f}% '
                 f'      &nbsp;·&nbsp; Compression {_cq_s} nights this quarter<br>'
                 f'      {_p_detail}'
@@ -4569,22 +4624,23 @@ with tab_ov:
 
         def _report_card_row(metric, value, status, note, source):
             _dot_map = {
-                "green":  ("🟢", "#16a34a", "On Track"),
-                "yellow": ("🟡", "#d97706", "Watch"),
-                "red":    ("🔴", "#dc2626", "Action Required"),
+                "green":  ("🟢", "#34D399", "#052e16", "On Track"),
+                "yellow": ("🟡", "#FCD34D", "#1c1000", "Watch"),
+                "red":    ("🔴", "#F87171", "#1c0000", "Action Required"),
             }
-            _dot, _col, _lbl = _dot_map.get(status, ("⚫", "#6b7280", "Unknown"))
+            _dot, _col, _row_bg, _lbl = _dot_map.get(status, ("⚫", "#94A3B8", "#111", "Unknown"))
             return (
-                f'<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;'
-                f'border-bottom:1px solid rgba(0,0,0,0.05);font-family:\'Plus Jakarta Sans\',sans-serif;">'
-                f'<div style="font-size:16px">{_dot}</div>'
-                f'<div style="flex:1.4;font-size:13px;font-weight:700;">{metric}</div>'
-                f'<div style="flex:0.8;font-size:13px;font-weight:800;color:{_col};">{value}</div>'
-                f'<div style="flex:1;font-size:11px;font-weight:700;color:{_col};text-transform:uppercase;'
-                f'letter-spacing:.05em;">{_lbl}</div>'
-                f'<div style="flex:2;font-size:12px;opacity:.65;">{note}</div>'
-                f'<div style="flex:0.8;font-size:10px;font-weight:600;letter-spacing:.04em;opacity:.45;'
-                f'text-transform:uppercase;">{source}</div>'
+                f'<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;'
+                f'border-bottom:1px solid rgba(255,255,255,0.06);font-family:\'Plus Jakarta Sans\',sans-serif;'
+                f'background:rgba(0,0,0,0.18);">'
+                f'<div style="font-size:16px;flex-shrink:0;">{_dot}</div>'
+                f'<div style="flex:1.4;font-size:13px;font-weight:700;color:#ffffff;">{metric}</div>'
+                f'<div style="flex:0.8;font-size:14px;font-weight:900;color:{_col};">{value}</div>'
+                f'<div style="flex:1;font-size:11px;font-weight:800;color:{_col};text-transform:uppercase;'
+                f'letter-spacing:.06em;">{_lbl}</div>'
+                f'<div style="flex:2;font-size:12px;color:rgba(255,255,255,0.72);line-height:1.4;">{note}</div>'
+                f'<div style="flex:0.8;font-size:10px;font-weight:700;letter-spacing:.05em;'
+                f'color:rgba(255,255,255,0.45);text-transform:uppercase;">{source}</div>'
                 f'</div>'
             )
 
@@ -4608,11 +4664,12 @@ with tab_ov:
         _rc_trips_note  = (f"{_trips_fmt} annual trips · {_exec_overnight:.0f}% overnight · {'Strong visitation base.' if _exec_trips >= 1e6 else 'Opportunity to grow overnight conversion.'}") if _exec_trips > 0 else "Run Datafy pipeline."
 
         _rc_html = (
-            '<div style="background:white;border-radius:14px;border:1px solid rgba(0,0,0,0.08);'
+            '<div style="background:rgba(0,0,0,0.30);border-radius:14px;'
+            'border:1px solid rgba(255,255,255,0.10);border-left:5px solid #FCD34D;'
             'overflow:hidden;font-family:\'Plus Jakarta Sans\',sans-serif;margin-bottom:16px;">'
-            '<div style="padding:12px 16px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);'
-            'border-bottom:1px solid rgba(0,0,0,0.07);font-size:12px;font-weight:700;'
-            'letter-spacing:.05em;text-transform:uppercase;opacity:.6;display:flex;gap:40px;">'
+            '<div style="padding:11px 16px;background:rgba(0,0,0,0.25);'
+            'border-bottom:1px solid rgba(255,255,255,0.08);font-size:11px;font-weight:800;'
+            'letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,0.55);display:flex;gap:40px;">'
             '<span style="flex:0.15"></span>'
             '<span style="flex:1.4">Metric</span>'
             '<span style="flex:0.8">Current</span>'
