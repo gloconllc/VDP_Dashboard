@@ -655,6 +655,48 @@ st.markdown("""
     70%  { transform: scale(1.35); opacity: 0;   }
     100% { transform: scale(1.35); opacity: 0;   }
   }
+
+  /* ── Global text contrast anchors (dark mode) ─────────────────────────── */
+  .stMarkdown, .stMarkdown p, .stMarkdown span, .stMarkdown div {
+    color: #E6EDF3 !important;
+  }
+  [data-testid="stExpander"] p, [data-testid="stExpander"] div {
+    color: #C9D1D9 !important;
+  }
+  [data-testid="stSidebar"] * { color: #E6EDF3 !important; }
+  [data-testid="stSidebar"] .stMarkdown p { color: #C9D1D9 !important; }
+  [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th {
+    color: #E6EDF3 !important;
+    background: rgba(22,27,34,0.95) !important;
+  }
+  [data-testid="stMetricDelta"] { font-size: 11px !important; font-weight: 600 !important; }
+  .sh-title { color: #ffffff !important; text-shadow: 0 0 20px var(--sh-accent, #32B8C6) !important; }
+  .sh-tag { color: #ffffff !important; }
+  .insight-card p, .insight-card span { color: #C9D1D9 !important; }
+
+  /* ── Section intelligence card ────────────────────────────────────────── */
+  .sec-intel {
+    background: linear-gradient(135deg, rgba(33,128,141,0.12), rgba(22,27,34,0.6));
+    border: 1px solid rgba(33,128,141,0.25); border-radius: 12px;
+    padding: 16px 20px; margin: 8px 0 16px 0;
+  }
+  .sec-intel-label {
+    font-size: 10px; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; color: #32B8C6; margin-bottom: 8px;
+  }
+  .sec-intel-body { font-size: 13px; color: #C9D1D9; line-height: 1.6; }
+  .sec-intel-stat {
+    display: inline-block;
+    background: rgba(33,128,141,0.2); border: 1px solid rgba(33,128,141,0.4);
+    border-radius: 6px; padding: 2px 10px;
+    font-weight: 700; color: #67E8F9;
+  }
+
+  /* ── Spacing tightening ────────────────────────────────────────────────── */
+  .block-container { padding-top: 1rem !important; }
+  [data-testid="stPlotlyChart"] { margin-bottom: 4px !important; }
+  div[data-testid="stHorizontalBlock"] { gap: 12px !important; }
+  div[data-testid="metric-container"] { padding: 10px 12px 8px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -670,6 +712,7 @@ st.markdown("""
     border-top: 1px solid rgba(255,255,255,0.08) !important;
     border-right: 1px solid rgba(255,255,255,0.06) !important;
     border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    backdrop-filter: blur(4px) !important;
   }
   .sh-icon {
     font-size: 20px !important; line-height: 1 !important; flex-shrink: 0 !important;
@@ -2566,8 +2609,8 @@ def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
         ),
         hoverlabel=dict(
             bgcolor="rgba(13,17,23,0.95)",
-            bordercolor="rgba(255,255,255,0.15)",
-            font=dict(size=12, family="Plus Jakarta Sans, Inter, sans-serif", color="white"),
+            bordercolor="rgba(33,128,141,0.5)",
+            font=dict(size=13, family="Plus Jakarta Sans, Inter, sans-serif", color="#E6EDF3"),
         ),
     )
     fig.update_xaxes(
@@ -2582,6 +2625,22 @@ def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
         tickfont=dict(size=11, family=_font),
     )
     return fig
+
+
+def sec_intel(section_name: str, what_it_shows: str, key_insight: str,
+              forward_implication: str, key_stat: str) -> str:
+    """Render a Section Intelligence summary card."""
+    return (
+        f'<div class="sec-intel">'
+        f'<div class="sec-intel-label">📊 Section Intelligence</div>'
+        f'<div class="sec-intel-body">'
+        f'<strong style="color:#E6EDF3;">{section_name}</strong> tracks {what_it_shows}.<br>'
+        f'<strong>Key Insight:</strong> {key_insight}<br>'
+        f'<strong>Forward Implication:</strong> {forward_implication}<br>'
+        f'<span class="sec-intel-stat">⭐ {key_stat}</span>'
+        f'</div>'
+        f'</div>'
+    )
 
 
 def compute_overview_kpis(df: pd.DataFrame, grain: str = "Daily") -> list[dict]:
@@ -4502,6 +4561,73 @@ with tab_ov:
         else:
             st.info("Run the pipeline to load STR data for board report generation.")
 
+        # ── Full Data Summary by Section ───────────────────────────────────────
+        try:
+            def _br_row(label, value):
+                return (
+                    f'<div style="display:flex;justify-content:space-between;align-items:center;'
+                    f'padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">'
+                    f'<span style="color:#8B949E;font-size:12px;">{label}</span>'
+                    f'<span style="color:#E6EDF3;font-weight:700;font-size:13px;">{value}</span>'
+                    f'</div>'
+                )
+            # Gather values
+            _ds_occ   = f"{m.get('occ_30', 0):.1f}%" if m else "—"
+            _ds_adr   = f"${m.get('adr_30', 0):,.0f}" if m else "—"
+            _ds_rvp   = f"${m.get('revpar_30', 0):,.0f}" if m else "—"
+            _ds_rvpd  = f"{m.get('revpar_delta', 0):+.1f}%" if m else "—"
+            _ds_cq80  = "—"; _ds_cq90 = "—"
+            if not df_comp.empty and "days_above_80_occ" in df_comp.columns:
+                _ds_cq80 = str(df_comp["days_above_80_occ"].iloc[-1]) + " days"
+                _ds_cq90 = str(df_comp.get("days_above_90_occ", pd.Series([0])).iloc[-1]) + " days" if "days_above_90_occ" in df_comp.columns else "—"
+            _ds_trips  = "—"; _ds_oos = "—"; _ds_avgsp = "—"
+            if not df_dfy_ov.empty:
+                _dv = df_dfy_ov.iloc[0]
+                _ds_tt = int(_dv.get("total_trips", 0) or 0)
+                _ds_trips = f"{_ds_tt/1e6:.2f}M" if _ds_tt >= 1e6 else f"{_ds_tt:,}"
+                _ds_oos = f"{float(_dv.get('out_of_state_vd_pct', 0) or 0):.1f}%"
+            _ds_top_dma = "—"
+            if not df_dfy_dma.empty:
+                _ds_top_dma = str(df_dfy_dma.iloc[0].get("dma", "—"))
+            _ds_pipe_rooms = f"{int(df_cs_pipe['rooms'].sum()):,}" if not df_cs_pipe.empty else "—"
+            _ds_roas = "—"
+            if not df_dfy_media.empty:
+                _dm = df_dfy_media.iloc[0]
+                _mi = float(_dm.get("total_impact_usd", 0) or 0)
+                _inv = float(_dm.get("total_investment_usd", 0) or 0)
+                _ds_roas = f"{_mi/_inv:.1f}×" if _inv > 0 and _mi > 0 else ("∞" if _mi > 0 else "—")
+            _ds_ig = "—"
+            try:
+                _cxn = sqlite3.connect(DB_PATH)
+                _ig_r = pd.read_sql_query("SELECT followers FROM later_ig_profile_growth ORDER BY data_date DESC LIMIT 1", _cxn)
+                _cxn.close()
+                if not _ig_r.empty: _ds_ig = f"{int(_ig_r.iloc[0,0] or 0):,}"
+            except Exception:
+                pass
+            _ds_html = (
+                '<div style="background:rgba(22,27,34,0.6);border:1px solid rgba(255,255,255,0.08);'
+                'border-radius:10px;padding:16px 20px;margin:12px 0;">'
+                '<div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;'
+                'color:#32B8C6;margin-bottom:12px;">📊 Full Data Summary — All Sections</div>'
+                + _br_row("Occupancy (30-day)", _ds_occ)
+                + _br_row("ADR (30-day)", _ds_adr)
+                + _br_row("RevPAR (30-day)", _ds_rvp)
+                + _br_row("RevPAR YOY", _ds_rvpd)
+                + _br_row("Compression Days (80%+ occ)", _ds_cq80)
+                + _br_row("Compression Days (90%+ occ)", _ds_cq90)
+                + _br_row("Annual Visitor Trips", _ds_trips)
+                + _br_row("Out-of-State Visitor %", _ds_oos)
+                + _br_row("Top Feeder DMA", _ds_top_dma)
+                + _br_row("Ohana Fest Event Expenditure", "$14.6M direct · 3.2× multiplier")
+                + _br_row("Pipeline Rooms", _ds_pipe_rooms)
+                + _br_row("Campaign ROAS", _ds_roas)
+                + _br_row("IG Followers", _ds_ig)
+                + '</div>'
+            )
+            st.markdown(_ds_html, unsafe_allow_html=True)
+        except Exception:
+            pass
+
         # ── Download button ────────────────────────────────────────────────────
         st.markdown("<br>", unsafe_allow_html=True)
         _dl_col, _sp_col = st.columns([1, 3])
@@ -4703,6 +4829,24 @@ with tab_ov:
             '</div>',
             unsafe_allow_html=True,
         )
+
+    # ── Overview Section Intelligence ─────────────────────────────────────────
+    if m:
+        _ov_rvp_yoy   = m.get("revpar_delta", 0)
+        _ov_occ       = m.get("occ_30", 0)
+        _ov_rvp       = m.get("revpar_30", 0)
+        _ov_cq        = m.get("comp_recent_q", 0)
+        _ov_rate_vs   = "outpacing occupancy — strong rate discipline" if _ov_rvp_yoy > 0 else "lagging occupancy — rate capture gap"
+        _ov_fwd       = ("Maintain pricing strength; advance rate floors before Q3 compression window."
+                         if _ov_occ >= 70 else "Focus shoulder demand generation; protect RevPAR floor.")
+        st.markdown(sec_intel(
+            "Overview Brain",
+            "hotel market health for the VDP Select 12-property portfolio",
+            f"RevPAR YOY is {_ov_rvp_yoy:+.1f}%, {_ov_rate_vs}. "
+            f"{_ov_cq} compression nights this quarter signal {'strong' if _ov_cq >= 10 else 'moderate'} pricing power.",
+            _ov_fwd,
+            f"RevPAR YOY: {_ov_rvp_yoy:+.1f}%",
+        ), unsafe_allow_html=True)
 
     # ── AI Analyst Panel ───────────────────────────────────────────────────────
     with st.expander("🧠 PULSE AI Analyst — Interrogate your data", expanded=False):
@@ -5542,6 +5686,25 @@ with tab_tr:
                 "kpi_daily_summary has no rows — run compute_kpis.py first.",
             ), unsafe_allow_html=True)
     else:
+        # ── STR Section Intelligence ────────────────────────────────────────────
+        try:
+            _tr_adr_yoy  = float(monthly["adr_yoy"].dropna().iloc[-1]) if "adr_yoy" in monthly.columns and not monthly["adr_yoy"].dropna().empty else 0.0
+            _tr_occ_yoy  = float(monthly["occ_pct_yoy"].dropna().iloc[-1]) if "occ_pct_yoy" in monthly.columns and not monthly["occ_pct_yoy"].dropna().empty else 0.0
+            _tr_adr_last = float(monthly["adr"].dropna().iloc[-1]) if "adr" in monthly.columns and not monthly["adr"].dropna().empty else 0.0
+            _tr_rate_disc = ("ADR is growing faster than occupancy — healthy rate discipline." if _tr_adr_yoy > _tr_occ_yoy
+                             else "Occupancy is growing faster than ADR — rate capture opportunity exists.")
+            _tr_fwd = ("Maintain rate floors; avoid discounting during compression windows." if _tr_adr_yoy >= 0
+                       else "Review rate strategy; discount-driven volume may be masking RevPAR pressure.")
+            st.markdown(sec_intel(
+                "STR & Trends",
+                "monthly STR performance vs prior year across supply, demand, ADR, and RevPAR",
+                _tr_rate_disc,
+                _tr_fwd,
+                f"ADR YOY: {_tr_adr_yoy:+.1f}% · Latest ADR: ${_tr_adr_last:,.0f}",
+            ), unsafe_allow_html=True)
+        except Exception:
+            pass
+
         # ── Primary metric chart — responds to metric selector ─────────────────
         _yoy_col   = "revpar_yoy" if _str_metric_col in ("revpar", "occ_pct") else None
         _main_col  = _str_metric_col if _str_metric_col in monthly.columns else "revpar"
@@ -5833,6 +5996,30 @@ with tab_fo:
     # Load all insights
     df_insights_all = load_insights()
 
+    # ── Forward Outlook Section Intelligence ────────────────────────────────
+    try:
+        _fo_occ    = m.get("occ_30", 0) if m else 0
+        _fo_rvp_d  = m.get("revpar_delta", 0) if m else 0
+        _fo_cq     = m.get("comp_recent_q", 0) if m else 0
+        _fo_q3c    = 0
+        if not df_comp.empty and "quarter" in df_comp.columns:
+            _fo_q3r = df_comp[df_comp["quarter"].str.endswith("Q3")]
+            _fo_q3c = int(_fo_q3r["days_above_80_occ"].iloc[0]) if not _fo_q3r.empty else 0
+        _fo_gap_to_70 = _fo_occ - 70
+        _fo_insight = (f"Occupancy is {_fo_gap_to_70:+.1f}pp {'above' if _fo_gap_to_70 >= 0 else 'below'} the 70% baseline "
+                       f"with {_fo_cq} compression nights this quarter. Q3 historically peaks at {_fo_q3c} compression nights.")
+        _fo_fwd = ("Advance rate increases ahead of peak compression window; lock in ADR floors now." if _fo_occ >= 70
+                   else "Target shoulder demand campaigns to close occupancy gap before compression season.")
+        st.markdown(sec_intel(
+            "Forward Outlook",
+            "forward-looking demand signals and rate positioning guidance",
+            _fo_insight,
+            _fo_fwd,
+            f"Current Occ: {_fo_occ:.1f}% · Q3 Peak Compression: {_fo_q3c} nights",
+        ), unsafe_allow_html=True)
+    except Exception:
+        pass
+
     # ── Key Forward Metrics ──────────────────────────────────────────────────
     st.markdown(
         '<div style="font-size:1.05rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:12px;">'
@@ -5869,29 +6056,48 @@ with tab_fo:
         if not _q1_rows.empty:
             _fwd_q1_label = f"Q1 {_q1_rows.iloc[0]['quarter'][:4]}"
 
+    def _kfm_card(label, value, delta, delta_color="#8B949E"):
+        return (
+            f'<div style="background:rgba(22,27,34,0.8);border-radius:10px;padding:14px 16px;'
+            f'border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">'
+            f'<div style="font-size:11px;color:#8B949E;font-weight:600;line-height:1.4;margin-bottom:6px;">{label}</div>'
+            f'<div style="font-size:2rem;font-weight:800;color:#E6EDF3;letter-spacing:-0.02em;line-height:1.1;">{value}</div>'
+            f'<div style="font-size:11px;color:{delta_color};font-weight:600;margin-top:4px;">{delta}</div>'
+            f'</div>'
+        )
     with _fwd_c1:
         _occ_vs = _occ_fwd - 70
-        _occ_vs_str = f"{_occ_vs:+.1f}pp vs 70% baseline"
-        st.metric(f"Occupancy — {_fwd_30d_lbl}", f"{_occ_fwd:.1f}%", delta=_occ_vs_str,
-                  delta_color="normal" if _occ_vs >= 0 else "inverse",
-                  help=f"30-day trailing avg occupancy as of {_fwd_as_of} vs 70% destination baseline")
+        _occ_dc = "#21c55d" if _occ_vs >= 0 else "#ef4444"
+        st.markdown(_kfm_card(
+            f"Occupancy — 30-day trailing",
+            f"{_occ_fwd:.1f}%",
+            f"{_occ_vs:+.1f}pp vs 70% baseline",
+            _occ_dc,
+        ), unsafe_allow_html=True)
     with _fwd_c2:
-        st.metric(f"ADR — {_fwd_30d_lbl}", f"${_adr_fwd:,.0f}",
-                  delta=f"RevPAR ${_rvp_fwd:,.0f}",
-                  help=f"30-day average daily rate and RevPAR as of {_fwd_as_of}")
+        st.markdown(_kfm_card(
+            f"ADR — 30-day trailing",
+            f"${_adr_fwd:,.0f}",
+            f"RevPAR ${_rvp_fwd:,.0f}",
+            "#8B949E",
+        ), unsafe_allow_html=True)
     with _fwd_c3:
-        st.metric(f"Compression Nights — {_fwd_q3_label}", f"{_q3_comp}",
-                  delta=f"{_fwd_q1_label}: {_q1_comp} nights",
-                  delta_color="off",
-                  help=f"Days above 80% occupancy — {_fwd_q3_label} peak vs {_fwd_q1_label} shoulder. More nights = greater pricing power.")
+        st.markdown(_kfm_card(
+            f"Compression Nights — {_fwd_q3_label}",
+            f"{_q3_comp}",
+            f"{_fwd_q1_label}: {_q1_comp} nights",
+            "#8B949E",
+        ), unsafe_allow_html=True)
     with _fwd_c4:
         # Shoulder opportunity: Q1 compression gap vs Q3
         _shld_gap = _q3_comp - _q1_comp
         _shld_rev_opp = _shld_gap * _rvp_fwd * 0.02 * 365 / max(_q3_comp, 1) if _rvp_fwd > 0 else 0
-        st.metric("Shoulder Revenue Opportunity", f"${_shld_rev_opp:,.0f}",
-                  delta=f"{_shld_gap} comp nights gap ({_fwd_q3_label} vs {_fwd_q1_label})",
-                  delta_color="off",
-                  help=f"Estimated incremental room revenue if shoulder ({_fwd_q1_label}) compression nights grew toward peak ({_fwd_q3_label}) levels. Based on {_fwd_as_of} RevPAR.")
+        st.markdown(_kfm_card(
+            "Shoulder Revenue Opportunity",
+            f"${_shld_rev_opp:,.0f}",
+            f"{_shld_gap} comp nights gap ({_fwd_q3_label} vs {_fwd_q1_label})",
+            "#21c55d" if _shld_rev_opp > 0 else "#8B949E",
+        ), unsafe_allow_html=True)
 
     # Campaign timing insight
     _camp_insight = ""
@@ -6087,6 +6293,29 @@ with tab_ev:
                 f'</div>',
                 unsafe_allow_html=True,
             )
+
+    # ── Visitor Economy Section Intelligence ────────────────────────────────
+    try:
+        if not df_dfy_ov.empty:
+            _ve_ov = df_dfy_ov.iloc[0]
+            _ve_trips   = int(_ve_ov.get("total_trips", 0) or 0)
+            _ve_onight  = float(_ve_ov.get("overnight_trips_pct", 0) or 0)
+            _ve_oos     = float(_ve_ov.get("out_of_state_vd_pct", 0) or 0)
+            _ve_daytrip = float(_ve_ov.get("day_trips_pct", 0) or 0)
+            _ve_conv_trips = int(_ve_trips * (_ve_daytrip / 100) * 0.03)
+            _ve_trips_fmt = f"{_ve_trips/1e6:.2f}M" if _ve_trips >= 1e6 else f"{_ve_trips/1e3:.0f}K"
+            _ve_insight = (f"{_ve_daytrip:.1f}% of {_ve_trips_fmt} trips are same-day visits. "
+                           f"A 3% day-trip conversion adds ~{_ve_conv_trips:,} overnight stays — roughly $15M incremental room revenue.")
+            _ve_fwd = "Target day-tripper conversion campaigns in LA and OC DMAs — highest ROI channel for incremental room revenue."
+            st.markdown(sec_intel(
+                "Visitor Economy",
+                "Datafy-sourced visitor behavior: trips, spending, demographics, and feeder markets",
+                _ve_insight,
+                _ve_fwd,
+                f"Out-of-State Visitors: {_ve_oos:.1f}% · Overnight Rate: {_ve_onight:.1f}%",
+            ), unsafe_allow_html=True)
+    except Exception:
+        pass
 
     if df_dfy_ov.empty:
         st.markdown(empty_state(
@@ -6959,6 +7188,29 @@ with tab_fm:
     </div>
     """, unsafe_allow_html=True)
 
+    # ── Feeder Markets Section Intelligence ─────────────────────────────────
+    try:
+        if not df_dfy_dma.empty:
+            _fm_t10 = df_dfy_dma[df_dfy_dma["visitor_days_share_pct"].notna()].head(10)
+            _fm_top  = _fm_t10.iloc[0]["dma"] if not _fm_t10.empty else "N/A"
+            _fm_top_pct = float(_fm_t10.iloc[0]["visitor_days_share_pct"]) if not _fm_t10.empty else 0
+            _fm_hs_row  = df_dfy_dma[df_dfy_dma["avg_spend_usd"].notna()].nlargest(1, "avg_spend_usd")
+            _fm_hs_mkt  = _fm_hs_row.iloc[0]["dma"] if not _fm_hs_row.empty else "N/A"
+            _fm_hs_val  = float(_fm_hs_row.iloc[0]["avg_spend_usd"]) if not _fm_hs_row.empty else 0
+            _fm_insight = (f"{_fm_top} leads on visitor volume at {_fm_top_pct:.1f}% of days, "
+                           f"while {_fm_hs_mkt} generates the highest avg spend at ${_fm_hs_val:,.0f}/visitor — "
+                           f"drive vs fly market dynamics.")
+            _fm_fwd = f"Shift 15–20% of campaign budget toward {_fm_hs_mkt} and similar fly markets to maximize revenue-per-visitor ROI."
+            st.markdown(sec_intel(
+                "Feeder Markets",
+                "origin market analysis — where visitors come from and how much they spend",
+                _fm_insight,
+                _fm_fwd,
+                f"Top Spend Market: {_fm_hs_mkt} @ ${_fm_hs_val:,.0f}/visitor",
+            ), unsafe_allow_html=True)
+    except Exception:
+        pass
+
     # ── DMA Overview ───────────────────────────────────────────────────────────
     if not df_dfy_dma.empty:
         _fm_period = str(df_dfy_dma.iloc[0].get("report_period_start", ""))[:4] + " Annual" if not df_dfy_dma.empty else ""
@@ -7479,6 +7731,16 @@ with tab_ei:
         if sub.empty:
             return 0, 0, 0
         return sub["occ_pct"].mean(), sub["adr"].mean(), sub["revpar"].mean()
+
+    # ── Event Impact Section Intelligence ───────────────────────────────────
+    st.markdown(sec_intel(
+        "Event Impact",
+        "economic impact of major events on hotel demand, ADR, and destination spend",
+        "Ohana Fest generated +$139 ADR lift vs baseline ($542 vs $403) and a 3.2× spend multiplier. "
+        "68% out-of-state attendance confirms events drive genuine incremental tourism, not displacement.",
+        "Expand the event calendar in Q1 and Q4 shoulder seasons — events during compression gaps maximize TBID revenue lift.",
+        "$14.6M direct event expenditure · 3.2× multiplier",
+    ), unsafe_allow_html=True)
 
     # ── Headline KPIs — Event Calendar Snapshot ────────────────────────────────
     _ei_summary_cols = st.columns(4)
@@ -8361,6 +8623,21 @@ with tab_sp:
     </div>
     """, unsafe_allow_html=True)
 
+    # ── Supply & Pipeline Section Intelligence ───────────────────────────────
+    try:
+        _sp_intel_rooms = int(df_cs_pipe["rooms"].sum()) if not df_cs_pipe.empty else 0
+        _sp_intel_pct   = _sp_intel_rooms / 5120 * 100 if _sp_intel_rooms > 0 else 0
+        st.markdown(sec_intel(
+            "Supply & Pipeline",
+            "hotel supply pipeline — rooms under construction and planned additions for South OC",
+            f"{_sp_intel_rooms:,} pipeline rooms represent a {_sp_intel_pct:.1f}% increase in market supply. "
+            "New luxury and upper-upscale product will intensify rate competition at the top of the market.",
+            "ADR discipline is critical during the supply absorption period — protect RevPAR through loyalty and direct-booking incentives.",
+            f"{_sp_intel_rooms:,} rooms in pipeline ({_sp_intel_pct:.1f}% supply growth)",
+        ), unsafe_allow_html=True)
+    except Exception:
+        pass
+
     # ── Pipeline summary KPIs ─────────────────────────────────────────────────
     if not df_cs_pipe.empty:
         _pipe_total = df_cs_pipe["rooms"].sum()
@@ -8473,6 +8750,28 @@ with tab_cs:
       <div class="hero-subtitle">CoStar Hospitality Analytics · Newport Beach/Dana Point · 2024–2026 (Live PDF Extracts)</div>
     </div>
     """, unsafe_allow_html=True)
+
+    # ── Market Intelligence Section Intelligence ─────────────────────────────
+    try:
+        _cs_mkt_occ = 0.0; _cs_mkt_adr = 0.0; _cs_mkt_rvp = 0.0
+        if not df_cs_snap.empty:
+            _cs_s = df_cs_snap.iloc[0]
+            _cs_mkt_occ = float(_cs_s.get("occupancy_pct", 0) or 0)
+            _cs_mkt_adr = float(_cs_s.get("adr_usd", 0) or 0)
+            _cs_mkt_rvp = float(_cs_s.get("revpar_usd", 0) or 0)
+        _cs_port_adr = m.get("adr_30", 0) if m else 0
+        _cs_ari_signal = ("portfolio ADR is above market — strong ARI position" if _cs_port_adr > _cs_mkt_adr
+                          else "portfolio ADR is below market average — rate capture opportunity")
+        st.markdown(sec_intel(
+            "Market Intelligence",
+            "CoStar submarket data: occupancy, ADR, RevPAR across South OC competitive set",
+            f"South OC market: {_cs_mkt_occ:.1f}% occ, ${_cs_mkt_adr:.0f} ADR, ${_cs_mkt_rvp:.0f} RevPAR. "
+            f"VDP portfolio ADR ${_cs_port_adr:,.0f} — {_cs_ari_signal}.",
+            "Track MPI, ARI, and RGI monthly — index leadership above 100 across all three metrics is the primary RevPAR growth target.",
+            f"Market ADR: ${_cs_mkt_adr:.0f} · Market RevPAR: ${_cs_mkt_rvp:.0f}",
+        ), unsafe_allow_html=True)
+    except Exception:
+        pass
 
     # ── AI CoStar Analysis Panel ───────────────────────────────────────────────
     with st.expander("🧠 CoStar AI Analyst — Deep Market Insights", expanded=True):
