@@ -2441,6 +2441,25 @@ def empty_state(icon: str, title: str, body: str) -> str:
     )
 
 
+def _safe_section(fn, section_name: str = "section"):
+    """GloCon Solutions LLC — failsafe wrapper for any dashboard section.
+    Catches exceptions and renders a user-friendly error card instead of crashing.
+    Usage: _safe_section(lambda: my_section_code(), 'Section Name')
+    """
+    try:
+        fn()
+    except Exception as _err:
+        import traceback as _tb
+        st.warning(
+            f"⚠️ **{section_name}** could not render — data may be incomplete or a format changed. "
+            f"Run `python scripts/run_pipeline.py` to refresh, then click 🔄 Refresh Dashboard.",
+            icon="⚠️",
+        )
+        if st.session_state.get("is_admin", False):
+            with st.expander(f"🔍 Debug: {section_name} error"):
+                st.code(_tb.format_exc(), language="python")
+
+
 def source_card(dot: str, name: str, meta: str, count: str) -> str:
     """Styled data-source health card."""
     return (
@@ -2514,7 +2533,16 @@ df_later_ig_stories  = load_later_ig_stories()
 df_later_tk_inter    = load_later_tk_interactions()
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
+# GloCon Solutions LLC — Dana Point PULSE sidebar with VDP branding + images
 with st.sidebar:
+    # VDP hero image from visitdanapoint.com public CDN
+    try:
+        st.image(
+            "https://www.visitdanapoint.com/wp-content/uploads/2023/03/Dana-Point-Harbor-Aerial-scaled.jpg",
+            use_container_width=True,
+        )
+    except Exception:
+        pass
     st.markdown(
         '<a href="?" style="text-decoration:none;">'
         '<div class="sidebar-brand">🌊 Dana Point PULSE</div>'
@@ -2522,7 +2550,9 @@ with st.sidebar:
         '<div style="font-size:11px;opacity:0.55;font-weight:500;margin-top:2px;margin-bottom:1px;">'
         'Performance · Understanding · Leadership · Spending · Economy</div>'
         '<div style="font-size:11px;opacity:0.45;font-weight:500;margin-top:1px;margin-bottom:2px;">'
-        'VDP Select Portfolio &nbsp;·&nbsp; 12 Properties</div>',
+        'VDP Select Portfolio &nbsp;·&nbsp; 12 Properties</div>'
+        '<div style="font-size:10px;opacity:0.35;font-weight:600;margin-top:3px;letter-spacing:.04em;">'
+        'Powered by GloCon Solutions LLC</div>',
         unsafe_allow_html=True,
     )
     st.divider()
@@ -2614,6 +2644,38 @@ with st.sidebar:
 
     if not ANTHROPIC_AVAILABLE:
         st.warning("`anthropic` not installed.\nRun: `pip install anthropic`", icon="⚠️")
+
+    # ── Public refresh button (all users) ────────────────────────────────────
+    # GloCon Solutions LLC — user-facing cache-clear button
+    if st.button("🔄 Refresh Dashboard", use_container_width=True,
+                 help="Clear cached data and reload all metrics from the database."):
+        st.cache_data.clear()
+        st.rerun()
+
+    st.divider()
+
+    # ── Global date range filter ───────────────────────────────────────────────
+    # GloCon Solutions LLC — global filter stored in session state; applied to df_sel
+    st.markdown("**📅 Date Filter**")
+    if not df_daily.empty:
+        _gf_min = df_daily["as_of_date"].min().to_pydatetime().date()
+        _gf_max = df_daily["as_of_date"].max().to_pydatetime().date()
+        _gf_default = st.session_state.get("global_date_range", (_gf_min, _gf_max))
+        _gf_sel = st.date_input(
+            "Show data between",
+            value=_gf_default,
+            min_value=_gf_min,
+            max_value=_gf_max,
+            key="global_date_range_input",
+            label_visibility="collapsed",
+        )
+        if isinstance(_gf_sel, (list, tuple)) and len(_gf_sel) == 2:
+            st.session_state["global_date_range"] = tuple(_gf_sel)
+        if st.button("↺ Reset to All Dates", use_container_width=True, key="reset_date_filter"):
+            st.session_state.pop("global_date_range", None)
+            st.rerun()
+    else:
+        st.caption("Load STR data to enable date filter.")
 
     st.divider()
 
@@ -2807,6 +2869,14 @@ elif grain == "Daily" and not df_sel.empty:
     _dow_nums   = [_dow_map[d] for d in _dow_filter if d in _dow_map]
     if _dow_nums and len(_dow_nums) < 7:
         df_sel = df_sel[df_sel["as_of_date"].dt.dayofweek.isin(_dow_nums)]
+
+# ── Apply global date range filter from sidebar ───────────────────────────────
+_gdr = st.session_state.get("global_date_range")
+if _gdr and len(_gdr) == 2 and not df_sel.empty and "as_of_date" in df_sel.columns:
+    import datetime as _dt
+    _gdr_start = pd.Timestamp(_gdr[0])
+    _gdr_end   = pd.Timestamp(_gdr[1])
+    df_sel = df_sel[(df_sel["as_of_date"] >= _gdr_start) & (df_sel["as_of_date"] <= _gdr_end)]
 
 m = build_metrics_context(df_sel, df_comp, df_monthly)
 
@@ -3861,10 +3931,42 @@ tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
+# GloCon Solutions LLC — Dana Point PULSE
+# Tab header helper: refresh button + active filter badge on every tab
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _tab_controls(tab_id: str = "", show_filter_badge: bool = True):
+    """Render per-tab refresh button and active filter badge.
+    GloCon Solutions LLC — universal tab control bar."""
+    _tc1, _tc2, _tc3 = st.columns([1, 1, 4])
+    with _tc1:
+        if st.button("🔄 Refresh", key=f"tab_refresh_{tab_id}",
+                     help="Clear cache and reload data.", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
+    with _tc2:
+        _gdr = st.session_state.get("global_date_range")
+        if st.button("↺ Reset Filter", key=f"tab_reset_{tab_id}",
+                     help="Clear active date filter.", use_container_width=True):
+            st.session_state.pop("global_date_range", None)
+            st.rerun()
+    with _tc3:
+        _gdr = st.session_state.get("global_date_range")
+        if show_filter_badge and _gdr and len(_gdr) == 2:
+            st.markdown(
+                f'<div style="background:rgba(0,196,204,0.12);border:1px solid rgba(0,196,204,0.4);'
+                f'border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;'
+                f'display:inline-block;margin-top:4px;">'
+                f'📅 Filter active: {_gdr[0]} → {_gdr[1]}</div>',
+                unsafe_allow_html=True,
+            )
+
+# ══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — OVERVIEW
+# GloCon Solutions LLC — Board-level executive summary + intelligence briefing
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ov:
-
+    _tab_controls("ov")
     # ── Board Executive Summary Banner ─────────────────────────────────────────
     try:
         _exec_rvp   = m.get("revpar_30", 0.0) if m else 0.0
@@ -4998,6 +5100,7 @@ with tab_ov:
 # TAB 2 — TRENDS
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_tr:
+    _tab_controls("tr")
     # ── Metric toggle filter ────────────────────────────────────────────────────
     _str_metric_label = st.selectbox(
         "View Metric",
@@ -5345,6 +5448,7 @@ with tab_tr:
 # TAB 3 — FORWARD OUTLOOK
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_fo:
+    _tab_controls("fo")
     # ── Header ─────────────────────────────────────────────────────────────────
     st.markdown(
         '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:1.55rem;'
@@ -5581,12 +5685,33 @@ with tab_fo:
 # TAB 4 — VISITOR ECONOMY (Datafy)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ev:
+    _tab_controls("ev")
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">Visitor Economy Intelligence</div>
       <div class="hero-subtitle">Datafy Geolocation Analytics · Dana Point, CA · Annual 2025</div>
     </div>
     """, unsafe_allow_html=True)
+
+    # GloCon Solutions LLC — VDP destination imagery from visitdanapoint.com
+    try:
+        _ve_img_c1, _ve_img_c2, _ve_img_c3 = st.columns(3)
+        _vdp_imgs = [
+            ("https://www.visitdanapoint.com/wp-content/uploads/2023/03/Dana-Point-Harbor-Aerial-scaled.jpg",
+             "Dana Point Harbor"),
+            ("https://www.visitdanapoint.com/wp-content/uploads/2023/04/Doheny-State-Beach-scaled.jpg",
+             "Doheny State Beach"),
+            ("https://www.visitdanapoint.com/wp-content/uploads/2023/03/whale-watching-dana-point.jpg",
+             "Whale Watching"),
+        ]
+        for _vic, (_vurl, _vcap) in zip([_ve_img_c1, _ve_img_c2, _ve_img_c3], _vdp_imgs):
+            with _vic:
+                try:
+                    st.image(_vurl, caption=_vcap, use_container_width=True)
+                except Exception:
+                    st.caption(f"📍 {_vcap}")
+    except Exception:
+        pass
 
     if df_dfy_ov.empty:
         st.markdown(empty_state(
@@ -6438,6 +6563,7 @@ with tab_ev:
 # TAB 5 — FEEDER MARKETS
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_fm:
+    _tab_controls("fm")
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">Feeder Market Intelligence</div>
@@ -6759,6 +6885,7 @@ with tab_fm:
 # TAB 6 — EVENT IMPACT
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ei:
+    _tab_controls("ei")
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">Event Impact Analysis</div>
@@ -7660,6 +7787,7 @@ with tab_ei:
 # TAB 7 — SUPPLY & PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_sp:
+    _tab_controls("sp")
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">Supply &amp; Pipeline</div>
@@ -7772,6 +7900,7 @@ with tab_sp:
 # TAB 8 — MARKET INTELLIGENCE (CoStar)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_cs:
+    _tab_controls("cs")
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">South OC Market Intelligence</div>
@@ -8624,6 +8753,65 @@ with tab_cs:
             "Run the pipeline to populate visit_ca_* tables from data/Visit_California/.",
         ), unsafe_allow_html=True)
 
+    # ── GloCon Solutions LLC — VDP vs Market Leadership Scorecard ─────────────
+    st.markdown("---")
+    st.markdown("### 🏆 VDP vs. South OC Market — Leadership Scorecard")
+    st.caption("How Dana Point properties perform vs. the South Orange County submarket · Source: STR 30-day actuals vs. CoStar snapshot · Built by GloCon Solutions LLC")
+
+    try:
+        if not df_cs_snap.empty and kpis:
+            _snap = df_cs_snap.iloc[0]
+            _mkt_occ_b = float(_snap.get("occupancy_pct", 76.4) or 76.4)
+            _mkt_adr_b = float(_snap.get("adr_usd", 288.50) or 288.50)
+            _mkt_rvp_b = float(_snap.get("revpar_usd", 220.42) or 220.42)
+            def _ns(v):
+                try: return float(str(v).replace("$","").replace("%","").replace(",",""))
+                except: return 0.0
+            _vdp_occ_n = _ns(next((k["raw_value"] for k in kpis if "Occ" in k.get("label","")), _mkt_occ_b))
+            _vdp_adr_n = _ns(next((k["raw_value"] for k in kpis if "ADR" in k.get("label","")), _mkt_adr_b))
+            _vdp_rvp_n = _ns(next((k["raw_value"] for k in kpis if "RevPAR" in k.get("label","")), _mkt_rvp_b))
+            _sc_rows = [
+                ("Occupancy",  f"{_vdp_occ_n:.1f}%", f"{_mkt_occ_b:.1f}%", _vdp_occ_n - _mkt_occ_b, "pp"),
+                ("ADR",        f"${_vdp_adr_n:.2f}",  f"${_mkt_adr_b:.2f}",  _vdp_adr_n - _mkt_adr_b, "$"),
+                ("RevPAR",     f"${_vdp_rvp_n:.2f}",  f"${_mkt_rvp_b:.2f}",  _vdp_rvp_n - _mkt_rvp_b, "$"),
+            ]
+            _sc_df = pd.DataFrame(_sc_rows, columns=["Metric","VDP Portfolio","S. OC Market","Gap","Unit"])
+            _sc_df["Signal"]      = _sc_df["Gap"].apply(lambda g: "✅ Premium" if g > 0 else ("⚠️ Parity" if abs(g) < 0.5 else "🔴 Below Market"))
+            _sc_df["Gap vs Mkt"]  = _sc_df.apply(lambda r: f"{'+' if r['Gap']>0 else ''}{r['Gap']:.1f}{r['Unit']}", axis=1)
+            _sc_df["Board Note"]  = _sc_df.apply(lambda r: (
+                "Maintain pricing discipline — demand supports premium." if r["Gap"] > 0
+                else "Investigate comp set — close rate gap strategy needed."), axis=1)
+            st.dataframe(
+                _sc_df[["Metric","VDP Portfolio","S. OC Market","Gap vs Mkt","Signal","Board Note"]],
+                use_container_width=True, hide_index=True,
+            )
+            # Visual comparison bar chart
+            _sc_fig = go.Figure()
+            for _sci, (_scm, _scvdp, _scmkt, _scgap, _scu) in enumerate(_sc_rows):
+                _scv_num = _ns(_scvdp); _scm_num = _ns(_scmkt)
+                _sc_fig.add_trace(go.Bar(
+                    name="VDP Portfolio", x=[_scm], y=[_scv_num],
+                    marker_color="#00C4CC", text=[_scvdp], textposition="outside",
+                    showlegend=(_sci == 0),
+                ))
+                _sc_fig.add_trace(go.Bar(
+                    name="S. OC Market", x=[_scm], y=[_scm_num],
+                    marker_color="#94A3B8", text=[_scmkt], textposition="outside",
+                    showlegend=(_sci == 0),
+                ))
+            _sc_fig.update_layout(
+                barmode="group", height=280, margin=dict(l=0,r=0,t=20,b=0),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                yaxis=dict(showticklabels=False),
+            )
+            st.plotly_chart(_sc_fig, use_container_width=True,
+                            config={"displayModeBar": False}, key="cs_leadership_scorecard")
+        else:
+            st.info("Load STR and CoStar data to populate the Leadership Scorecard.")
+    except Exception as _sc_err:
+        st.warning(f"Leadership Scorecard unavailable: {_sc_err}")
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -8632,6 +8820,7 @@ with tab_cs:
 # TAB 5 — DATA LOG
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_dl:
+    _tab_controls("dl", show_filter_badge=False)
     col_a, col_b = st.columns([3, 1])
 
     with col_a:
@@ -9074,9 +9263,19 @@ with _gl2:
         st.markdown(_SOURCES_HTML, unsafe_allow_html=True)
 
 st.markdown(
-    '<div style="text-align:center;padding:18px 0 10px;font-size:12px;opacity:0.40;">'
-    'Powered by <strong>GloCon Solutions LLC</strong> &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; '
-    'Dana Point PULSE · All data is proprietary and confidential.'
+    '<div style="text-align:center;padding:24px 0 12px;border-top:1px solid rgba(0,0,0,0.07);">'
+    '<div style="font-size:13px;font-weight:700;letter-spacing:.02em;margin-bottom:4px;">'
+    '🌊 Dana Point PULSE</div>'
+    '<div style="font-size:11px;opacity:0.50;margin-bottom:6px;">'
+    'Performance · Understanding · Leadership · Spending · Economy</div>'
+    '<div style="font-size:11px;opacity:0.40;">'
+    'Powered by <strong>GloCon Solutions LLC</strong> &nbsp;·&nbsp; © 2026 &nbsp;·&nbsp; '
+    'Built for Visit Dana Point (VDP) &nbsp;·&nbsp; '
+    'Data sources: STR · Datafy · CoStar · Later.com · Visit California · FRED &nbsp;·&nbsp; '
+    'All data is proprietary and confidential. &nbsp;·&nbsp; '
+    '<a href="https://www.visitdanapoint.com" target="_blank" style="color:inherit;opacity:.7;">'
+    'visitdanapoint.com</a>'
+    '</div>'
     '</div>',
     unsafe_allow_html=True,
 )
