@@ -694,8 +694,8 @@ st.markdown("""
     text-shadow: 0 1px 4px rgba(0,0,0,0.5) !important;
   }
   .pulse-info-detail {
-    color: rgba(255,255,255,0.72) !important;
-    font-size: 12px !important; line-height: 1.55 !important;
+    color: rgba(255,255,255,0.92) !important;
+    font-size: 12.5px !important; line-height: 1.6 !important;
   }
 
   /* ── Back-to-top button ──────────────────────────────────────────────────── */
@@ -717,6 +717,115 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+  /* ═══════════════════════════════════════════════════════════════
+     MOBILE & TABLET RESPONSIVE STYLES
+     Targets: phones (< 640px), tablets (640–1024px)
+  ═══════════════════════════════════════════════════════════════ */
+
+  /* ── Streamlit layout fixes ─────────────────────────────────── */
+  @media screen and (max-width: 768px) {
+    /* Main content padding */
+    .main .block-container {
+      padding: 0.5rem 0.75rem 2rem 0.75rem !important;
+      max-width: 100% !important;
+    }
+
+    /* Hero banner — shrink text on mobile */
+    .hero-banner { padding: 18px 16px !important; }
+    .hero-title { font-size: 1.4rem !important; }
+    .hero-subtitle { font-size: 11px !important; }
+
+    /* Section header blocks */
+    .sh-block { padding: 10px 14px !important; }
+    .sh-title { font-size: 13px !important; }
+
+    /* PULSE Score widget — stack vertically on mobile */
+    .pulse-wrapper {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 16px !important;
+      padding: 16px 18px !important;
+    }
+    .pulse-info-detail { font-size: 12px !important; }
+
+    /* KPI card — ensure text wraps */
+    [data-testid="stMetricLabel"] {
+      font-size: 10px !important;
+      white-space: normal !important;
+      line-height: 1.3 !important;
+    }
+    [data-testid="stMetricValue"] {
+      font-size: 1.3rem !important;
+    }
+
+    /* Tab labels — smaller on mobile */
+    button[data-baseweb="tab"] {
+      font-size: 11px !important;
+      padding: 6px 10px !important;
+    }
+
+    /* Chart headers */
+    .chart-header { font-size: 13px !important; }
+
+    /* Sidebar brand */
+    .sidebar-brand { font-size: 16px !important; }
+
+    /* Back-to-top — offset from bottom nav on mobile */
+    #back-to-top-btn {
+      bottom: 70px !important;
+      right: 16px !important;
+      width: 44px !important;
+      height: 44px !important;
+    }
+
+    /* Event stat cards */
+    .event-stat { padding: 16px 12px !important; }
+    .event-val { font-size: 24px !important; }
+
+    /* NLM briefing */
+    .nlm-briefing { padding: 14px 16px !important; }
+    .nlm-point { font-size: 12.5px !important; }
+
+    /* Source cards */
+    .src-card { padding: 10px 14px !important; }
+  }
+
+  @media screen and (max-width: 480px) {
+    .hero-title { font-size: 1.2rem !important; }
+    .main .block-container { padding: 0.25rem 0.5rem 2rem 0.5rem !important; }
+    .sh-tag { display: none !important; }
+    [data-testid="stMetricValue"] { font-size: 1.15rem !important; }
+  }
+
+  /* ── Plotly charts — ensure mobile resize ────────────────────── */
+  @media screen and (max-width: 768px) {
+    .js-plotly-plot .plotly { overflow-x: auto !important; }
+  }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<style>
+  /* ── Key Forward Metrics — allow label wrapping ───────────────────── */
+  [data-testid="stMetricLabel"] {
+    font-size: 11px !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    line-height: 1.35 !important;
+    min-height: 2.5em !important;
+  }
+  [data-testid="stMetricValue"] {
+    font-size: clamp(1.2rem, 2.5vw, 1.8rem) !important;
+  }
+  [data-testid="stMetricDelta"] {
+    font-size: 11px !important;
+  }
+</style>
+""", unsafe_allow_html=True)
+
 # ── Back-to-top button (injected once at top-level)
 st.markdown("""
 <button id="back-to-top-btn" title="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
@@ -726,11 +835,28 @@ st.markdown("""
 (function(){
   var btn = document.getElementById('back-to-top-btn');
   if(!btn) return;
-  function onScroll(){
-    if(window.scrollY > 300){ btn.classList.add('visible'); }
+  function onScroll(e){
+    var scroller = e ? e.target : window;
+    var scrollTop = scroller.scrollTop !== undefined ? scroller.scrollTop : window.scrollY;
+    if(scrollTop > 300){ btn.classList.add('visible'); }
     else { btn.classList.remove('visible'); }
   }
+  // Listen on both window and Streamlit's scroll container
   window.addEventListener('scroll', onScroll, {passive:true});
+  // Also attach to Streamlit's main scroll container when it mounts
+  setTimeout(function(){
+    var stScroll = document.querySelector('[data-testid="stAppViewContainer"]') ||
+                   document.querySelector('.main') ||
+                   document.querySelector('section.main');
+    if(stScroll){ stScroll.addEventListener('scroll', onScroll, {passive:true}); }
+  }, 800);
+  // Update scroll target on click
+  btn.onclick = function(){
+    var stScroll = document.querySelector('[data-testid="stAppViewContainer"]') ||
+                   document.querySelector('.main');
+    if(stScroll){ stScroll.scrollTop = 0; }
+    window.scrollTo({top:0, behavior:'smooth'});
+  };
 })();
 </script>
 """, unsafe_allow_html=True)
@@ -2638,14 +2764,16 @@ df_later_tk_inter    = load_later_tk_interactions()
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 # GloCon Solutions LLC — Dana Point PULSE sidebar with VDP branding + images
 with st.sidebar:
-    # VDP hero image from visitdanapoint.com public CDN
-    try:
-        st.image(
-            "https://www.visitdanapoint.com/wp-content/uploads/2023/03/Dana-Point-Harbor-Aerial-scaled.jpg",
-            use_container_width=True,
-        )
-    except Exception:
-        pass
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,rgba(33,128,141,0.25) 0%,rgba(50,184,198,0.15) 50%,rgba(230,129,97,0.12) 100%);'
+        'border-radius:12px;padding:20px 16px;margin-bottom:8px;text-align:center;'
+        'border:1px solid rgba(33,128,141,0.20);">'
+        '<div style="font-size:28px;margin-bottom:4px;">🌊</div>'
+        '<div style="font-size:11px;font-weight:700;color:#32B8C6;letter-spacing:.08em;text-transform:uppercase;">Dana Point</div>'
+        '<div style="font-size:10px;opacity:0.55;margin-top:2px;">South Orange County, CA</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     st.markdown(
         '<a href="?" style="text-decoration:none;">'
         '<div class="sidebar-brand">🌊 Dana Point PULSE</div>'
@@ -4500,7 +4628,7 @@ with tab_ov:
                 f'      &nbsp;·&nbsp; Compression {_cq_s} nights this quarter<br>'
                 f'      {_p_detail}'
                 f'    </div>'
-                f'    <span class="pulse-info-status" style="background:{_p_color};color:#0d1117;margin-top:8px;display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">{_p_status}</span>'
+                f'    <span class="pulse-info-status" style="background:{_p_color};color:#ffffff;margin-top:8px;display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;text-shadow:0 1px 2px rgba(0,0,0,0.4);">{_p_status}</span>'
                 f'  </div>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -4510,11 +4638,11 @@ with tab_ov:
         # Tier legend
         st.markdown(
             '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;margin-bottom:12px;">'
-            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(239,68,68,0.14);color:#EF4444;font-weight:700;">0–39 Caution</span>'
-            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(245,158,11,0.14);color:#F59E0B;font-weight:700;">40–59 Stable</span>'
-            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(33,128,141,0.14);color:#21808D;font-weight:700;">60–74 Strong</span>'
-            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(33,197,93,0.14);color:#21C55D;font-weight:700;">75–89 Exceptional</span>'
-            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(124,58,237,0.14);color:#7C3AED;font-weight:700;">90–100 Historic</span>'
+            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(239,68,68,0.22);color:#FCA5A5;font-weight:700;">0–39 Caution</span>'
+            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(245,158,11,0.22);color:#FDE68A;font-weight:700;">40–59 Stable</span>'
+            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(33,128,141,0.25);color:#67E8F9;font-weight:700;">60–74 Strong</span>'
+            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(33,197,93,0.22);color:#86EFAC;font-weight:700;">75–89 Exceptional</span>'
+            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(124,58,237,0.22);color:#C4B5FD;font-weight:700;">90–100 Historic</span>'
             '</div>',
             unsafe_allow_html=True,
         )
@@ -4763,11 +4891,24 @@ with tab_ov:
                 _chart_col = _rcols[1 if _idx == 0 else 4]
                 _chart_key = f"kpi30_spark_{_ri}_{_idx}_{_k['label'].replace(' ','_').replace('.','')}"
                 with _card_col:
-                    st.markdown(
-                        kpi_card(_k["label"], _k["value"], _k["delta"],
+                    _card_html = kpi_card(_k["label"], _k["value"], _k["delta"],
                                  _k.get("positive", True), _k.get("neutral", False),
                                  "", _k.get("date_label", ""), _k.get("raw_value", 0.0),
-                                 []),  # sparkline shown as Plotly chart instead
+                                 [])
+                    # Map metric label to tab index for navigation
+                    _tab_map = {"RevPAR": 1, "ADR": 1, "Occupancy": 1, "Room Revenue": 1,
+                                "Rooms Sold": 1, "Est. TBID Rev": 1, "TBID": 1,
+                                "Demand": 1, "Supply": 1, "Revenue": 1}
+                    _tab_idx = next((v for k,v in _tab_map.items() if k.lower() in _k["label"].lower()), 1)
+                    st.markdown(
+                        f'<div onclick="(function(){{var tabs=document.querySelectorAll(\'button[data-baseweb=\"tab\"]\');'
+                        f'if(tabs[{_tab_idx}]){{tabs[{_tab_idx}].click();window.scrollTo({{top:0,behavior:\'smooth\'}});}}}})();" '
+                        f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;" '
+                        f'onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(33,128,141,0.20)\'" '
+                        f'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
+                        f'{_card_html}'
+                        f'<div style="font-size:9px;opacity:0.45;text-align:right;padding:2px 4px 0 0;font-weight:600;letter-spacing:.04em;">→ VIEW DETAIL</div>'
+                        f'</div>',
                         unsafe_allow_html=True,
                     )
                 with _chart_col:
@@ -4845,11 +4986,23 @@ with tab_ov:
                     _mcc = _mrc[1 if _mi == 0 else 4]
                     _mk_key = f"m12_spark_{_mri}_{_mi}_{_mk['label'].replace(' ','_').replace('.','')}"
                     with _mc:
-                        st.markdown(
-                            kpi_card(_mk["label"], _mk["value"], _mk["delta"],
+                        _mk_card_html = kpi_card(_mk["label"], _mk["value"], _mk["delta"],
                                      _mk.get("positive", True), _mk.get("neutral", False),
                                      "", _mk.get("date_label", ""), _mk.get("raw_value", 0.0),
-                                     []),
+                                     [])
+                        _mk_tab_map = {"RevPAR": 1, "ADR": 1, "Occupancy": 1, "Room Revenue": 1,
+                                       "Rooms Sold": 1, "Est. TBID Rev": 1, "TBID": 1,
+                                       "Demand": 1, "Supply": 1, "Revenue": 1}
+                        _mk_tab_idx = next((v for k,v in _mk_tab_map.items() if k.lower() in _mk["label"].lower()), 1)
+                        st.markdown(
+                            f'<div onclick="(function(){{var tabs=document.querySelectorAll(\'button[data-baseweb=\"tab\"]\');'
+                            f'if(tabs[{_mk_tab_idx}]){{tabs[{_mk_tab_idx}].click();window.scrollTo({{top:0,behavior:\'smooth\'}});}}}})();" '
+                            f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;" '
+                            f'onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(33,128,141,0.20)\'" '
+                            f'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
+                            f'{_mk_card_html}'
+                            f'<div style="font-size:9px;opacity:0.45;text-align:right;padding:2px 4px 0 0;font-weight:600;letter-spacing:.04em;">→ VIEW DETAIL</div>'
+                            f'</div>',
                             unsafe_allow_html=True,
                         )
                     with _mcc:
@@ -5830,25 +5983,23 @@ with tab_ev:
     </div>
     """, unsafe_allow_html=True)
 
-    # GloCon Solutions LLC — VDP destination imagery from visitdanapoint.com
-    try:
-        _ve_img_c1, _ve_img_c2, _ve_img_c3 = st.columns(3)
-        _vdp_imgs = [
-            ("https://www.visitdanapoint.com/wp-content/uploads/2023/03/Dana-Point-Harbor-Aerial-scaled.jpg",
-             "Dana Point Harbor"),
-            ("https://www.visitdanapoint.com/wp-content/uploads/2023/04/Doheny-State-Beach-scaled.jpg",
-             "Doheny State Beach"),
-            ("https://www.visitdanapoint.com/wp-content/uploads/2023/03/whale-watching-dana-point.jpg",
-             "Whale Watching"),
-        ]
-        for _vic, (_vurl, _vcap) in zip([_ve_img_c1, _ve_img_c2, _ve_img_c3], _vdp_imgs):
-            with _vic:
-                try:
-                    st.image(_vurl, caption=_vcap, use_container_width=True)
-                except Exception:
-                    st.caption(f"📍 {_vcap}")
-    except Exception:
-        pass
+    _ve_img_c1, _ve_img_c2, _ve_img_c3 = st.columns(3)
+    _vdp_spots = [
+        ("🏔️", "Dana Point Harbor", "16.1% visitor share", "#21808D"),
+        ("🏖️", "Doheny State Beach", "11.2% visitor share", "#32B8C6"),
+        ("🐋", "Whale Watching", "Seasonal attraction", "#E68161"),
+    ]
+    for _vic, (_icon, _vcap, _vsub, _vclr) in zip([_ve_img_c1, _ve_img_c2, _ve_img_c3], _vdp_spots):
+        with _vic:
+            st.markdown(
+                f'<div style="background:linear-gradient(145deg,rgba(33,128,141,0.10) 0%,rgba(33,128,141,0.04) 100%);'
+                f'border:1px solid rgba(33,128,141,0.18);border-radius:12px;padding:18px 14px;text-align:center;margin-bottom:8px;">'
+                f'<div style="font-size:32px;margin-bottom:6px;">{_icon}</div>'
+                f'<div style="font-size:13px;font-weight:700;color:{_vclr};">{_vcap}</div>'
+                f'<div style="font-size:11px;opacity:0.55;margin-top:3px;">{_vsub}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
     if df_dfy_ov.empty:
         st.markdown(empty_state(
@@ -7313,7 +7464,7 @@ with tab_ei:
                         line=dict(color="white", width=1.5)),
             text=_ev_dates,
             textposition="top center",
-            textfont=dict(size=9),
+            textfont=dict(size=10, color="rgba(255,255,255,0.85)"),
             customdata=list(zip(_ev_labels, _ev_months)),
             hovertemplate="<b>%{customdata[0]}</b><br>%{customdata[1]}<extra></extra>",
             showlegend=False,
@@ -7325,13 +7476,15 @@ with tab_ei:
                 x=_ix, y=0.85,
                 text=_lbl[:20] + ("…" if len(_lbl) > 20 else ""),
                 showarrow=False, textangle=-45,
-                font=dict(size=8, color=TEAL if _rv.get("is_major") == 1 else "#9AA0A6"),
+                font=dict(size=9, color=TEAL if _rv.get("is_major") == 1 else "#CBD5E1"),
             )
         _cal_fig2.update_layout(
             xaxis=dict(showticklabels=False, showgrid=False, zeroline=False),
-            yaxis=dict(visible=False, range=[0.5, 1.5]),
-            height=200,
-            margin=dict(l=10, r=10, t=10, b=80),
+            yaxis=dict(visible=False, range=[0.5, 1.6]),
+            height=240,
+            margin=dict(l=10, r=10, t=20, b=100),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
         )
         st.plotly_chart(style_fig(_cal_fig2, height=200), use_container_width=True)
         st.caption(f"🟦 Teal = Major events  ·  ⚫ Gray = Standard events  ·  {_total_major} major, {_total_events} total on calendar")
@@ -8783,7 +8936,14 @@ with tab_cs:
         str_avail = [c for c in str_cols if c in df_monthly.columns]
         if len(str_avail) >= 2:
             str_m = df_monthly[str_avail].copy()
-            merged = pd.merge(str_m, cs_merged, on="as_of_date", how="inner")
+            # Normalize both to year-month (STR uses first-of-month, CoStar uses last-of-month)
+            str_m["_ym"] = pd.to_datetime(str_m["as_of_date"]).dt.to_period("M").astype(str)
+            cs_merged["_ym"] = pd.to_datetime(cs_merged["as_of_date"]).dt.to_period("M").astype(str)
+            merged = pd.merge(str_m, cs_merged, on="_ym", how="inner", suffixes=("","_cs"))
+            # Use STR as_of_date as the display date
+            if "as_of_date_cs" in merged.columns:
+                merged = merged.drop(columns=["as_of_date_cs"])
+            merged = merged.drop(columns=["_ym"])
 
             if len(merged) >= 6:
                 col_corr1, col_corr2 = st.columns(2)
