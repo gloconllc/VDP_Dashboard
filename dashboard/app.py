@@ -644,6 +644,41 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+  /* ── Section Header Blocks ─────────────────────────────────────────────── */
+  .sh-block {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; border-radius: 10px; margin: 18px 0 10px 0;
+    border-left: 4px solid var(--sh-accent, #21808D);
+    background: var(--sh-bg, rgba(33,128,141,0.08));
+  }
+  .sh-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
+  .sh-title {
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px;
+    font-weight: 800; letter-spacing: -.02em;
+    color: rgba(255,255,255,0.92);
+  }
+  .sh-tag {
+    margin-left: auto; font-size: 9px; font-weight: 700; letter-spacing: .07em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 20px;
+    background: var(--sh-tag-bg, rgba(33,128,141,0.20));
+    color: var(--sh-accent, #21808D);
+  }
+  /* color variants */
+  .sh-teal   { --sh-accent:#21808D; --sh-bg:rgba(33,128,141,0.09); --sh-tag-bg:rgba(33,128,141,0.18); }
+  .sh-blue   { --sh-accent:#0EA5E9; --sh-bg:rgba(14,165,233,0.09); --sh-tag-bg:rgba(14,165,233,0.18); }
+  .sh-green  { --sh-accent:#10B981; --sh-bg:rgba(16,185,129,0.09); --sh-tag-bg:rgba(16,185,129,0.18); }
+  .sh-purple { --sh-accent:#8B5CF6; --sh-bg:rgba(139,92,246,0.09); --sh-tag-bg:rgba(139,92,246,0.18); }
+  .sh-orange { --sh-accent:#F97316; --sh-bg:rgba(249,115,22,0.09); --sh-tag-bg:rgba(249,115,22,0.18); }
+  .sh-amber  { --sh-accent:#F59E0B; --sh-bg:rgba(245,158,11,0.09); --sh-tag-bg:rgba(245,158,11,0.18); }
+  .sh-indigo { --sh-accent:#6366F1; --sh-bg:rgba(99,102,241,0.09); --sh-tag-bg:rgba(99,102,241,0.18); }
+  .sh-coral  { --sh-accent:#E68161; --sh-bg:rgba(230,129,97,0.09); --sh-tag-bg:rgba(230,129,97,0.18); }
+  .sh-gray   { --sh-accent:#94A3B8; --sh-bg:rgba(148,163,184,0.07); --sh-tag-bg:rgba(148,163,184,0.14); }
+  .sh-gold   { --sh-accent:#EAB308; --sh-bg:rgba(234,179,8,0.09); --sh-tag-bg:rgba(234,179,8,0.18); }
+</style>
+""", unsafe_allow_html=True)
+
 # ─── Day / Night auto-background ─────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -2460,6 +2495,18 @@ def _safe_section(fn, section_name: str = "section"):
                 st.code(_tb.format_exc(), language="python")
 
 
+def _sh(icon: str, title: str, color: str = "teal", tag: str = "") -> str:
+    """Generate a colored section header block HTML."""
+    _tag_html = f'<span class="sh-tag">{tag}</span>' if tag else ""
+    return (
+        f'<div class="sh-block sh-{color}">'
+        f'<span class="sh-icon">{icon}</span>'
+        f'<span class="sh-title">{title}</span>'
+        f'{_tag_html}'
+        f'</div>'
+    )
+
+
 def source_card(dot: str, name: str, meta: str, count: str) -> str:
     """Styled data-source health card."""
     return (
@@ -4032,13 +4079,14 @@ with tab_ov:
         # Build banner HTML
         def _exec_kpi(label, value, sub="", color="#111"):
             return (
-                f'<div style="flex:1;min-width:140px;padding:14px 18px;background:white;'
-                f'border-radius:12px;border:1px solid rgba(0,0,0,0.07);'
-                f'box-shadow:0 1px 4px rgba(0,0,0,0.05);">'
+                f'<div style="flex:1;min-width:140px;padding:14px 18px;'
+                f'background:rgba(255,255,255,0.05);'
+                f'border-radius:12px;border:1px solid rgba(255,255,255,0.10);'
+                f'box-shadow:0 1px 4px rgba(0,0,0,0.12);">'
                 f'<div style="font-size:11px;font-weight:600;letter-spacing:.06em;'
-                f'text-transform:uppercase;opacity:.55;margin-bottom:4px;">{label}</div>'
+                f'text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:4px;">{label}</div>'
                 f'<div style="font-size:22px;font-weight:800;letter-spacing:-.03em;color:{color};">{value}</div>'
-                + (f'<div style="font-size:11px;font-weight:500;margin-top:3px;opacity:.65;">{sub}</div>' if sub else '')
+                + (f'<div style="font-size:11px;font-weight:500;margin-top:3px;color:rgba(255,255,255,0.5);">{sub}</div>' if sub else '')
                 + '</div>'
             )
         _rev12_fmt  = f"${_exec_rev12/1e6:.1f}M" if _exec_rev12 > 0 else "—"
@@ -4050,10 +4098,13 @@ with tab_ov:
                        else "Datafy media attr.")
         _social_fmt = f"{_exec_social_total/1e3:.0f}K" if _exec_social_total >= 1000 else (str(_exec_social_total) if _exec_social_total > 0 else "—")
         _banner_html = (
-            f'<div style="margin-bottom:18px;">'
-            f'<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:13px;font-weight:700;'
-            f'letter-spacing:.04em;text-transform:uppercase;opacity:.4;margin-bottom:8px;">'
-            f'Board Executive Summary &middot; {datetime.now().strftime("%B %Y").upper()}</div>'
+            f'<div style="margin-bottom:18px;background:rgba(33,128,141,0.06);border-radius:14px;'
+            f'border:1px solid rgba(33,128,141,0.15);padding:16px 18px;">'
+            f'<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:11px;font-weight:700;'
+            f'letter-spacing:.08em;text-transform:uppercase;color:#32B8C6;margin-bottom:12px;'
+            f'display:flex;align-items:center;gap:8px;">'
+            f'<span style="display:inline-block;width:3px;height:14px;background:#32B8C6;border-radius:2px;"></span>'
+            f'Board Executive Summary &nbsp;·&nbsp; {datetime.now().strftime("%B %Y").upper()}</div>'
             f'<div style="display:flex;flex-wrap:wrap;gap:10px;font-family:\'Plus Jakarta Sans\',sans-serif;">'
             + _exec_kpi("RevPAR (30d)", f"${_exec_rvp:.0f}", f'{_arr(_exec_rvp_d)} {abs(_exec_rvp_d):.1f}% vs prior', _c(_exec_rvp_d))
             + _exec_kpi("ADR (30d)", f"${_exec_adr:.0f}", f'{_arr(_exec_adr_d)} {abs(_exec_adr_d):.1f}% vs prior', _c(_exec_adr_d))
@@ -4064,7 +4115,7 @@ with tab_ov:
             + _exec_kpi("Annual Visitor Trips", _trips_fmt, f"{_exec_overnight:.0f}% overnight" if _exec_overnight > 0 else "Datafy")
             + _exec_kpi("Campaign ROAS", _roas_fmt, _roas_sub)
             + _exec_kpi("Social Audience", _social_fmt, f"IG · FB · TikTok" if _exec_social_total > 0 else "Later.com exports")
-            + '</div></div>'
+            + '</div></div></div>'
         )
         st.markdown(_banner_html, unsafe_allow_html=True)
     except Exception:
@@ -4378,8 +4429,8 @@ with tab_ov:
         _pulse_col1, _pulse_col2 = st.columns([3, 2])
         with _pulse_col1:
             st.markdown(
-                f'<div class="pulse-wrapper" style="color:{_p_color};">'
-                f'  <div class="pulse-circle">'
+                f'<div class="pulse-wrapper" style="border-left:4px solid {_p_color};background:rgba(0,0,0,0.18);">'
+                f'  <div class="pulse-circle" style="color:{_p_color};">'
                 f'    <div class="pulse-ring"></div>'
                 f'    <div class="pulse-ring-2"></div>'
                 f'    <div class="pulse-core">'
@@ -4388,13 +4439,13 @@ with tab_ov:
                 f'    </div>'
                 f'  </div>'
                 f'  <div class="pulse-info">'
-                f'    <div class="pulse-info-title">Dana Point Market PULSE Score</div>'
-                f'    <div class="pulse-info-detail">'
+                f'    <div class="pulse-info-title" style="color:rgba(255,255,255,0.95);">Dana Point Market PULSE Score</div>'
+                f'    <div class="pulse-info-detail" style="color:rgba(255,255,255,0.65);">'
                 f'      Occ {_occ_score:.1f}% &nbsp;·&nbsp; RevPAR YOY {_rvp_d_s:+.1f}% '
                 f'      &nbsp;·&nbsp; Compression {_cq_s} nights this quarter<br>'
                 f'      {_p_detail}'
                 f'    </div>'
-                f'    <span class="pulse-info-status" style="background:{_p_color};">{_p_status}</span>'
+                f'    <span class="pulse-info-status" style="background:{_p_color};color:#0d1117;margin-top:8px;display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">{_p_status}</span>'
                 f'  </div>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -4513,7 +4564,7 @@ with tab_ov:
 
     # ── Board Report Card (Traffic Light) ─────────────────────────────────────
     try:
-        st.markdown("### 📋 Board Report Card")
+        st.markdown(_sh("📋", "Board Report Card", "gold", "TRAFFIC LIGHT"), unsafe_allow_html=True)
         st.caption("Traffic-light assessment for board presentation · Updates with every pipeline run")
 
         def _report_card_row(metric, value, status, note, source):
@@ -5065,8 +5116,7 @@ with tab_ov:
 
     # ── Economic Impact Statement ──────────────────────────────────────────────
     try:
-        st.markdown("---")
-        st.markdown("### 💰 Economic Impact Statement")
+        st.markdown(_sh("💰", "Economic Impact Statement", "green", "CITY FINANCE"), unsafe_allow_html=True)
         st.caption("Estimated economic contribution of Dana Point hotel sector · Based on STR + Datafy + TBID formula")
 
         _ei_c1, _ei_c2, _ei_c3, _ei_c4 = st.columns(4)
@@ -6125,8 +6175,7 @@ with tab_ev:
             )
 
     # ── Website Attribution Deep-Dive ─────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("### 🌐 Website Attribution — Acquisition Channels & Top Markets")
+    st.markdown(_sh("🌐", "Website Attribution — Acquisition Channels & Top Markets", "teal", "DATAFY"), unsafe_allow_html=True)
     st.caption("Source: Datafy Attribution Website · Q3 2025 · visitdanapoint.com")
 
     _web_c1, _web_c2 = st.columns(2)
@@ -6202,8 +6251,7 @@ with tab_ev:
 
     # ── Visitor Cluster Visitation ─────────────────────────────────────────────
     if not df_dfy_clusters.empty:
-        st.markdown("---")
-        st.markdown("### 🗺️ Visitor Cluster Visitation — Where They Go")
+        st.markdown(_sh("🗺️", "Visitor Cluster Visitation", "green", "DATAFY"), unsafe_allow_html=True)
         st.caption("Which Dana Point area clusters attract the most visitor activity · Datafy Annual 2025")
         _cl = df_dfy_clusters.copy()
         _cl_share_col = [c for c in _cl.columns if "share" in c.lower() or "pct" in c.lower() or "visits" in c.lower()]
@@ -6222,8 +6270,7 @@ with tab_ev:
                 st.dataframe(_cl.reset_index(drop=True), use_container_width=True)
 
     # ── Social & Web Analytics ────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("### 📱 Social & Web Analytics — visitdanapoint.com")
+    st.markdown(_sh("📱", "Social & Web Analytics — visitdanapoint.com", "teal", "GA4 · DATAFY"), unsafe_allow_html=True)
     st.caption("Source: Datafy GA4 Social / Web Analytics · Annual 2025")
 
     _soc_c1, _soc_c2 = st.columns(2)
@@ -6291,8 +6338,7 @@ with tab_ev:
                     st.metric(_ak.replace("_"," ").title(), _disp)
 
     # ── Social Media Command Center (Later.com) ───────────────────────────────
-    st.markdown("---")
-    st.markdown("### 📲 Social Media Command Center — Later.com")
+    st.markdown(_sh("📲", "Social Media Command Center", "purple", "LATER.COM"), unsafe_allow_html=True)
     st.caption("Source: Later.com Analytics Export · Instagram · Facebook · TikTok · Layer 2.5 Social Performance")
 
     _smc_c1, _smc_c2, _smc_c3 = st.columns(3)
@@ -6480,7 +6526,7 @@ with tab_ev:
 
     # ── Zartico Historical Reference ─────────────────────────────────────────
     st.info("📚 **Historical Reference:** Zartico data reflects a Jun 2025 snapshot. Use for trend comparison only — Datafy is the current source of record.")
-    st.markdown("### 📚 Zartico Historical Reference (Jun 2025 Snapshot)")
+    st.markdown(_sh("📚", "Zartico Historical Reference", "gray", "JUN 2025 SNAPSHOT"), unsafe_allow_html=True)
     st.caption("⚠️ Zartico data represents a historical snapshot (last updated Jun 2025). "
                "Use for trend comparison only. Current performance data comes from Datafy, CoStar, and STR.")
 
@@ -7157,7 +7203,7 @@ with tab_ei:
     # ══════════════════════════════════════════════════════════════════════════
     # EVENT CALENDAR — Gantt-style timeline from VDP events database
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown("#### 📅 Dana Point Events Calendar — Full Year Timeline")
+    st.markdown(_sh("📅", "Dana Point Events Calendar — Full Year Timeline", "orange", "EVENTS"), unsafe_allow_html=True)
     st.caption("Events sourced from Visit Dana Point official calendar · Database: vdp_events · Major events highlighted in teal")
 
     if not df_vdp_events.empty:
@@ -7240,7 +7286,7 @@ with tab_ei:
     # ══════════════════════════════════════════════════════════════════════════
     # EVENT SCORECARD — STR performance vs. monthly baseline for every event
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown("#### Event Performance Scorecard — STR vs. Baseline")
+    st.markdown(_sh("📊", "Event Performance Scorecard — STR vs. Baseline", "orange", "STR + EVENTS"), unsafe_allow_html=True)
     st.caption("Event-window average vs. monthly baseline · Source: STR daily data · All figures from live database")
 
     # Define events with their STR window, monthly baseline month, and known context
@@ -7404,7 +7450,7 @@ with tab_ei:
     # ══════════════════════════════════════════════════════════════════════════
     # ADR LIFT CHART — all events vs. monthly baseline
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown("#### ADR Lift by Event vs. Monthly Baseline")
+    st.markdown(_sh("💵", "ADR Lift by Event vs. Monthly Baseline", "blue", "STR"), unsafe_allow_html=True)
     _chart_rows_ei = [sc for sc in _sc_rows if sc["e_adr"] > 0 and sc["b_adr"] > 0]
     if _chart_rows_ei:
         _ev_names  = [sc["event"]["name"] for sc in _chart_rows_ei]
@@ -7526,7 +7572,7 @@ with tab_ei:
     # ZARTICO EVENT IMPACT — Historical reference (OC Marathon period)
     # ══════════════════════════════════════════════════════════════════════════
     st.info("📚 **Historical Reference:** Zartico data reflects a Jun 2025 snapshot. Use for trend comparison only — Datafy is the current source of record.")
-    st.markdown("#### Zartico — Event Spend Impact Analysis")
+    st.markdown(_sh("📚", "Event Spend Impact Analysis", "gray", "ZARTICO HISTORICAL"), unsafe_allow_html=True)
     st.caption("⚠️ Zartico is historical reference only (Jun 2025 snapshot). Event window: May 4–10, 2025 (OC Marathon period) · Current data: Datafy/STR.")
 
     if not df_zrt_events.empty:
@@ -7587,7 +7633,7 @@ with tab_ei:
     # ══════════════════════════════════════════════════════════════════════════
     # VISITOR ECONOMY CONTEXT — Datafy
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown("#### Visitor Economy Context — Datafy 2025")
+    st.markdown(_sh("🧭", "Visitor Economy Context — Datafy 2025", "teal", "DATAFY"), unsafe_allow_html=True)
     st.caption("Annual 2025 visitor profile · Datafy Geolocation (Caladan 1.2) · Jan–Dec 2025")
 
     if not df_dfy_ov.empty:
@@ -8082,7 +8128,7 @@ with tab_sp:
     st.markdown("---")
 
     # ── Annual performance context ─────────────────────────────────────────────
-    st.markdown("### Annual Market Performance Context")
+    st.markdown(_sh("📈", "Annual Market Performance Context", "indigo", "COSTAR"), unsafe_allow_html=True)
     conn_sp = get_connection()
     try:
         df_cs_annual = pd.read_sql_query(
@@ -8230,7 +8276,7 @@ with tab_cs:
     st.markdown("---")
 
     # ── Market Overview KPI Cards ──────────────────────────────────────────────
-    st.markdown("### South OC Market Overview (2024)")
+    st.markdown(_sh("🏨", "South OC Market Overview (2024)", "indigo", "COSTAR"), unsafe_allow_html=True)
 
     if not df_cs_snap.empty:
         # Prefer South OC or Newport Beach/Dana Point 2024 annual data
