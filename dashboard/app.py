@@ -2666,15 +2666,42 @@ with st.sidebar:
             pass
     _vca_dot  = "🟢" if _vca_rows > 0 else "⚫"
     _vca_label = f"{_vca_rows:,} rows" if _vca_rows > 0 else "No data"
-    # Later.com social media — per-platform detail
-    _ig_followers = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
-    _fb_followers = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
-    _tk_followers = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
+    # Later.com social media — direct DB count (same pattern as Visit CA — bypasses stale cache)
     _later_ig_rows = len(df_later_ig_profile) + len(df_later_ig_posts) + len(df_later_ig_reels)
     _later_fb_rows = len(df_later_fb_profile) + len(df_later_fb_posts)
     _later_tk_rows = len(df_later_tk_profile)
     _later_total   = _later_ig_rows + _later_fb_rows + _later_tk_rows
-    _later_dot     = "🟢" if _later_total > 0 else "⚫"
+    _ig_followers  = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
+    _fb_followers  = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
+    _tk_followers  = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
+    # Fallback: query DB directly if cached DFs are empty (same guard as Visit CA)
+    if _later_total == 0:
+        try:
+            _l_conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+            _later_total = sum(
+                _l_conn.execute(f"SELECT COUNT(*) FROM {_lt}").fetchone()[0]
+                for _lt in ["later_ig_profile_growth","later_ig_posts","later_ig_reels",
+                            "later_fb_profile_growth","later_fb_posts","later_tk_profile_growth"]
+            )
+            if _ig_followers == 0:
+                _row = _l_conn.execute(
+                    "SELECT followers FROM later_ig_profile_growth ORDER BY data_date DESC LIMIT 1"
+                ).fetchone()
+                _ig_followers = int(_row[0]) if _row and _row[0] else 0
+            if _fb_followers == 0:
+                _row = _l_conn.execute(
+                    "SELECT page_followers FROM later_fb_profile_growth ORDER BY data_date DESC LIMIT 1"
+                ).fetchone()
+                _fb_followers = int(_row[0]) if _row and _row[0] else 0
+            if _tk_followers == 0:
+                _row = _l_conn.execute(
+                    "SELECT followers FROM later_tk_profile_growth ORDER BY data_date DESC LIMIT 1"
+                ).fetchone()
+                _tk_followers = int(_row[0]) if _row and _row[0] else 0
+            _l_conn.close()
+        except Exception:
+            pass
+    _later_dot = "🟢" if _later_total > 0 else "⚫"
     if _later_total > 0:
         _ig_fmt = f"{_ig_followers/1000:.1f}K" if _ig_followers >= 1000 else str(_ig_followers)
         _fb_fmt = f"{_fb_followers/1000:.1f}K" if _fb_followers >= 1000 else str(_fb_followers)
@@ -3838,6 +3865,84 @@ tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ov:
 
+    # ── Board Executive Summary Banner ─────────────────────────────────────────
+    try:
+        _exec_rvp   = m.get("revpar_30", 0.0) if m else 0.0
+        _exec_adr   = m.get("adr_30", 0.0) if m else 0.0
+        _exec_occ   = m.get("occ_30", 0.0) if m else 0.0
+        _exec_tbid  = m.get("tbid_monthly", 0.0) if m else 0.0
+        _exec_rvp_d = m.get("revpar_delta", 0.0) if m else 0.0
+        _exec_adr_d = m.get("adr_delta", 0.0) if m else 0.0
+        _exec_occ_d = m.get("occ_delta", 0.0) if m else 0.0
+        # 12-month room revenue
+        _exec_rev12  = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
+        _exec_tbid12 = _exec_rev12 * 0.0125
+        _exec_tot12  = _exec_rev12 * 0.10
+        # Social reach
+        _exec_ig_fol = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
+        _exec_fb_fol = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
+        _exec_tk_fol = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
+        _exec_social_total = _exec_ig_fol + _exec_fb_fol + _exec_tk_fol
+        # Datafy media ROAS
+        _exec_roas        = 0.0
+        _exec_attr_trips  = 0
+        _exec_media_impact= 0.0
+        if not df_dfy_media.empty:
+            _mk = df_dfy_media.iloc[0]
+            _exec_roas        = float(_mk.get("roas", 0) or 0)
+            _exec_attr_trips  = int(_mk.get("attributable_trips", 0) or 0)
+            _exec_media_impact= float(_mk.get("total_impact_usd", 0) or 0)
+        # Visitor trips
+        _exec_trips    = 0.0
+        _exec_overnight= 0.0
+        if not df_dfy_ov.empty:
+            _ek = df_dfy_ov.iloc[0]
+            _exec_trips    = float(_ek.get("total_trips", 0) or 0)
+            _exec_overnight= float(_ek.get("overnight_pct", 0) or 0)
+        # Color helpers
+        _up  = "#00C49A"
+        _down= "#FF4757"
+        def _c(v): return _up if v >= 0 else _down
+        def _arr(v): return "▲" if v >= 0 else "▼"
+        # Build banner HTML
+        def _exec_kpi(label, value, sub="", color="#111"):
+            return (
+                f'<div style="flex:1;min-width:140px;padding:14px 18px;background:white;'
+                f'border-radius:12px;border:1px solid rgba(0,0,0,0.07);'
+                f'box-shadow:0 1px 4px rgba(0,0,0,0.05);">'
+                f'<div style="font-size:11px;font-weight:600;letter-spacing:.06em;'
+                f'text-transform:uppercase;opacity:.55;margin-bottom:4px;">{label}</div>'
+                f'<div style="font-size:22px;font-weight:800;letter-spacing:-.03em;color:{color};">{value}</div>'
+                + (f'<div style="font-size:11px;font-weight:500;margin-top:3px;opacity:.65;">{sub}</div>' if sub else '')
+                + '</div>'
+            )
+        _rev12_fmt  = f"${_exec_rev12/1e6:.1f}M" if _exec_rev12 > 0 else "—"
+        _tbid12_fmt = f"${_exec_tbid12/1e3:.0f}K" if _exec_tbid12 > 0 else "—"
+        _tot12_fmt  = f"${_exec_tot12/1e6:.1f}M" if _exec_tot12 > 0 else "—"
+        _trips_fmt  = f"{_exec_trips/1e6:.2f}M" if _exec_trips >= 1e6 else (f"{_exec_trips/1e3:.0f}K" if _exec_trips > 0 else "—")
+        _roas_fmt   = f"{_exec_roas:.1f}×" if _exec_roas > 0 else "—"
+        _social_fmt = f"{_exec_social_total/1e3:.0f}K" if _exec_social_total >= 1000 else (str(_exec_social_total) if _exec_social_total > 0 else "—")
+        _banner_html = (
+            f'<div style="margin-bottom:18px;">'
+            f'<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:13px;font-weight:700;'
+            f'letter-spacing:.04em;text-transform:uppercase;opacity:.4;margin-bottom:8px;">'
+            f'Board Executive Summary &middot; {datetime.now().strftime("%B %Y").upper()}</div>'
+            f'<div style="display:flex;flex-wrap:wrap;gap:10px;font-family:\'Plus Jakarta Sans\',sans-serif;">'
+            + _exec_kpi("RevPAR (30d)", f"${_exec_rvp:.0f}", f'{_arr(_exec_rvp_d)} {abs(_exec_rvp_d):.1f}% vs prior', _c(_exec_rvp_d))
+            + _exec_kpi("ADR (30d)", f"${_exec_adr:.0f}", f'{_arr(_exec_adr_d)} {abs(_exec_adr_d):.1f}% vs prior', _c(_exec_adr_d))
+            + _exec_kpi("Occupancy (30d)", f"{_exec_occ:.1f}%", f'{_arr(_exec_occ_d)} {abs(_exec_occ_d):.1f}pp vs prior', _c(_exec_occ_d))
+            + _exec_kpi("12-Mo Room Rev", _rev12_fmt, "Layer 1 STR truth")
+            + _exec_kpi("12-Mo TBID Est.", _tbid12_fmt, "at blended 1.25%")
+            + _exec_kpi("12-Mo TOT Est.", _tot12_fmt, "at 10% rate")
+            + _exec_kpi("Annual Visitor Trips", _trips_fmt, f"{_exec_overnight:.0f}% overnight" if _exec_overnight > 0 else "Datafy")
+            + _exec_kpi("Campaign ROAS", _roas_fmt, f"{_exec_attr_trips:,} attr. trips" if _exec_attr_trips > 0 else "Datafy media")
+            + _exec_kpi("Social Audience", _social_fmt, "IG + FB + TikTok")
+            + '</div></div>'
+        )
+        st.markdown(_banner_html, unsafe_allow_html=True)
+    except Exception:
+        pass
+
     # ── Board Report (auto-generated, always visible) ──────────────────────────
     with st.expander("📋 VDP Board Report — Auto-Generated Talking Points", expanded=True):
         st.markdown('<span class="ai-chip">BOARD READY</span>', unsafe_allow_html=True)
@@ -4278,6 +4383,71 @@ with tab_ov:
         st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("---")
+
+    # ── Board Report Card (Traffic Light) ─────────────────────────────────────
+    try:
+        st.markdown("### 📋 Board Report Card")
+        st.caption("Traffic-light assessment for board presentation · Updates with every pipeline run")
+
+        def _report_card_row(metric, value, status, note, source):
+            _dot_map = {
+                "green":  ("🟢", "#16a34a", "On Track"),
+                "yellow": ("🟡", "#d97706", "Watch"),
+                "red":    ("🔴", "#dc2626", "Action Required"),
+            }
+            _dot, _col, _lbl = _dot_map.get(status, ("⚫", "#6b7280", "Unknown"))
+            return (
+                f'<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;'
+                f'border-bottom:1px solid rgba(0,0,0,0.05);font-family:\'Plus Jakarta Sans\',sans-serif;">'
+                f'<div style="font-size:16px">{_dot}</div>'
+                f'<div style="flex:1.4;font-size:13px;font-weight:700;">{metric}</div>'
+                f'<div style="flex:0.8;font-size:13px;font-weight:800;color:{_col};">{value}</div>'
+                f'<div style="flex:1;font-size:11px;font-weight:700;color:{_col};text-transform:uppercase;'
+                f'letter-spacing:.05em;">{_lbl}</div>'
+                f'<div style="flex:2;font-size:12px;opacity:.65;">{note}</div>'
+                f'<div style="flex:0.8;font-size:10px;font-weight:600;letter-spacing:.04em;opacity:.45;'
+                f'text-transform:uppercase;">{source}</div>'
+                f'</div>'
+            )
+
+        _rc_occ_status    = "green" if _exec_occ >= 75 else ("yellow" if _exec_occ >= 60 else "red")
+        _rc_revpar_status = "green" if _exec_rvp_d >= 2 else ("yellow" if _exec_rvp_d >= -2 else "red")
+        _rc_adr_status    = "green" if _exec_adr_d >= 3 else ("yellow" if _exec_adr_d >= 0 else "red")
+        _rc_roas_status   = ("green" if _exec_roas >= 5 else ("yellow" if _exec_roas >= 2 else "red")) if _exec_roas > 0 else "yellow"
+        _rc_social_status = ("green" if _exec_ig_fol >= 20000 else ("yellow" if _exec_ig_fol >= 10000 else "red")) if _exec_ig_fol > 0 else "yellow"
+        _rc_trips_status  = ("green" if _exec_trips >= 1000000 else ("yellow" if _exec_trips >= 500000 else "red")) if _exec_trips > 0 else "yellow"
+
+        _rc_occ_note    = f"{_exec_occ:.1f}% occ · {_arr(_exec_occ_d)}{abs(_exec_occ_d):.1f}pp vs prior · {'Maintain pricing discipline.' if _exec_occ >= 75 else 'Demand generation programs needed.'}"
+        _rc_revpar_note = f"${_exec_rvp:.0f} RevPAR · {_arr(_exec_rvp_d)}{abs(_exec_rvp_d):.1f}% YOY · {'Rate strategy working.' if _exec_rvp_d >= 2 else 'Review rate strategy and comp set positioning.'}"
+        _rc_adr_note    = f"${_exec_adr:.0f} ADR · {'Premium rate capture on track.' if _exec_adr_d >= 3 else 'Rate pressure — audit discount patterns and channel mix.'}"
+        _rc_roas_note   = (f"{_roas_fmt} return · {_exec_attr_trips:,} attributable trips · {'Strong ROI — recommend budget increase.' if _exec_roas >= 5 else 'Acceptable ROI.' if _exec_roas >= 2 else 'Investigate attribution model and campaign targeting.'}") if _exec_roas > 0 else "Run Datafy media attribution pipeline to populate."
+        _rc_social_note = (f"IG {_exec_ig_fol:,} · FB {_exec_fb_fol:,} · TK {_exec_tk_fol:,} · {'Healthy audience scale for a DMO.' if _exec_ig_fol >= 20000 else 'Growth campaigns recommended.'}") if _exec_social_total > 0 else "Load Later.com exports."
+        _rc_trips_note  = (f"{_trips_fmt} annual trips · {_exec_overnight:.0f}% overnight · {'Strong visitation base.' if _exec_trips >= 1e6 else 'Opportunity to grow overnight conversion.'}") if _exec_trips > 0 else "Run Datafy pipeline."
+
+        _rc_html = (
+            '<div style="background:white;border-radius:14px;border:1px solid rgba(0,0,0,0.08);'
+            'overflow:hidden;font-family:\'Plus Jakarta Sans\',sans-serif;margin-bottom:16px;">'
+            '<div style="padding:12px 16px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);'
+            'border-bottom:1px solid rgba(0,0,0,0.07);font-size:12px;font-weight:700;'
+            'letter-spacing:.05em;text-transform:uppercase;opacity:.6;display:flex;gap:40px;">'
+            '<span style="flex:0.15"></span>'
+            '<span style="flex:1.4">Metric</span>'
+            '<span style="flex:0.8">Current</span>'
+            '<span style="flex:1">Status</span>'
+            '<span style="flex:2">Board Note</span>'
+            '<span style="flex:0.8">Source</span>'
+            '</div>'
+            + _report_card_row("Occupancy Rate",       f"{_exec_occ:.1f}%",     _rc_occ_status,    _rc_occ_note,    "STR")
+            + _report_card_row("RevPAR Growth",        f"{_exec_rvp_d:+.1f}%",  _rc_revpar_status, _rc_revpar_note, "STR")
+            + _report_card_row("ADR Growth",           f"{_exec_adr_d:+.1f}%",  _rc_adr_status,    _rc_adr_note,    "STR")
+            + _report_card_row("Campaign ROAS",        _roas_fmt,               _rc_roas_status,   _rc_roas_note,   "Datafy")
+            + _report_card_row("Social Audience",      _social_fmt,             _rc_social_status, _rc_social_note, "Later.com")
+            + _report_card_row("Annual Visitor Trips", _trips_fmt,              _rc_trips_status,  _rc_trips_note,  "Datafy")
+            + '</div>'
+        )
+        st.markdown(_rc_html, unsafe_allow_html=True)
+    except Exception:
+        pass
 
     # ── KPI Cards ──────────────────────────────────────────────────────────────
     kpis = compute_overview_kpis(df_sel, grain)
@@ -4760,6 +4930,69 @@ with tab_ov:
                         f'</div>',
                         unsafe_allow_html=True,
                     )
+
+    # ── Economic Impact Statement ──────────────────────────────────────────────
+    try:
+        st.markdown("---")
+        st.markdown("### 💰 Economic Impact Statement")
+        st.caption("Estimated economic contribution of Dana Point hotel sector · Based on STR + Datafy + TBID formula")
+
+        _ei_c1, _ei_c2, _ei_c3, _ei_c4 = st.columns(4)
+        with _ei_c1:
+            _rev12_disp = f"${_exec_rev12/1e6:.1f}M" if _exec_rev12 > 0 else "—"
+            st.metric("Hotel Room Revenue", _rev12_disp, help="12-month STR total room revenue")
+        with _ei_c2:
+            _tbid12_disp = f"${_exec_tbid12/1e3:.0f}K" if _exec_tbid12 > 0 else "—"
+            st.metric("Est. TBID Assessment", _tbid12_disp, help="Room revenue × 1.25% blended rate")
+        with _ei_c3:
+            _tot12_disp = f"${_exec_tot12/1e6:.1f}M" if _exec_tot12 > 0 else "—"
+            st.metric("Est. TOT Revenue", _tot12_disp, help="Room revenue × 10%")
+        with _ei_c4:
+            _dest_spend = float(df_dfy_ov.iloc[0].get("total_destination_spend_usd", 0) or 0) if not df_dfy_ov.empty else 0.0
+            _dest_disp  = f"${_dest_spend/1e6:.1f}M" if _dest_spend > 0 else "—"
+            st.metric("Total Destination Spend", _dest_disp, help="Datafy total visitor destination spend")
+
+        if _exec_media_impact > 0:
+            _mei_c1, _mei_c2, _mei_c3 = st.columns(3)
+            with _mei_c1:
+                st.metric("Campaign Media Spend Impact", f"${_exec_media_impact/1e6:.2f}M", help="Datafy media attribution total economic impact")
+            with _mei_c2:
+                st.metric("Campaign ROAS", f"{_exec_roas:.1f}×", help="Return on ad spend from Datafy media attribution")
+            with _mei_c3:
+                st.metric("Attributable Trips", f"{_exec_attr_trips:,}", help="Trips directly attributable to VDP digital campaigns")
+    except Exception:
+        pass
+
+    # ── Strategic Asks ─────────────────────────────────────────────────────────
+    try:
+        _ask_color  = "rgba(0,196,204,0.08)"
+        _ask_border = "#00C4CC"
+        _asks = []
+        if _exec_rvp_d < 0:
+            _asks.append(("Rate Strategy Review", "RevPAR declining — request approval for comp set re-pricing analysis and channel mix audit.", "Revenue"))
+        if _exec_roas > 5:
+            _asks.append(("Increase Media Budget", f"Campaign ROAS of {_exec_roas:.1f}× exceeds target. Request additional investment to extend reach into SLC, DFW, and NYC fly markets.", "Budget"))
+        if _exec_occ >= 80:
+            _asks.append(("Compression Rate Authorization", f"Occupancy above 80% — request board authorization for dynamic rate increases during compression periods.", "Pricing"))
+        if _exec_trips > 0 and _exec_overnight < 50:
+            _asks.append(("Overnight Conversion Program", f"Only {_exec_overnight:.0f}% of visitors stay overnight. Request funding for packages targeting day-tripper conversion.", "Strategy"))
+        _asks.append(("Annual Report Narrative", "Data supports a strong YOY growth narrative. Request approval to publish annual economic impact report to city council and stakeholders.", "Communications"))
+
+        if _asks:
+            st.markdown("#### 🎯 Recommended Board Actions")
+            for _ask_title, _ask_body, _ask_tag in _asks:
+                st.markdown(
+                    f'<div style="padding:12px 16px;margin-bottom:8px;background:{_ask_color};'
+                    f'border-left:3px solid {_ask_border};border-radius:0 8px 8px 0;'
+                    f'font-family:\'Plus Jakarta Sans\',sans-serif;">'
+                    f'<span style="font-size:11px;font-weight:700;letter-spacing:.05em;'
+                    f'text-transform:uppercase;opacity:.5;">{_ask_tag}</span><br>'
+                    f'<span style="font-size:13px;font-weight:700;">{_ask_title}</span><br>'
+                    f'<span style="font-size:12px;opacity:.75;">{_ask_body}</span></div>',
+                    unsafe_allow_html=True,
+                )
+    except Exception:
+        pass
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — TRENDS
