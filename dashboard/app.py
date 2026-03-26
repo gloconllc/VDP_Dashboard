@@ -3980,20 +3980,39 @@ with tab_ov:
         _exec_rev12  = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
         _exec_tbid12 = _exec_rev12 * 0.0125
         _exec_tot12  = _exec_rev12 * 0.10
-        # Social reach
+        # Social reach — with direct DB fallback (same guard as sidebar)
         _exec_ig_fol = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
         _exec_fb_fol = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
         _exec_tk_fol = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
+        if _exec_ig_fol + _exec_fb_fol + _exec_tk_fol == 0:
+            try:
+                _s_conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+                _r = _s_conn.execute("SELECT followers FROM later_ig_profile_growth ORDER BY data_date DESC LIMIT 1").fetchone()
+                if _r: _exec_ig_fol = int(_r[0] or 0)
+                _r = _s_conn.execute("SELECT page_followers FROM later_fb_profile_growth ORDER BY data_date DESC LIMIT 1").fetchone()
+                if _r: _exec_fb_fol = int(_r[0] or 0)
+                _r = _s_conn.execute("SELECT followers FROM later_tk_profile_growth ORDER BY data_date DESC LIMIT 1").fetchone()
+                if _r: _exec_tk_fol = int(_r[0] or 0)
+                _s_conn.close()
+            except Exception:
+                pass
         _exec_social_total = _exec_ig_fol + _exec_fb_fol + _exec_tk_fol
-        # Datafy media ROAS
-        _exec_roas        = 0.0
-        _exec_attr_trips  = 0
-        _exec_media_impact= 0.0
+        # Datafy media attribution — ROAS / impact / trips
+        _exec_roas         = 0.0
+        _exec_attr_trips   = 0
+        _exec_media_impact = 0.0
+        _exec_roas_infinite= False
+        _exec_invest       = 0.0
         if not df_dfy_media.empty:
             _mk = df_dfy_media.iloc[0]
-            _exec_roas        = float(_mk.get("roas", 0) or 0)
-            _exec_attr_trips  = int(_mk.get("attributable_trips", 0) or 0)
-            _exec_media_impact= float(_mk.get("total_impact_usd", 0) or 0)
+            _exec_attr_trips   = int(_mk.get("attributable_trips", 0) or 0)
+            _exec_media_impact = float(_mk.get("total_impact_usd", 0) or 0)
+            _exec_invest       = float(_mk.get("total_investment_usd", 0) or 0)
+            _roas_raw          = str(_mk.get("roas_description", "") or "")
+            if _exec_invest > 0:
+                _exec_roas = _exec_media_impact / _exec_invest
+            elif "infinite" in _roas_raw.lower() or _exec_media_impact > 0:
+                _exec_roas_infinite = True   # infinite ROAS — no cost recorded
         # Visitor trips
         _exec_trips    = 0.0
         _exec_overnight= 0.0
@@ -4022,7 +4041,9 @@ with tab_ov:
         _tbid12_fmt = f"${_exec_tbid12/1e3:.0f}K" if _exec_tbid12 > 0 else "—"
         _tot12_fmt  = f"${_exec_tot12/1e6:.1f}M" if _exec_tot12 > 0 else "—"
         _trips_fmt  = f"{_exec_trips/1e6:.2f}M" if _exec_trips >= 1e6 else (f"{_exec_trips/1e3:.0f}K" if _exec_trips > 0 else "—")
-        _roas_fmt   = f"{_exec_roas:.1f}×" if _exec_roas > 0 else "—"
+        _roas_fmt   = ("∞" if _exec_roas_infinite else (f"{_exec_roas:.1f}×" if _exec_roas > 0 else "—"))
+        _roas_sub   = (f"${_exec_media_impact/1e3:.0f}K impact · {_exec_attr_trips:,} trips" if _exec_media_impact > 0
+                       else "Datafy media attr.")
         _social_fmt = f"{_exec_social_total/1e3:.0f}K" if _exec_social_total >= 1000 else (str(_exec_social_total) if _exec_social_total > 0 else "—")
         _banner_html = (
             f'<div style="margin-bottom:18px;">'
@@ -4037,7 +4058,7 @@ with tab_ov:
             + _exec_kpi("12-Mo TBID Est.", _tbid12_fmt, "at blended 1.25%")
             + _exec_kpi("12-Mo TOT Est.", _tot12_fmt, "at 10% rate")
             + _exec_kpi("Annual Visitor Trips", _trips_fmt, f"{_exec_overnight:.0f}% overnight" if _exec_overnight > 0 else "Datafy")
-            + _exec_kpi("Campaign ROAS", _roas_fmt, f"{_exec_attr_trips:,} attr. trips" if _exec_attr_trips > 0 else "Datafy media")
+            + _exec_kpi("Campaign ROAS", _roas_fmt, _roas_sub)
             + _exec_kpi("Social Audience", _social_fmt, "IG + FB + TikTok")
             + '</div></div>'
         )
@@ -4515,14 +4536,19 @@ with tab_ov:
         _rc_occ_status    = "green" if _exec_occ >= 75 else ("yellow" if _exec_occ >= 60 else "red")
         _rc_revpar_status = "green" if _exec_rvp_d >= 2 else ("yellow" if _exec_rvp_d >= -2 else "red")
         _rc_adr_status    = "green" if _exec_adr_d >= 3 else ("yellow" if _exec_adr_d >= 0 else "red")
-        _rc_roas_status   = ("green" if _exec_roas >= 5 else ("yellow" if _exec_roas >= 2 else "red")) if _exec_roas > 0 else "yellow"
+        _rc_roas_status   = ("green" if (_exec_roas_infinite or _exec_roas >= 5) else ("yellow" if _exec_roas >= 2 else "red")) if (_exec_roas > 0 or _exec_roas_infinite) else "yellow"
         _rc_social_status = ("green" if _exec_ig_fol >= 20000 else ("yellow" if _exec_ig_fol >= 10000 else "red")) if _exec_ig_fol > 0 else "yellow"
         _rc_trips_status  = ("green" if _exec_trips >= 1000000 else ("yellow" if _exec_trips >= 500000 else "red")) if _exec_trips > 0 else "yellow"
 
         _rc_occ_note    = f"{_exec_occ:.1f}% occ · {_arr(_exec_occ_d)}{abs(_exec_occ_d):.1f}pp vs prior · {'Maintain pricing discipline.' if _exec_occ >= 75 else 'Demand generation programs needed.'}"
         _rc_revpar_note = f"${_exec_rvp:.0f} RevPAR · {_arr(_exec_rvp_d)}{abs(_exec_rvp_d):.1f}% YOY · {'Rate strategy working.' if _exec_rvp_d >= 2 else 'Review rate strategy and comp set positioning.'}"
         _rc_adr_note    = f"${_exec_adr:.0f} ADR · {'Premium rate capture on track.' if _exec_adr_d >= 3 else 'Rate pressure — audit discount patterns and channel mix.'}"
-        _rc_roas_note   = (f"{_roas_fmt} return · {_exec_attr_trips:,} attributable trips · {'Strong ROI — recommend budget increase.' if _exec_roas >= 5 else 'Acceptable ROI.' if _exec_roas >= 2 else 'Investigate attribution model and campaign targeting.'}") if _exec_roas > 0 else "Run Datafy media attribution pipeline to populate."
+        _rc_roas_note   = (
+            f"∞ ROAS (no media cost recorded) · ${_exec_media_impact:,.0f} est. campaign impact · {_exec_attr_trips:,} attributable trips · Organic performance — strong case for paid investment."
+            if _exec_roas_infinite else
+            (f"{_roas_fmt} return · {_exec_attr_trips:,} attributable trips · {'Strong ROI — recommend budget increase.' if _exec_roas >= 5 else 'Acceptable ROI.' if _exec_roas >= 2 else 'Investigate attribution model and campaign targeting.'}") if _exec_roas > 0
+            else "Run Datafy media attribution pipeline to populate."
+        )
         _rc_social_note = (f"IG {_exec_ig_fol:,} · FB {_exec_fb_fol:,} · TK {_exec_tk_fol:,} · {'Healthy audience scale for a DMO.' if _exec_ig_fol >= 20000 else 'Growth campaigns recommended.'}") if _exec_social_total > 0 else "Load Later.com exports."
         _rc_trips_note  = (f"{_trips_fmt} annual trips · {_exec_overnight:.0f}% overnight · {'Strong visitation base.' if _exec_trips >= 1e6 else 'Opportunity to grow overnight conversion.'}") if _exec_trips > 0 else "Run Datafy pipeline."
 
@@ -5072,8 +5098,8 @@ with tab_ov:
         _asks = []
         if _exec_rvp_d < 0:
             _asks.append(("Rate Strategy Review", "RevPAR declining — request approval for comp set re-pricing analysis and channel mix audit.", "Revenue"))
-        if _exec_roas > 5:
-            _asks.append(("Increase Media Budget", f"Campaign ROAS of {_exec_roas:.1f}× exceeds target. Request additional investment to extend reach into SLC, DFW, and NYC fly markets.", "Budget"))
+        if _exec_roas_infinite or _exec_roas > 5:
+            _asks.append(("Invest in Paid Media", f"Campaign currently running with {'∞ ROAS (no cost recorded)' if _exec_roas_infinite else f'{_exec_roas:.1f}× ROAS'}. ${_exec_media_impact:,.0f} in estimated impact from {_exec_attr_trips:,} attributable trips. Request board approval for paid media budget to scale this performance.", "Budget"))
         if _exec_occ >= 80:
             _asks.append(("Compression Rate Authorization", f"Occupancy above 80% — request board authorization for dynamic rate increases during compression periods.", "Pricing"))
         if _exec_trips > 0 and _exec_overnight < 50:
@@ -6845,6 +6871,182 @@ with tab_fm:
                             f'</div>',
                             unsafe_allow_html=True,
                         )
+
+        # ── GloCon Solutions LLC — Spend Efficiency Index ─────────────────────
+        st.markdown("---")
+        st.markdown('<div class="chart-header">📊 Market Spend Efficiency Index — Spending Share ÷ Visitor Days Share</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-caption">Index > 1.0 = market punches above its weight in spend · Index < 1.0 = under-spends relative to visitation volume</div>', unsafe_allow_html=True)
+        _eff_df = df_dfy_dma[
+            df_dfy_dma["visitor_days_share_pct"].notna() &
+            df_dfy_dma["spending_share_pct"].notna() &
+            (df_dfy_dma["visitor_days_share_pct"] > 0)
+        ].copy()
+        if not _eff_df.empty:
+            _eff_df["efficiency_index"] = (_eff_df["spending_share_pct"] / _eff_df["visitor_days_share_pct"]).round(2)
+            _eff_df = _eff_df.sort_values("efficiency_index", ascending=True)
+            _eff_colors = ["#00C49A" if v >= 1.0 else "#FF4757" for v in _eff_df["efficiency_index"]]
+            fig_eff = go.Figure(go.Bar(
+                x=_eff_df["efficiency_index"],
+                y=_eff_df["dma"],
+                orientation="h",
+                marker=dict(color=_eff_colors, cornerradius=5),
+                text=[f"{v:.2f}×" for v in _eff_df["efficiency_index"]],
+                textposition="outside",
+                hovertemplate="<b>%{y}</b><br>Efficiency: %{x:.2f}×<br>(spending share ÷ visitor days share)<extra></extra>",
+            ))
+            fig_eff.add_vline(x=1.0, line_dash="solid", line_color="rgba(0,0,0,0.3)", line_width=1.5,
+                              annotation_text="Parity", annotation_position="top right",
+                              annotation_font_size=10)
+            fig_eff.update_layout(xaxis_title="Spend Efficiency Index", showlegend=False)
+            st.plotly_chart(style_fig(fig_eff, height=360), use_container_width=True,
+                            config={"displayModeBar": False}, key="fm_efficiency_index")
+            # Insight callout
+            _over_idx = _eff_df[_eff_df["efficiency_index"] > 1.2]
+            _under_idx = _eff_df[_eff_df["efficiency_index"] < 0.85]
+            if not _over_idx.empty:
+                _over_names = ", ".join(_over_idx.nlargest(3, "efficiency_index")["dma"].tolist())
+                st.markdown(
+                    f'<div style="background:rgba(0,196,154,0.08);border-left:3px solid #00C49A;'
+                    f'border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;margin-bottom:6px;">'
+                    f'<strong>✅ High-Efficiency Markets:</strong> {_over_names} — these markets spend more than their visit share warrants. '
+                    f'Strong campaign conversion candidates.</div>',
+                    unsafe_allow_html=True,
+                )
+            if not _under_idx.empty:
+                _under_names = ", ".join(_under_idx.nsmallest(3, "efficiency_index")["dma"].tolist())
+                st.markdown(
+                    f'<div style="background:rgba(255,71,87,0.06);border-left:3px solid #FF4757;'
+                    f'border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;">'
+                    f'<strong>⚠️ Volume-Heavy / Spend-Light Markets:</strong> {_under_names} — high visitation but under-index on spend. '
+                    f'Target with upsell and overnight conversion campaigns.</div>',
+                    unsafe_allow_html=True,
+                )
+
+        # ── Length of Stay by Market ──────────────────────────────────────────
+        st.markdown("---")
+        _los_df = df_dfy_dma[df_dfy_dma["avg_length_of_stay_days"].notna()].copy()
+        if not _los_df.empty:
+            st.markdown('<div class="chart-header">🛌 Length of Stay by Feeder Market</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">Avg days per trip · Longer stays = more room nights = higher TBID + TOT revenue per visitor</div>', unsafe_allow_html=True)
+            _los_df = _los_df.sort_values("avg_length_of_stay_days", ascending=True)
+            _los_avg = float(_los_df["avg_length_of_stay_days"].mean())
+            _los_colors = ["#8B5CF6" if v >= _los_avg else "#94A3B8" for v in _los_df["avg_length_of_stay_days"]]
+            fig_los = go.Figure(go.Bar(
+                x=_los_df["avg_length_of_stay_days"],
+                y=_los_df["dma"],
+                orientation="h",
+                marker=dict(color=_los_colors, cornerradius=5),
+                text=[f"{v:.1f}d" for v in _los_df["avg_length_of_stay_days"]],
+                textposition="outside",
+                hovertemplate="<b>%{y}</b><br>Avg stay: %{x:.1f} days<extra></extra>",
+            ))
+            fig_los.add_vline(x=_los_avg, line_dash="dot", line_color="rgba(0,0,0,0.25)", line_width=1,
+                              annotation_text=f"Avg {_los_avg:.1f}d", annotation_position="top right",
+                              annotation_font_size=10)
+            fig_los.update_layout(xaxis_title="Avg Length of Stay (days)", showlegend=False)
+            st.plotly_chart(style_fig(fig_los, height=260), use_container_width=True,
+                            config={"displayModeBar": False}, key="fm_los_chart")
+
+        # ── Campaign Attribution: Top Markets ─────────────────────────────────
+        if not df_dfy_mktmkt.empty:
+            st.markdown("---")
+            st.markdown('<div class="chart-header">🎯 Campaign Attribution — Top DMA Markets by Est. Impact</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">Markets with highest estimated $ impact from the 2025–26 Annual Campaign · Source: Datafy Media Attribution</div>', unsafe_allow_html=True)
+            _cam_dest = df_dfy_mktmkt[df_dfy_mktmkt["cluster_type"] == "destination"].copy() if "cluster_type" in df_dfy_mktmkt.columns else df_dfy_mktmkt.copy()
+            if not _cam_dest.empty and "top_dma" in _cam_dest.columns and "dma_est_impact_usd" in _cam_dest.columns:
+                _cam_dest = _cam_dest.sort_values("dma_est_impact_usd", ascending=True).tail(8)
+                _cam_colors = ["#F59E0B" if i == len(_cam_dest) - 1 else "#00C4CC"
+                               for i in range(len(_cam_dest))]
+                fig_cam = go.Figure(go.Bar(
+                    x=_cam_dest["dma_est_impact_usd"],
+                    y=_cam_dest["top_dma"],
+                    orientation="h",
+                    marker=dict(color=_cam_colors, cornerradius=5),
+                    text=[f"${v/1e3:.0f}K" for v in _cam_dest["dma_est_impact_usd"]],
+                    textposition="outside",
+                    hovertemplate="<b>%{y}</b><br>Est. impact: $%{x:,.0f}<extra></extra>",
+                ))
+                fig_cam.update_layout(xaxis_title="Est. Campaign Impact ($)", xaxis_tickprefix="$",
+                                      showlegend=False)
+                st.plotly_chart(style_fig(fig_cam, height=300), use_container_width=True,
+                                config={"displayModeBar": False}, key="fm_campaign_impact")
+
+        # ── Website Attribution DMA ───────────────────────────────────────────
+        if not df_dfy_web_dma.empty:
+            st.markdown("---")
+            _wa_c1, _wa_c2 = st.columns(2)
+            with _wa_c1:
+                st.markdown('<div class="chart-header">🌐 Website Attribution — Trips by Origin Market</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">Visitors attributed to visitdanapoint.com by DMA · Datafy Website Attribution</div>', unsafe_allow_html=True)
+                _wdma = df_dfy_web_dma.sort_values("total_trips", ascending=True).tail(9)
+                fig_wdma = go.Figure(go.Bar(
+                    x=_wdma["total_trips"],
+                    y=_wdma["dma"],
+                    orientation="h",
+                    marker=dict(
+                        color=[f"rgba(139,92,246,{0.55 + 0.45*(v/max(_wdma['total_trips'])):.2f})"
+                               for v in _wdma["total_trips"]],
+                        cornerradius=5,
+                    ),
+                    text=[f"{int(v)}" for v in _wdma["total_trips"]],
+                    textposition="outside",
+                    hovertemplate="<b>%{y}</b><br>Attributed trips: %{x:,}<extra></extra>",
+                ))
+                fig_wdma.update_layout(xaxis_title="Attributed Trips", showlegend=False)
+                st.plotly_chart(style_fig(fig_wdma, height=320), use_container_width=True,
+                                config={"displayModeBar": False}, key="fm_web_dma_trips")
+            with _wa_c2:
+                st.markdown('<div class="chart-header">🛏 Website Attribution — Avg LOS by Origin Market</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">Longer LOS from website visitors = higher room night value</div>', unsafe_allow_html=True)
+                _wdma_los = df_dfy_web_dma[df_dfy_web_dma["avg_los_destination_days"].notna()].sort_values("avg_los_destination_days", ascending=True)
+                if not _wdma_los.empty:
+                    _wlos_avg = float(_wdma_los["avg_los_destination_days"].mean())
+                    fig_wlos = go.Figure(go.Bar(
+                        x=_wdma_los["avg_los_destination_days"],
+                        y=_wdma_los["dma"],
+                        orientation="h",
+                        marker=dict(
+                            color=["#8B5CF6" if v >= _wlos_avg else "#CBD5E1"
+                                   for v in _wdma_los["avg_los_destination_days"]],
+                            cornerradius=5,
+                        ),
+                        text=[f"{v:.1f}d" for v in _wdma_los["avg_los_destination_days"]],
+                        textposition="outside",
+                        hovertemplate="<b>%{y}</b><br>Avg LOS: %{x:.1f} days<extra></extra>",
+                    ))
+                    fig_wlos.add_vline(x=_wlos_avg, line_dash="dot", line_color="rgba(0,0,0,0.2)")
+                    fig_wlos.update_layout(xaxis_title="Avg Length of Stay (days)", showlegend=False)
+                    st.plotly_chart(style_fig(fig_wlos, height=320), use_container_width=True,
+                                    config={"displayModeBar": False}, key="fm_web_dma_los")
+
+        # ── Complete Market Intelligence Table ────────────────────────────────
+        st.markdown("---")
+        st.markdown('<div class="chart-header">📋 Complete Market Intelligence Table</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-caption">All feeder markets · Visitor days · Spending share · Avg spend · LOS · YOY change · Use for campaign planning and budget allocation</div>', unsafe_allow_html=True)
+        _full_tbl = df_dfy_dma.copy()
+        _col_map = {
+            "dma": "Market (DMA)",
+            "visitor_days_share_pct": "Visitor Days %",
+            "spending_share_pct": "Spending Share %",
+            "avg_spend_usd": "Avg Spend/Visitor",
+            "avg_length_of_stay_days": "Avg LOS (days)",
+            "visitor_days_vs_compare_pct": "YOY Change (pp)",
+            "trips_share_pct": "Trips Share %",
+        }
+        _show_cols = [c for c in _col_map if c in _full_tbl.columns]
+        _full_tbl = _full_tbl[_show_cols].rename(columns=_col_map)
+        if "Avg Spend/Visitor" in _full_tbl.columns:
+            _full_tbl["Avg Spend/Visitor"] = _full_tbl["Avg Spend/Visitor"].apply(
+                lambda v: f"${v:,.0f}" if pd.notna(v) else "—")
+        if "Efficiency Index" not in _full_tbl.columns and "Visitor Days %" in _full_tbl.columns and "Spending Share %" in _full_tbl.columns:
+            _full_tbl["Efficiency"] = (_full_tbl["Spending Share %"] / _full_tbl["Visitor Days %"]).round(2).apply(
+                lambda v: f"{v:.2f}×" if pd.notna(v) and v > 0 else "—")
+        st.dataframe(_full_tbl.sort_values("Visitor Days %", ascending=False),
+                     use_container_width=True, hide_index=True)
+        _dma_dl = df_dfy_dma.to_csv(index=False).encode()
+        st.download_button("⬇️ Download Full Market Intelligence CSV", _dma_dl,
+                           file_name="feeder_market_intelligence.csv", mime="text/csv",
+                           key="fm_dl_full")
 
         # ── Zartico Top Markets (historical comparison) ────────────────────────
         if not df_zrt_markets.empty:
