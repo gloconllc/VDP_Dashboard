@@ -666,10 +666,10 @@ st.markdown("""
     padding: 13px 20px !important; border-radius: 10px !important;
     margin: 22px 0 12px 0 !important;
     border-left: 5px solid var(--sh-accent, #21808D) !important;
-    background: rgba(255,255,255,0.05) !important;
-    border-top: 1px solid rgba(255,255,255,0.06) !important;
-    border-right: 1px solid rgba(255,255,255,0.04) !important;
-    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+    background: rgba(13,17,23,0.70) !important;
+    border-top: 1px solid rgba(255,255,255,0.08) !important;
+    border-right: 1px solid rgba(255,255,255,0.06) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
   }
   .sh-icon {
     font-size: 20px !important; line-height: 1 !important; flex-shrink: 0 !important;
@@ -813,7 +813,8 @@ st.markdown("""
   [data-testid="stMetricLabel"] > div,
   [data-testid="stMetricLabel"] label,
   [data-testid="stMetricLabel"] p,
-  div[data-testid="metric-container"] > label {
+  div[data-testid="metric-container"] > label,
+  div[data-testid="stMetricLabel"] div {
     font-size: 11px !important;
     white-space: normal !important;
     overflow: visible !important;
@@ -825,19 +826,42 @@ st.markdown("""
     height: auto !important;
     -webkit-line-clamp: unset !important;
     -webkit-box-orient: unset !important;
+    word-break: break-word !important;
   }
   [data-testid="stMetricValue"],
   div[data-testid="metric-container"] [data-testid="stMetricValue"] {
     font-size: clamp(1.1rem, 2.2vw, 1.7rem) !important;
     letter-spacing: -0.02em !important;
   }
-  [data-testid="stMetricDelta"] {
-    font-size: 11px !important;
-  }
-  div[data-testid="metric-container"] {
-    padding-top: 4px !important;
-  }
+  [data-testid="stMetricDelta"] { font-size: 11px !important; }
+  div[data-testid="metric-container"] { padding-top: 4px !important; }
 </style>
+<script>
+/* Force metric labels to wrap — CSS alone can't override Streamlit inline styles */
+(function fixMetricLabels(){
+  function fix(){
+    document.querySelectorAll('[data-testid="stMetricLabel"]').forEach(function(el){
+      el.style.whiteSpace = 'normal';
+      el.style.overflow   = 'visible';
+      el.style.textOverflow = 'unset';
+      el.style.maxHeight  = 'none';
+      el.style.height     = 'auto';
+      el.querySelectorAll('div,p,label').forEach(function(c){
+        c.style.whiteSpace  = 'normal';
+        c.style.overflow    = 'visible';
+        c.style.textOverflow = 'unset';
+        c.style.maxHeight   = 'none';
+        c.style.height      = 'auto';
+        c.style.display     = 'block';
+      });
+    });
+  }
+  fix(); setTimeout(fix,400); setTimeout(fix,1200);
+  if(window.MutationObserver){
+    new MutationObserver(fix).observe(document.body,{childList:true,subtree:true});
+  }
+})();
+</script>
 """, unsafe_allow_html=True)
 
 # ── Back-to-top button (always visible as fixed action button)
@@ -4645,7 +4669,7 @@ with tab_ov:
         _pulse_col1, _pulse_col2 = st.columns([3, 2])
         with _pulse_col1:
             st.markdown(
-                f'<div class="pulse-wrapper" style="border-left:4px solid {_p_color};background:rgba(0,0,0,0.18);">'
+                f'<div class="pulse-wrapper" style="border-left:4px solid {_p_color};background:rgba(13,17,23,0.85);border:1px solid rgba(255,255,255,0.10);border-left:4px solid {_p_color};">'
                 f'  <div class="pulse-circle" style="color:{_p_color};">'
                 f'    <div class="pulse-ring"></div>'
                 f'    <div class="pulse-ring-2"></div>'
@@ -4671,11 +4695,11 @@ with tab_ov:
         # Tier legend
         st.markdown(
             '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;margin-bottom:12px;">'
-            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(239,68,68,0.22);color:#FCA5A5;font-weight:700;">0–39 Caution</span>'
-            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(245,158,11,0.22);color:#FDE68A;font-weight:700;">40–59 Stable</span>'
-            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(33,128,141,0.25);color:#67E8F9;font-weight:700;">60–74 Strong</span>'
-            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(33,197,93,0.22);color:#86EFAC;font-weight:700;">75–89 Exceptional</span>'
-            '<span style="font-size:10px;padding:2px 10px;border-radius:99px;background:rgba(124,58,237,0.22);color:#C4B5FD;font-weight:700;">90–100 Historic</span>'
+            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#7f1d1d;color:#fca5a5;font-weight:700;border:1px solid #ef4444;">0–39 Caution</span>'
+            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#78350f;color:#fde68a;font-weight:700;border:1px solid #f59e0b;">40–59 Stable</span>'
+            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#134e4a;color:#67e8f9;font-weight:700;border:1px solid #21808D;">60–74 Strong</span>'
+            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#14532d;color:#86efac;font-weight:700;border:1px solid #21c55d;">75–89 Exceptional</span>'
+            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#3b0764;color:#c4b5fd;font-weight:700;border:1px solid #7c3aed;">90–100 Historic</span>'
             '</div>',
             unsafe_allow_html=True,
         )
