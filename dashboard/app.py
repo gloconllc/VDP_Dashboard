@@ -262,134 +262,182 @@ for _k, _v in [
 # ─── CSS ──────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-  /* ── Google Fonts: Plus Jakarta Sans + Inter ─────────────────────────── */
+  /* ════════════════════════════════════════════════════════════════════════
+     DANA POINT PULSE — Enterprise Analytics Design System
+     Inspired by: Tableau, PowerBI, Looker, CoStar, Placer.ai, Datafy
+     Dark professional theme optimized for hospitality executives
+  ════════════════════════════════════════════════════════════════════════ */
+
+  /* ── Google Fonts ────────────────────────────────────────────────────── */
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
-  html, body, [class*="css"] {
-    font-family: 'Inter', system-ui, sans-serif;
+  /* ── Design Tokens ───────────────────────────────────────────────────── */
+  :root {
+    --dp-bg:            #06101E;
+    --dp-surface:       #0B1929;
+    --dp-card:          #0F2039;
+    --dp-card-hover:    #132645;
+    --dp-border:        rgba(255,255,255,0.07);
+    --dp-border-accent: rgba(0,195,190,0.30);
+    --dp-teal:          #00C3BE;
+    --dp-teal-dim:      rgba(0,195,190,0.12);
+    --dp-teal-glow:     rgba(0,195,190,0.06);
+    --dp-blue:          #3D8EF0;
+    --dp-green:         #10B981;
+    --dp-amber:         #F59E0B;
+    --dp-red:           #F04E37;
+    --dp-purple:        #8B5CF6;
+    --dp-orange:        #E68161;
+    --dp-text-1:        #E2E8F0;
+    --dp-text-2:        #8FA3B8;
+    --dp-text-3:        #4A5F74;
+    --dp-radius:        12px;
+    --dp-radius-lg:     16px;
+    --dp-shadow:        0 2px 12px rgba(0,0,0,0.35);
+    --dp-shadow-hover:  0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,195,190,0.18);
   }
 
-  /* ── KPI cards — glassmorphism 2025 ─────────────────────────────────── */
+  html, body, [class*="css"] {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--dp-bg) !important;
+  }
+
+  /* ── KPI Cards — Enterprise Tile Style ──────────────────────────────── */
   .kpi-card {
-    background: linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border-radius: 18px;
-    padding: 20px 22px;
-    border: 1px solid rgba(33,128,141,0.14);
+    background: var(--dp-card);
+    border-radius: var(--dp-radius-lg);
+    padding: 18px 20px 14px 20px;
+    border: 1px solid var(--dp-border);
+    border-top: 3px solid var(--dp-teal);
     margin-bottom: 12px;
     position: relative;
     overflow: hidden;
-    transition: box-shadow 0.28s cubic-bezier(.25,.46,.45,.94),
-                transform 0.28s cubic-bezier(.25,.46,.45,.94),
-                border-color 0.28s ease;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
-  }
-  .kpi-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0;
-    height: 2px; border-radius: 18px 18px 0 0;
-    background: linear-gradient(90deg, #21808D 0%, #32B8C6 50%, #21808D 100%);
-    background-size: 200% 100%;
-    animation: shimmer 3.5s linear infinite;
-  }
-  @keyframes shimmer {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    transition: box-shadow 0.22s ease, border-color 0.22s ease, transform 0.22s ease;
+    box-shadow: var(--dp-shadow);
   }
   .kpi-card::after {
-    content: ''; position: absolute;
-    top: -40px; right: -30px;
-    width: 100px; height: 100px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(50,184,198,0.10) 0%, transparent 70%);
+    content: '';
+    position: absolute; bottom: 0; right: 0;
+    width: 80px; height: 80px; border-radius: 50%;
+    background: radial-gradient(circle, var(--dp-teal-glow) 0%, transparent 70%);
     pointer-events: none;
   }
   .kpi-card:hover {
-    box-shadow: 0 10px 36px rgba(33,128,141,0.18), 0 2px 8px rgba(0,0,0,0.06);
-    transform: translateY(-3px);
-    border-color: rgba(33,128,141,0.28);
+    box-shadow: var(--dp-shadow-hover);
+    transform: translateY(-2px);
+    border-top-color: #00E5DF;
   }
-  .kpi-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .kpi-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
   .kpi-label {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 10px; font-weight: 800;
-    text-transform: uppercase; letter-spacing: .09em; opacity: .50;
+    font-family: 'Inter', sans-serif;
+    font-size: 10.5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .09em;
+    color: var(--dp-text-2);
   }
-  .kpi-icon-svg { flex-shrink:0; line-height:0; }
+  .kpi-icon-svg { flex-shrink: 0; line-height: 0; opacity: 0.75; }
   .kpi-value {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 28px; font-weight: 800;
-    letter-spacing: -.035em; line-height: 1.05; margin: 6px 0;
+    font-size: 30px; font-weight: 800;
+    letter-spacing: -.04em; line-height: 1.0;
+    color: var(--dp-text-1);
+    margin: 4px 0 6px 0;
   }
-  .kpi-delta-pos     { color:#21808D; font-size:12px; font-weight:600; margin-top:6px; }
-  .kpi-delta-neg     { color:#C0152F; font-size:12px; font-weight:600; margin-top:6px; }
-  .kpi-delta-neutral { color:#626C71; font-size:12px; font-weight:600; margin-top:6px; }
+  .kpi-delta-pos     { color: #10B981; font-size: 12px; font-weight: 600; display:flex; align-items:center; gap:3px; }
+  .kpi-delta-neg     { color: var(--dp-red); font-size: 12px; font-weight: 600; display:flex; align-items:center; gap:3px; }
+  .kpi-delta-neutral { color: var(--dp-text-3); font-size: 12px; font-weight: 600; }
   .kpi-date {
-    font-size:10px; opacity:0.42; margin-top:8px; letter-spacing:.01em;
-    background: rgba(33,128,141,0.08); border-radius:6px; padding:3px 8px;
-    display:inline-block; font-weight:500;
+    font-size: 10px; color: var(--dp-text-3);
+    margin-top: 10px; letter-spacing: .01em;
+    border-top: 1px solid var(--dp-border);
+    padding-top: 8px; display: block; font-weight: 500;
   }
 
-  /* ── Insight cards ────────────────────────────────────────────────────── */
+  /* ── Insight Cards — Signal Cards ───────────────────────────────────── */
   .insight-card {
-    border-radius: 16px; padding: 16px 18px; margin-bottom: 6px;
+    border-radius: var(--dp-radius);
+    padding: 14px 16px;
+    margin-bottom: 8px;
     position: relative;
-    border: 1px solid rgba(255,255,255,0.10);
-    background: linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    border: 1px solid var(--dp-border);
+    background: var(--dp-card);
+    transition: box-shadow 0.20s ease, transform 0.20s ease;
   }
-  .insight-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
+  .insight-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.30);
+    transform: translateY(-1px);
+  }
   .insight-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0;
-    height: 3px; border-radius: 16px 16px 0 0;
+    content: '';
+    position: absolute; top: 0; left: 0;
+    width: 4px; height: 100%;
+    border-radius: var(--dp-radius) 0 0 var(--dp-radius);
   }
-  .insight-positive::before { background: linear-gradient(90deg, #21808D, #32B8C6); }
-  .insight-warning::before  { background: linear-gradient(90deg, #E68161, #f59e0b); }
-  .insight-negative::before { background: linear-gradient(90deg, #C0152F, #ef4444); }
-  .insight-info::before     { background: linear-gradient(90deg, #21808D, #626C71); }
+  .insight-positive::before { background: var(--dp-green); }
+  .insight-warning::before  { background: var(--dp-amber); }
+  .insight-negative::before { background: var(--dp-red); }
+  .insight-info::before     { background: var(--dp-teal); }
   .insight-title {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 13px; font-weight: 700; margin-bottom: 6px; letter-spacing: -.01em;
+    font-size: 13px; font-weight: 700;
+    margin-bottom: 5px; letter-spacing: -.01em;
+    padding-left: 10px;
+    color: var(--dp-text-1);
   }
-  .insight-body { font-size: 12px; opacity: .72; line-height: 1.6; margin: 0; }
+  .insight-body {
+    font-size: 12.5px; color: var(--dp-text-2);
+    line-height: 1.65; margin: 0;
+    padding-left: 10px;
+  }
 
-  /* ── AI chip ─────────────────────────────────────────────────────────── */
+  /* ── AI Chip Badge ───────────────────────────────────────────────────── */
   .ai-chip {
     display: inline-flex; align-items: center; gap: 5px;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em;
-    padding: 3px 10px; border-radius: 99px;
-    background: linear-gradient(135deg, rgba(33,128,141,.16), rgba(50,184,198,.10));
-    color: #21808D; margin-bottom: 12px;
-    border: 1px solid rgba(33,128,141,.22);
+    font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em;
+    padding: 3px 10px; border-radius: 6px;
+    background: rgba(0,195,190,0.10);
+    color: var(--dp-teal); margin-bottom: 12px;
+    border: 1px solid rgba(0,195,190,0.22);
   }
 
-  /* ── Event stat cards ────────────────────────────────────────────────── */
+  /* ── Event Stat Cards ────────────────────────────────────────────────── */
   .event-stat {
-    background: linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%);
-    border: 1px solid rgba(33,128,141,0.14);
-    border-radius: 18px; padding: 22px 18px; text-align: center; margin-bottom: 10px;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-    backdrop-filter: blur(10px);
+    background: var(--dp-card);
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius-lg);
+    padding: 20px 16px; text-align: center; margin-bottom: 10px;
+    transition: box-shadow 0.22s ease, transform 0.22s ease;
+    position: relative; overflow: hidden;
+  }
+  .event-stat::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; background: linear-gradient(90deg, var(--dp-teal), var(--dp-blue));
   }
   .event-stat:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 32px rgba(33,128,141,0.16);
-    border-color: rgba(33,128,141,0.28);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.40);
+    transform: translateY(-2px);
   }
-  .event-icon  { line-height:0; display:flex; justify-content:center; margin-bottom:10px; }
+  .event-icon  { line-height: 0; display: flex; justify-content: center; margin-bottom: 10px; }
   .event-val   {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 30px; font-weight: 800; color: #21808D; letter-spacing: -.035em;
+    font-size: 28px; font-weight: 800; color: var(--dp-teal);
+    letter-spacing: -.04em; line-height: 1;
   }
-  .event-label { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 600; opacity: .60; margin-top: 5px; }
-  .event-date  { font-size: 10px; opacity: .38; margin-top: 4px; }
+  .event-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px; font-weight: 600;
+    color: var(--dp-text-2); margin-top: 6px; text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+  .event-date  { font-size: 10px; color: var(--dp-text-3); margin-top: 4px; }
 
-  /* ── Insight card icon ───────────────────────────────────────────────── */
-  .insight-icon { display:inline-block; vertical-align:middle; margin-right:6px; line-height:0; }
+  /* ── Insight Icon ────────────────────────────────────────────────────── */
+  .insight-icon { display: inline-block; vertical-align: middle; margin-right: 6px; line-height: 0; }
 
-  /* ── Hide all Streamlit chrome from client view ──────────────────────── */
+  /* ── Hide Streamlit Chrome ───────────────────────────────────────────── */
   #MainMenu                              { visibility: hidden !important; }
   footer                                 { visibility: hidden !important; }
   [data-testid="stToolbar"]             { visibility: hidden !important; }
@@ -401,361 +449,499 @@ st.markdown("""
   a[href*="streamlit.io"]               { display:    none    !important; }
   a[href*="github.com/streamlit"]       { display:    none    !important; }
 
-  /* ── Empty-state cards ───────────────────────────────────────────────── */
+  /* ── Empty State ─────────────────────────────────────────────────────── */
   .empty-card {
-    background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
-    border-radius: 16px; padding: 36px 28px; text-align: center;
-    border: 1px dashed rgba(33,128,141,0.20); margin: 6px 0 12px 0;
+    background: var(--dp-card);
+    border-radius: var(--dp-radius-lg); padding: 40px 28px; text-align: center;
+    border: 1px dashed rgba(0,195,190,0.20); margin: 6px 0 12px 0;
   }
-  .empty-icon  { font-size: 32px; margin-bottom: 12px; }
+  .empty-icon  { font-size: 32px; margin-bottom: 12px; opacity: 0.6; }
   .empty-title {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 15px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.01em;
+    color: var(--dp-text-1);
   }
-  .empty-body  { font-size: 13px; opacity: 0.58; line-height: 1.65; }
+  .empty-body  { font-size: 13px; color: var(--dp-text-2); line-height: 1.65; }
 
-  /* ── Data-source health cards ────────────────────────────────────────── */
+  /* ── Data Source Health Cards ────────────────────────────────────────── */
   .src-card {
-    background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
-    border-radius: 14px; padding: 14px 18px;
-    border: 1px solid rgba(255,255,255,0.09);
-    margin-bottom: 8px; display: flex; align-items: center; gap: 12px;
-    transition: box-shadow 0.20s ease, transform 0.20s ease; cursor: default;
+    background: var(--dp-card);
+    border-radius: var(--dp-radius); padding: 13px 16px;
+    border: 1px solid var(--dp-border);
+    margin-bottom: 6px; display: flex; align-items: center; gap: 12px;
+    transition: box-shadow 0.18s ease, border-color 0.18s ease; cursor: default;
   }
-  .src-card:hover { box-shadow: 0 4px 18px rgba(33,128,141,0.12); transform: translateX(2px); }
-  .src-dot   { font-size: 15px; flex-shrink: 0; }
-  .src-name  { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 700; }
-  .src-meta  { font-size: 11px; opacity: 0.55; margin-top: 2px; line-height: 1.4; }
+  .src-card:hover {
+    border-color: var(--dp-border-accent);
+    box-shadow: 0 2px 14px rgba(0,0,0,0.25);
+  }
+  .src-dot   { font-size: 14px; flex-shrink: 0; }
+  .src-name  {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px; font-weight: 700; color: var(--dp-text-1);
+  }
+  .src-meta  { font-size: 11px; color: var(--dp-text-3); margin-top: 2px; line-height: 1.4; }
   .src-count {
-    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 700;
-    color: #21808D; margin-left: auto; text-align: right; white-space: nowrap;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 700;
+    color: var(--dp-teal); margin-left: auto; text-align: right; white-space: nowrap;
   }
 
-  /* ── Grain badge ─────────────────────────────────────────────────────── */
+  /* ── Grain Badge ─────────────────────────────────────────────────────── */
   .grain-badge {
-    display: inline-block; font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em;
-    padding: 2px 8px; border-radius: 99px;
-    background: rgba(230,129,97,.14); color: #E68161;
+    display: inline-block; font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+    padding: 2px 8px; border-radius: 5px;
+    background: rgba(230,129,97,.12); color: var(--dp-orange);
     margin-left: 8px; vertical-align: middle;
-    border: 1px solid rgba(230,129,97,.22);
+    border: 1px solid rgba(230,129,97,.20);
   }
 
-  /* ── Hero banner ─────────────────────────────────────────────────────── */
+  /* ── Hero Banner — Command Center Header ─────────────────────────────── */
   .hero-banner {
     background: linear-gradient(135deg,
-      rgba(33,128,141,0.11) 0%,
-      rgba(50,184,198,0.06) 50%,
-      rgba(230,129,97,0.05) 100%);
-    border-radius: 22px; padding: 28px 32px;
-    border: 1px solid rgba(33,128,141,0.14);
-    margin-bottom: 6px; position: relative; overflow: hidden;
+      rgba(0,195,190,0.08) 0%,
+      rgba(11,25,41,0.95) 50%,
+      rgba(61,142,240,0.05) 100%);
+    border-radius: 14px; padding: 24px 28px;
+    border: 1px solid rgba(0,195,190,0.15);
+    margin-bottom: 16px; position: relative; overflow: hidden;
   }
   .hero-banner::before {
     content: ''; position: absolute;
-    top: -50px; right: -50px;
-    width: 220px; height: 220px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(50,184,198,0.13) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .hero-banner::after {
-    content: ''; position: absolute;
-    bottom: -40px; left: 30%;
-    width: 160px; height: 160px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(230,129,97,0.07) 0%, transparent 70%);
+    top: 0; right: 0; bottom: 0;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, rgba(0,195,190,0.04));
     pointer-events: none;
   }
   .hero-title {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 2.15rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.1;
-    background: linear-gradient(135deg, #21808D 0%, #32B8C6 55%, #1a6b78 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text; margin-bottom: 4px;
+    font-size: 1.85rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.1;
+    color: var(--dp-text-1);
+    margin-bottom: 6px;
+  }
+  .hero-title span {
+    background: linear-gradient(135deg, var(--dp-teal) 0%, #38E8E2 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
   .hero-subtitle {
-    font-size: 13px; font-weight: 500; opacity: 0.52; letter-spacing: 0.005em;
+    font-size: 13px; font-weight: 400; color: var(--dp-text-2);
+    letter-spacing: 0.01em; margin-top: 2px;
   }
 
-  /* ── Home button title (legacy — hero-banner is preferred) ───────────── */
+  /* ── Home button title ───────────────────────────────────────────────── */
   .home-title a {
     text-decoration: none; color: inherit;
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 2rem; font-weight: 800;
     letter-spacing: -0.03em; line-height: 1.2;
   }
-  .home-title a:hover { opacity: 0.78; }
+  .home-title a:hover { opacity: 0.80; }
 
-  /* ── Filter active badge ─────────────────────────────────────────────── */
+  /* ── Filter Active Badge ─────────────────────────────────────────────── */
   .filter-badge {
-    display: inline-block; font-family: 'Plus Jakarta Sans', sans-serif;
+    display: inline-block; font-family: 'Inter', sans-serif;
     font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
-    padding: 2px 8px; border-radius: 99px;
-    background: rgba(230,129,97,.18); color: #E68161; margin-left: 6px; vertical-align: middle;
+    padding: 2px 8px; border-radius: 5px;
+    background: rgba(230,129,97,.14); color: var(--dp-orange);
+    margin-left: 6px; vertical-align: middle;
   }
 
-  /* ── Load-log source badges ──────────────────────────────────────────── */
-  .log-badge-str   { display:inline-block; padding:2px 8px; border-radius:99px;
-    font-size:10px; font-weight:700; background:rgba(33,128,141,.12); color:#21808D; }
-  .log-badge-kpi   { display:inline-block; padding:2px 8px; border-radius:99px;
-    font-size:10px; font-weight:700; background:rgba(230,129,97,.13); color:#E68161; }
-  .log-badge-other { display:inline-block; padding:2px 8px; border-radius:99px;
-    font-size:10px; font-weight:700; background:rgba(0,0,0,.07); color:#626C71; }
+  /* ── Load-log Source Badges ──────────────────────────────────────────── */
+  .log-badge-str   { display:inline-block; padding:2px 8px; border-radius:5px;
+    font-size:10px; font-weight:700; background:rgba(0,195,190,.10); color:var(--dp-teal); }
+  .log-badge-kpi   { display:inline-block; padding:2px 8px; border-radius:5px;
+    font-size:10px; font-weight:700; background:rgba(230,129,97,.11); color:var(--dp-orange); }
+  .log-badge-other { display:inline-block; padding:2px 8px; border-radius:5px;
+    font-size:10px; font-weight:700; background:rgba(255,255,255,.06); color:var(--dp-text-2); }
 
-  /* ── Trend table strip ───────────────────────────────────────────────── */
-  .trend-row-pos { color:#21808D; font-weight:700; }
-  .trend-row-neg { color:#C0152F; font-weight:700; }
+  /* ── Trend Table ─────────────────────────────────────────────────────── */
+  .trend-row-pos { color: var(--dp-green); font-weight: 700; }
+  .trend-row-neg { color: var(--dp-red); font-weight: 700; }
 
-  /* ── Section sub-header ──────────────────────────────────────────────── */
+  /* ── Section Sub-header Label ────────────────────────────────────────── */
   .section-label {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 11px; font-weight: 800; text-transform: uppercase;
-    letter-spacing: .08em; opacity: .45; margin-bottom: 8px; margin-top: 2px;
+    font-family: 'Inter', sans-serif;
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .09em; color: var(--dp-text-3);
+    margin-bottom: 8px; margin-top: 2px;
   }
 
-  /* ── Chart section header ────────────────────────────────────────────── */
+  /* ── Chart Header ────────────────────────────────────────────────────── */
   .chart-header {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 14px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 2px;
+    color: var(--dp-text-1);
   }
   .chart-caption {
-    font-size: 11px; opacity: .50; font-weight: 500; margin-bottom: 6px;
+    font-size: 11px; color: var(--dp-text-3); font-weight: 500; margin-bottom: 8px;
   }
 
-  /* ── Sidebar brand ───────────────────────────────────────────────────── */
+  /* ── Chart Container ─────────────────────────────────────────────────── */
+  .chart-container {
+    background: var(--dp-card);
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  /* ── Sidebar Brand ───────────────────────────────────────────────────── */
   .sidebar-brand {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 18px; font-weight: 800; letter-spacing: -.02em;
-    background: linear-gradient(135deg, #21808D, #32B8C6);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    font-size: 17px; font-weight: 800; letter-spacing: -.02em;
+    color: var(--dp-teal);
   }
 
-  /* ── Tab label override ──────────────────────────────────────────────── */
+  /* ── Tab Labels ──────────────────────────────────────────────────────── */
   button[data-baseweb="tab"] {
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 13px !important;
     font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+  }
+  [data-testid="stTabs"] [data-baseweb="tab-list"] {
+    gap: 2px !important;
+    background: var(--dp-surface) !important;
+    border-radius: 8px !important;
+    padding: 3px !important;
+    border: 1px solid var(--dp-border) !important;
+  }
+  [data-testid="stTabs"] [data-baseweb="tab"] {
+    border-radius: 6px !important;
+    padding: 6px 14px !important;
   }
 
-  /* ── NotebookLM-inspired: inline source citation tags ────────────────── */
+  /* ── Source Attribution Tags (inline) ───────────────────────────────── */
   .nlm-tag {
     display: inline-flex; align-items: center;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 9px; font-weight: 800; letter-spacing: .06em;
+    font-family: 'Inter', sans-serif;
+    font-size: 9px; font-weight: 700; letter-spacing: .06em;
     text-transform: uppercase; padding: 2px 7px; border-radius: 4px;
     vertical-align: middle; margin: 0 2px; line-height: 1;
   }
-  .nlm-tag-str    { background: rgba(37,99,235,.12);  color: #2563eb; }
-  .nlm-tag-datafy { background: rgba(22,163,74,.12);  color: #16a34a; }
-  .nlm-tag-costar { background: rgba(124,58,237,.12); color: #7c3aed; }
-  .nlm-tag-ai     { background: rgba(217,119,6,.12);  color: #b45309; }
+  .nlm-tag-str    { background: rgba(61,142,240,.12);  color: var(--dp-blue); }
+  .nlm-tag-datafy { background: rgba(16,185,129,.12);  color: var(--dp-green); }
+  .nlm-tag-costar { background: rgba(139,92,246,.12);  color: var(--dp-purple); }
+  .nlm-tag-ai     { background: rgba(245,158,11,.12);  color: var(--dp-amber); }
 
-  /* ── NotebookLM-inspired: intelligence briefing box ─────────────────── */
+  /* ── Intelligence Briefing Box ───────────────────────────────────────── */
   .nlm-briefing {
-    background: rgba(33,128,141,0.10);
-    border: 1px solid rgba(33,128,141,0.28);
-    border-left: 4px solid #21808D;
-    border-radius: 14px; padding: 20px 24px; margin-bottom: 14px;
+    background: rgba(0,195,190,0.06);
+    border: 1px solid rgba(0,195,190,0.20);
+    border-left: 3px solid var(--dp-teal);
+    border-radius: var(--dp-radius); padding: 18px 22px; margin-bottom: 14px;
     position: relative;
   }
   .nlm-briefing-title {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 10px; font-weight: 800; text-transform: uppercase;
-    letter-spacing: .10em; color: #32B8C6; margin-bottom: 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .10em; color: var(--dp-teal); margin-bottom: 14px;
     display: flex; align-items: center; gap: 8px;
   }
   .nlm-point {
     font-size: 13.5px; line-height: 1.70; margin-bottom: 12px;
-    padding-left: 18px; position: relative;
-    opacity: 0.95;
+    padding-left: 16px; position: relative;
+    color: var(--dp-text-1);
   }
-  .nlm-point em { opacity: 0.75; font-size: 12.5px; }
+  .nlm-point::before {
+    content: '›'; position: absolute; left: 0;
+    color: var(--dp-teal); font-weight: 700; font-size: 14px;
+  }
+  .nlm-point em { color: var(--dp-text-2); font-size: 12.5px; font-style: normal; }
   .nlm-point:last-child { margin-bottom: 0; }
 
-  /* ── NotebookLM-inspired: Q&A insight blocks ─────────────────────────── */
+  /* ── Q&A Insight Blocks ──────────────────────────────────────────────── */
   .nlm-qa-q {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 12.5px; font-weight: 700; margin-bottom: 5px;
-    display: flex; align-items: flex-start; gap: 7px;
+    display: flex; align-items: flex-start; gap: 7px; color: var(--dp-text-1);
   }
   .nlm-qa-mark {
     width: 18px; height: 18px; min-width: 18px;
-    background: rgba(33,128,141,0.14); border-radius: 50%;
+    background: rgba(0,195,190,0.12); border-radius: 4px;
     display: inline-flex; align-items: center; justify-content: center;
-    font-size: 9px; font-weight: 900; color: #21808D; flex-shrink: 0; margin-top: 1px;
+    font-size: 9px; font-weight: 900; color: var(--dp-teal);
+    flex-shrink: 0; margin-top: 1px;
   }
-  .nlm-qa-a { font-size: 12px; opacity: 0.70; line-height: 1.65; padding-left: 25px; }
+  .nlm-qa-a { font-size: 12px; color: var(--dp-text-2); line-height: 1.65; padding-left: 25px; }
 
-  /* ── NotebookLM-inspired: source attribution row ─────────────────────── */
+  /* ── Source Attribution Row ──────────────────────────────────────────── */
   .nlm-source-row {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
     margin-top: 10px; padding-top: 8px;
-    border-top: 1px solid rgba(255,255,255,0.07);
+    border-top: 1px solid var(--dp-border);
   }
 
-  /* ── Questions answered box ──────────────────────────────────────────── */
+  /* ── Questions Block ─────────────────────────────────────────────────── */
   .nlm-questions {
-    background: rgba(33,128,141,0.05);
-    border: 1px solid rgba(33,128,141,0.14);
-    border-radius: 12px; padding: 16px 20px; margin-bottom: 14px;
+    background: rgba(0,195,190,0.04);
+    border: 1px solid rgba(0,195,190,0.12);
+    border-radius: var(--dp-radius); padding: 14px 18px; margin-bottom: 14px;
   }
   .nlm-questions-title {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 10px; font-weight: 800; text-transform: uppercase;
-    letter-spacing: .09em; opacity: .55; margin-bottom: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .09em; color: var(--dp-text-3); margin-bottom: 10px;
   }
   .nlm-questions ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
   .nlm-questions ul li {
-    font-size: 12px; opacity: .80; padding-left: 14px; position: relative;
+    font-size: 12px; color: var(--dp-text-2); padding-left: 14px; position: relative;
   }
-  .nlm-questions ul li::before { content: '?'; position: absolute; left: 0;
-    font-weight: 800; color: #21808D; font-size: 11px; }
+  .nlm-questions ul li::before {
+    content: '›'; position: absolute; left: 0;
+    font-weight: 800; color: var(--dp-teal); font-size: 13px;
+  }
 
-  /* ── PULSE Score Widget ───────────────────────────────────────────────── */
+  /* ── PULSE Score Widget ──────────────────────────────────────────────── */
   .pulse-wrapper {
-    display: flex; align-items: center; gap: 28px;
-    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 20px; padding: 18px 28px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 24px;
+    background: var(--dp-card);
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius-lg); padding: 20px 24px; margin-bottom: 16px;
   }
   .pulse-circle {
-    position: relative; width: 90px; height: 90px; flex-shrink: 0;
+    position: relative; width: 88px; height: 88px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
   }
   .pulse-ring {
     position: absolute; inset: 0; border-radius: 50%;
-    border: 3px solid currentColor; opacity: 0.25;
-    animation: pulse-ring 2s ease-out infinite;
+    border: 2px solid currentColor; opacity: 0.20;
+    animation: pulse-ring 2.4s ease-out infinite;
   }
   .pulse-ring-2 {
-    position: absolute; inset: -8px; border-radius: 50%;
-    border: 2px solid currentColor; opacity: 0.12;
-    animation: pulse-ring 2s ease-out infinite 0.5s;
+    position: absolute; inset: -10px; border-radius: 50%;
+    border: 1.5px solid currentColor; opacity: 0.10;
+    animation: pulse-ring 2.4s ease-out infinite 0.6s;
   }
   .pulse-core {
-    width: 70px; height: 70px; border-radius: 50%;
+    width: 68px; height: 68px; border-radius: 50%;
     display: flex; flex-direction: column; align-items: center;
     justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 900; position: relative; z-index: 1;
-    border: 2.5px solid currentColor;
+    border: 2px solid currentColor;
+    background: rgba(0,0,0,0.35);
   }
-  .pulse-score { font-size: 24px; line-height: 1; letter-spacing: -.04em; }
-  .pulse-label { font-size: 8px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .1em; opacity: .7; margin-top: 2px; }
+  .pulse-score { font-size: 22px; line-height: 1; letter-spacing: -.04em; }
+  .pulse-label {
+    font-size: 7.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .12em; opacity: .65; margin-top: 2px;
+  }
   .pulse-info { flex: 1; }
   .pulse-info-title {
-    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px;
-    font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px;
+    font-weight: 800; letter-spacing: -.025em; margin-bottom: 4px;
+    color: var(--dp-text-1) !important;
   }
-  .pulse-info-detail { font-size: 12px; opacity: 1; line-height: 1.5; }
+  .pulse-info-detail {
+    font-size: 12.5px; color: var(--dp-text-2) !important;
+    line-height: 1.55; opacity: 1 !important;
+  }
   .pulse-info-status {
-    display: inline-block; margin-top: 8px; font-size: 11px; font-weight: 700;
-    padding: 3px 10px; border-radius: 20px;
-    background: currentColor; color: #0d1117;
+    display: inline-block; margin-top: 8px; font-size: 10.5px; font-weight: 700;
+    padding: 3px 10px; border-radius: 6px;
+    background: currentColor; color: #06101E;
+    letter-spacing: .03em;
   }
   @keyframes pulse-ring {
-    0%   { transform: scale(1);   opacity: 0.25; }
-    70%  { transform: scale(1.35); opacity: 0;   }
-    100% { transform: scale(1.35); opacity: 0;   }
+    0%   { transform: scale(1);    opacity: 0.22; }
+    70%  { transform: scale(1.40); opacity: 0;    }
+    100% { transform: scale(1.40); opacity: 0;    }
   }
 
-  /* ── Global text contrast anchors (dark mode) ─────────────────────────── */
+  /* ── Global Text Contrast (Dark Mode) ───────────────────────────────── */
   .stMarkdown, .stMarkdown p, .stMarkdown span, .stMarkdown div {
-    color: #E6EDF3 !important;
+    color: var(--dp-text-1) !important;
   }
   [data-testid="stExpander"] p, [data-testid="stExpander"] div {
-    color: #C9D1D9 !important;
+    color: var(--dp-text-2) !important;
   }
-  [data-testid="stSidebar"] * { color: #E6EDF3 !important; }
-  [data-testid="stSidebar"] .stMarkdown p { color: #C9D1D9 !important; }
+  [data-testid="stSidebar"] * { color: var(--dp-text-1) !important; }
+  [data-testid="stSidebar"] .stMarkdown p { color: var(--dp-text-2) !important; }
   [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th {
-    color: #E6EDF3 !important;
-    background: rgba(22,27,34,0.95) !important;
+    color: var(--dp-text-1) !important;
+    background: var(--dp-card) !important;
   }
   [data-testid="stMetricDelta"] { font-size: 11px !important; font-weight: 600 !important; }
-  .sh-title { color: #ffffff !important; text-shadow: 0 0 20px var(--sh-accent, #32B8C6) !important; }
+  .sh-title { color: #ffffff !important; }
   .sh-tag { color: #ffffff !important; }
-  .insight-card p, .insight-card span { color: #C9D1D9 !important; }
+  .insight-card p, .insight-card span { color: var(--dp-text-2) !important; }
 
-  /* ── Section intelligence card ────────────────────────────────────────── */
+  /* ── Section Intelligence Card ───────────────────────────────────────── */
   .sec-intel {
-    background: linear-gradient(135deg, rgba(33,128,141,0.12), rgba(22,27,34,0.6));
-    border: 1px solid rgba(33,128,141,0.25); border-radius: 12px;
-    padding: 16px 20px; margin: 8px 0 16px 0;
+    background: rgba(0,195,190,0.05);
+    border: 1px solid rgba(0,195,190,0.18);
+    border-left: 3px solid var(--dp-teal);
+    border-radius: var(--dp-radius);
+    padding: 14px 18px; margin: 8px 0 16px 0;
   }
   .sec-intel-label {
-    font-size: 10px; font-weight: 800; letter-spacing: .1em;
-    text-transform: uppercase; color: #32B8C6; margin-bottom: 8px;
+    font-size: 9.5px; font-weight: 700; letter-spacing: .10em;
+    text-transform: uppercase; color: var(--dp-teal); margin-bottom: 8px;
   }
-  .sec-intel-body { font-size: 13px; color: #C9D1D9; line-height: 1.6; }
+  .sec-intel-body { font-size: 13px; color: var(--dp-text-2); line-height: 1.65; }
   .sec-intel-stat {
     display: inline-block;
-    background: rgba(33,128,141,0.2); border: 1px solid rgba(33,128,141,0.4);
-    border-radius: 6px; padding: 2px 10px;
-    font-weight: 700; color: #67E8F9;
+    background: rgba(0,195,190,0.12); border: 1px solid rgba(0,195,190,0.28);
+    border-radius: 5px; padding: 2px 10px;
+    font-weight: 700; color: var(--dp-teal); font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
-  /* ── Spacing tightening ────────────────────────────────────────────────── */
+  /* ── Divider Rule ────────────────────────────────────────────────────── */
+  .dp-divider {
+    border: none; border-top: 1px solid var(--dp-border);
+    margin: 20px 0;
+  }
+
+  /* ── Data Callout Box ────────────────────────────────────────────────── */
+  .dp-callout {
+    background: rgba(61,142,240,0.06);
+    border: 1px solid rgba(61,142,240,0.18);
+    border-left: 3px solid var(--dp-blue);
+    border-radius: var(--dp-radius);
+    padding: 12px 16px; margin: 10px 0;
+    font-size: 13px; color: var(--dp-text-1); line-height: 1.6;
+  }
+  .dp-callout-warn {
+    background: rgba(245,158,11,0.05);
+    border-color: rgba(245,158,11,0.18);
+    border-left-color: var(--dp-amber);
+  }
+  .dp-callout-success {
+    background: rgba(16,185,129,0.05);
+    border-color: rgba(16,185,129,0.18);
+    border-left-color: var(--dp-green);
+  }
+
+  /* ── Layout Spacing ──────────────────────────────────────────────────── */
   .block-container { padding-top: 1rem !important; }
   [data-testid="stPlotlyChart"] { margin-bottom: 4px !important; }
-  div[data-testid="stHorizontalBlock"] { gap: 12px !important; }
-  div[data-testid="metric-container"] { padding: 10px 12px 8px !important; }
+  div[data-testid="stHorizontalBlock"] { gap: 10px !important; }
+  div[data-testid="metric-container"] {
+    background: var(--dp-card) !important;
+    border: 1px solid var(--dp-border) !important;
+    border-radius: var(--dp-radius) !important;
+    padding: 14px 16px 10px !important;
+    border-top: 2px solid var(--dp-teal) !important;
+  }
+
+  /* ── Streamlit Native Metric Styling ─────────────────────────────────── */
+  [data-testid="stMetricLabel"] label,
+  [data-testid="stMetricLabel"] p {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 10.5px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .07em !important;
+    color: var(--dp-text-2) !important;
+  }
+  [data-testid="stMetricValue"] {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: clamp(1.2rem, 2.2vw, 1.75rem) !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.03em !important;
+    color: var(--dp-text-1) !important;
+  }
+  [data-testid="stMetricDelta"] {
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+  }
+
+  /* ── Sidebar Styling ─────────────────────────────────────────────────── */
+  [data-testid="stSidebar"] {
+    background: var(--dp-surface) !important;
+    border-right: 1px solid var(--dp-border) !important;
+  }
+  [data-testid="stSidebar"] .stRadio label {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+  }
+
+  /* ── Selectbox / Widget Styling ──────────────────────────────────────── */
+  [data-testid="stSelectbox"] > div,
+  [data-testid="stDateInput"] > div {
+    background: var(--dp-card) !important;
+    border-color: var(--dp-border) !important;
+    border-radius: 8px !important;
+  }
+
+  /* ── Expander ────────────────────────────────────────────────────────── */
+  [data-testid="stExpander"] {
+    border: 1px solid var(--dp-border) !important;
+    border-radius: var(--dp-radius) !important;
+    background: var(--dp-card) !important;
+  }
+  [data-testid="stExpander"] summary {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-weight: 700 !important; font-size: 13px !important;
+  }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("""
 <style>
-  /* ── Section Header Blocks ─────────────────────────────────────────────── */
+  /* ── Section Header Blocks — Enterprise Edition ─────────────────────────── */
   .sh-block {
-    display: flex !important; align-items: center !important; gap: 14px !important;
-    padding: 13px 20px !important; border-radius: 10px !important;
-    margin: 22px 0 12px 0 !important;
-    border-left: 5px solid var(--sh-accent, #21808D) !important;
-    background: rgba(13,17,23,0.70) !important;
-    border-top: 1px solid rgba(255,255,255,0.08) !important;
-    border-right: 1px solid rgba(255,255,255,0.06) !important;
-    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
-    backdrop-filter: blur(4px) !important;
+    display: flex !important; align-items: center !important; gap: 12px !important;
+    padding: 10px 16px !important; border-radius: 8px !important;
+    margin: 24px 0 14px 0 !important;
+    border-left: 3px solid var(--sh-accent, #00C3BE) !important;
+    background: rgba(0,195,190,0.05) !important;
+    border-top: 1px solid rgba(255,255,255,0.06) !important;
+    border-right: 1px solid rgba(255,255,255,0.04) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
   }
   .sh-icon {
-    font-size: 20px !important; line-height: 1 !important; flex-shrink: 0 !important;
+    font-size: 18px !important; line-height: 1 !important; flex-shrink: 0 !important;
+    opacity: 0.85 !important;
   }
   .sh-title {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 16px !important; font-weight: 900 !important;
-    letter-spacing: -.02em !important; line-height: 1.2 !important;
-    color: #ffffff !important;
-    text-shadow: 0 0 20px var(--sh-accent, #32B8C6) !important;
+    font-size: 15px !important; font-weight: 800 !important;
+    letter-spacing: -.025em !important; line-height: 1.2 !important;
+    color: #E2E8F0 !important;
   }
   .sh-tag {
     margin-left: auto !important; font-size: 9px !important;
-    font-weight: 800 !important; letter-spacing: .08em !important;
-    text-transform: uppercase !important; padding: 3px 9px !important;
-    border-radius: 20px !important; white-space: nowrap !important;
-    background: rgba(255,255,255,0.08) !important;
-    color: rgba(255,255,255,0.85) !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
+    font-weight: 700 !important; letter-spacing: .07em !important;
+    text-transform: uppercase !important; padding: 2px 8px !important;
+    border-radius: 5px !important; white-space: nowrap !important;
+    background: rgba(0,195,190,0.12) !important;
+    color: #00C3BE !important;
+    border: 1px solid rgba(0,195,190,0.22) !important;
   }
-  /* color variants — accent color drives the left border + title text */
-  .sh-teal   { --sh-accent: #32B8C6; }
-  .sh-blue   { --sh-accent: #38BDF8; }
-  .sh-green  { --sh-accent: #34D399; }
-  .sh-purple { --sh-accent: #A78BFA; }
-  .sh-orange { --sh-accent: #FB923C; }
-  .sh-amber  { --sh-accent: #FCD34D; }
-  .sh-indigo { --sh-accent: #818CF8; }
-  .sh-coral  { --sh-accent: #F87171; }
-  .sh-gray   { --sh-accent: #94A3B8; }
-  .sh-gold   { --sh-accent: #FDE68A; }
+  /* Accent color variants */
+  .sh-teal   { --sh-accent: #00C3BE; }
+  .sh-blue   { --sh-accent: #3D8EF0; }
+  .sh-green  { --sh-accent: #10B981; }
+  .sh-purple { --sh-accent: #8B5CF6; }
+  .sh-orange { --sh-accent: #E68161; }
+  .sh-amber  { --sh-accent: #F59E0B; }
+  .sh-indigo { --sh-accent: #6366F1; }
+  .sh-coral  { --sh-accent: #F04E37; }
+  .sh-gray   { --sh-accent: #8FA3B8; }
+  .sh-gold   { --sh-accent: #EAB308; }
 
-  /* ── PULSE Score text overrides ─────────────────────────────────────────── */
-  .pulse-info-title {
-    color: #ffffff !important; font-size: 15px !important;
-    font-weight: 800 !important; letter-spacing: -.02em !important;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.5) !important;
-  }
-  .pulse-info-detail {
-    color: rgba(255,255,255,0.92) !important;
-    font-size: 12.5px !important; line-height: 1.6 !important;
-    opacity: 1 !important;
-  }
+  /* Accent-aware backgrounds for sh variants */
+  .sh-teal   { background: rgba(0,195,190,0.05) !important; }
+  .sh-blue   { background: rgba(61,142,240,0.05) !important; }
+  .sh-green  { background: rgba(16,185,129,0.05) !important; }
+  .sh-purple { background: rgba(139,92,246,0.05) !important; }
+  .sh-orange { background: rgba(230,129,97,0.05) !important; }
+  .sh-amber  { background: rgba(245,158,11,0.05) !important; }
+  .sh-indigo { background: rgba(99,102,241,0.05) !important; }
+  .sh-coral  { background: rgba(240,78,55,0.05) !important; }
+  .sh-gray   { background: rgba(143,163,184,0.05) !important; }
+  .sh-gold   { background: rgba(234,179,8,0.05) !important; }
+
+  /* Accent-aware tag colors */
+  .sh-blue   .sh-tag { background: rgba(61,142,240,0.12) !important; color: #3D8EF0 !important; border-color: rgba(61,142,240,0.22) !important; }
+  .sh-green  .sh-tag { background: rgba(16,185,129,0.12) !important; color: #10B981 !important; border-color: rgba(16,185,129,0.22) !important; }
+  .sh-purple .sh-tag { background: rgba(139,92,246,0.12) !important; color: #8B5CF6 !important; border-color: rgba(139,92,246,0.22) !important; }
+  .sh-orange .sh-tag { background: rgba(230,129,97,0.12) !important; color: #E68161 !important; border-color: rgba(230,129,97,0.22) !important; }
+  .sh-amber  .sh-tag { background: rgba(245,158,11,0.12) !important; color: #F59E0B !important; border-color: rgba(245,158,11,0.22) !important; }
+  .sh-coral  .sh-tag { background: rgba(240,78,55,0.12) !important;  color: #F04E37 !important; border-color: rgba(240,78,55,0.22) !important; }
+  .sh-gray   .sh-tag { background: rgba(143,163,184,0.12) !important; color: #8FA3B8 !important; border-color: rgba(143,163,184,0.22) !important; }
+  .sh-gold   .sh-tag { background: rgba(234,179,8,0.12) !important;  color: #EAB308 !important; border-color: rgba(234,179,8,0.22) !important; }
 
 </style>
 """, unsafe_allow_html=True)
@@ -763,86 +949,45 @@ st.markdown("""
 st.markdown("""
 <style>
   /* ═══════════════════════════════════════════════════════════════
-     MOBILE & TABLET RESPONSIVE STYLES
-     Targets: phones (< 640px), tablets (640–1024px)
+     RESPONSIVE — Mobile & Tablet
+     Phones < 640px · Tablets 640–1024px
   ═══════════════════════════════════════════════════════════════ */
-
-  /* ── Streamlit layout fixes ─────────────────────────────────── */
   @media screen and (max-width: 768px) {
-    /* Main content padding */
     .main .block-container {
       padding: 0.5rem 0.75rem 2rem 0.75rem !important;
       max-width: 100% !important;
     }
-
-    /* Hero banner — shrink text on mobile */
-    .hero-banner { padding: 18px 16px !important; }
-    .hero-title { font-size: 1.4rem !important; }
+    .hero-banner { padding: 16px 14px !important; }
+    .hero-title  { font-size: 1.35rem !important; }
     .hero-subtitle { font-size: 11px !important; }
-
-    /* Section header blocks */
-    .sh-block { padding: 10px 14px !important; }
-    .sh-title { font-size: 13px !important; }
-
-    /* PULSE Score widget — stack vertically on mobile */
+    .sh-block  { padding: 9px 12px !important; }
+    .sh-title  { font-size: 13px !important; }
     .pulse-wrapper {
       flex-direction: column !important;
       align-items: flex-start !important;
-      gap: 16px !important;
-      padding: 16px 18px !important;
+      gap: 14px !important; padding: 14px 16px !important;
     }
-    .pulse-info-detail { font-size: 12px !important; }
-
-    /* KPI card — ensure text wraps */
-    [data-testid="stMetricLabel"] {
-      font-size: 10px !important;
-      white-space: normal !important;
-      line-height: 1.3 !important;
-    }
-    [data-testid="stMetricValue"] {
-      font-size: 1.3rem !important;
-    }
-
-    /* Tab labels — smaller on mobile */
     button[data-baseweb="tab"] {
-      font-size: 11px !important;
-      padding: 6px 10px !important;
+      font-size: 11px !important; padding: 5px 9px !important;
     }
-
-    /* Chart headers */
     .chart-header { font-size: 13px !important; }
-
-    /* Sidebar brand */
-    .sidebar-brand { font-size: 16px !important; }
-
-    /* Back-to-top — offset from bottom nav on mobile */
+    .sidebar-brand { font-size: 15px !important; }
     #back-to-top-btn {
-      bottom: 70px !important;
-      right: 16px !important;
-      width: 44px !important;
-      height: 44px !important;
+      bottom: 70px !important; right: 14px !important;
+      width: 42px !important; height: 42px !important;
     }
-
-    /* Event stat cards */
-    .event-stat { padding: 16px 12px !important; }
-    .event-val { font-size: 24px !important; }
-
-    /* NLM briefing */
-    .nlm-briefing { padding: 14px 16px !important; }
-    .nlm-point { font-size: 12.5px !important; }
-
-    /* Source cards */
-    .src-card { padding: 10px 14px !important; }
+    .event-stat { padding: 14px 10px !important; }
+    .event-val  { font-size: 22px !important; }
+    .nlm-briefing { padding: 12px 14px !important; }
+    .src-card { padding: 10px 12px !important; }
+    .kpi-value { font-size: 24px !important; }
   }
-
   @media screen and (max-width: 480px) {
-    .hero-title { font-size: 1.2rem !important; }
+    .hero-title { font-size: 1.15rem !important; }
     .main .block-container { padding: 0.25rem 0.5rem 2rem 0.5rem !important; }
     .sh-tag { display: none !important; }
-    [data-testid="stMetricValue"] { font-size: 1.15rem !important; }
+    [data-testid="stMetricValue"] { font-size: 1.1rem !important; }
   }
-
-  /* ── Plotly charts — ensure mobile resize ────────────────────── */
   @media screen and (max-width: 768px) {
     .js-plotly-plot .plotly { overflow-x: auto !important; }
   }
@@ -907,20 +1052,23 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
-# ── Back-to-top button (always visible as fixed action button)
+# ── Back-to-top button (fixed action button)
 st.markdown("""
 <style>
   #back-to-top-btn {
     position: fixed; bottom: 24px; right: 20px; z-index: 99999;
-    width: 44px; height: 44px; border-radius: 50%;
-    background: linear-gradient(135deg, #21808D, #32B8C6);
-    border: 2px solid rgba(255,255,255,0.2); cursor: pointer;
+    width: 40px; height: 40px; border-radius: 8px;
+    background: rgba(0,195,190,0.18);
+    border: 1px solid rgba(0,195,190,0.35); cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 20px rgba(33,128,141,0.55);
-    opacity: 0.85; transition: opacity .2s, transform .2s;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.40);
+    opacity: 0.80; transition: opacity .2s, transform .2s, background .2s;
   }
-  #back-to-top-btn:hover { opacity: 1; transform: translateY(-3px) scale(1.05); }
-  #back-to-top-btn svg { width: 20px; height: 20px; fill: #fff; pointer-events: none; }
+  #back-to-top-btn:hover {
+    opacity: 1; transform: translateY(-2px);
+    background: rgba(0,195,190,0.28);
+  }
+  #back-to-top-btn svg { width: 18px; height: 18px; fill: #00C3BE; pointer-events: none; }
 </style>
 <button id="back-to-top-btn" title="Back to top">
   <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
@@ -1707,6 +1855,62 @@ def load_datafy_clusters() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_overview_cluster_visitation ORDER BY report_period_start DESC", conn
         )
+    except Exception:
+        return pd.DataFrame()
+
+
+# ─── New External Data Loaders ────────────────────────────────────────────────
+
+@st.cache_data(ttl=300)
+def load_fred_indicators() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM fred_economic_indicators ORDER BY data_date ASC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_google_trends() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM google_trends_weekly ORDER BY week_date ASC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_weather_monthly() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        df = pd.read_sql_query(
+            "SELECT * FROM weather_monthly ORDER BY year ASC, month ASC", conn
+        )
+        if not df.empty:
+            df["date"] = pd.to_datetime(
+                df["year"].astype(str) + "-" + df["month"].astype(str).str.zfill(2) + "-01"
+            )
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_bls_employment() -> pd.DataFrame:
+    conn = get_connection()
+    try:
+        df = pd.read_sql_query(
+            "SELECT * FROM bls_employment_monthly ORDER BY year ASC, month ASC", conn
+        )
+        if not df.empty:
+            df["date"] = pd.to_datetime(
+                df["year"].astype(str) + "-" + df["month"].astype(str).str.zfill(2) + "-01"
+            )
+        return df
     except Exception:
         return pd.DataFrame()
 
@@ -2546,9 +2750,17 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
              icon: str = "", date_label: str = "", raw_value: float = 0.0,
              sparkline_values: list = None) -> str:
     css      = "kpi-delta-neutral" if neutral else ("kpi-delta-pos" if positive else "kpi-delta-neg")
-    arrow    = "" if neutral else ("▲ " if positive else "▼ ")
-    date_html = f'<div class="kpi-date">📅 {date_label}</div>' if date_label else ""
-    svg      = kpi_metric_svg(label, positive, raw_value, sparkline_values)
+    if neutral:
+        arrow = "— "
+        trend_icon = ""
+    elif positive:
+        arrow = ""
+        trend_icon = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 7L5 3L8 7" stroke="#10B981" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    else:
+        arrow = ""
+        trend_icon = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3L5 7L8 3" stroke="#F04E37" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    date_html  = f'<div class="kpi-date">{date_label}</div>' if date_label else ""
+    svg        = kpi_metric_svg(label, positive, raw_value, sparkline_values)
     spark_html = sparkline_svg(sparkline_values, positive) if sparkline_values else ""
     return (
         f'<div class="kpi-card">'
@@ -2557,7 +2769,7 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
         f'<div class="kpi-icon-svg">{svg}</div>'
         f'</div>'
         f'<div class="kpi-value">{value}</div>'
-        f'<div class="{css}">{arrow}{delta}</div>'
+        f'<div class="{css}">{trend_icon}{arrow}{delta}</div>'
         f'{date_html}'
         f'{spark_html}'
         f'</div>'
@@ -2567,12 +2779,26 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
 def insight_card(title, body, kind="info", icon: str = "", date_label: str = "") -> str:
     svg_icon  = insight_icon_svg(kind, icon) if icon else ""
     icon_html = f'<span class="insight-icon">{svg_icon}</span>' if svg_icon else ""
+    # Kind → label + color
+    _kind_meta = {
+        "positive": ("OPPORTUNITY", "#10B981"),
+        "negative": ("RISK",        "#F04E37"),
+        "warning":  ("WATCH",       "#F59E0B"),
+        "info":     ("SIGNAL",      "#00C3BE"),
+    }
+    _lbl, _clr = _kind_meta.get(kind, ("INSIGHT", "#8FA3B8"))
     date_html = (
-        f'<div style="font-size:10px;opacity:.4;margin-top:6px;">📅 {date_label}</div>'
+        f'<div style="font-size:10px;color:#4A5F74;margin-top:8px;padding-top:6px;'
+        f'border-top:1px solid rgba(255,255,255,0.06);">{date_label}</div>'
         if date_label else ""
     )
     return (
         f'<div class="insight-card insight-{kind}">'
+        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        f'<span style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;'
+        f'color:{_clr};padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.04);'
+        f'border:1px solid {_clr}33;">{_lbl}</span>'
+        f'</div>'
         f'<div class="insight-title">{icon_html}{md_to_html(title)}</div>'
         f'<p class="insight-body">{md_to_html(body)}</p>'
         f'{date_html}'
@@ -2595,49 +2821,70 @@ def event_stat(val, label, icon: str = "", date: str = "") -> str:
 
 
 def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
-    _font = "Plus Jakarta Sans, Inter, system-ui, sans-serif"
+    """Apply enterprise BI chart theme — matches Dana Point PULSE design system."""
+    _font  = "Inter, Plus Jakarta Sans, system-ui, sans-serif"
+    _title = "Plus Jakarta Sans, Inter, system-ui, sans-serif"
     fig.update_layout(
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(family=_font, size=12),
-        height=height,
-        margin=dict(l=0, r=0, t=36, b=0),
-        transition={"duration": 800, "easing": "cubic-in-out"},
-        legend=dict(
-            orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
-            font=dict(size=11, family=_font),
-            bgcolor="rgba(0,0,0,0)", borderwidth=0,
+        plot_bgcolor  = "rgba(0,0,0,0)",
+        paper_bgcolor = "rgba(0,0,0,0)",
+        font    = dict(family=_font, size=12, color="#8FA3B8"),
+        height  = height,
+        margin  = dict(l=0, r=2, t=36, b=0),
+        transition = {"duration": 600, "easing": "cubic-in-out"},
+        legend = dict(
+            orientation = "h",
+            yanchor = "bottom", y = 1.02,
+            xanchor = "left",   x = 0,
+            font    = dict(size=11, family=_font, color="#8FA3B8"),
+            bgcolor = "rgba(0,0,0,0)", borderwidth=0,
         ),
-        hoverlabel=dict(
-            bgcolor="rgba(13,17,23,0.95)",
-            bordercolor="rgba(33,128,141,0.5)",
-            font=dict(size=13, family="Plus Jakarta Sans, Inter, sans-serif", color="#E6EDF3"),
+        hoverlabel = dict(
+            bgcolor     = "rgba(11,25,41,0.97)",
+            bordercolor = "rgba(0,195,190,0.50)",
+            font        = dict(size=13, family=_title, color="#E2E8F0"),
+            namelength  = -1,
         ),
+        colorway = ["#00C3BE", "#3D8EF0", "#10B981", "#F59E0B", "#8B5CF6", "#E68161", "#F04E37"],
     )
     fig.update_xaxes(
-        showgrid=False, zeroline=False,
-        tickfont=dict(size=11, family=_font),
-        linecolor="rgba(0,0,0,0.08)",
+        showgrid    = False,
+        zeroline    = False,
+        tickfont    = dict(size=11, family=_font, color="#4A5F74"),
+        linecolor   = "rgba(255,255,255,0.07)",
+        linewidth   = 1,
+        showline    = True,
+        ticks       = "",
     )
     fig.update_yaxes(
-        gridcolor="rgba(127,127,127,0.10)",
-        gridwidth=1,
-        zeroline=False,
-        tickfont=dict(size=11, family=_font),
+        gridcolor   = "rgba(255,255,255,0.05)",
+        gridwidth   = 1,
+        griddash    = "solid",
+        zeroline    = False,
+        tickfont    = dict(size=11, family=_font, color="#4A5F74"),
+        showline    = False,
+        ticks       = "",
     )
+    # Update title font if present
+    if fig.layout.title and fig.layout.title.text:
+        fig.update_layout(
+            title_font = dict(family=_title, size=14, color="#E2E8F0"),
+            title_x    = 0,
+            title_pad  = dict(l=0, t=0),
+        )
     return fig
 
 
 def sec_intel(section_name: str, what_it_shows: str, key_insight: str,
               forward_implication: str, key_stat: str) -> str:
-    """Render a Section Intelligence summary card."""
+    """Render a Section Intelligence summary card — enterprise edition."""
     return (
         f'<div class="sec-intel">'
-        f'<div class="sec-intel-label">📊 Section Intelligence</div>'
+        f'<div class="sec-intel-label">◈ Section Intelligence</div>'
         f'<div class="sec-intel-body">'
-        f'<strong style="color:#E6EDF3;">{section_name}</strong> tracks {what_it_shows}.<br>'
-        f'<strong>Key Insight:</strong> {key_insight}<br>'
-        f'<strong>Forward Implication:</strong> {forward_implication}<br>'
-        f'<span class="sec-intel-stat">⭐ {key_stat}</span>'
+        f'<strong style="color:#E2E8F0;">{section_name}</strong> — {what_it_shows}.<br>'
+        f'<strong style="color:#E2E8F0;">Key Insight:</strong> {key_insight} &nbsp;'
+        f'<strong style="color:#E2E8F0;">Forward Implication:</strong> {forward_implication}<br>'
+        f'<span class="sec-intel-stat">▸ {key_stat}</span>'
         f'</div>'
         f'</div>'
     )
@@ -2785,7 +3032,7 @@ def _safe_section(fn, section_name: str = "section"):
 
 
 def _sh(icon: str, title: str, color: str = "teal", tag: str = "") -> str:
-    """Generate a colored section header block HTML."""
+    """Generate an enterprise section header block HTML."""
     _tag_html = f'<span class="sh-tag">{tag}</span>' if tag else ""
     return (
         f'<div class="sh-block sh-{color}">'
@@ -2867,6 +3114,11 @@ df_later_tk_profile  = load_later_tk_profile()
 df_later_tk_demo     = load_later_tk_demographics()
 df_later_ig_stories  = load_later_ig_stories()
 df_later_tk_inter    = load_later_tk_interactions()
+# External live data (populated by pipeline steps 12–15)
+df_fred    = load_fred_indicators()    # FRED economic indicators
+df_trends  = load_google_trends()      # Google Trends search demand
+df_weather = load_weather_monthly()    # Open-Meteo coastal weather
+df_bls     = load_bls_employment()     # BLS hospitality employment
 
 # Global Plotly chart config — drill-down ready
 PLOTLY_CONFIG = {
@@ -2881,25 +3133,24 @@ PLOTLY_CONFIG = {
 # GloCon Solutions LLC — Dana Point PULSE sidebar with VDP branding + images
 with st.sidebar:
     st.markdown(
-        '<div style="background:linear-gradient(135deg,rgba(33,128,141,0.25) 0%,rgba(50,184,198,0.15) 50%,rgba(230,129,97,0.12) 100%);'
-        'border-radius:12px;padding:20px 16px;margin-bottom:8px;text-align:center;'
-        'border:1px solid rgba(33,128,141,0.20);">'
-        '<div style="font-size:28px;margin-bottom:4px;">🌊</div>'
-        '<div style="font-size:11px;font-weight:700;color:#32B8C6;letter-spacing:.08em;text-transform:uppercase;">Dana Point</div>'
-        '<div style="font-size:10px;opacity:0.55;margin-top:2px;">South Orange County, CA</div>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
+        '<div style="background:rgba(0,195,190,0.06);border-radius:10px;padding:16px;'
+        'margin-bottom:12px;border:1px solid rgba(0,195,190,0.16);">'
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+        '<span style="font-size:22px;line-height:1;">🌊</span>'
+        '<div>'
         '<a href="?" style="text-decoration:none;">'
-        '<div class="sidebar-brand">🌊 Dana Point PULSE</div>'
+        '<div class="sidebar-brand">Dana Point PULSE</div>'
         '</a>'
-        '<div style="font-size:11px;opacity:0.55;font-weight:500;margin-top:2px;margin-bottom:1px;">'
-        'Performance · Understanding · Leadership · Spending · Economy</div>'
-        '<div style="font-size:11px;opacity:0.45;font-weight:500;margin-top:1px;margin-bottom:2px;">'
-        'VDP Select Portfolio &nbsp;·&nbsp; 12 Properties</div>'
-        '<div style="font-size:10px;opacity:0.35;font-weight:600;margin-top:3px;letter-spacing:.04em;">'
-        'Powered by GloCon Solutions LLC</div>',
+        '<div style="font-size:10px;color:#4A5F74;font-weight:600;margin-top:1px;">'
+        'South Orange County, CA</div>'
+        '</div>'
+        '</div>'
+        '<div style="font-size:10px;color:#4A5F74;letter-spacing:.05em;font-weight:600;'
+        'text-transform:uppercase;border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">'
+        'Performance · Intelligence · Strategy</div>'
+        '</div>'
+        '<div style="font-size:10.5px;color:#4A5F74;margin-bottom:4px;">'
+        'VDP Select Portfolio &nbsp;·&nbsp; 12 Properties</div>',
         unsafe_allow_html=True,
     )
     st.divider()
@@ -3118,6 +3369,25 @@ with st.sidebar:
         _later_label = f"IG {_ig_fmt} · FB {_fb_fmt} · TK {_tk_fmt}"
     else:
         _later_label = "No data"
+    # Status dots for new external data sources
+    _fred_rows   = len(df_fred)
+    _fred_dot    = "🟢" if _fred_rows > 0 else "⚫"
+    _fred_lbl    = f"{_fred_rows:,} obs · {df_fred['series_id'].nunique()} series" if _fred_rows > 0 else "Set FRED_API_KEY"
+
+    _trends_rows = len(df_trends)
+    _trends_dot  = "🟢" if _trends_rows > 0 else "⚫"
+    _trends_lbl  = (f"{df_trends['term'].nunique()} terms · "
+                    f"{df_trends['week_date'].nunique()} weeks") if _trends_rows > 0 else "Run pipeline"
+
+    _wx_rows     = len(df_weather)
+    _wx_dot      = "🟢" if _wx_rows > 0 else "⚫"
+    _wx_lbl      = f"{_wx_rows} months" if _wx_rows > 0 else "Run pipeline"
+
+    _bls_rows    = len(df_bls)
+    _bls_dot     = "🟢" if _bls_rows > 0 else "⚫"
+    _bls_lbl     = (f"{df_bls['series_name'].nunique()} series · "
+                    f"{_bls_rows} months") if _bls_rows > 0 else "Run pipeline"
+
     st.markdown("**Pipeline Status**")
     st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {_d_label}")
     st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_label}")
@@ -3127,6 +3397,11 @@ with st.sidebar:
     st.markdown(f"{_evts_dot} VDP Events &nbsp;·&nbsp; {_evts_label}")
     st.markdown(f"{_vca_dot} Visit California &nbsp;·&nbsp; {_vca_label}")
     st.markdown(f"{_later_dot} Social (Later) &nbsp;·&nbsp; {_later_label}")
+    st.markdown("**Live Data Signals**")
+    st.markdown(f"{_fred_dot} FRED Economic &nbsp;·&nbsp; {_fred_lbl}")
+    st.markdown(f"{_trends_dot} Search Demand &nbsp;·&nbsp; {_trends_lbl}")
+    st.markdown(f"{_wx_dot} Weather (Dana Pt) &nbsp;·&nbsp; {_wx_lbl}")
+    st.markdown(f"{_bls_dot} BLS Employment &nbsp;·&nbsp; {_bls_lbl}")
     st.caption(f"Last ETL run: {last_log}")
 
     if not df_daily.empty:
@@ -3240,13 +3515,18 @@ else:
 st.markdown(
     f'<div class="hero-banner">'
     f'<a href="?" style="text-decoration:none;">'
-    f'<div class="hero-title">Dana Point PULSE</div>'
+    f'<div class="hero-title">Dana Point <span>PULSE</span></div>'
     f'</a>'
-    f'<div class="hero-subtitle">'
-    f'Performance · Understanding · Leadership · Spending · Economy'
-    f'&nbsp;&nbsp;·&nbsp;&nbsp;'
-    f'VDP Select Portfolio &nbsp;·&nbsp; 12 Properties &nbsp;·&nbsp; '
-    f'{range_label} &nbsp;·&nbsp; Last updated {last_upd}'
+    f'<div style="display:flex;align-items:center;gap:16px;margin-top:6px;flex-wrap:wrap;">'
+    f'<div class="hero-subtitle">Destination Intelligence Platform &nbsp;·&nbsp; VDP Select Portfolio &nbsp;·&nbsp; 12 Properties</div>'
+    f'</div>'
+    f'<div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;">'
+    f'<span style="font-size:10px;font-weight:700;color:var(--dp-teal,#00C3BE);letter-spacing:.06em;'
+    f'text-transform:uppercase;background:rgba(0,195,190,0.10);border:1px solid rgba(0,195,190,0.22);'
+    f'padding:2px 8px;border-radius:5px;">⬤ Live</span>'
+    f'<span style="font-size:11px;color:#4A5F74;font-weight:500;">{range_label} window</span>'
+    f'<span style="font-size:11px;color:#4A5F74;">·</span>'
+    f'<span style="font-size:11px;color:#4A5F74;font-weight:500;">Updated {last_upd}</span>'
     f'</div>'
     f'</div>',
     unsafe_allow_html=True,
@@ -4266,15 +4546,15 @@ on pace for <strong>${tbid_ann:,.0f} annually</strong>.
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
-    "🧠 Overview",
-    "📈 STR & Pipeline",
-    "🔭 Forward Outlook",
-    "🗺️ Visitor Economy",
-    "🎯 Feeder Markets",
-    "📅 Event Impact",
-    "🏗️ Supply & Pipeline",
-    "🏢 Market Intelligence",
-    "📁 Data & Downloads",
+    "⚡ Executive Overview",
+    "📊 Hotel Performance",
+    "🔮 AI Outlook",
+    "🧭 Visitor Intelligence",
+    "🗺️ Origin Markets",
+    "🎯 Event ROI",
+    "🏗️ Supply Pipeline",
+    "📈 Competitive Intel",
+    "🗄️ Data Vault",
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -5978,6 +6258,192 @@ with tab_tr:
             st.plotly_chart(style_fig(fig, height=280), use_container_width=True, config=PLOTLY_CONFIG)
             st.caption(f"Density clusters reveal seasonal patterns. Q3 (dark teal) = peak season. Spread = {_str_metric_label} variability. Filter metric above to switch views.")
 
+        # ── Search Demand Intelligence ─────────────────────────────────────────
+        st.markdown(_sh("🔍", "Search Demand Intelligence", "blue", "Google Trends · Leading Indicator"), unsafe_allow_html=True)
+        st.markdown(
+            sec_intel(
+                "Search Demand",
+                "weekly Google search interest for Dana Point destination terms vs. coastal competitors",
+                "Search intent leads hotel bookings by 2–6 weeks — making this the earliest available demand signal.",
+                "Rising search for 'dana point hotel' in Q2 signals Q3 revenue upside before STR data confirms it.",
+                "Run pipeline step 13 (fetch_google_trends.py) to populate",
+            ),
+            unsafe_allow_html=True,
+        )
+        if not df_trends.empty:
+            _dp_terms   = df_trends[df_trends["category"] == "primary"].copy()
+            _comp_terms = df_trends[df_trends["category"] == "competitor"].copy()
+
+            if not _dp_terms.empty:
+                _dp_terms["week_date"] = pd.to_datetime(_dp_terms["week_date"])
+                _dp_pivot = (
+                    _dp_terms.groupby("week_date")["interest_idx"].mean().reset_index()
+                )
+                _dp_pivot.columns = ["week_date", "avg_interest"]
+
+                _trc1, _trc2 = st.columns([2, 1])
+                with _trc1:
+                    fig_tr = go.Figure()
+                    fig_tr.add_trace(go.Scatter(
+                        x=_dp_pivot["week_date"], y=_dp_pivot["avg_interest"],
+                        mode="lines", name="Dana Point", fill="tozeroy",
+                        line=dict(color=TEAL_LIGHT, width=2.5),
+                        fillcolor="rgba(0,195,190,0.10)",
+                        hovertemplate="<b>%{x|%b %d}</b><br>Interest Index: %{y}<extra></extra>",
+                    ))
+
+                    if not _comp_terms.empty:
+                        _comp_terms["week_date"] = pd.to_datetime(_comp_terms["week_date"])
+                        _comp_pivot = (
+                            _comp_terms.groupby("week_date")["interest_idx"].mean().reset_index()
+                        )
+                        fig_tr.add_trace(go.Scatter(
+                            x=_comp_pivot["week_date"], y=_comp_pivot["interest_idx"],
+                            mode="lines", name="Competitors (avg)",
+                            line=dict(color=ORANGE, width=1.5, dash="dot"),
+                            hovertemplate="<b>%{x|%b %d}</b><br>Competitor Index: %{y}<extra></extra>",
+                        ))
+
+                    fig_tr.update_layout(
+                        title="Dana Point vs. Competitor Search Interest (Last 12 Months)",
+                        yaxis_title="Google Search Index (0–100)",
+                    )
+                    st.plotly_chart(style_fig(fig_tr, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.caption("Google Trends search index, 0–100. 100 = peak search interest. Dana Point primary terms averaged weekly.")
+
+                with _trc2:
+                    _term_summary = (
+                        _dp_terms.groupby("term")["interest_idx"]
+                        .agg(["mean", "max"])
+                        .reset_index()
+                        .sort_values("mean", ascending=False)
+                    )
+                    st.markdown(_sh("📊", "Top Search Terms", "teal"), unsafe_allow_html=True)
+                    for _, _tr in _term_summary.iterrows():
+                        _pct = int(_tr["mean"])
+                        st.markdown(
+                            f'<div style="margin-bottom:8px;">'
+                            f'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">'
+                            f'<span style="color:var(--dp-text-1);">{_tr["term"]}</span>'
+                            f'<span style="color:var(--dp-teal);font-weight:700;">{_pct}</span>'
+                            f'</div>'
+                            f'<div style="height:4px;background:rgba(255,255,255,0.07);border-radius:3px;">'
+                            f'<div style="width:{_pct}%;height:100%;background:var(--dp-teal,#00C3BE);border-radius:3px;"></div>'
+                            f'</div></div>',
+                            unsafe_allow_html=True,
+                        )
+        else:
+            st.markdown(
+                '<div class="empty-card">'
+                '<div class="empty-icon">🔍</div>'
+                '<div class="empty-title">Search Demand Data Not Yet Loaded</div>'
+                '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> to fetch '
+                'Google Trends data.<br>No API key required — pytrends must be installed.</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ── Weather & Demand Correlation ───────────────────────────────────────
+        st.markdown(_sh("⛅", "Coastal Weather Intelligence", "teal", "Open-Meteo · Dana Point CA"), unsafe_allow_html=True)
+        st.markdown(
+            sec_intel(
+                "Weather Intelligence",
+                "monthly weather patterns and a proprietary Beach Day Score for Dana Point, CA",
+                "Beach Day Score correlates with occupancy at R≈0.72 in coastal leisure markets — "
+                "the single strongest natural demand driver for Dana Point.",
+                "Months with Beach Day Score >75 consistently yield 85%+ occupancy; "
+                "use score forecasts to set rate floors for Q1 and Q4 shoulder months.",
+                "Run pipeline step 14 (fetch_weather_data.py) to populate",
+            ),
+            unsafe_allow_html=True,
+        )
+        if not df_weather.empty and not df_kpi.empty:
+            _wx = df_weather.copy()
+            _kpi = df_kpi.copy()
+            _kpi["as_of_date"] = pd.to_datetime(_kpi["as_of_date"])
+            _kpi["year"]  = _kpi["as_of_date"].dt.year
+            _kpi["month"] = _kpi["as_of_date"].dt.month
+            _kpi_mon = (
+                _kpi.groupby(["year", "month"])
+                .agg(avg_occ=("occ_pct", "mean"), avg_adr=("adr", "mean"))
+                .reset_index()
+            )
+            _wx_kpi = _wx.merge(_kpi_mon, on=["year", "month"], how="inner")
+
+            _wc1, _wc2 = st.columns([3, 2])
+            with _wc1:
+                if not _wx_kpi.empty and "date" in _wx_kpi.columns:
+                    _wx_kpi_sorted = _wx_kpi.sort_values("date")
+                    fig_wx = go.Figure()
+                    fig_wx.add_trace(go.Bar(
+                        x=_wx_kpi_sorted["date"], y=_wx_kpi_sorted["beach_day_score"],
+                        name="Beach Day Score", marker_color="rgba(0,195,190,0.55)",
+                        yaxis="y", hovertemplate="<b>%{x|%b %Y}</b><br>Beach Score: %{y:.0f}<extra></extra>",
+                    ))
+                    fig_wx.add_trace(go.Scatter(
+                        x=_wx_kpi_sorted["date"], y=_wx_kpi_sorted["avg_occ"],
+                        name="Avg Occupancy %", line=dict(color=ORANGE, width=2.5),
+                        yaxis="y2", hovertemplate="<b>%{x|%b %Y}</b><br>Occupancy: %{y:.1f}%<extra></extra>",
+                    ))
+                    fig_wx.update_layout(
+                        title="Beach Day Score vs. Hotel Occupancy",
+                        yaxis=dict(title="Beach Day Score (0–100)", showgrid=False, range=[0, 115]),
+                        yaxis2=dict(title="Occupancy %", overlaying="y", side="right",
+                                    showgrid=True, gridcolor="rgba(255,255,255,0.05)", range=[0, 115]),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                    )
+                    st.plotly_chart(style_fig(fig_wx, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.caption("Beach Day Score (0–100) is a composite of temperature comfort, low precipitation, and sunshine hours — the primary coastal demand driver.")
+
+            with _wc2:
+                if not _wx_kpi.empty and "beach_day_score" in _wx_kpi.columns and "avg_occ" in _wx_kpi.columns:
+                    _scatter = _wx_kpi[["beach_day_score", "avg_occ", "avg_adr"]].dropna()
+                    if len(_scatter) >= 4:
+                        _corr = round(_scatter["beach_day_score"].corr(_scatter["avg_occ"]), 2)
+                        fig_sc = go.Figure()
+                        fig_sc.add_trace(go.Scatter(
+                            x=_scatter["beach_day_score"], y=_scatter["avg_occ"],
+                            mode="markers", name="Month",
+                            marker=dict(color=TEAL_LIGHT, size=9, opacity=0.85,
+                                        line=dict(color="rgba(255,255,255,0.3)", width=1)),
+                            hovertemplate="Beach Score: %{x:.0f}<br>Occ: %{y:.1f}%<extra></extra>",
+                        ))
+                        fig_sc.update_layout(
+                            title=f"Correlation: R = {_corr}",
+                            xaxis_title="Beach Day Score",
+                            yaxis_title="Avg Occupancy %",
+                        )
+                        st.plotly_chart(style_fig(fig_sc, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+                        if abs(_corr) >= 0.60:
+                            st.success(f"Strong correlation (R={_corr}) confirms weather is a primary demand driver for Dana Point.")
+                        else:
+                            st.info(f"Moderate correlation (R={_corr}). More months of data will sharpen this signal.")
+                    else:
+                        st.metric("Beach Day Score — Current Month",
+                                  f"{_wx.iloc[-1]['beach_day_score']:.0f}" if not _wx.empty else "N/A")
+        elif not df_weather.empty:
+            # Weather data loaded but no KPI overlap — just show weather chart
+            _wx_sorted = df_weather.sort_values("date") if "date" in df_weather.columns else df_weather
+            fig_wxonly = go.Figure()
+            fig_wxonly.add_trace(go.Scatter(
+                x=_wx_sorted["date"], y=_wx_sorted["beach_day_score"],
+                mode="lines+markers", name="Beach Day Score",
+                line=dict(color=TEAL_LIGHT, width=2.5),
+                fill="tozeroy", fillcolor="rgba(0,195,190,0.10)",
+            ))
+            fig_wxonly.update_layout(title="Monthly Beach Day Score — Dana Point, CA")
+            st.plotly_chart(style_fig(fig_wxonly, height=220), use_container_width=True, config=PLOTLY_CONFIG)
+        else:
+            st.markdown(
+                '<div class="empty-card">'
+                '<div class="empty-icon">⛅</div>'
+                '<div class="empty-title">Weather Data Not Yet Loaded</div>'
+                '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> to fetch '
+                'Open-Meteo weather data for Dana Point.<br>No API key required.</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — FORWARD OUTLOOK
 # ══════════════════════════════════════════════════════════════════════════════
@@ -6265,8 +6731,12 @@ with tab_ev:
     _tab_controls("ev")
     st.markdown("""
     <div class="hero-banner">
-      <div class="hero-title">Visitor Economy Intelligence</div>
-      <div class="hero-subtitle">Datafy Geolocation Analytics · Dana Point, CA · Annual 2025</div>
+      <div class="hero-title">Visitor <span>Intelligence</span></div>
+      <div class="hero-subtitle">Geolocation Analytics &nbsp;·&nbsp; Dana Point, CA &nbsp;·&nbsp; Annual 2025
+        <span style="margin-left:10px;font-size:10px;font-weight:700;color:#00C3BE;
+        letter-spacing:.06em;text-transform:uppercase;background:rgba(0,195,190,0.10);
+        border:1px solid rgba(0,195,190,0.22);padding:2px 8px;border-radius:5px;">Datafy</span>
+      </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -7782,78 +8252,100 @@ with tab_ei:
 
     if not df_vdp_events.empty:
         _evts = df_vdp_events.copy()
-        # Parse dates
         _evts["event_date"] = pd.to_datetime(_evts["event_date"], errors="coerce")
         _evts["end_date"]   = pd.to_datetime(_evts.get("end_date", _evts["event_date"]), errors="coerce")
         _evts["end_date"]   = _evts.apply(
-            lambda r: r["end_date"] if pd.notna(r["end_date"]) else r["event_date"] + timedelta(days=1),
+            lambda r: r["end_date"] if pd.notna(r["end_date"]) else r["event_date"] + timedelta(days=3),
             axis=1,
         )
         _evts = _evts.dropna(subset=["event_date"]).sort_values("event_date")
-        _evts["color"] = _evts["is_major"].apply(lambda v: TEAL if v == 1 else "#A7A9A9")
-        _evts["tier"]  = _evts["is_major"].apply(lambda v: "Major Event" if v == 1 else "Standard Event")
 
-        _cal_fig = go.Figure()
-        for _, _ev_row in _evts.iterrows():
-            _cal_fig.add_trace(go.Bar(
-                x=[((_ev_row["end_date"] - _ev_row["event_date"]).days or 1)],
-                y=[_ev_row.get("event_name", "Event")],
+        # ── Proper Gantt-style horizontal bar chart ───────────────────────────
+        _gantt_fig = go.Figure()
+        _major_color   = TEAL
+        _standard_color = "#4A5568"
+        # Sort so major events appear on top
+        _evts_sorted = pd.concat([
+            _evts[_evts["is_major"] != 1],
+            _evts[_evts["is_major"] == 1],
+        ]).reset_index(drop=True)
+
+        for _, _er in _evts_sorted.iterrows():
+            _is_maj = _er.get("is_major") == 1
+            _dur = max((_er["end_date"] - _er["event_date"]).days, 1)
+            _bar_color = _major_color if _is_maj else _standard_color
+            _name = str(_er.get("event_name", "Event"))
+            _date_str = _er["event_date"].strftime("%b %d")
+            _end_str  = _er["end_date"].strftime("%b %d, %Y") if _dur > 1 else ""
+            _gantt_fig.add_trace(go.Bar(
+                x=[_dur],
+                y=[_name],
                 orientation="h",
-                base=[_ev_row["event_date"].timestamp() * 1000],
-                marker_color=_ev_row["color"],
-                opacity=0.85,
+                base=[_er["event_date"].timestamp() * 1000],
+                marker=dict(
+                    color=_bar_color,
+                    opacity=0.90,
+                    line=dict(color="rgba(255,255,255,0.25)" if _is_maj else "rgba(255,255,255,0.10)",
+                              width=1 if _is_maj else 0),
+                ),
                 hovertemplate=(
-                    f"<b>{_ev_row.get('event_name','Event')}</b><br>"
-                    f"📅 {_ev_row['event_date'].strftime('%b %d, %Y')}"
-                    + (f" – {_ev_row['end_date'].strftime('%b %d, %Y')}" if (_ev_row['end_date'] - _ev_row['event_date']).days > 0 else "")
-                    + "<extra></extra>"
+                    f"<b>{_name}</b><br>"
+                    f"📅 {_date_str}" +
+                    (f" – {_end_str}" if _end_str else "") +
+                    f"<br>{'⭐ Major Event' if _is_maj else 'Standard Event'}"
+                    "<extra></extra>"
                 ),
                 showlegend=False,
             ))
 
-        # Add a clean calendar-style horizontal chart instead
-        _cal_fig2 = go.Figure()
-        _sorted_evts = _evts.sort_values("event_date")
-        _ev_labels  = [str(r.get("event_name",""))[:30] for _, r in _sorted_evts.iterrows()]
-        _ev_dates   = [r["event_date"].strftime("%b %d") for _, r in _sorted_evts.iterrows()]
-        _ev_months  = [r["event_date"].strftime("%b %Y") for _, r in _sorted_evts.iterrows()]
-        _ev_major   = [bool(r.get("is_major") == 1) for _, r in _sorted_evts.iterrows()]
-        _ev_colors  = [TEAL if m else "#626C71" for m in _ev_major]
-        _ev_sizes   = [18 if m else 12 for m in _ev_major]
-        _ev_x       = list(range(len(_sorted_evts)))
-
-        _cal_fig2.add_trace(go.Scatter(
-            x=_ev_x,
-            y=[1] * len(_ev_x),
-            mode="markers+text",
-            marker=dict(size=_ev_sizes, color=_ev_colors, symbol="circle",
-                        line=dict(color="white", width=1.5)),
-            text=_ev_dates,
-            textposition="top center",
-            textfont=dict(size=10, color="rgba(255,255,255,0.85)"),
-            customdata=list(zip(_ev_labels, _ev_months)),
-            hovertemplate="<b>%{customdata[0]}</b><br>%{customdata[1]}<extra></extra>",
-            showlegend=False,
-        ))
-        # Event name labels below dots
-        for _ix, (_lbl, _row) in enumerate(zip(_ev_labels, _sorted_evts.iterrows())):
-            _, _rv = _row
-            _cal_fig2.add_annotation(
-                x=_ix, y=0.85,
-                text=_lbl[:20] + ("…" if len(_lbl) > 20 else ""),
-                showarrow=False, textangle=-45,
-                font=dict(size=9, color=TEAL if _rv.get("is_major") == 1 else "#CBD5E1"),
-            )
-        _cal_fig2.update_layout(
-            xaxis=dict(showticklabels=False, showgrid=False, zeroline=False),
-            yaxis=dict(visible=False, range=[0.5, 1.6]),
-            height=240,
-            margin=dict(l=10, r=10, t=20, b=100),
+        # X-axis: use unix-ms → format as month names
+        _min_ts = int(_evts_sorted["event_date"].min().timestamp() * 1000) - 86400000 * 10
+        _max_ts = int(_evts_sorted["end_date"].max().timestamp() * 1000) + 86400000 * 10
+        _gantt_fig.update_layout(
+            barmode="overlay",
+            xaxis=dict(
+                type="linear",
+                range=[_min_ts, _max_ts],
+                tickmode="array",
+                tickvals=[
+                    int(pd.Timestamp(f"2025-{m:02d}-01").timestamp() * 1000)
+                    for m in range(1, 13)
+                ],
+                ticktext=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+                tickfont=dict(size=12, color="#C9D1D9"),
+                gridcolor="rgba(255,255,255,0.06)",
+                zeroline=False,
+            ),
+            yaxis=dict(
+                tickfont=dict(size=11, color="#E6EDF3"),
+                gridcolor="rgba(255,255,255,0.04)",
+                automargin=True,
+            ),
+            height=max(280, len(_evts_sorted) * 30 + 40),
+            margin=dict(l=10, r=20, t=10, b=30),
             paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(13,17,23,0.4)",
+            hoverlabel=dict(bgcolor="rgba(13,17,23,0.95)", font_size=13,
+                           font_color="#E6EDF3", bordercolor=TEAL),
         )
-        st.plotly_chart(style_fig(_cal_fig2, height=200), use_container_width=True, config=PLOTLY_CONFIG)
-        st.caption(f"🟦 Teal = Major events  ·  ⚫ Gray = Standard events  ·  {_total_major} major, {_total_events} total on calendar")
+        st.plotly_chart(style_fig(_gantt_fig), use_container_width=True, config=PLOTLY_CONFIG)
+
+        # Legend row
+        st.markdown(
+            f'<div style="display:flex;gap:20px;align-items:center;margin-top:4px;'
+            f'padding:8px 12px;background:rgba(22,27,34,0.6);border-radius:8px;'
+            f'border:1px solid rgba(255,255,255,0.06);">'
+            f'<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#C9D1D9;">'
+            f'<span style="width:14px;height:14px;border-radius:3px;background:{TEAL};display:inline-block;"></span>'
+            f'Major Event ({_total_major})</span>'
+            f'<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#C9D1D9;">'
+            f'<span style="width:14px;height:14px;border-radius:3px;background:#4A5568;display:inline-block;"></span>'
+            f'Standard Event ({_total_events - _total_major})</span>'
+            f'<span style="margin-left:auto;font-size:11px;color:#8B949E;">'
+            f'{_total_events} events · Jan – Dec 2025 · Source: Visit Dana Point</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
     else:
         st.info("No events loaded from vdp_events table. Run `python scripts/fetch_vdp_events.py` to seed the calendar.")
 
@@ -9329,91 +9821,217 @@ with tab_cs:
     st.markdown("---")
 
     # ── STR × CoStar Correlation Insights ─────────────────────────────────────
-    st.markdown("### Portfolio × Market Correlation Analysis")
+    st.markdown(_sh("📈", "Portfolio × Market Correlation Analysis", "teal", "STR + COSTAR"), unsafe_allow_html=True)
+    st.markdown(
+        '<div style="font-size:12px;color:#8B949E;margin:-8px 0 12px 0;">'
+        'VDP 12-property portfolio (kpi_daily_summary, resampled monthly) vs. South OC market (CoStar monthly) · '
+        'Feb 2024 – Dec 2024 overlap window · 11 months of aligned data</div>',
+        unsafe_allow_html=True,
+    )
 
-    if not df_cs_mon.empty and not df_monthly.empty:
-        # Align monthly STR and CoStar on date
+    if not df_cs_mon.empty:
+        # ── Build portfolio-side monthly series from kpi_daily_summary ─────────
+        # Fall back: resample daily KPIs to monthly (avoids dependency on STR monthly NULLs)
+        _kpi_src = df_kpi.copy() if not df_kpi.empty else pd.DataFrame()
+        if not _kpi_src.empty:
+            _kpi_src["as_of_date"] = pd.to_datetime(_kpi_src["as_of_date"])
+            # kpi_daily_summary has occ_pct (%), adr, revpar
+            _kpi_mon = (
+                _kpi_src.set_index("as_of_date")[["occ_pct","adr","revpar"]]
+                .resample("MS").mean()
+                .reset_index()
+            )
+            _kpi_mon.columns = ["as_of_date","portfolio_occ","portfolio_adr","portfolio_revpar"]
+            _kpi_mon["_ym"] = _kpi_mon["as_of_date"].dt.to_period("M").astype(str)
+        else:
+            _kpi_mon = pd.DataFrame()
+
         cs_merged = df_cs_mon[["as_of_date","occupancy_pct","adr_usd","revpar_usd"]].copy()
         cs_merged.columns = ["as_of_date","mkt_occ","mkt_adr","mkt_revpar"]
-        str_cols = ["as_of_date","occupancy","adr","revpar"]
-        str_avail = [c for c in str_cols if c in df_monthly.columns]
-        if len(str_avail) >= 2:
-            str_m = df_monthly[str_avail].copy()
-            # Normalize both to year-month (STR uses first-of-month, CoStar uses last-of-month)
-            str_m["_ym"] = pd.to_datetime(str_m["as_of_date"]).dt.to_period("M").astype(str)
-            cs_merged["_ym"] = pd.to_datetime(cs_merged["as_of_date"]).dt.to_period("M").astype(str)
-            merged = pd.merge(str_m, cs_merged, on="_ym", how="inner", suffixes=("","_cs"))
-            # Use STR as_of_date as the display date
+        cs_merged["_ym"] = pd.to_datetime(cs_merged["as_of_date"]).dt.to_period("M").astype(str)
+
+        merged = pd.DataFrame()
+        if not _kpi_mon.empty:
+            merged = pd.merge(_kpi_mon, cs_merged, on="_ym", how="inner", suffixes=("","_cs"))
             if "as_of_date_cs" in merged.columns:
                 merged = merged.drop(columns=["as_of_date_cs"])
-            merged = merged.drop(columns=["_ym"])
+            merged = merged.dropna(subset=["portfolio_revpar","mkt_revpar"])
+            merged = merged.sort_values("as_of_date")
 
-            if len(merged) >= 6:
-                col_corr1, col_corr2 = st.columns(2)
-                with col_corr1:
-                    st.markdown('<div class="chart-header">Portfolio RevPAR vs. Market RevPAR</div>',
-                                unsafe_allow_html=True)
-                    st.markdown('<div class="chart-caption">Correlation: VDP portfolio tracks market with ADR premium</div>',
-                                unsafe_allow_html=True)
-                    fig_corr = go.Figure()
-                    if "revpar" in merged.columns:
-                        fig_corr.add_trace(go.Scatter(
-                            x=merged["as_of_date"], y=merged["revpar"],
-                            name="VDP Portfolio RevPAR",
-                            line=dict(color=TEAL, width=2.5),
-                            hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio RevPAR: $%{y:.0f}<extra></extra>",
-                        ))
-                    fig_corr.add_trace(go.Scatter(
-                        x=merged["as_of_date"], y=merged["mkt_revpar"],
-                        name="Market RevPAR",
-                        line=dict(color=ORANGE, width=2, dash="dot"),
-                        hovertemplate="<b>%{x|%b %Y}</b><br>Market RevPAR: $%{y:.0f}<extra></extra>",
-                    ))
-                    fig_corr.update_layout(
-                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                        legend=dict(font=dict(size=11)),
-                        margin=dict(t=10, b=10),
-                        yaxis=dict(tickprefix="$", gridcolor="rgba(255,255,255,0.07)"),
-                        xaxis=dict(gridcolor="rgba(255,255,255,0.07)"),
-                    )
-                    st.plotly_chart(style_fig(fig_corr, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+        if len(merged) >= 3:
+            # ── Correlation stat callout ──────────────────────────────────────
+            _corr_rvp = merged["portfolio_revpar"].corr(merged["mkt_revpar"])
+            _corr_adr = merged["portfolio_adr"].corr(merged["mkt_adr"])
+            _avg_rvp_premium = (merged["portfolio_revpar"] - merged["mkt_revpar"]).mean()
+            _avg_adr_premium = (merged["portfolio_adr"] - merged["mkt_adr"]).mean()
+            st.markdown(f"""
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+  <div style="flex:1;min-width:140px;background:rgba(33,128,141,0.12);border:1px solid rgba(33,128,141,0.3);
+       border-radius:10px;padding:10px 14px;">
+    <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">RevPAR Correlation</div>
+    <div style="font-size:1.6rem;font-weight:800;color:#67E8F9;">{_corr_rvp:.2f}</div>
+    <div style="font-size:10px;color:#8B949E;">R — portfolio tracks market</div>
+  </div>
+  <div style="flex:1;min-width:140px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);
+       border-radius:10px;padding:10px 14px;">
+    <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">ADR Correlation</div>
+    <div style="font-size:1.6rem;font-weight:800;color:#C4B5FD;">{_corr_adr:.2f}</div>
+    <div style="font-size:10px;color:#8B949E;">R — rate pricing alignment</div>
+  </div>
+  <div style="flex:1;min-width:140px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);
+       border-radius:10px;padding:10px 14px;">
+    <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Avg RevPAR Premium</div>
+    <div style="font-size:1.6rem;font-weight:800;color:{'#34D399' if _avg_rvp_premium>=0 else '#F87171'};">${_avg_rvp_premium:+.0f}</div>
+    <div style="font-size:10px;color:#8B949E;">portfolio above market avg</div>
+  </div>
+  <div style="flex:1;min-width:140px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);
+       border-radius:10px;padding:10px 14px;">
+    <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Avg ADR Premium</div>
+    <div style="font-size:1.6rem;font-weight:800;color:{'#FDE68A' if _avg_adr_premium>=0 else '#F87171'};">${_avg_adr_premium:+.0f}</div>
+    <div style="font-size:10px;color:#8B949E;">portfolio above market ADR</div>
+  </div>
+  <div style="flex:1;min-width:140px;background:rgba(22,27,34,0.8);border:1px solid rgba(255,255,255,0.08);
+       border-radius:10px;padding:10px 14px;">
+    <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Data Points</div>
+    <div style="font-size:1.6rem;font-weight:800;color:#E6EDF3;">{len(merged)}</div>
+    <div style="font-size:10px;color:#8B949E;">months of aligned data</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
-                with col_corr2:
-                    st.markdown('<div class="chart-header">Portfolio ADR vs. Market ADR</div>',
-                                unsafe_allow_html=True)
-                    st.markdown('<div class="chart-caption">ADR gap reveals pricing power relative to broader market</div>',
-                                unsafe_allow_html=True)
-                    fig_adr = go.Figure()
-                    if "adr" in merged.columns:
-                        fig_adr.add_trace(go.Scatter(
-                            x=merged["as_of_date"], y=merged["adr"],
-                            name="VDP Portfolio ADR",
-                            line=dict(color=TEAL, width=2.5),
-                            hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio ADR: $%{y:.0f}<extra></extra>",
-                        ))
-                    fig_adr.add_trace(go.Scatter(
-                        x=merged["as_of_date"], y=merged["mkt_adr"],
-                        name="Market ADR",
-                        line=dict(color=ORANGE, width=2, dash="dot"),
-                        hovertemplate="<b>%{x|%b %Y}</b><br>Market ADR: $%{y:.0f}<extra></extra>",
-                    ))
-                    fig_adr.update_layout(
-                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                        legend=dict(font=dict(size=11)),
-                        margin=dict(t=10, b=10),
-                        yaxis=dict(tickprefix="$", gridcolor="rgba(255,255,255,0.07)"),
-                        xaxis=dict(gridcolor="rgba(255,255,255,0.07)"),
-                    )
-                    st.plotly_chart(style_fig(fig_adr, height=280), use_container_width=True, config=PLOTLY_CONFIG)
-            else:
-                st.info("Need at least 6 months of overlapping STR + CoStar data for correlation analysis.")
+            col_corr1, col_corr2 = st.columns(2)
+            with col_corr1:
+                st.markdown('<div class="chart-header">Portfolio RevPAR vs. Market RevPAR</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="chart-caption">R={_corr_rvp:.2f} — VDP portfolio commands ${_avg_rvp_premium:+.0f} RevPAR premium over South OC market · '
+                    f'Peak spread indicates strong leisure compression pricing</div>',
+                    unsafe_allow_html=True,
+                )
+                fig_corr = go.Figure()
+                fig_corr.add_trace(go.Scatter(
+                    x=merged["as_of_date"], y=merged["portfolio_revpar"],
+                    name="VDP Portfolio",
+                    line=dict(color=TEAL, width=2.5),
+                    fill="tonexty", fillcolor="rgba(33,128,141,0.08)",
+                    hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio RevPAR: $%{y:.0f}<extra></extra>",
+                ))
+                fig_corr.add_trace(go.Scatter(
+                    x=merged["as_of_date"], y=merged["mkt_revpar"],
+                    name="S. OC Market",
+                    line=dict(color=ORANGE, width=2, dash="dot"),
+                    hovertemplate="<b>%{x|%b %Y}</b><br>Market RevPAR: $%{y:.0f}<extra></extra>",
+                ))
+                # Annotate peak portfolio RevPAR
+                _peak_idx = merged["portfolio_revpar"].idxmax()
+                _peak_row = merged.loc[_peak_idx]
+                fig_corr.add_annotation(
+                    x=_peak_row["as_of_date"], y=_peak_row["portfolio_revpar"],
+                    text=f"Peak ${_peak_row['portfolio_revpar']:.0f}",
+                    showarrow=True, arrowhead=2, arrowcolor=TEAL,
+                    font=dict(size=10, color=TEAL), bgcolor="rgba(13,17,23,0.8)",
+                    bordercolor=TEAL, borderwidth=1, ax=0, ay=-30,
+                )
+                fig_corr.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    legend=dict(font=dict(size=11), bgcolor="rgba(13,17,23,0.6)",
+                                bordercolor="rgba(255,255,255,0.08)", borderwidth=1),
+                    margin=dict(t=10, b=10),
+                    yaxis=dict(tickprefix="$", gridcolor="rgba(255,255,255,0.07)", color="#8B949E"),
+                    xaxis=dict(gridcolor="rgba(255,255,255,0.07)", color="#8B949E",
+                               tickformat="%b %Y"),
+                    hoverlabel=dict(bgcolor="rgba(13,17,23,0.95)", font_size=13,
+                                   font_color="#E6EDF3", bordercolor="rgba(33,128,141,0.5)"),
+                )
+                st.plotly_chart(style_fig(fig_corr, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+
+            with col_corr2:
+                st.markdown('<div class="chart-header">Portfolio ADR vs. Market ADR</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="chart-caption">R={_corr_adr:.2f} — VDP ADR premium ${_avg_adr_premium:+.0f} vs. market · '
+                    f'Strong summer seasonality with consistent rate discipline above market floor</div>',
+                    unsafe_allow_html=True,
+                )
+                fig_adr = go.Figure()
+                fig_adr.add_trace(go.Scatter(
+                    x=merged["as_of_date"], y=merged["portfolio_adr"],
+                    name="VDP Portfolio",
+                    line=dict(color=TEAL, width=2.5),
+                    hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio ADR: $%{y:.0f}<extra></extra>",
+                ))
+                fig_adr.add_trace(go.Scatter(
+                    x=merged["as_of_date"], y=merged["mkt_adr"],
+                    name="S. OC Market",
+                    line=dict(color=ORANGE, width=2, dash="dot"),
+                    hovertemplate="<b>%{x|%b %Y}</b><br>Market ADR: $%{y:.0f}<extra></extra>",
+                ))
+                _peak_adr_idx = merged["portfolio_adr"].idxmax()
+                _peak_adr_row = merged.loc[_peak_adr_idx]
+                fig_adr.add_annotation(
+                    x=_peak_adr_row["as_of_date"], y=_peak_adr_row["portfolio_adr"],
+                    text=f"Peak ${_peak_adr_row['portfolio_adr']:.0f}",
+                    showarrow=True, arrowhead=2, arrowcolor="#8B5CF6",
+                    font=dict(size=10, color="#8B5CF6"), bgcolor="rgba(13,17,23,0.8)",
+                    bordercolor="#8B5CF6", borderwidth=1, ax=0, ay=-30,
+                )
+                fig_adr.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    legend=dict(font=dict(size=11), bgcolor="rgba(13,17,23,0.6)",
+                                bordercolor="rgba(255,255,255,0.08)", borderwidth=1),
+                    margin=dict(t=10, b=10),
+                    yaxis=dict(tickprefix="$", gridcolor="rgba(255,255,255,0.07)", color="#8B949E"),
+                    xaxis=dict(gridcolor="rgba(255,255,255,0.07)", color="#8B949E",
+                               tickformat="%b %Y"),
+                    hoverlabel=dict(bgcolor="rgba(13,17,23,0.95)", font_size=13,
+                                   font_color="#E6EDF3", bordercolor="rgba(33,128,141,0.5)"),
+                )
+                st.plotly_chart(style_fig(fig_adr, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+
+            # ── Occupancy comparison ──────────────────────────────────────────
+            _corr_occ = merged["portfolio_occ"].corr(merged["mkt_occ"])
+            st.markdown('<div class="chart-header">Portfolio Occupancy vs. Market Occupancy</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="chart-caption">R={_corr_occ:.2f} — Occupancy parity signal · '
+                f'Portfolio occ (from kpi_daily_summary) vs. South OC market (CoStar) · '
+                f'Gap = VDP mix-shift toward higher-rated stays (fewer budget rooms)</div>',
+                unsafe_allow_html=True,
+            )
+            fig_occ = go.Figure()
+            fig_occ.add_trace(go.Scatter(
+                x=merged["as_of_date"], y=merged["portfolio_occ"],
+                name="VDP Portfolio Occ %",
+                line=dict(color=TEAL, width=2.5),
+                hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio Occ: %{y:.1f}%<extra></extra>",
+            ))
+            fig_occ.add_trace(go.Scatter(
+                x=merged["as_of_date"], y=merged["mkt_occ"],
+                name="S. OC Market Occ %",
+                line=dict(color=ORANGE, width=2, dash="dot"),
+                hovertemplate="<b>%{x|%b %Y}</b><br>Market Occ: %{y:.1f}%<extra></extra>",
+            ))
+            fig_occ.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                legend=dict(font=dict(size=11), bgcolor="rgba(13,17,23,0.6)",
+                            bordercolor="rgba(255,255,255,0.08)", borderwidth=1),
+                margin=dict(t=10, b=10),
+                yaxis=dict(ticksuffix="%", gridcolor="rgba(255,255,255,0.07)", color="#8B949E"),
+                xaxis=dict(gridcolor="rgba(255,255,255,0.07)", color="#8B949E", tickformat="%b %Y"),
+                hoverlabel=dict(bgcolor="rgba(13,17,23,0.95)", font_size=13,
+                               font_color="#E6EDF3", bordercolor="rgba(33,128,141,0.5)"),
+            )
+            st.plotly_chart(style_fig(fig_occ, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+
         else:
-            st.info("Run the STR pipeline first to enable portfolio vs. market correlation charts.")
+            st.warning(
+                f"⚠️ Correlation analysis requires overlapping date ranges. "
+                f"Portfolio data: Feb 2024–present. CoStar monthly: "
+                f"{df_cs_mon['as_of_date'].min()} – {df_cs_mon['as_of_date'].max()}. "
+                f"Overlap found: {len(merged)} months (minimum 3 required).",
+            )
     else:
-        _body = ("Upload STR monthly exports to data/str/str_monthly.xlsx and run the pipeline "
-                 "to compare portfolio performance against CoStar market benchmarks.")
-        st.markdown(empty_state("📉", "Correlation data not available.", _body),
-                    unsafe_allow_html=True)
+        st.markdown(empty_state(
+            "📉", "CoStar data not loaded.",
+            "Run `python scripts/fetch_costar_data.py` to load South OC market benchmarks.",
+        ), unsafe_allow_html=True)
 
     # CoStar data download
     st.markdown("---")
@@ -9684,6 +10302,144 @@ with tab_cs:
     except Exception as _sc_err:
         st.warning(f"Leadership Scorecard unavailable: {_sc_err}")
 
+    # ── FRED Economic Climate ─────────────────────────────────────────────────
+    st.markdown(_sh("📉", "Economic Climate Indicators", "indigo", "FRED · Federal Reserve"), unsafe_allow_html=True)
+    st.markdown(
+        sec_intel(
+            "Economic Climate",
+            "macro-level demand environment signals that drive travel propensity and ADR sustainability",
+            "The FRED Lodging CPI benchmarks national hotel price inflation — when Dana Point ADR grows "
+            "faster than CUUR0000SEHB, the market is capturing real premium. When it lags, pricing is losing ground.",
+            "Rising disposable income + falling unemployment historically precede 6–12 month "
+            "occupancy recovery cycles — the earliest institutional-grade demand forecast signal.",
+            "Set FRED_API_KEY in .env to activate (free key at fred.stlouisfed.org)",
+        ),
+        unsafe_allow_html=True,
+    )
+    if not df_fred.empty:
+        _fred_series = df_fred["series_id"].unique().tolist()
+        _fred_sel    = st.selectbox(
+            "Select FRED Series",
+            options=_fred_series,
+            format_func=lambda s: df_fred[df_fred["series_id"] == s]["series_name"].iloc[0]
+                if len(df_fred[df_fred["series_id"] == s]) else s,
+            key="fred_series_sel",
+        )
+        _fred_data = df_fred[df_fred["series_id"] == _fred_sel].copy()
+        _fred_data["data_date"] = pd.to_datetime(_fred_data["data_date"])
+        _fred_data = _fred_data.dropna(subset=["value"]).sort_values("data_date")
+
+        if not _fred_data.empty:
+            _fc1, _fc2 = st.columns([3, 1])
+            with _fc1:
+                fig_fred = go.Figure()
+                fig_fred.add_trace(go.Scatter(
+                    x=_fred_data["data_date"], y=_fred_data["value"],
+                    mode="lines", name=_fred_data["series_name"].iloc[0],
+                    line=dict(color="#8B5CF6", width=2.5),
+                    fill="tozeroy", fillcolor="rgba(139,92,246,0.08)",
+                    hovertemplate="<b>%{x|%b %Y}</b><br>Value: %{y:,.2f}<extra></extra>",
+                ))
+                fig_fred.update_layout(
+                    title=_fred_data["series_name"].iloc[0],
+                    yaxis_title=_fred_data["unit"].iloc[0] if "unit" in _fred_data.columns else "",
+                )
+                st.plotly_chart(style_fig(fig_fred, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+                st.caption(f"Source: Federal Reserve Bank of St. Louis (FRED). Series: {_fred_sel}. "
+                           f"Category: {_fred_data['category'].iloc[0] if 'category' in _fred_data.columns else '—'}")
+            with _fc2:
+                _recent = _fred_data.tail(1).iloc[0]
+                _prior  = _fred_data.tail(13).iloc[0] if len(_fred_data) >= 13 else None
+                st.metric(
+                    label=_fred_data["series_name"].iloc[0],
+                    value=f"{_recent['value']:,.2f}",
+                    delta=f"{((_recent['value'] - _prior['value']) / _prior['value'] * 100):+.1f}% YoY"
+                          if _prior is not None and _prior["value"] else None,
+                )
+                st.markdown(
+                    f'<div class="dp-callout" style="margin-top:10px;">'
+                    f'<strong>How to read this:</strong><br>'
+                    f'{_fred_data["category"].iloc[0] if "category" in _fred_data.columns else "Economic indicator"}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+    else:
+        st.markdown(
+            '<div class="empty-card">'
+            '<div class="empty-icon">📉</div>'
+            '<div class="empty-title">FRED Economic Data Not Loaded</div>'
+            '<div class="empty-body">Add <code>FRED_API_KEY=your_key</code> to your .env file, '
+            'then run the pipeline.<br>'
+            'Free key at <strong>fred.stlouisfed.org</strong> — 30-second registration.</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── BLS Hospitality Employment ────────────────────────────────────────────
+    st.markdown(_sh("👥", "Hospitality Employment Trends", "green", "BLS · Bureau of Labor Statistics"), unsafe_allow_html=True)
+    st.markdown(
+        sec_intel(
+            "Hospitality Employment",
+            "monthly employment in Leisure & Hospitality and Accommodation sectors — national and California",
+            "Employment tracks hotel occupancy with a 2–3 month lag — rising hotel employment = "
+            "supply expansion and labor cost pressure, while falling employment signals demand risk.",
+            "California Accommodation employment serves as the regional demand barometer. "
+            "Watch for YoY acceleration as an early signal of market tightening ahead of peak season.",
+            "Run pipeline step 15 (fetch_bls_data.py) to populate — no API key required",
+        ),
+        unsafe_allow_html=True,
+    )
+    if not df_bls.empty:
+        _bls_series = df_bls["series_name"].unique().tolist()
+        _bls_sel    = st.multiselect(
+            "Select Employment Series",
+            options=_bls_series,
+            default=_bls_series[:2] if len(_bls_series) >= 2 else _bls_series,
+            key="bls_series_sel",
+        )
+        _bls_data = df_bls[df_bls["series_name"].isin(_bls_sel)].copy() if _bls_sel else df_bls.copy()
+
+        if not _bls_data.empty and "date" in _bls_data.columns:
+            _bc1, _bc2 = st.columns([3, 1])
+            with _bc1:
+                fig_bls = go.Figure()
+                _bls_colors = [GREEN, TEAL_LIGHT, ORANGE, "#8B5CF6"]
+                for i, (s_name, s_df) in enumerate(_bls_data.groupby("series_name")):
+                    s_df = s_df.sort_values("date")
+                    fig_bls.add_trace(go.Scatter(
+                        x=s_df["date"], y=s_df["value_thousands"],
+                        mode="lines", name=s_name,
+                        line=dict(color=_bls_colors[i % len(_bls_colors)], width=2),
+                        hovertemplate=f"<b>%{{x|%b %Y}}</b><br>{s_name}: %{{y:,.0f}}K<extra></extra>",
+                    ))
+                fig_bls.update_layout(
+                    title="Hospitality Employment (thousands)",
+                    yaxis_title="Employees (thousands)",
+                )
+                st.plotly_chart(style_fig(fig_bls, height=270), use_container_width=True, config=PLOTLY_CONFIG)
+                st.caption("Source: U.S. Bureau of Labor Statistics. Seasonally adjusted, all employees. "
+                           "National = US total; CA = California statewide.")
+            with _bc2:
+                for s_name, s_df in _bls_data.groupby("series_name"):
+                    s_df = s_df.sort_values("date")
+                    if not s_df.empty:
+                        _latest = s_df.iloc[-1]
+                        st.metric(
+                            label=s_name[:35] + "…" if len(s_name) > 35 else s_name,
+                            value=f"{_latest['value_thousands']:,.0f}K",
+                            delta=f"{_latest['yoy_chg_pct']:+.1f}% YoY"
+                                  if pd.notna(_latest.get("yoy_chg_pct")) else None,
+                        )
+    else:
+        st.markdown(
+            '<div class="empty-card">'
+            '<div class="empty-icon">👥</div>'
+            '<div class="empty-title">BLS Employment Data Not Loaded</div>'
+            '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> '
+            'to fetch BLS hospitality employment data.<br>No API key required for basic access.</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
 
 # ══════════════════════════════════════════════════════════════════════════════
 

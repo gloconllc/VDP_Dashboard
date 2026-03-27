@@ -14,10 +14,14 @@ Orchestrates the full VDP analytics pipeline in order:
   9. load_visit_ca.py            — load Visit California state context data (skip-safe)
  10. load_later_reports.py       — load Later.com social media data (IG/FB/TikTok) (skip-safe)
  11. audit_data.py               — data-quality audit; prints summary to stdout (skip-safe)
+ 12. fetch_fred_data.py          — FRED economic indicators (hotel CPI, disposable income) (skip-safe, needs FRED_API_KEY)
+ 13. fetch_google_trends.py      — Google Trends search demand signals (skip-safe)
+ 14. fetch_weather_data.py       — Open-Meteo coastal weather + beach day score (skip-safe)
+ 15. fetch_bls_data.py           — BLS OC hospitality employment data (skip-safe)
 
-Steps 4, 5, 7, 8, 9, 10, 11 are SKIP-SAFE: if input files are absent or the script fails,
-the step logs a warning and continues (exit code 0). Steps 1, 2, 3, 6 are
-FAIL-FAST: any failure aborts.
+Steps 4–15 are SKIP-SAFE: if input files are absent, API keys are missing, or the
+script fails, the step logs a warning and continues (exit code 0). Steps 1, 2, 3, 6
+are FAIL-FAST: any failure aborts.
 
 Each step is logged to logs/pipeline.log as:
   YYYY-MM-DD HH:MM:SS | STEP                 | OK/FAIL | message
@@ -54,6 +58,11 @@ STEPS = [
     ("load_visit_ca",     os.path.join(BASE_DIR, "load_visit_ca.py"),           False),
     ("load_later",        os.path.join(BASE_DIR, "load_later_reports.py"),      False),
     ("audit_data",        os.path.join(BASE_DIR, "audit_data.py"),              False),
+    # External live data — skip-safe, run last so core pipeline is never blocked
+    ("fetch_fred",        os.path.join(BASE_DIR, "fetch_fred_data.py"),         False),
+    ("fetch_trends",      os.path.join(BASE_DIR, "fetch_google_trends.py"),     False),
+    ("fetch_weather",     os.path.join(BASE_DIR, "fetch_weather_data.py"),      False),
+    ("fetch_bls",         os.path.join(BASE_DIR, "fetch_bls_data.py"),          False),
 ]
 
 
