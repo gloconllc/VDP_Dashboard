@@ -265,7 +265,7 @@ st.markdown("""
   /* ════════════════════════════════════════════════════════════════════════
      DANA POINT PULSE — Enterprise Analytics Design System
      Inspired by: Tableau, PowerBI, Looker, CoStar, Placer.ai, Datafy
-     Dark professional theme optimized for hospitality executives
+     Bright professional theme optimized for hospitality executives
   ════════════════════════════════════════════════════════════════════════ */
 
   /* ── Google Fonts ────────────────────────────────────────────────────── */
@@ -273,33 +273,40 @@ st.markdown("""
 
   /* ── Design Tokens ───────────────────────────────────────────────────── */
   :root {
-    --dp-bg:            #06101E;
-    --dp-surface:       #0B1929;
-    --dp-card:          #0F2039;
-    --dp-card-hover:    #132645;
-    --dp-border:        rgba(255,255,255,0.07);
-    --dp-border-accent: rgba(0,195,190,0.30);
-    --dp-teal:          #00C3BE;
-    --dp-teal-dim:      rgba(0,195,190,0.12);
-    --dp-teal-glow:     rgba(0,195,190,0.06);
-    --dp-blue:          #3D8EF0;
-    --dp-green:         #10B981;
-    --dp-amber:         #F59E0B;
-    --dp-red:           #F04E37;
-    --dp-purple:        #8B5CF6;
-    --dp-orange:        #E68161;
-    --dp-text-1:        #E2E8F0;
-    --dp-text-2:        #8FA3B8;
-    --dp-text-3:        #4A5F74;
-    --dp-radius:        12px;
-    --dp-radius-lg:     16px;
-    --dp-shadow:        0 2px 12px rgba(0,0,0,0.35);
-    --dp-shadow-hover:  0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,195,190,0.18);
+    --dp-bg:            #F0F4F8;
+    --dp-surface:       #FFFFFF;
+    --dp-card:          #FFFFFF;
+    --dp-card-hover:    #F7FAFD;
+    --dp-border:        #E2EBF3;
+    --dp-border-accent: rgba(0,113,188,0.25);
+    --dp-teal:          #0071BC;
+    --dp-teal-dim:      rgba(0,113,188,0.08);
+    --dp-teal-glow:     rgba(0,113,188,0.04);
+    --dp-blue:          #1A56DB;
+    --dp-green:         #059669;
+    --dp-amber:         #D97706;
+    --dp-red:           #DC2626;
+    --dp-purple:        #7C3AED;
+    --dp-orange:        #EA580C;
+    --dp-text-1:        #0F1923;
+    --dp-text-2:        #4A6174;
+    --dp-text-3:        #8FA3B8;
+    --dp-radius:        10px;
+    --dp-radius-lg:     14px;
+    --dp-shadow:        0 1px 4px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.05);
+    --dp-shadow-hover:  0 4px 16px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,113,188,0.15);
   }
 
   html, body, [class*="css"] {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: var(--dp-bg) !important;
+    color: var(--dp-text-1) !important;
+  }
+  body, .main, .stApp, [data-testid="stAppViewContainer"] {
+    background-color: var(--dp-bg) !important;
+  }
+  .block-container {
+    background-color: transparent !important;
   }
 
   /* ── KPI Cards — Enterprise Tile Style ──────────────────────────────── */
@@ -309,6 +316,7 @@ st.markdown("""
     padding: 18px 20px 14px 20px;
     border: 1px solid var(--dp-border);
     border-top: 3px solid var(--dp-teal);
+    color: var(--dp-text-1);
     margin-bottom: 12px;
     position: relative;
     overflow: hidden;
@@ -325,7 +333,7 @@ st.markdown("""
   .kpi-card:hover {
     box-shadow: var(--dp-shadow-hover);
     transform: translateY(-2px);
-    border-top-color: #00E5DF;
+    border-top-color: #0071BC;
   }
   .kpi-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -363,10 +371,11 @@ st.markdown("""
     position: relative;
     border: 1px solid var(--dp-border);
     background: var(--dp-card);
+    color: var(--dp-text-1);
     transition: box-shadow 0.20s ease, transform 0.20s ease;
   }
   .insight-card:hover {
-    box-shadow: 0 4px 20px rgba(0,0,0,0.30);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
     transform: translateY(-1px);
   }
   .insight-card::before {
@@ -496,35 +505,38 @@ st.markdown("""
     border: 1px solid rgba(230,129,97,.20);
   }
 
-  /* ── Hero Banner — Command Center Header ─────────────────────────────── */
+  /* ── Hero Banner — Command Center Header (Sticky) ────────────────────── */
   .hero-banner {
-    background: linear-gradient(135deg,
-      rgba(0,195,190,0.08) 0%,
-      rgba(11,25,41,0.95) 50%,
-      rgba(61,142,240,0.05) 100%);
-    border-radius: 14px; padding: 24px 28px;
-    border: 1px solid rgba(0,195,190,0.15);
-    margin-bottom: 16px; position: relative; overflow: hidden;
+    position: sticky !important;
+    top: 0;
+    z-index: 999;
+    background: linear-gradient(135deg, #0F2A4A 0%, #1A3D6B 100%) !important;
+    border-radius: 0 !important;
+    margin: -1rem -1rem 1rem -1rem;
+    padding: 14px 28px 12px 28px;
+    border-bottom: 2px solid rgba(255,255,255,0.10);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+    overflow: hidden;
   }
   .hero-banner::before {
     content: ''; position: absolute;
     top: 0; right: 0; bottom: 0;
     width: 40%;
-    background: linear-gradient(90deg, transparent, rgba(0,195,190,0.04));
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03));
     pointer-events: none;
   }
   .hero-title {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 1.85rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.1;
-    color: var(--dp-text-1);
+    color: #FFFFFF;
     margin-bottom: 6px;
   }
   .hero-title span {
-    background: linear-gradient(135deg, var(--dp-teal) 0%, #38E8E2 100%);
+    background: linear-gradient(135deg, #60C4FF 0%, #A8E6FF 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
   .hero-subtitle {
-    font-size: 13px; font-weight: 400; color: var(--dp-text-2);
+    font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.72);
     letter-spacing: 0.01em; margin-top: 2px;
   }
 
@@ -589,7 +601,7 @@ st.markdown("""
   .sidebar-brand {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 17px; font-weight: 800; letter-spacing: -.02em;
-    color: var(--dp-teal);
+    color: var(--dp-teal) !important;
   }
 
   /* ── Tab Labels ──────────────────────────────────────────────────────── */
@@ -601,14 +613,20 @@ st.markdown("""
   }
   [data-testid="stTabs"] [data-baseweb="tab-list"] {
     gap: 2px !important;
-    background: var(--dp-surface) !important;
+    background: #FFFFFF !important;
     border-radius: 8px !important;
     padding: 3px !important;
     border: 1px solid var(--dp-border) !important;
+    box-shadow: var(--dp-shadow) !important;
   }
   [data-testid="stTabs"] [data-baseweb="tab"] {
     border-radius: 6px !important;
     padding: 6px 14px !important;
+    color: var(--dp-text-1) !important;
+  }
+  [data-testid="stTabs"] [aria-selected="true"] {
+    background: var(--dp-teal) !important;
+    color: #FFFFFF !important;
   }
 
   /* ── Source Attribution Tags (inline) ───────────────────────────────── */
@@ -719,7 +737,7 @@ st.markdown("""
     justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 900; position: relative; z-index: 1;
     border: 2px solid currentColor;
-    background: rgba(0,0,0,0.35);
+    background: rgba(255,255,255,0.90);
   }
   .pulse-score { font-size: 22px; line-height: 1; letter-spacing: -.04em; }
   .pulse-label {
@@ -739,7 +757,7 @@ st.markdown("""
   .pulse-info-status {
     display: inline-block; margin-top: 8px; font-size: 10.5px; font-weight: 700;
     padding: 3px 10px; border-radius: 6px;
-    background: currentColor; color: #06101E;
+    background: currentColor; color: #FFFFFF;
     letter-spacing: .03em;
   }
   @keyframes pulse-ring {
@@ -748,22 +766,20 @@ st.markdown("""
     100% { transform: scale(1.40); opacity: 0;    }
   }
 
-  /* ── Global Text Contrast (Dark Mode) ───────────────────────────────── */
+  /* ── Global Text Contrast (Light Mode) ───────────────────────────────── */
   .stMarkdown, .stMarkdown p, .stMarkdown span, .stMarkdown div {
     color: var(--dp-text-1) !important;
   }
   [data-testid="stExpander"] p, [data-testid="stExpander"] div {
     color: var(--dp-text-2) !important;
   }
-  [data-testid="stSidebar"] * { color: var(--dp-text-1) !important; }
-  [data-testid="stSidebar"] .stMarkdown p { color: var(--dp-text-2) !important; }
   [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th {
     color: var(--dp-text-1) !important;
     background: var(--dp-card) !important;
   }
   [data-testid="stMetricDelta"] { font-size: 11px !important; font-weight: 600 !important; }
-  .sh-title { color: #ffffff !important; }
-  .sh-tag { color: #ffffff !important; }
+  .sh-title { color: #0F1923 !important; }
+  .sh-tag { color: #0071BC !important; }
   .insight-card p, .insight-card span { color: var(--dp-text-2) !important; }
 
   /* ── Section Intelligence Card ───────────────────────────────────────── */
@@ -822,6 +838,7 @@ st.markdown("""
     border-radius: var(--dp-radius) !important;
     padding: 14px 16px 10px !important;
     border-top: 2px solid var(--dp-teal) !important;
+    box-shadow: var(--dp-shadow) !important;
   }
 
   /* ── Streamlit Native Metric Styling ─────────────────────────────────── */
@@ -841,6 +858,9 @@ st.markdown("""
     letter-spacing: -0.03em !important;
     color: var(--dp-text-1) !important;
   }
+  [data-testid="stMetricValue"] div {
+    color: var(--dp-text-1) !important;
+  }
   [data-testid="stMetricDelta"] {
     font-size: 11.5px !important;
     font-weight: 600 !important;
@@ -848,12 +868,19 @@ st.markdown("""
 
   /* ── Sidebar Styling ─────────────────────────────────────────────────── */
   [data-testid="stSidebar"] {
-    background: var(--dp-surface) !important;
-    border-right: 1px solid var(--dp-border) !important;
+    background: #FFFFFF !important;
+    border-right: 1px solid #E2EBF3 !important;
   }
   [data-testid="stSidebar"] .stRadio label {
     font-size: 13px !important;
     font-weight: 500 !important;
+    color: var(--dp-text-1) !important;
+  }
+  [data-testid="stSidebar"] * {
+    color: var(--dp-text-1) !important;
+  }
+  [data-testid="stSidebar"] .stMarkdown p {
+    color: var(--dp-text-2) !important;
   }
 
   /* ── Selectbox / Widget Styling ──────────────────────────────────────── */
@@ -874,6 +901,25 @@ st.markdown("""
     font-family: 'Plus Jakarta Sans', sans-serif !important;
     font-weight: 700 !important; font-size: 13px !important;
   }
+
+  /* ── Global Filter Bar ────────────────────────────────────────────────── */
+  .filter-bar {
+    background: var(--dp-surface);
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius);
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: var(--dp-shadow);
+  }
+  .filter-bar .stSelectbox > div > div {
+    background: #F0F4F8 !important;
+    border: 1px solid var(--dp-border) !important;
+    border-radius: 6px !important;
+    font-size: 13px !important;
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -884,11 +930,11 @@ st.markdown("""
     display: flex !important; align-items: center !important; gap: 12px !important;
     padding: 10px 16px !important; border-radius: 8px !important;
     margin: 24px 0 14px 0 !important;
-    border-left: 3px solid var(--sh-accent, #00C3BE) !important;
-    background: rgba(0,195,190,0.05) !important;
-    border-top: 1px solid rgba(255,255,255,0.06) !important;
-    border-right: 1px solid rgba(255,255,255,0.04) !important;
-    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+    border-left: 3px solid var(--sh-accent, #0071BC) !important;
+    background: rgba(0,113,188,0.04) !important;
+    border-top: 1px solid rgba(0,113,188,0.06) !important;
+    border-right: 1px solid rgba(0,113,188,0.04) !important;
+    border-bottom: 1px solid rgba(0,113,188,0.04) !important;
   }
   .sh-icon {
     font-size: 18px !important; line-height: 1 !important; flex-shrink: 0 !important;
@@ -898,50 +944,51 @@ st.markdown("""
     font-family: 'Plus Jakarta Sans', sans-serif !important;
     font-size: 15px !important; font-weight: 800 !important;
     letter-spacing: -.025em !important; line-height: 1.2 !important;
-    color: #E2E8F0 !important;
+    color: #0F1923 !important;
   }
   .sh-tag {
     margin-left: auto !important; font-size: 9px !important;
     font-weight: 700 !important; letter-spacing: .07em !important;
     text-transform: uppercase !important; padding: 2px 8px !important;
     border-radius: 5px !important; white-space: nowrap !important;
-    background: rgba(0,195,190,0.12) !important;
-    color: #00C3BE !important;
-    border: 1px solid rgba(0,195,190,0.22) !important;
+    background: rgba(0,113,188,0.10) !important;
+    color: #0071BC !important;
+    border: 1px solid rgba(0,113,188,0.20) !important;
   }
   /* Accent color variants */
-  .sh-teal   { --sh-accent: #00C3BE; }
-  .sh-blue   { --sh-accent: #3D8EF0; }
-  .sh-green  { --sh-accent: #10B981; }
-  .sh-purple { --sh-accent: #8B5CF6; }
-  .sh-orange { --sh-accent: #E68161; }
-  .sh-amber  { --sh-accent: #F59E0B; }
-  .sh-indigo { --sh-accent: #6366F1; }
-  .sh-coral  { --sh-accent: #F04E37; }
-  .sh-gray   { --sh-accent: #8FA3B8; }
-  .sh-gold   { --sh-accent: #EAB308; }
+  .sh-teal   { --sh-accent: #0071BC; }
+  .sh-blue   { --sh-accent: #1A56DB; }
+  .sh-green  { --sh-accent: #059669; }
+  .sh-purple { --sh-accent: #7C3AED; }
+  .sh-orange { --sh-accent: #EA580C; }
+  .sh-amber  { --sh-accent: #D97706; }
+  .sh-indigo { --sh-accent: #4338CA; }
+  .sh-coral  { --sh-accent: #DC2626; }
+  .sh-gray   { --sh-accent: #64748B; }
+  .sh-gold   { --sh-accent: #B45309; }
 
   /* Accent-aware backgrounds for sh variants */
-  .sh-teal   { background: rgba(0,195,190,0.05) !important; }
-  .sh-blue   { background: rgba(61,142,240,0.05) !important; }
-  .sh-green  { background: rgba(16,185,129,0.05) !important; }
-  .sh-purple { background: rgba(139,92,246,0.05) !important; }
-  .sh-orange { background: rgba(230,129,97,0.05) !important; }
-  .sh-amber  { background: rgba(245,158,11,0.05) !important; }
-  .sh-indigo { background: rgba(99,102,241,0.05) !important; }
-  .sh-coral  { background: rgba(240,78,55,0.05) !important; }
-  .sh-gray   { background: rgba(143,163,184,0.05) !important; }
-  .sh-gold   { background: rgba(234,179,8,0.05) !important; }
+  .sh-teal   { background: rgba(0,113,188,0.04) !important; }
+  .sh-blue   { background: rgba(26,86,219,0.04) !important; }
+  .sh-green  { background: rgba(5,150,105,0.04) !important; }
+  .sh-purple { background: rgba(124,58,237,0.04) !important; }
+  .sh-orange { background: rgba(234,88,12,0.04) !important; }
+  .sh-amber  { background: rgba(217,119,6,0.04) !important; }
+  .sh-indigo { background: rgba(67,56,202,0.04) !important; }
+  .sh-coral  { background: rgba(220,38,38,0.04) !important; }
+  .sh-gray   { background: rgba(100,116,139,0.04) !important; }
+  .sh-gold   { background: rgba(180,83,9,0.04) !important; }
 
   /* Accent-aware tag colors */
-  .sh-blue   .sh-tag { background: rgba(61,142,240,0.12) !important; color: #3D8EF0 !important; border-color: rgba(61,142,240,0.22) !important; }
-  .sh-green  .sh-tag { background: rgba(16,185,129,0.12) !important; color: #10B981 !important; border-color: rgba(16,185,129,0.22) !important; }
-  .sh-purple .sh-tag { background: rgba(139,92,246,0.12) !important; color: #8B5CF6 !important; border-color: rgba(139,92,246,0.22) !important; }
-  .sh-orange .sh-tag { background: rgba(230,129,97,0.12) !important; color: #E68161 !important; border-color: rgba(230,129,97,0.22) !important; }
-  .sh-amber  .sh-tag { background: rgba(245,158,11,0.12) !important; color: #F59E0B !important; border-color: rgba(245,158,11,0.22) !important; }
-  .sh-coral  .sh-tag { background: rgba(240,78,55,0.12) !important;  color: #F04E37 !important; border-color: rgba(240,78,55,0.22) !important; }
-  .sh-gray   .sh-tag { background: rgba(143,163,184,0.12) !important; color: #8FA3B8 !important; border-color: rgba(143,163,184,0.22) !important; }
-  .sh-gold   .sh-tag { background: rgba(234,179,8,0.12) !important;  color: #EAB308 !important; border-color: rgba(234,179,8,0.22) !important; }
+  .sh-teal   .sh-tag { background: rgba(0,113,188,0.10) !important; color: #0071BC !important; border-color: rgba(0,113,188,0.20) !important; }
+  .sh-blue   .sh-tag { background: rgba(26,86,219,0.10) !important; color: #1A56DB !important; border-color: rgba(26,86,219,0.20) !important; }
+  .sh-green  .sh-tag { background: rgba(5,150,105,0.10) !important; color: #059669 !important; border-color: rgba(5,150,105,0.20) !important; }
+  .sh-purple .sh-tag { background: rgba(124,58,237,0.10) !important; color: #7C3AED !important; border-color: rgba(124,58,237,0.20) !important; }
+  .sh-orange .sh-tag { background: rgba(234,88,12,0.10) !important; color: #EA580C !important; border-color: rgba(234,88,12,0.20) !important; }
+  .sh-amber  .sh-tag { background: rgba(217,119,6,0.10) !important; color: #D97706 !important; border-color: rgba(217,119,6,0.20) !important; }
+  .sh-coral  .sh-tag { background: rgba(220,38,38,0.10) !important; color: #DC2626 !important; border-color: rgba(220,38,38,0.20) !important; }
+  .sh-gray   .sh-tag { background: rgba(100,116,139,0.10) !important; color: #64748B !important; border-color: rgba(100,116,139,0.20) !important; }
+  .sh-gold   .sh-tag { background: rgba(180,83,9,0.10) !important; color: #B45309 !important; border-color: rgba(180,83,9,0.20) !important; }
 
 </style>
 """, unsafe_allow_html=True)
@@ -1104,15 +1151,15 @@ st.markdown("""
 st.markdown("""
 <style>
   :root {
-    --bg-tint: rgba(13,17,23,1);
+    --bg-tint: rgba(240,244,248,1);
   }
   /* Applied by JS below — subtle tint only */
-  body.dp-day     { --bg-tint: rgba(13,17,26,1); }
-  body.dp-evening { --bg-tint: rgba(20,14,10,1); }
-  body.dp-night   { --bg-tint: rgba(7,10,18,1);  }
-  body.dp-day     .main { background: linear-gradient(180deg, rgba(33,128,141,0.04) 0%, transparent 100%); }
-  body.dp-evening .main { background: linear-gradient(180deg, rgba(230,129,97,0.06) 0%, transparent 100%); }
-  body.dp-night   .main { background: linear-gradient(180deg, rgba(10,16,32,0.50)   0%, transparent 100%); }
+  body.dp-day     { --bg-tint: rgba(240,244,248,1); }
+  body.dp-evening { --bg-tint: rgba(245,242,238,1); }
+  body.dp-night   { --bg-tint: rgba(238,242,248,1); }
+  body.dp-day     .main { background: linear-gradient(180deg, rgba(0,113,188,0.03) 0%, transparent 100%); }
+  body.dp-evening .main { background: linear-gradient(180deg, rgba(234,88,12,0.03) 0%, transparent 100%); }
+  body.dp-night   .main { background: linear-gradient(180deg, rgba(26,61,107,0.04) 0%, transparent 100%); }
 </style>
 <script>
 (function(){
@@ -3129,12 +3176,23 @@ PLOTLY_CONFIG = {
     "responsive": True,
 }
 
+# ─── Sticky header JS ─────────────────────────────────────────────────────────
+st.markdown("""
+<script>
+// Pin hero banner to top when it scrolls out of normal flow
+window.addEventListener('scroll', function() {
+  const banner = window.parent.document.querySelector('.hero-banner');
+  if (banner) banner.style.position = 'sticky';
+});
+</script>
+""", unsafe_allow_html=True)
+
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 # GloCon Solutions LLC — Dana Point PULSE sidebar with VDP branding + images
 with st.sidebar:
     st.markdown(
-        '<div style="background:rgba(0,195,190,0.06);border-radius:10px;padding:16px;'
-        'margin-bottom:12px;border:1px solid rgba(0,195,190,0.16);">'
+        '<div style="background:rgba(0,113,188,0.06);border-radius:10px;padding:16px;'
+        'margin-bottom:12px;border:1px solid rgba(0,113,188,0.16);">'
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
         '<span style="font-size:22px;line-height:1;">🌊</span>'
         '<div>'
@@ -4543,6 +4601,45 @@ on pace for <strong>${tbid_ann:,.0f} annually</strong>.
     return html
 
 
+# ─── Global Filter Bar ────────────────────────────────────────────────────────
+st.markdown('<div class="filter-bar">', unsafe_allow_html=True)
+_fc1, _fc2, _fc3, _fc4 = st.columns([2, 2, 2, 2])
+with _fc1:
+    _preset = st.selectbox(
+        "Time Period",
+        ["Last 30 Days", "Last 60 Days", "Last 90 Days", "Last 6 Months",
+         "YTD", "Last 12 Months", "All Time"],
+        key="fb_preset", label_visibility="visible",
+        index=2
+    )
+with _fc2:
+    _grain_fb = st.selectbox(
+        "Data Grain",
+        ["Daily", "Monthly"],
+        key="fb_grain", label_visibility="visible"
+    )
+with _fc3:
+    _market_opts = ["All Markets", "Dana Point Select", "Orange County", "US Composite"]
+    _market_fb = st.selectbox(
+        "Market",
+        _market_opts,
+        key="fb_market", label_visibility="visible"
+    )
+with _fc4:
+    _metric_fb = st.selectbox(
+        "Primary Metric",
+        ["RevPAR", "Occupancy", "ADR", "Revenue", "Demand"],
+        key="fb_metric", label_visibility="visible"
+    )
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Map preset to days
+_preset_days_map = {
+    "Last 30 Days": 30, "Last 60 Days": 60, "Last 90 Days": 90,
+    "Last 6 Months": 180, "YTD": (datetime.now() - datetime(datetime.now().year, 1, 1)).days,
+    "Last 12 Months": 365, "All Time": 3650
+}
+
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
@@ -4832,9 +4929,9 @@ with tab_ov:
 </div>
 
 <div class="nlm-point">
-  <strong>Historical Context (Zartico 2024–25)</strong> <span class="nlm-tag" style="background:rgba(121,82,179,0.15);color:#7952b3;">Zartico</span><br>
+  <strong>Historical Context (Zartico 2024–25) (Historical Reference)</strong> <span class="nlm-tag" style="background:rgba(121,82,179,0.15);color:#7952b3;">Zartico</span><br>
   {_zrt_ctx}
-  <br><em style="opacity:.72">→ Zartico historical data provides independent validation of Datafy trends; present alongside for board credibility.</em>
+  <br><em style="opacity:.72">→ Zartico historical data provides independent validation of Datafy trends; present alongside for board credibility. Note: Zartico is historical reference only (Jun 2025 snapshot) — not current data.</em>
 </div>
 </div>
 """, unsafe_allow_html=True)
@@ -6722,6 +6819,157 @@ with tab_fo:
             if all_sources:
                 st.caption(f"Data sources: {', '.join(sorted(s.strip() for s in all_sources if s.strip()))}")
 
+    # ── Forward Signals Dashboard ──────────────────────────────────────────
+    st.markdown(_sh("📊", "Forward Signal Dashboard", "blue", "Leading indicators powering the AI outlook"), unsafe_allow_html=True)
+
+    _s1, _s2 = st.columns(2)
+
+    with _s1:
+        # Google Trends chart
+        if not df_trends.empty and "week_date" in df_trends.columns:
+            _trend_terms = df_trends["term"].unique().tolist() if "term" in df_trends.columns else []
+            _trend_colors = ["#0071BC", "#059669", "#DC2626", "#7C3AED", "#D97706"]
+            fig_trend = go.Figure()
+            for i, term in enumerate(_trend_terms[:5]):
+                _td = df_trends[df_trends["term"] == term].copy()
+                _td = _td.sort_values("week_date")
+                fig_trend.add_trace(go.Scatter(
+                    x=_td["week_date"], y=_td["interest"],
+                    name=term, mode="lines",
+                    line=dict(color=_trend_colors[i % len(_trend_colors)], width=2),
+                    hovertemplate="%{x|%b %d}<br>Interest: %{y}<extra>" + term + "</extra>"
+                ))
+            fig_trend.update_layout(
+                title="Search Demand Index — Dana Point vs. Competitors",
+                template="plotly_white",
+                height=300,
+                margin=dict(l=10, r=10, t=40, b=10),
+                legend=dict(orientation="h", y=-0.2, font=dict(size=10)),
+                xaxis=dict(showgrid=False, color="#4A6174"),
+                yaxis=dict(title="Interest (0-100)", gridcolor="#F0F4F8", color="#4A6174"),
+                plot_bgcolor="white", paper_bgcolor="white",
+                font=dict(family="Inter", color="#0F1923")
+            )
+            st.plotly_chart(fig_trend, use_container_width=True, config={"displayModeBar": False})
+        else:
+            st.info("Google Trends data not available. Run `fetch_google_trends.py`.")
+
+    with _s2:
+        # Weather correlation chart
+        if not df_weather.empty:
+            _wm = df_weather.copy()
+            if "year" in _wm.columns and "month" in _wm.columns:
+                _wm["date"] = pd.to_datetime(_wm[["year", "month"]].assign(day=1))
+                _wm = _wm.sort_values("date").tail(24)
+                _temp_col = next((c for c in ["avg_high_f","avg_temp_f","temp_high"] if c in _wm.columns), None)
+                if _temp_col:
+                    fig_wx = go.Figure()
+                    fig_wx.add_trace(go.Bar(
+                        x=_wm["date"], y=_wm[_temp_col],
+                        name="Avg High F",
+                        marker_color="#0071BC",
+                        opacity=0.8,
+                        hovertemplate="%{x|%b %Y}<br>%{y:.0f}F<extra></extra>"
+                    ))
+                    fig_wx.update_layout(
+                        title="Coastal Weather — Dana Point (Seasonal Demand Driver)",
+                        template="plotly_white",
+                        height=300,
+                        margin=dict(l=10, r=10, t=40, b=10),
+                        xaxis=dict(showgrid=False, color="#4A6174"),
+                        yaxis=dict(title="Temp (F)", gridcolor="#F0F4F8", color="#4A6174"),
+                        plot_bgcolor="white", paper_bgcolor="white",
+                        font=dict(family="Inter", color="#0F1923")
+                    )
+                    st.plotly_chart(fig_wx, use_container_width=True, config={"displayModeBar": False})
+                else:
+                    st.info("Weather temperature data column not found.")
+            else:
+                st.info("Weather data format unexpected.")
+        else:
+            st.info("Weather data not available. Run `fetch_weather_data.py`.")
+
+    # BLS Employment and Compression Calendar row
+    _b1, _b2 = st.columns(2)
+    with _b1:
+        if not df_bls.empty:
+            _bls_plot = df_bls.copy()
+            if "year" in _bls_plot.columns and "month" in _bls_plot.columns:
+                _bls_plot["date"] = pd.to_datetime(_bls_plot[["year","month"]].assign(day=1))
+                _bls_plot = _bls_plot.sort_values("date").tail(36)
+                _val_col = next((c for c in ["value","employment","level"] if c in _bls_plot.columns), None)
+                if _val_col:
+                    fig_bls = go.Figure()
+                    if "series_name" in _bls_plot.columns:
+                        for _sname, _sdf in _bls_plot.groupby("series_name"):
+                            fig_bls.add_trace(go.Scatter(
+                                x=_sdf["date"], y=_sdf[_val_col],
+                                name=str(_sname), mode="lines+markers",
+                                line=dict(width=2),
+                                marker=dict(size=4),
+                                hovertemplate="%{x|%b %Y}<br>%{y:,.0f}<extra>" + str(_sname) + "</extra>"
+                            ))
+                    else:
+                        fig_bls.add_trace(go.Scatter(
+                            x=_bls_plot["date"], y=_bls_plot[_val_col],
+                            name="Employment", mode="lines+markers",
+                            line=dict(width=2), marker=dict(size=4),
+                            hovertemplate="%{x|%b %Y}<br>%{y:,.0f}<extra></extra>"
+                        ))
+                    fig_bls.update_layout(
+                        title="Hospitality Employment — Orange County (BLS)",
+                        template="plotly_white",
+                        height=280,
+                        margin=dict(l=10, r=10, t=40, b=10),
+                        legend=dict(orientation="h", y=-0.25, font=dict(size=9)),
+                        xaxis=dict(showgrid=False, color="#4A6174"),
+                        yaxis=dict(title="Workers (000s)", gridcolor="#F0F4F8", color="#4A6174"),
+                        plot_bgcolor="white", paper_bgcolor="white",
+                        font=dict(family="Inter", color="#0F1923")
+                    )
+                    st.plotly_chart(fig_bls, use_container_width=True, config={"displayModeBar": False})
+                else:
+                    st.info("BLS data value column not found.")
+            else:
+                st.info("BLS data not available. Run `fetch_bls_data.py`.")
+        else:
+            st.info("BLS data not available. Run `fetch_bls_data.py`.")
+
+    with _b2:
+        # Compression calendar heatmap
+        if not df_kpi.empty and "as_of_date" in df_kpi.columns:
+            _comp_df = df_kpi.copy()
+            _comp_df["month"] = _comp_df["as_of_date"].dt.to_period("M").astype(str)
+            _occ_col = "occ_pct" if "occ_pct" in _comp_df.columns else ("occ" if "occ" in _comp_df.columns else None)
+            if _occ_col:
+                _comp_df["occ"] = pd.to_numeric(_comp_df[_occ_col], errors="coerce")
+                _monthly_occ = _comp_df.groupby("month")["occ"].mean().reset_index().tail(18)
+                fig_comp = go.Figure(go.Bar(
+                    x=_monthly_occ["month"],
+                    y=_monthly_occ["occ"],
+                    marker_color=["#DC2626" if v >= 80 else "#D97706" if v >= 70 else "#0071BC"
+                                 for v in _monthly_occ["occ"]],
+                    hovertemplate="%{x}<br>Avg Occ: %{y:.1f}%<extra></extra>"
+                ))
+                fig_comp.add_hline(y=80, line_dash="dot", line_color="#DC2626",
+                                   annotation_text="Compression (80%)", annotation_font_size=10)
+                fig_comp.add_hline(y=70, line_dash="dot", line_color="#D97706",
+                                   annotation_text="Threshold (70%)", annotation_font_size=10)
+                fig_comp.update_layout(
+                    title="Monthly Occupancy — Compression Calendar",
+                    template="plotly_white",
+                    height=280,
+                    margin=dict(l=10, r=10, t=40, b=40),
+                    xaxis=dict(showgrid=False, color="#4A6174", tickangle=-45),
+                    yaxis=dict(title="Avg Occ %", gridcolor="#F0F4F8", color="#4A6174"),
+                    plot_bgcolor="white", paper_bgcolor="white",
+                    font=dict(family="Inter", color="#0F1923")
+                )
+                st.plotly_chart(fig_comp, use_container_width=True, config={"displayModeBar": False})
+            else:
+                st.info("Occupancy data not available for compression calendar.")
+        else:
+            st.info("KPI data not available for compression calendar.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -7260,6 +7508,36 @@ with tab_ev:
                     )
                     st.plotly_chart(style_fig(fig_cmp, height=300), use_container_width=True, config=PLOTLY_CONFIG)
 
+    # ── Visitor Segment Images ─────────────────────────────────────────────────
+    VISITOR_SEGMENT_IMAGES = {
+        "beach":     "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80",
+        "surf":      "https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=400&q=80",
+        "harbor":    "https://images.unsplash.com/photo-1564424224827-cd24b8915874?w=400&q=80",
+        "festival":  "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&q=80",
+        "family":    "https://images.unsplash.com/photo-1511895426328-dc8714191011?w=400&q=80",
+        "luxury":    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=80",
+        "overnight": "https://images.unsplash.com/photo-1455587734955-081b22074882?w=400&q=80",
+        "daytrip":   "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&q=80",
+        "corporate": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80",
+    }
+
+    def segment_image_card(label: str, value: str, img_url: str, delta: str = "") -> str:
+        _delta_html = (f'<div style="font-size:11px;color:#059669;margin-top:2px;">{delta}</div>'
+                       if delta else "")
+        return (
+            f'<div style="background:#fff;border-radius:12px;overflow:hidden;border:1px solid #E2EBF3;'
+            f'box-shadow:0 1px 4px rgba(0,0,0,0.07);margin-bottom:12px;">'
+            f'<div style="height:100px;overflow:hidden;">'
+            f'<img src="{img_url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" />'
+            f'</div>'
+            f'<div style="padding:10px 14px 12px;">'
+            f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#4A6174;">{label}</div>'
+            f'<div style="font-size:22px;font-weight:800;color:#0F1923;font-family:\'Plus Jakarta Sans\',sans-serif;">{value}</div>'
+            f'{_delta_html}'
+            f'</div>'
+            f'</div>'
+        )
+
     # ── Visitor Cluster Visitation ─────────────────────────────────────────────
     if not df_dfy_clusters.empty:
         st.markdown(_sh("🗺️", "Visitor Cluster Visitation", "green", "DATAFY"), unsafe_allow_html=True)
@@ -7269,15 +7547,39 @@ with tab_ev:
         _cl_name_col  = [c for c in _cl.columns if "cluster" in c.lower() or "area" in c.lower() or "zone" in c.lower() or "name" in c.lower()]
         if _cl_share_col and _cl_name_col:
             _cl_x = _cl_share_col[0]; _cl_y = _cl_name_col[0]
-            _cl_s = _cl.sort_values(_cl_x, ascending=True).head(10)
+            _cl_s = _cl.sort_values(_cl_x, ascending=False).head(10)
+
+            # Image-backed cluster cards for top segments
+            _seg_img_map = {
+                "harbor": VISITOR_SEGMENT_IMAGES["harbor"],
+                "beach":  VISITOR_SEGMENT_IMAGES["beach"],
+                "surf":   VISITOR_SEGMENT_IMAGES["surf"],
+                "festival": VISITOR_SEGMENT_IMAGES["festival"],
+                "overnight": VISITOR_SEGMENT_IMAGES["overnight"],
+            }
+            _top_clusters = _cl_s.head(4)
+            _cl_img_cols = st.columns(min(4, len(_top_clusters)))
+            for _cic, (_, _crow) in zip(_cl_img_cols, _top_clusters.iterrows()):
+                _cname = str(_crow[_cl_y])
+                _cval  = f"{float(_crow[_cl_x]):.1f}%" if pd.notna(_crow[_cl_x]) else "—"
+                # Pick image by keyword match
+                _img   = next(
+                    (v for k, v in _seg_img_map.items() if k in _cname.lower()),
+                    VISITOR_SEGMENT_IMAGES["beach"]
+                )
+                with _cic:
+                    st.markdown(segment_image_card(_cname, _cval, _img), unsafe_allow_html=True)
+
+            # Full bar chart below
+            _cl_s_bar = _cl.sort_values(_cl_x, ascending=True).head(10)
             fig_cl = go.Figure(go.Bar(
-                x=_cl_s[_cl_x].values, y=_cl_s[_cl_y].values,
+                x=_cl_s_bar[_cl_x].values, y=_cl_s_bar[_cl_y].values,
                 orientation="h", marker_color=TEAL_LIGHT,
                 hovertemplate="<b>%{y}</b><br>Share: %{x:.1f}%<extra></extra>",
             ))
             fig_cl.update_layout(xaxis_title="Visitation Share (%)", xaxis_ticksuffix="%", height=280, margin=dict(l=0,r=0,t=20,b=20))
             st.plotly_chart(style_fig(fig_cl, height=280), use_container_width=True, config=PLOTLY_CONFIG)
-            with st.expander("📊 View raw cluster data"):
+            with st.expander("View raw cluster data"):
                 st.dataframe(_cl.reset_index(drop=True), use_container_width=True)
 
     # ── Social & Web Analytics ────────────────────────────────────────────────
@@ -7536,10 +7838,14 @@ with tab_ev:
     st.markdown("---")
 
     # ── Zartico Historical Reference ─────────────────────────────────────────
-    st.info("📚 **Historical Reference:** Zartico data reflects a Jun 2025 snapshot. Use for trend comparison only — Datafy is the current source of record.")
+    st.markdown("""<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px 14px;
+margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+<span style="font-size:16px;">📦</span>
+<div>
+  <span style="font-weight:700;color:#92400E;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
+  <span style="font-size:11px;color:#78350F;">Current data: Datafy &amp; CoStar. Zartico provides baseline &amp; trend context only.</span>
+</div></div>""", unsafe_allow_html=True)
     st.markdown(_sh("📚", "Zartico Historical Reference", "gray", "JUN 2025 SNAPSHOT"), unsafe_allow_html=True)
-    st.caption("⚠️ Zartico data represents a historical snapshot (last updated Jun 2025). "
-               "Use for trend comparison only. Current performance data comes from Datafy, CoStar, and STR.")
 
     if not df_zrt_kpis.empty or not df_zrt_spend.empty:
         zrt_col1, zrt_col2, zrt_col3 = st.columns(3)
@@ -8135,7 +8441,13 @@ with tab_fm:
         # ── Zartico Top Markets (historical comparison) ────────────────────────
         if not df_zrt_markets.empty:
             st.markdown("---")
-            st.info("📚 **Historical Reference:** Zartico data reflects a Jun 2025 snapshot. Use for trend comparison only — Datafy is the current source of record.")
+            st.markdown("""<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px 14px;
+margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+<span style="font-size:16px;">📦</span>
+<div>
+  <span style="font-weight:700;color:#92400E;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
+  <span style="font-size:11px;color:#78350F;">Current data: Datafy &amp; CoStar. Zartico provides baseline &amp; trend context only.</span>
+</div></div>""", unsafe_allow_html=True)
             st.markdown("#### Historical Feeder Markets — Zartico Reference (Q1 2025)")
             st.caption("⚠️ Zartico data is a historical snapshot. Use for trend context only — not current performance.")
             _zrt_top10 = df_zrt_markets.sort_values("rank").head(10)
@@ -8639,9 +8951,14 @@ with tab_ei:
     # ══════════════════════════════════════════════════════════════════════════
     # ZARTICO EVENT IMPACT — Historical reference (OC Marathon period)
     # ══════════════════════════════════════════════════════════════════════════
-    st.info("📚 **Historical Reference:** Zartico data reflects a Jun 2025 snapshot. Use for trend comparison only — Datafy is the current source of record.")
+    st.markdown("""<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px 14px;
+margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+<span style="font-size:16px;">📦</span>
+<div>
+  <span style="font-weight:700;color:#92400E;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
+  <span style="font-size:11px;color:#78350F;">Current data: Datafy &amp; CoStar. Zartico provides baseline &amp; trend context only. Event window: May 4–10, 2025 (OC Marathon period).</span>
+</div></div>""", unsafe_allow_html=True)
     st.markdown(_sh("📚", "Event Spend Impact Analysis", "gray", "ZARTICO HISTORICAL"), unsafe_allow_html=True)
-    st.caption("⚠️ Zartico is historical reference only (Jun 2025 snapshot). Event window: May 4–10, 2025 (OC Marathon period) · Current data: Datafy/STR.")
 
     if not df_zrt_events.empty:
         ze = df_zrt_events.iloc[0]
@@ -8751,8 +9068,14 @@ with tab_ei:
     # VISITOR/RESIDENT RATIO — Zartico seasonality index
     # ══════════════════════════════════════════════════════════════════════════
     if not df_zrt_movement.empty:
-        st.info("📚 **Historical Reference:** Zartico data reflects a Jun 2025 snapshot. Use for trend comparison only — Datafy is the current source of record.")
-        st.markdown("#### Visitor-to-Resident Ratio — Event Season Intensity (Zartico)")
+        st.markdown("""<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px 14px;
+margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+<span style="font-size:16px;">📦</span>
+<div>
+  <span style="font-weight:700;color:#92400E;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
+  <span style="font-size:11px;color:#78350F;">Current data: Datafy &amp; CoStar. Zartico provides baseline &amp; trend context only.</span>
+</div></div>""", unsafe_allow_html=True)
+        st.markdown("#### Visitor-to-Resident Ratio — Event Season Intensity (Zartico Historical Reference)")
         st.caption("Ratio > benchmark = tourism demand above normal · Q3 events amplify an already-peak season")
         fig_move = go.Figure()
         fig_move.add_trace(go.Scatter(
