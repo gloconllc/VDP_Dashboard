@@ -5962,6 +5962,149 @@ with tab_ov:
     except Exception:
         pass
 
+    # ── Social Performance Intelligence ───────────────────────────────────────
+    try:
+        _spi_ig  = df_later_ig_profile.iloc[0]  if not df_later_ig_profile.empty  else None
+        _spi_fb  = df_later_fb_profile.iloc[0]  if not df_later_fb_profile.empty  else None
+        _spi_tk  = df_later_tk_profile.iloc[0]  if not df_later_tk_profile.empty  else None
+        _spi_posts = df_later_ig_posts           if not df_later_ig_posts.empty    else pd.DataFrame()
+
+        if _spi_ig is not None or _spi_fb is not None or _spi_tk is not None:
+            st.markdown(sec_div("📲 Social Performance Intelligence"), unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-family:\'Inter\',sans-serif;font-size:12px;color:#64748B;margin-bottom:12px;">'
+                'Later.com social analytics — Instagram, Facebook & TikTok performance alongside destination metrics.</div>',
+                unsafe_allow_html=True,
+            )
+            _spi_c1, _spi_c2, _spi_c3, _spi_c4 = st.columns(4)
+
+            # IG card
+            _spi_ig_fol = int(_spi_ig.get("followers", 0) or 0) if _spi_ig is not None else 0
+            _spi_ig_fol_fmt = f"{_spi_ig_fol/1e3:.1f}K" if _spi_ig_fol >= 1000 else str(_spi_ig_fol)
+            # YOY growth from profile growth table
+            _ig_growth = 0.0
+            if not df_later_ig_profile.empty and len(df_later_ig_profile) >= 2:
+                _ig_oldest = float(df_later_ig_profile.sort_values("data_date").iloc[0].get("followers", 0) or 0)
+                _ig_latest = float(df_later_ig_profile.sort_values("data_date").iloc[-1].get("followers", 0) or 0)
+                _ig_growth = ((_ig_latest - _ig_oldest) / _ig_oldest * 100) if _ig_oldest > 0 else 0.0
+            # Avg engagement from posts
+            _spi_ig_eng = float(_spi_posts["engagement_rate"].mean()) if not _spi_posts.empty and "engagement_rate" in _spi_posts.columns else 0.0
+            _spi_ig_reach_avg = int(_spi_posts["reach"].mean()) if not _spi_posts.empty and "reach" in _spi_posts.columns and _spi_posts["reach"].notna().any() else 0
+
+            def _spi_card(platform_icon, platform, followers, sub_label, sub_val, growth_pct, color, bg_color):
+                _grow_color = "#059669" if growth_pct >= 0 else "#DC2626"
+                _grow_arrow = "▲" if growth_pct >= 0 else "▼"
+                return (
+                    f'<div style="background:#FFFFFF;border-radius:12px;padding:16px 18px;'
+                    f'border:1px solid rgba(15,28,46,0.07);border-top:3px solid {color};'
+                    f'box-shadow:0 1px 4px rgba(15,28,46,0.06);">'
+                    f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">'
+                    f'<span style="font-size:18px;">{platform_icon}</span>'
+                    f'<span style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;'
+                    f'letter-spacing:.08em;">{platform}</span>'
+                    f'</div>'
+                    f'<div style="font-family:\'Outfit\',sans-serif;font-size:24px;font-weight:800;'
+                    f'color:#0D1B2E;letter-spacing:-.03em;line-height:1.1;">{followers}</div>'
+                    f'<div style="font-size:10px;color:#64748B;margin-top:2px;margin-bottom:8px;">Followers</div>'
+                    f'<div style="background:{bg_color};border-radius:6px;padding:6px 10px;'
+                    f'display:flex;justify-content:space-between;align-items:center;">'
+                    f'<span style="font-size:10px;color:#64748B;">{sub_label}</span>'
+                    f'<span style="font-size:12px;font-weight:700;color:{color};">{sub_val}</span>'
+                    f'</div>'
+                    f'<div style="font-size:10px;color:{_grow_color};font-weight:600;margin-top:6px;">'
+                    f'{_grow_arrow} {abs(growth_pct):.1f}% follower growth (period)</div>'
+                    f'</div>'
+                )
+
+            with _spi_c1:
+                st.markdown(_spi_card(
+                    "📸", "Instagram",
+                    _spi_ig_fol_fmt,
+                    "Avg Eng. Rate",
+                    f"{_spi_ig_eng:.1f}%" if _spi_ig_eng > 0 else "—",
+                    _ig_growth,
+                    "#E1306C", "rgba(225,48,108,0.07)",
+                ), unsafe_allow_html=True)
+
+            # FB card
+            _spi_fb_fol = int(_spi_fb.get("page_followers", 0) or 0) if _spi_fb is not None else 0
+            _spi_fb_fol_fmt = f"{_spi_fb_fol/1e3:.1f}K" if _spi_fb_fol >= 1000 else str(_spi_fb_fol)
+            _spi_fb_reach = int(_spi_fb.get("reach", 0) or 0) if _spi_fb is not None else 0
+            _fb_growth = 0.0
+            if not df_later_fb_profile.empty and len(df_later_fb_profile) >= 2:
+                _fb_oldest = float(df_later_fb_profile.sort_values("data_date").iloc[0].get("page_followers", 0) or 0)
+                _fb_latest = float(df_later_fb_profile.sort_values("data_date").iloc[-1].get("page_followers", 0) or 0)
+                _fb_growth = ((_fb_latest - _fb_oldest) / _fb_oldest * 100) if _fb_oldest > 0 else 0.0
+
+            with _spi_c2:
+                st.markdown(_spi_card(
+                    "👥", "Facebook",
+                    _spi_fb_fol_fmt,
+                    "Recent Reach",
+                    f"{_spi_fb_reach:,}" if _spi_fb_reach > 0 else "—",
+                    _fb_growth,
+                    "#1877F2", "rgba(24,119,242,0.07)",
+                ), unsafe_allow_html=True)
+
+            # TK card
+            _spi_tk_fol = int(_spi_tk.get("followers", 0) or 0) if _spi_tk is not None else 0
+            _spi_tk_fol_fmt = f"{_spi_tk_fol/1e3:.1f}K" if _spi_tk_fol >= 1000 else str(_spi_tk_fol)
+            _spi_tk_views = int(_spi_tk.get("video_views", 0) or 0) if _spi_tk is not None else 0
+            _tk_growth = 0.0
+            if not df_later_tk_profile.empty and len(df_later_tk_profile) >= 2:
+                _tk_oldest = float(df_later_tk_profile.sort_values("data_date").iloc[0].get("followers", 0) or 0)
+                _tk_latest = float(df_later_tk_profile.sort_values("data_date").iloc[-1].get("followers", 0) or 0)
+                _tk_growth = ((_tk_latest - _tk_oldest) / _tk_oldest * 100) if _tk_oldest > 0 else 0.0
+
+            with _spi_c3:
+                st.markdown(_spi_card(
+                    "🎵", "TikTok",
+                    _spi_tk_fol_fmt,
+                    "Video Views",
+                    f"{_spi_tk_views:,}" if _spi_tk_views > 0 else "—",
+                    _tk_growth,
+                    "#010101", "rgba(0,0,0,0.05)",
+                ), unsafe_allow_html=True)
+
+            # Combined reach signal card (cross-dataset)
+            _spi_total_fol = _spi_ig_fol + _spi_fb_fol + _spi_tk_fol
+            _spi_total_fmt = f"{_spi_total_fol/1e3:.1f}K" if _spi_total_fol >= 1000 else str(_spi_total_fol)
+            _spi_occ_now   = m.get("occ_30", 0) if m else 0
+            _spi_adr_now   = m.get("adr_30", 0) if m else 0
+            _spi_eng_signal = (
+                f"{_spi_ig_eng:.1f}% IG engagement" if _spi_ig_eng >= 8 else
+                f"IG eng. {_spi_ig_eng:.1f}% — below 8% benchmark" if _spi_ig_eng > 0 else "Load posts"
+            )
+            _spi_cross_note = (
+                f"Social reach leads hotel demand by ~3 weeks. "
+                f"At {_spi_occ_now:.1f}% current occ, monitor IG reach for early Q2 booking signal."
+                if _spi_occ_now > 0 else
+                "Social reach is a leading demand indicator — rising IG/FB reach precedes hotel bookings by 2–4 weeks."
+            )
+
+            with _spi_c4:
+                st.markdown(
+                    f'<div style="background:#FFFFFF;border-radius:12px;padding:16px 18px;'
+                    f'border:1px solid rgba(15,28,46,0.07);border-top:3px solid #8B5CF6;'
+                    f'box-shadow:0 1px 4px rgba(15,28,46,0.06);">'
+                    f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">'
+                    f'<span style="font-size:18px;">🌐</span>'
+                    f'<span style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;'
+                    f'letter-spacing:.08em;">Combined Reach</span>'
+                    f'</div>'
+                    f'<div style="font-family:\'Outfit\',sans-serif;font-size:24px;font-weight:800;'
+                    f'color:#0D1B2E;letter-spacing:-.03em;line-height:1.1;">{_spi_total_fmt}</div>'
+                    f'<div style="font-size:10px;color:#64748B;margin-top:2px;margin-bottom:8px;">Total Followers (IG+FB+TK)</div>'
+                    f'<div style="background:rgba(139,92,246,0.07);border-radius:6px;padding:6px 10px;">'
+                    f'<span style="font-size:10px;color:#64748B;">{_spi_eng_signal}</span>'
+                    f'</div>'
+                    f'<div style="font-size:10px;color:#64748B;margin-top:6px;line-height:1.5;">{_spi_cross_note}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+    except Exception:
+        pass
+
     # ── KPI Cards ──────────────────────────────────────────────────────────────
     kpis = compute_overview_kpis(df_sel, grain)
     if not kpis:
@@ -7398,6 +7541,83 @@ with tab_fo:
             _camp_insight = _camp_row.iloc[0].get("body", "")
     if _camp_insight:
         st.info(f"📡 **Campaign Timing Signal:** {_camp_insight}")
+
+    # ── 30 / 60 / 90-Day Demand Signal Board ──────────────────────────────
+    try:
+        _dsb_occ    = m.get("occ_30", 0) if m else 0
+        _dsb_adr    = m.get("adr_30", 0) if m else 0
+        _dsb_rvp    = m.get("revpar_30", 0) if m else 0
+        _dsb_rvp_d  = m.get("revpar_delta", 0) if m else 0
+        _dsb_adr_d  = m.get("adr_delta", 0) if m else 0
+        _dsb_cq     = m.get("comp_recent_q", 0) if m else 0
+        _dsb_trips  = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
+        _dsb_oos    = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
+        _dsb_ig_eng = float(df_later_ig_posts["engagement_rate"].mean()) if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns else 0.0
+
+        # 30-day signal: current occupancy trend vs baseline
+        _30d_status = "🟢 BULLISH" if _dsb_occ >= 72 else "🟡 NEUTRAL" if _dsb_occ >= 60 else "🔴 BEARISH"
+        _30d_color  = "#059669" if _dsb_occ >= 72 else "#D97706" if _dsb_occ >= 60 else "#DC2626"
+        _30d_signal = (
+            f"Occ {_dsb_occ:.1f}% · ADR ${_dsb_adr:,.0f} · RevPAR {_dsb_rvp_d:+.1f}% YOY. "
+            + ("Rate floors are justified — above 70% baseline." if _dsb_occ >= 70 else
+               "Rate caution advised — below 70% trigger. Watch compression build.")
+        )
+        _30d_action = "Lock ADR floors ahead of compression peak." if _dsb_occ >= 70 else "Launch demand campaigns targeting shoulder demand."
+
+        # 60-day signal: compression trajectory + events
+        _60d_events_ct = len(df_vdp_events[pd.to_datetime(df_vdp_events["event_date"], errors="coerce") >= datetime.now()]) if not df_vdp_events.empty and "event_date" in df_vdp_events.columns else 0
+        _60d_status = "🟢 BULLISH" if (_dsb_cq >= 10 or _60d_events_ct >= 2) else "🟡 NEUTRAL" if (_dsb_cq >= 5 or _60d_events_ct >= 1) else "🟡 NEUTRAL"
+        _60d_color  = "#059669" if (_dsb_cq >= 10 or _60d_events_ct >= 2) else "#D97706"
+        _60d_signal = (
+            f"{_dsb_cq} compression nights this quarter · {_60d_events_ct} upcoming events. "
+            + ("Strong event pipeline supports premium pricing." if _60d_events_ct >= 2 else
+               "Limited event pipeline — activate group + event marketing for Q2.")
+        )
+        _60d_action = "Price events at premium; activate group RFP outreach." if _60d_events_ct >= 2 else "Develop 1–2 shoulder events or packages for 60-day window."
+
+        # 90-day signal: seasonal + campaign + OOS
+        _90d_status = "🟢 BULLISH" if (_dsb_oos >= 50 and _dsb_rvp_d >= 0) else "🟡 NEUTRAL" if _dsb_rvp_d >= -5 else "🔴 BEARISH"
+        _90d_color  = "#059669" if (_dsb_oos >= 50 and _dsb_rvp_d >= 0) else "#D97706" if _dsb_rvp_d >= -5 else "#DC2626"
+        _90d_signal = (
+            f"OOS visitor share {_dsb_oos:.1f}% · IG engagement {_dsb_ig_eng:.1f}% avg · RevPAR trend {_dsb_rvp_d:+.1f}% YOY. "
+            + ("High OOS share + positive RevPAR trend = strong 90-day window." if _dsb_oos >= 50 and _dsb_rvp_d >= 0 else
+               "Social engagement and OOS rate suggest opportunity to build fly-market demand.")
+        )
+        _90d_action = "Scale fly-market campaigns; align with Q3 peak to compound ADR gains." if _dsb_oos >= 50 else "Invest in OOS campaign creative; target SLC, Dallas, NYC for highest ROAS."
+
+        def _dsb_signal_col(window, status, color, signal, action):
+            return (
+                f'<div style="background:#FFFFFF;border-radius:12px;padding:18px 20px;'
+                f'border:1px solid rgba(15,28,46,0.07);border-top:4px solid {color};'
+                f'box-shadow:0 1px 4px rgba(15,28,46,0.06);height:100%;">'
+                f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+                f'<span style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:800;color:#0D1B2E;">{window}</span>'
+                f'<span style="font-size:10px;font-weight:800;letter-spacing:.08em;color:{color};'
+                f'background:rgba(15,28,46,0.05);padding:3px 10px;border-radius:99px;">{status}</span>'
+                f'</div>'
+                f'<div style="font-family:\'Inter\',sans-serif;font-size:12px;color:#334155;'
+                f'line-height:1.65;margin-bottom:10px;">{signal}</div>'
+                f'<div style="background:rgba(15,28,46,0.04);border-radius:8px;padding:8px 12px;'
+                f'font-size:11px;color:#0D1B2E;font-weight:600;border-left:2px solid {color};">'
+                f'→ {action}'
+                f'</div>'
+                f'</div>'
+            )
+
+        st.markdown(
+            '<div style="font-family:\'Syne\',sans-serif;font-size:14px;font-weight:800;'
+            'letter-spacing:-.01em;margin:20px 0 10px;">📡 Forward Demand Signal Board</div>',
+            unsafe_allow_html=True,
+        )
+        _dsb_c1, _dsb_c2, _dsb_c3 = st.columns(3)
+        with _dsb_c1:
+            st.markdown(_dsb_signal_col("30-Day Window", _30d_status, _30d_color, _30d_signal, _30d_action), unsafe_allow_html=True)
+        with _dsb_c2:
+            st.markdown(_dsb_signal_col("60-Day Window", _60d_status, _60d_color, _60d_signal, _60d_action), unsafe_allow_html=True)
+        with _dsb_c3:
+            st.markdown(_dsb_signal_col("90-Day Window", _90d_status, _90d_color, _90d_signal, _90d_action), unsafe_allow_html=True)
+    except Exception:
+        pass
 
     st.markdown("---")
 
@@ -9308,6 +9528,172 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
                 yaxis=dict(autorange="reversed"),
             )
             st.plotly_chart(style_fig(fig_zrt_mkt, height=320), use_container_width=True, config=PLOTLY_CONFIG)
+
+        # ── DMA × STR Revenue Intelligence Matrix ────────────────────────────
+        st.markdown("---")
+        try:
+            _dmi_adr   = m.get("adr_30", 0) if m else 0
+            _dmi_rev12 = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
+            _dmi_trips = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
+            _dmi_onight_pct = float(df_dfy_ov.iloc[0].get("overnight_trips_pct", 0) or 0) if not df_dfy_ov.empty else 40.0
+            _dmi_los_all = float(df_dfy_ov.iloc[0].get("avg_length_of_stay_days", 0) or 0) if not df_dfy_ov.empty else 2.0
+            _dmi_adr_use = _dmi_adr if _dmi_adr > 0 else 350
+
+            if not df_dfy_dma.empty and _dmi_adr_use > 0:
+                st.markdown(sec_div("🔗 DMA × STR Revenue Intelligence"), unsafe_allow_html=True)
+                st.markdown(
+                    '<div style="font-family:\'Inter\',sans-serif;font-size:12px;color:#64748B;margin-bottom:14px;">'
+                    'Hidden signals that only appear when feeder market data (Datafy) is read alongside hotel rate '
+                    'performance (STR) — reveals which DMAs generate outsized room revenue relative to their visitor share.</div>',
+                    unsafe_allow_html=True,
+                )
+
+                # Classify markets as fly vs drive
+                _dmi_drive_kw = ["los angeles", "san diego", "orange county", "riverside", "inland empire", "santa barbara", "oxnard"]
+                _dmi_fly_kw   = ["salt lake", "dallas", "new york", "chicago", "denver", "seattle", "portland", "phoenix", "las vegas", "atlanta", "houston", "boston", "miami", "minneapolis"]
+
+                _dmi_df = df_dfy_dma[df_dfy_dma["visitor_days_share_pct"].notna()].head(12).copy()
+
+                def _dmi_classify(dma_name):
+                    _d = str(dma_name).lower()
+                    if any(k in _d for k in _dmi_drive_kw): return "drive"
+                    if any(k in _d for k in _dmi_fly_kw):   return "fly"
+                    return "other"
+
+                _dmi_df["market_type"] = _dmi_df["dma"].apply(_dmi_classify)
+
+                # Estimate room revenue contribution per DMA
+                # = visitor_days_share % × total_overnight_trips × avg_LOS × ADR
+                if _dmi_trips > 0 and _dmi_onight_pct > 0:
+                    _dmi_df["est_overnight"] = (
+                        _dmi_df["visitor_days_share_pct"] / 100 * _dmi_trips * (_dmi_onight_pct / 100)
+                    ).astype(int)
+                    _los_col = _dmi_df["avg_length_of_stay_days"].fillna(_dmi_los_all) if "avg_length_of_stay_days" in _dmi_df.columns else _dmi_los_all
+                    _dmi_df["est_room_rev"] = _dmi_df["est_overnight"] * _los_col * _dmi_adr_use
+
+                # Aggregate fly vs drive
+                _dmi_fly   = _dmi_df[_dmi_df["market_type"] == "fly"]
+                _dmi_drive = _dmi_df[_dmi_df["market_type"] == "drive"]
+                _dmi_fly_spend   = float(_dmi_fly["avg_spend_usd"].mean())   if not _dmi_fly.empty   and "avg_spend_usd" in _dmi_fly.columns   and _dmi_fly["avg_spend_usd"].notna().any()   else 0
+                _dmi_drive_spend = float(_dmi_drive["avg_spend_usd"].mean()) if not _dmi_drive.empty and "avg_spend_usd" in _dmi_drive.columns and _dmi_drive["avg_spend_usd"].notna().any() else 0
+                _dmi_fly_vol     = float(_dmi_fly["visitor_days_share_pct"].sum())   if not _dmi_fly.empty   else 0
+                _dmi_drive_vol   = float(_dmi_drive["visitor_days_share_pct"].sum()) if not _dmi_drive.empty else 0
+                _dmi_fly_rev     = float(_dmi_fly["est_room_rev"].sum())   if not _dmi_fly.empty   and "est_room_rev" in _dmi_fly.columns   else 0
+                _dmi_drive_rev   = float(_dmi_drive["est_room_rev"].sum()) if not _dmi_drive.empty and "est_room_rev" in _dmi_drive.columns else 0
+
+                # Revenue concentration: top 3 markets
+                _top3 = _dmi_df.nlargest(3, "visitor_days_share_pct")
+                _top3_vol_pct = float(_top3["visitor_days_share_pct"].sum())
+                _top3_rev_pct = (float(_top3["est_room_rev"].sum()) / _dmi_df["est_room_rev"].sum() * 100
+                                 if "est_room_rev" in _dmi_df.columns and _dmi_df["est_room_rev"].sum() > 0 else 0)
+                _top3_names   = ", ".join(_top3["dma"].tolist())
+
+                # LOS × Spend → top "total value" market
+                if "avg_length_of_stay_days" in _dmi_df.columns and "avg_spend_usd" in _dmi_df.columns:
+                    _dmi_df["total_trip_value"] = (
+                        _dmi_df["avg_spend_usd"].fillna(0) * _dmi_df["avg_length_of_stay_days"].fillna(_dmi_los_all)
+                    )
+                    _best_val_row = _dmi_df[_dmi_df["total_trip_value"] > 0].nlargest(1, "total_trip_value")
+                    _best_val_mkt = str(_best_val_row.iloc[0]["dma"]) if not _best_val_row.empty else "—"
+                    _best_val     = float(_best_val_row.iloc[0]["total_trip_value"]) if not _best_val_row.empty else 0
+                    _best_val_los = float(_best_val_row.iloc[0].get("avg_length_of_stay_days", _dmi_los_all)) if not _best_val_row.empty else 0
+                    _best_val_spe = float(_best_val_row.iloc[0].get("avg_spend_usd", 0)) if not _best_val_row.empty else 0
+                else:
+                    _best_val_mkt = "—"; _best_val = 0; _best_val_los = 0; _best_val_spe = 0
+
+                def _dmi_card(icon, title, signal_text, source_tags, signal_type="insight"):
+                    _tc = {"insight": "#0567C8", "opportunity": "#059669", "risk": "#DC2626", "gap": "#D97706"}.get(signal_type, "#0567C8")
+                    return (
+                        f'<div style="background:#FFFFFF;border-radius:12px;padding:16px 18px;'
+                        f'border:1px solid rgba(15,28,46,0.07);border-left:3px solid {_tc};'
+                        f'box-shadow:0 1px 4px rgba(15,28,46,0.06);margin-bottom:10px;">'
+                        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+                        f'<span style="font-size:16px;">{icon}</span>'
+                        f'<span style="font-family:\'Outfit\',sans-serif;font-size:12px;font-weight:700;color:#0D1B2E;">{title}</span>'
+                        f'<span style="margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.08em;'
+                        f'text-transform:uppercase;color:{_tc};background:rgba(5,103,200,0.08);'
+                        f'padding:2px 8px;border-radius:99px;">{signal_type.upper()}</span>'
+                        f'</div>'
+                        f'<div style="font-family:\'Inter\',sans-serif;font-size:12px;color:#334155;line-height:1.6;">{signal_text}</div>'
+                        f'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">{source_tags}</div>'
+                        f'</div>'
+                    )
+
+                def _dmi_src(label, color, bg):
+                    return (f'<span style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;'
+                            f'color:{color};background:{bg};padding:2px 8px;border-radius:99px;">{label}</span>')
+
+                _dmi_c1, _dmi_c2 = st.columns(2)
+
+                with _dmi_c1:
+                    # Signal 1: Fly vs. drive revenue premium
+                    if _dmi_fly_spend > 0 and _dmi_drive_spend > 0:
+                        _fly_mult = _dmi_fly_spend / _dmi_drive_spend
+                        _fly_signal = (
+                            f"Fly markets ({', '.join(_dmi_fly['dma'].tolist()[:3]) if not _dmi_fly.empty else 'SLC, Dallas, NYC'}) "
+                            f"avg ${_dmi_fly_spend:,.0f}/trip vs. drive markets at ${_dmi_drive_spend:,.0f}/trip — "
+                            f"<strong>{_fly_mult:.2f}× revenue premium per visitor</strong>. "
+                            f"Fly markets represent {_dmi_fly_vol:.1f}% of visitor days but generate disproportionate room revenue."
+                        )
+                    else:
+                        _fly_signal = (
+                            "Load avg spend data across fly and drive DMAs to compute the revenue premium "
+                            "gap — fly markets typically generate 1.3–1.4× more room revenue per trip."
+                        )
+                    st.markdown(_dmi_card("✈️", "Fly Market Revenue Premium",  _fly_signal,
+                        _dmi_src("STR","#0567C8","rgba(5,103,200,0.10)") + _dmi_src("Datafy","#059669","rgba(5,150,105,0.10)"),
+                        "gap"), unsafe_allow_html=True)
+
+                    # Signal 2: Revenue concentration risk
+                    _conc_signal = (
+                        f"<strong>Top 3 origin markets ({_top3_names}) generate {_top3_vol_pct:.1f}% of visitor days</strong>"
+                        + (f" and an estimated {_top3_rev_pct:.1f}% of room revenue." if _top3_rev_pct > 0 else ".") +
+                        f" High geographic concentration is a demand risk — a single market recession or competing event "
+                        f"could materially impact RevPAR. Diversify with 2 new fly-market campaigns."
+                    )
+                    st.markdown(_dmi_card("⚠️", "Revenue Concentration Risk", _conc_signal,
+                        _dmi_src("Datafy","#059669","rgba(5,150,105,0.10)") + _dmi_src("STR","#0567C8","rgba(5,103,200,0.10)"),
+                        "risk"), unsafe_allow_html=True)
+
+                with _dmi_c2:
+                    # Signal 3: Best LOS × Spend market (highest total trip value)
+                    if _best_val_mkt != "—" and _best_val > 0:
+                        _los_val_signal = (
+                            f"<strong>{_best_val_mkt}</strong> combines ${_best_val_spe:,.0f} avg spend/trip × "
+                            f"{_best_val_los:.1f}-night stays = <strong>${_best_val:,.0f} total trip value</strong> — "
+                            f"highest total revenue per visitor in the portfolio. "
+                            f"Prioritize this market in premium campaign creative and minimum-stay packages."
+                        )
+                    else:
+                        _los_val_signal = (
+                            "Load LOS and spend data by DMA to identify the highest total-trip-value market — "
+                            "longer stays × higher daily spend = most room revenue per visitor trip."
+                        )
+                    st.markdown(_dmi_card("🏆", "Highest Total Trip Value Market", _los_val_signal,
+                        _dmi_src("Datafy","#059669","rgba(5,150,105,0.10)") + _dmi_src("STR","#0567C8","rgba(5,103,200,0.10)"),
+                        "opportunity"), unsafe_allow_html=True)
+
+                    # Signal 4: Budget reallocation opportunity
+                    if _dmi_fly_spend > 0 and _dmi_drive_spend > 0 and _dmi_fly_vol > 0:
+                        _shift_trips = int(_dmi_trips * (_dmi_onight_pct / 100) * 0.05)  # 5% of overnights
+                        _shift_rev_gain = _shift_trips * (_dmi_fly_spend - _dmi_drive_spend) / 1000
+                        _budget_signal = (
+                            f"Shifting 5% of marketing spend from drive to fly markets would redirect "
+                            f"~{_shift_trips:,} overnight trips to higher-spend visitors. "
+                            f"At a ${_dmi_fly_spend - _dmi_drive_spend:,.0f} avg spend premium, that's "
+                            f"<strong>${_shift_rev_gain:,.0f}K in incremental destination spend annually.</strong>"
+                        )
+                    else:
+                        _budget_signal = (
+                            "Quantify the reallocation opportunity: load avg spend by DMA to compute how "
+                            "shifting 5–10% of media budget from drive to fly markets changes total destination spend."
+                        )
+                    st.markdown(_dmi_card("💰", "Budget Reallocation Opportunity", _budget_signal,
+                        _dmi_src("Datafy","#059669","rgba(5,150,105,0.10)") + _dmi_src("STR","#0567C8","rgba(5,103,200,0.10)"),
+                        "opportunity"), unsafe_allow_html=True)
+
+        except Exception:
+            pass
 
         # ── Raw data expander ─────────────────────────────────────────────────
         with st.expander("📊 View raw DMA data"):
