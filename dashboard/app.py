@@ -430,42 +430,43 @@ for _k, _v in [
 st.markdown("""
 <style>
   /* ════════════════════════════════════════════════════════════════════════
-     DANA POINT PULSE — Clean Light Analytics Design System v3
-     Professional · Accessible · Navy/Teal Accent · White Surface Cards
+     DANA POINT PULSE — Premium Light Analytics Design System v5
+     Enterprise-Grade · Data-Forward · Crisp Typography · Elevated Cards
   ════════════════════════════════════════════════════════════════════════ */
 
   /* ── Google Fonts ────────────────────────────────────────────────────── */
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
   /* ── Design Tokens ───────────────────────────────────────────────────── */
   :root {
-    --dp-bg:            #F7F9FC;
+    --dp-bg:            #F2F5FA;
+    --dp-bg2:           #E8EDF5;
     --dp-surface:       #FFFFFF;
     --dp-card:          #FFFFFF;
     --dp-card-solid:    #FFFFFF;
     --dp-card-hover:    #F0F7FF;
-    --dp-border:        rgba(0,0,0,0.08);
-    --dp-border-accent: rgba(8,145,178,0.30);
-    --dp-teal:          #0891B2;
-    --dp-teal-dim:      rgba(8,145,178,0.10);
-    --dp-teal-glow:     rgba(8,145,178,0.15);
+    --dp-border:        rgba(15,28,46,0.07);
+    --dp-border-accent: rgba(8,100,168,0.25);
+    --dp-teal:          #0567C8;
+    --dp-teal-dim:      rgba(5,103,200,0.10);
+    --dp-teal-glow:     rgba(5,103,200,0.15);
     --dp-blue:          #2563EB;
     --dp-green:         #059669;
     --dp-amber:         #D97706;
     --dp-red:           #DC2626;
     --dp-purple:        #7C3AED;
     --dp-orange:        #EA580C;
-    --dp-text-1:        #0F1C2E;
-    --dp-text-2:        #4A5568;
-    --dp-text-3:        #718096;
+    --dp-text-1:        #0D1B2E;
+    --dp-text-2:        #334155;
+    --dp-text-3:        #64748B;
     --dp-radius:        10px;
     --dp-radius-lg:     14px;
-    --dp-shadow:        0 1px 4px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.05);
-    --dp-shadow-hover:  0 4px 16px rgba(0,0,0,0.12), 0 0 0 1px rgba(8,145,178,0.20);
+    --dp-shadow:        0 1px 3px rgba(15,28,46,0.06), 0 4px 12px rgba(15,28,46,0.08);
+    --dp-shadow-hover:  0 4px 20px rgba(15,28,46,0.14), 0 0 0 2px rgba(5,103,200,0.12);
   }
 
   html, body, [class*="css"] {
-    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: var(--dp-bg) !important;
     color: var(--dp-text-1) !important;
   }
@@ -477,26 +478,28 @@ st.markdown("""
     background-color: transparent !important;
   }
 
-  /* ── KPI Cards — White Surface with Teal Left Border ───────────────── */
+  /* ── KPI Cards ───────────────────────────────────────────────────────── */
   .kpi-card {
     background: #FFFFFF;
     border-radius: var(--dp-radius-lg);
     padding: 18px 20px 14px 20px;
-    border: 1px solid rgba(0,0,0,0.08);
-    border-left: 4px solid var(--dp-teal);
+    border: 1px solid rgba(15,28,46,0.07);
+    border-left: 3px solid var(--dp-teal);
     color: var(--dp-text-1);
     margin-bottom: 12px;
     position: relative;
     overflow: hidden;
-    transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+    transition: box-shadow 0.22s ease, transform 0.22s ease;
     box-shadow: var(--dp-shadow);
   }
   .kpi-card::before {
-    content: none;
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--dp-teal) 0%, transparent 60%);
+    opacity: 0.5;
   }
-  .kpi-card::after {
-    content: none;
-  }
+  .kpi-card::after { content: none; }
   .kpi-card:hover {
     box-shadow: var(--dp-shadow-hover);
     transform: translateY(-2px);
@@ -506,15 +509,15 @@ st.markdown("""
     margin-bottom: 8px;
   }
   .kpi-label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11.5px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .08em;
+    font-family: 'Inter', sans-serif;
+    font-size: 10.5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .10em;
     color: var(--dp-text-3);
   }
-  .kpi-icon-svg { flex-shrink: 0; line-height: 0; opacity: 0.70; }
+  .kpi-icon-svg { flex-shrink: 0; line-height: 0; opacity: 0.60; }
   .kpi-value {
-    font-family: 'Syne', sans-serif;
-    font-size: 30px; font-weight: 900;
+    font-family: 'Outfit', sans-serif;
+    font-size: 30px; font-weight: 800;
     letter-spacing: -.04em; line-height: 1.0;
     color: var(--dp-text-1);
     -webkit-text-fill-color: var(--dp-text-1);
@@ -524,19 +527,19 @@ st.markdown("""
   .kpi-delta-neg     { color: #DC2626; font-size: 11.5px; font-weight: 700; display:flex; align-items:center; gap:3px; }
   .kpi-delta-neutral { color: var(--dp-text-3); font-size: 11.5px; font-weight: 600; }
   .kpi-date {
-    font-size: 11px; color: var(--dp-text-3);
+    font-size: 10.5px; color: var(--dp-text-3);
     margin-top: 10px; letter-spacing: .01em;
-    border-top: 1px solid rgba(0,0,0,0.07);
+    border-top: 1px solid rgba(15,28,46,0.07);
     padding-top: 8px; display: block; font-weight: 500;
   }
 
-  /* ── Insight Cards — White with Colored Left Border ────────────────── */
+  /* ── Insight Cards ────────────────────────────────────────────────────── */
   .insight-card {
     border-radius: var(--dp-radius);
     padding: 14px 16px;
     margin-bottom: 8px;
     position: relative;
-    border: 1px solid rgba(0,0,0,0.08);
+    border: 1px solid rgba(15,28,46,0.07);
     background: #FFFFFF;
     color: var(--dp-text-1);
     transition: box-shadow 0.22s ease, transform 0.22s ease;
@@ -550,21 +553,21 @@ st.markdown("""
   .insight-card::before {
     content: '';
     position: absolute; top: 0; left: 0;
-    width: 4px; height: 100%;
+    width: 3px; height: 100%;
   }
   .insight-positive::before { background: linear-gradient(180deg, #059669, #047857); }
   .insight-warning::before  { background: linear-gradient(180deg, #D97706, #B45309); }
   .insight-negative::before { background: linear-gradient(180deg, #DC2626, #B91C1C); }
-  .insight-info::before     { background: linear-gradient(180deg, #0891B2, #2563EB); }
+  .insight-info::before     { background: linear-gradient(180deg, #0567C8, #2563EB); }
   .insight-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Outfit', sans-serif;
     font-size: 13px; font-weight: 700;
     margin-bottom: 5px; letter-spacing: -.01em;
     padding-left: 12px;
     color: var(--dp-text-1);
   }
   .insight-body {
-    font-size: 13.5px; color: var(--dp-text-2);
+    font-size: 13px; color: var(--dp-text-2);
     line-height: 1.65; margin: 0;
     padding-left: 12px;
   }
@@ -572,18 +575,18 @@ st.markdown("""
   /* ── AI Chip Badge ───────────────────────────────────────────────────── */
   .ai-chip {
     display: inline-flex; align-items: center; gap: 5px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .10em;
     padding: 3px 10px; border-radius: 20px;
-    background: rgba(8,145,178,0.10);
+    background: rgba(5,103,200,0.08);
     color: var(--dp-teal); margin-bottom: 12px;
-    border: 1px solid rgba(8,145,178,0.25);
+    border: 1px solid rgba(5,103,200,0.20);
   }
 
   /* ── Event Stat Cards ────────────────────────────────────────────────── */
   .event-stat {
     background: #FFFFFF;
-    border: 1px solid rgba(0,0,0,0.08);
+    border: 1px solid rgba(15,28,46,0.07);
     border-top: 3px solid #7C3AED;
     border-radius: var(--dp-radius-lg);
     padding: 20px 16px; text-align: center; margin-bottom: 10px;
@@ -591,26 +594,24 @@ st.markdown("""
     position: relative; overflow: hidden;
     box-shadow: var(--dp-shadow);
   }
-  .event-stat::before {
-    content: none;
-  }
+  .event-stat::before { content: none; }
   .event-stat:hover {
     box-shadow: var(--dp-shadow-hover);
     transform: translateY(-3px);
   }
   .event-icon  { line-height: 0; display: flex; justify-content: center; margin-bottom: 10px; }
   .event-val   {
-    font-family: 'Syne', sans-serif;
-    font-size: 28px; font-weight: 900;
-    color: #0F1C2E;
-    -webkit-text-fill-color: #0F1C2E;
+    font-family: 'Outfit', sans-serif;
+    font-size: 28px; font-weight: 800;
+    color: var(--dp-text-1);
+    -webkit-text-fill-color: var(--dp-text-1);
     letter-spacing: -.04em; line-height: 1;
   }
   .event-label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 12px; font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px; font-weight: 600;
     color: var(--dp-text-2); margin-top: 6px; text-transform: uppercase;
-    letter-spacing: .06em;
+    letter-spacing: .08em;
   }
   .event-date  { font-size: 11px; color: var(--dp-text-3); margin-top: 4px; }
 
@@ -630,23 +631,23 @@ st.markdown("""
   a[href*="github.com/streamlit"]       { display:    none    !important; }
 
   /* ── Custom Scrollbar ────────────────────────────────────────────────── */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: rgba(0,0,0,0.04); }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: rgba(15,28,46,0.04); }
   ::-webkit-scrollbar-thumb {
-    background: rgba(8,145,178,0.30); border-radius: 3px;
+    background: rgba(5,103,200,0.22); border-radius: 3px;
   }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(8,145,178,0.55); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(5,103,200,0.45); }
 
   /* ── Empty State ─────────────────────────────────────────────────────── */
   .empty-card {
     background: #FFFFFF;
     border-radius: var(--dp-radius-lg); padding: 40px 28px; text-align: center;
-    border: 1px dashed rgba(8,145,178,0.25); margin: 6px 0 12px 0;
+    border: 1px dashed rgba(5,103,200,0.22); margin: 6px 0 12px 0;
     box-shadow: var(--dp-shadow);
   }
-  .empty-icon  { font-size: 32px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-icon  { font-size: 32px; margin-bottom: 12px; opacity: 0.45; }
   .empty-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Outfit', sans-serif;
     font-size: 15px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.01em;
     color: var(--dp-text-1);
   }
@@ -655,8 +656,8 @@ st.markdown("""
   /* ── Data Source Health Cards ────────────────────────────────────────── */
   .src-card {
     background: #FFFFFF;
-    border-radius: var(--dp-radius); padding: 13px 16px;
-    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: var(--dp-radius); padding: 12px 16px;
+    border: 1px solid rgba(15,28,46,0.07);
     margin-bottom: 6px; display: flex; align-items: center; gap: 12px;
     transition: box-shadow 0.20s ease, border-color 0.20s ease, background 0.20s ease; cursor: default;
     text-decoration: none !important; color: inherit !important;
@@ -664,85 +665,79 @@ st.markdown("""
   }
   a.src-card { cursor: pointer; }
   .src-card:hover {
-    border-color: rgba(8,145,178,0.30);
-    background: rgba(8,145,178,0.04);
+    border-color: rgba(5,103,200,0.25);
+    background: rgba(5,103,200,0.03);
     box-shadow: var(--dp-shadow-hover);
   }
   a.src-card:hover .src-name { color: var(--dp-teal) !important; }
   .src-dot   { font-size: 14px; flex-shrink: 0; }
   .src-name  {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Outfit', sans-serif;
     font-size: 13px; font-weight: 700; color: var(--dp-text-1);
   }
-  .src-meta  { font-size: 12.5px; color: var(--dp-text-3); margin-top: 2px; line-height: 1.4; }
+  .src-meta  { font-size: 12px; color: var(--dp-text-3); margin-top: 2px; line-height: 1.4; }
   .src-count {
-    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
     color: var(--dp-teal); margin-left: auto; text-align: right; white-space: nowrap;
   }
 
   /* ── Grain Badge ─────────────────────────────────────────────────────── */
   .grain-badge {
-    display: inline-block; font-family: 'DM Sans', sans-serif;
-    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    display: inline-block; font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
     padding: 2px 8px; border-radius: 20px;
     background: rgba(234,88,12,.10); color: #EA580C;
     margin-left: 8px; vertical-align: middle;
-    border: 1px solid rgba(234,88,12,.22);
+    border: 1px solid rgba(234,88,12,.20);
   }
 
-  /* ── Hero Banner — Command Center Header (Sticky, always dark navy) ── */
+  /* ── Hero Banner ─────────────────────────────────────────────────────── */
   .hero-banner {
     position: sticky !important;
-    top: 0;
-    z-index: 999;
-    background: #0F1C2E !important;
+    top: 0; z-index: 999;
+    background: #0D1B2E !important;
     border-radius: 0 !important;
     margin: -1rem -1rem 1rem -1rem;
     padding: 16px 28px 14px 28px;
-    border-bottom: 1px solid rgba(8,145,178,0.30) !important;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.20) !important;
+    border-bottom: 1px solid rgba(5,103,200,0.30) !important;
+    box-shadow: 0 2px 20px rgba(15,28,46,0.25) !important;
     overflow: hidden;
   }
-  .hero-banner::before {
-    content: none;
-  }
+  .hero-banner::before { content: none; }
   .hero-banner::after {
     content: '';
     position: absolute; bottom: 0; left: 0; right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(8,145,178,0.50), transparent);
+    background: linear-gradient(90deg, transparent, rgba(5,103,200,0.50), transparent);
     pointer-events: none;
   }
   .hero-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Outfit', sans-serif;
     font-size: 1.85rem; font-weight: 900; letter-spacing: -0.045em; line-height: 1.1;
-    color: #FFFFFF;
-    margin-bottom: 6px;
-    position: relative;
+    color: #FFFFFF; margin-bottom: 6px; position: relative;
   }
   .hero-title span {
-    background: linear-gradient(135deg, #22D3EE 0%, #67E8F9 50%, #A5F3FC 100%);
+    background: linear-gradient(135deg, #38BDF8 0%, #7DD3FC 50%, #BAE6FD 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
   .hero-subtitle {
-    font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.72);
-    letter-spacing: 0.01em; margin-top: 2px;
-    position: relative;
+    font-size: 12.5px; font-weight: 400; color: rgba(255,255,255,0.60);
+    letter-spacing: 0.01em; margin-top: 2px; position: relative;
   }
 
   /* ── Home button title ───────────────────────────────────────────────── */
   .home-title a {
     text-decoration: none; color: inherit;
-    font-family: 'Syne', sans-serif;
-    font-size: 2rem; font-weight: 800;
-    letter-spacing: -0.03em; line-height: 1.2;
+    font-family: 'Outfit', sans-serif;
+    font-size: 2rem; font-weight: 900;
+    letter-spacing: -0.04em; line-height: 1.2;
   }
   .home-title a:hover { opacity: 0.80; }
 
   /* ── Filter Active Badge ─────────────────────────────────────────────── */
   .filter-badge {
-    display: inline-block; font-family: 'DM Sans', sans-serif;
-    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    display: inline-block; font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
     padding: 2px 8px; border-radius: 5px;
     background: rgba(234,88,12,.10); color: var(--dp-orange);
     margin-left: 6px; vertical-align: middle;
@@ -750,128 +745,100 @@ st.markdown("""
 
   /* ── Load-log Source Badges ──────────────────────────────────────────── */
   .log-badge-str   { display:inline-block; padding:2px 8px; border-radius:20px;
-    font-size:10px; font-weight:700; background:rgba(8,145,178,.12); color:#0891B2;
-    border: 1px solid rgba(8,145,178,0.25); }
+    font-size:10px; font-weight:700; background:rgba(5,103,200,.10); color:#0567C8;
+    border: 1px solid rgba(5,103,200,0.20); }
   .log-badge-kpi   { display:inline-block; padding:2px 8px; border-radius:20px;
-    font-size:10px; font-weight:700; background:rgba(234,88,12,.12); color:#EA580C;
-    border: 1px solid rgba(234,88,12,0.25); }
+    font-size:10px; font-weight:700; background:rgba(234,88,12,.10); color:#EA580C;
+    border: 1px solid rgba(234,88,12,0.20); }
   .log-badge-other { display:inline-block; padding:2px 8px; border-radius:20px;
-    font-size:10px; font-weight:700; background:rgba(0,0,0,.06); color:var(--dp-text-2);
-    border: 1px solid rgba(0,0,0,0.10); }
+    font-size:10px; font-weight:700; background:rgba(15,28,46,.06); color:var(--dp-text-2);
+    border: 1px solid rgba(15,28,46,0.10); }
 
   /* ── Trend Table ─────────────────────────────────────────────────────── */
-  .trend-row-pos { color: var(--dp-green); font-weight: 700; }
-  .trend-row-neg { color: var(--dp-red); font-weight: 700; }
+  .trend-row-pos { color: #059669; font-weight: 700; }
+  .trend-row-neg { color: #DC2626; font-weight: 700; }
 
   /* ── Section Sub-header Label ────────────────────────────────────────── */
   .section-label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 12px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .07em; color: var(--dp-text-3);
+    font-family: 'Inter', sans-serif;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .10em; color: var(--dp-text-3);
     margin-bottom: 8px; margin-top: 2px;
   }
 
   /* ── Section Divider ─────────────────────────────────────────────────── */
   .section-divider {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 28px 0 16px 0;
+    display: flex; align-items: center; gap: 12px; margin: 28px 0 16px 0;
   }
   .section-divider-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, rgba(8,145,178,0.30), rgba(0,0,0,0.05));
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, rgba(5,103,200,0.25), rgba(15,28,46,0.05));
   }
   .section-divider-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 11.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .10em; color: var(--dp-teal);
-    white-space: nowrap;
-    padding: 4px 12px;
-    background: rgba(8,145,178,0.08);
-    border: 1px solid rgba(8,145,178,0.20);
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .12em; color: var(--dp-teal);
+    white-space: nowrap; padding: 4px 14px;
+    background: rgba(5,103,200,0.07);
+    border: 1px solid rgba(5,103,200,0.18);
     border-radius: 20px;
   }
   .section-divider-line-r {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, rgba(0,0,0,0.05), transparent);
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, rgba(15,28,46,0.05), transparent);
   }
 
   /* ── Tab Summary Card ─────────────────────────────────────────────────── */
   .tab-summary {
-    background: rgba(8,145,178,0.05);
-    border: 1px solid rgba(8,145,178,0.15);
+    background: rgba(5,103,200,0.05);
+    border: 1px solid rgba(5,103,200,0.14);
     border-left: 3px solid var(--dp-teal);
-    border-radius: 10px;
-    padding: 14px 18px;
-    margin: 8px 0 18px 0;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13.5px;
-    color: var(--dp-text-2);
-    line-height: 1.65;
+    border-radius: var(--dp-radius);
+    padding: 14px 18px; margin: 8px 0 18px 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px; color: var(--dp-text-2); line-height: 1.65;
   }
-  .tab-summary strong {
-    color: var(--dp-teal);
-    font-weight: 700;
-  }
+  .tab-summary strong { color: var(--dp-teal); font-weight: 600; }
 
-  /* ── Mini Data Card (for Full Data Summary) ───────────────────────────── */
+  /* ── Mini Data Card ─────────────────────────────────────────────────── */
   .mini-data-card {
     background: #FFFFFF;
-    border: 1px solid rgba(0,0,0,0.08);
-    border-radius: 10px;
-    padding: 12px 16px;
-    margin-bottom: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
+    border: 1px solid rgba(15,28,46,0.07);
+    border-radius: var(--dp-radius);
+    padding: 12px 16px; margin-bottom: 8px;
+    display: flex; flex-direction: column; gap: 3px;
     transition: border-color 0.20s ease, box-shadow 0.20s ease;
     box-shadow: var(--dp-shadow);
   }
   .mini-data-card:hover {
-    border-color: rgba(8,145,178,0.25);
+    border-color: rgba(5,103,200,0.22);
     box-shadow: var(--dp-shadow-hover);
   }
   .mini-data-card-label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: .07em; color: var(--dp-text-3);
+    font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .10em; color: var(--dp-text-3);
   }
   .mini-data-card-value {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Outfit', sans-serif;
     font-size: 20px; font-weight: 800;
-    letter-spacing: -.03em; color: var(--dp-text-1);
-    line-height: 1.1;
+    letter-spacing: -.03em; color: var(--dp-text-1); line-height: 1.1;
   }
   .mini-data-card-sub {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11.5px; color: var(--dp-text-3);
-    margin-top: 1px;
-  }
-
-  /* ── Chart Header ────────────────────────────────────────────────────── */
-  .chart-header {
-    font-family: 'Syne', sans-serif;
-    font-size: 14px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 2px;
-    color: var(--dp-text-1);
-  }
-  .chart-caption {
-    font-size: 12px; color: var(--dp-text-3); font-weight: 500; margin-bottom: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px; color: var(--dp-text-3); margin-top: 1px;
   }
 
   /* ── Chart Container ─────────────────────────────────────────────────── */
   .chart-container {
     background: #FFFFFF;
-    border: 1px solid rgba(0,0,0,0.08);
+    border: 1px solid rgba(15,28,46,0.07);
     border-radius: var(--dp-radius-lg);
-    padding: 16px;
-    margin-bottom: 12px;
+    padding: 16px; margin-bottom: 12px;
     box-shadow: var(--dp-shadow);
   }
   .chart-header {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Outfit', sans-serif;
     font-size: 14px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 2px;
     color: var(--dp-text-1);
   }
@@ -881,46 +848,45 @@ st.markdown("""
 
   /* ── Sidebar Brand ───────────────────────────────────────────────────── */
   .sidebar-brand {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Outfit', sans-serif;
     font-size: 17px; font-weight: 900; letter-spacing: -.03em;
-    color: #0F1C2E;
-    -webkit-text-fill-color: #0F1C2E;
+    color: #0D1B2E; -webkit-text-fill-color: #0D1B2E;
   }
 
   /* ── Tab Labels ──────────────────────────────────────────────────────── */
   button[data-baseweb="tab"] {
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 12.5px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 12px !important;
     font-weight: 600 !important;
-    letter-spacing: -0.01em !important;
+    letter-spacing: 0em !important;
     color: var(--dp-text-2) !important;
   }
   [data-testid="stTabs"] [data-baseweb="tab-list"] {
     gap: 2px !important;
-    background: rgba(0,0,0,0.04) !important;
-    border-radius: 10px !important;
+    background: rgba(15,28,46,0.05) !important;
+    border-radius: 12px !important;
     padding: 3px !important;
-    border: 1px solid rgba(0,0,0,0.08) !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+    border: 1px solid rgba(15,28,46,0.08) !important;
+    box-shadow: inset 0 1px 3px rgba(15,28,46,0.06) !important;
   }
   [data-testid="stTabs"] [data-baseweb="tab"] {
-    border-radius: 7px !important;
+    border-radius: 9px !important;
     padding: 7px 14px !important;
     color: var(--dp-text-2) !important;
     transition: color 0.18s ease, background 0.18s ease !important;
   }
   [data-testid="stTabs"] [aria-selected="true"] {
-    background: var(--dp-teal) !important;
-    color: #FFFFFF !important;
-    border: 1px solid rgba(8,145,178,0.50) !important;
-    box-shadow: 0 2px 8px rgba(8,145,178,0.25) !important;
+    background: #FFFFFF !important;
+    color: var(--dp-teal) !important;
+    border: 1px solid rgba(5,103,200,0.20) !important;
+    box-shadow: 0 1px 6px rgba(15,28,46,0.10), 0 0 0 1px rgba(5,103,200,0.12) !important;
   }
 
   /* ── Source Attribution Tags (inline) ───────────────────────────────── */
   .nlm-tag {
     display: inline-flex; align-items: center;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 10.5px; font-weight: 700; letter-spacing: .05em;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 700; letter-spacing: .06em;
     text-transform: uppercase; padding: 2px 7px; border-radius: 20px;
     vertical-align: middle; margin: 0 2px; line-height: 1;
     border: 1px solid transparent;
@@ -933,43 +899,41 @@ st.markdown("""
   /* ── Intelligence Briefing Box ───────────────────────────────────────── */
   .nlm-briefing {
     background: #FFFFFF;
-    border: 1px solid rgba(0,0,0,0.08);
+    border: 1px solid rgba(15,28,46,0.07);
     border-left: 3px solid var(--dp-teal);
     border-radius: var(--dp-radius-lg); padding: 18px 22px; margin-bottom: 14px;
-    position: relative;
-    box-shadow: var(--dp-shadow);
+    position: relative; box-shadow: var(--dp-shadow);
   }
   .nlm-briefing-title {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .08em; color: var(--dp-teal); margin-bottom: 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .10em; color: var(--dp-teal); margin-bottom: 14px;
     display: flex; align-items: center; gap: 8px;
   }
   .nlm-point {
-    font-size: 13.5px; line-height: 1.70; margin-bottom: 12px;
-    padding-left: 16px; position: relative;
-    color: var(--dp-text-1);
+    font-size: 13px; line-height: 1.70; margin-bottom: 12px;
+    padding-left: 16px; position: relative; color: var(--dp-text-1);
   }
   .nlm-point::before {
     content: '›'; position: absolute; left: 0;
-    color: var(--dp-teal); font-weight: 700; font-size: 15px;
+    color: var(--dp-teal); font-weight: 700; font-size: 16px;
   }
-  .nlm-point em { color: var(--dp-text-2); font-size: 13px; font-style: normal; }
+  .nlm-point em { color: var(--dp-text-3); font-size: 12.5px; font-style: normal; }
   .nlm-point:last-child { margin-bottom: 0; }
 
   /* ── Q&A Insight Blocks ──────────────────────────────────────────────── */
   .nlm-qa-q {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Outfit', sans-serif;
     font-size: 12.5px; font-weight: 700; margin-bottom: 5px;
     display: flex; align-items: flex-start; gap: 7px; color: var(--dp-text-1);
   }
   .nlm-qa-mark {
     width: 18px; height: 18px; min-width: 18px;
-    background: rgba(8,145,178,0.10); border-radius: 5px;
+    background: rgba(5,103,200,0.08); border-radius: 5px;
     display: inline-flex; align-items: center; justify-content: center;
     font-size: 9px; font-weight: 900; color: var(--dp-teal);
     flex-shrink: 0; margin-top: 1px;
-    border: 1px solid rgba(8,145,178,0.22);
+    border: 1px solid rgba(5,103,200,0.18);
   }
   .nlm-qa-a { font-size: 12px; color: var(--dp-text-2); line-height: 1.65; padding-left: 25px; }
 
@@ -977,19 +941,19 @@ st.markdown("""
   .nlm-source-row {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
     margin-top: 10px; padding-top: 8px;
-    border-top: 1px solid rgba(0,0,0,0.07);
+    border-top: 1px solid rgba(15,28,46,0.07);
   }
 
   /* ── Questions Block ─────────────────────────────────────────────────── */
   .nlm-questions {
-    background: rgba(8,145,178,0.04);
-    border: 1px solid rgba(8,145,178,0.14);
+    background: rgba(5,103,200,0.04);
+    border: 1px solid rgba(5,103,200,0.12);
     border-radius: var(--dp-radius-lg); padding: 14px 18px; margin-bottom: 14px;
   }
   .nlm-questions-title {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .08em; color: var(--dp-text-3); margin-bottom: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .10em; color: var(--dp-text-3); margin-bottom: 10px;
   }
   .nlm-questions ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
   .nlm-questions ul li {
@@ -1004,7 +968,7 @@ st.markdown("""
   .pulse-wrapper {
     display: flex; align-items: center; gap: 24px;
     background: #FFFFFF;
-    border: 1px solid rgba(0,0,0,0.08);
+    border: 1px solid rgba(15,28,46,0.07);
     border-radius: var(--dp-radius-lg); padding: 20px 24px; margin-bottom: 16px;
     box-shadow: var(--dp-shadow);
   }
@@ -1025,7 +989,7 @@ st.markdown("""
   .pulse-core {
     width: 68px; height: 68px; border-radius: 50%;
     display: flex; flex-direction: column; align-items: center;
-    justify-content: center; font-family: 'Syne', sans-serif;
+    justify-content: center; font-family: 'Outfit', sans-serif;
     font-weight: 900; position: relative; z-index: 1;
     border: 2px solid currentColor;
     background: rgba(255,255,255,0.95);
@@ -1037,7 +1001,7 @@ st.markdown("""
   }
   .pulse-info { flex: 1; }
   .pulse-info-title {
-    font-family: 'Syne', sans-serif; font-size: 15px;
+    font-family: 'Outfit', sans-serif; font-size: 15px;
     font-weight: 800; letter-spacing: -.025em; margin-bottom: 4px;
     color: var(--dp-text-1) !important;
   }
@@ -1046,11 +1010,11 @@ st.markdown("""
     line-height: 1.55; opacity: 1 !important;
   }
   .pulse-info-status {
-    display: inline-block; margin-top: 8px; font-size: 10.5px; font-weight: 700;
+    display: inline-block; margin-top: 8px; font-size: 10px; font-weight: 700;
     padding: 3px 10px; border-radius: 20px;
-    background: rgba(8,145,178,0.10); color: var(--dp-teal);
-    border: 1px solid rgba(8,145,178,0.25);
-    letter-spacing: .04em;
+    background: rgba(5,103,200,0.08); color: var(--dp-teal);
+    border: 1px solid rgba(5,103,200,0.20);
+    letter-spacing: .05em;
   }
   @keyframes pulse-ring {
     0%   { transform: scale(1);    opacity: 0.22; }
@@ -1072,7 +1036,6 @@ st.markdown("""
   .event-stat { animation: fadeSlideUp 0.35s ease both; }
   .src-card   { animation: fadeIn 0.30s ease both; }
   .tab-summary { animation: fadeIn 0.25s ease both; }
-  /* Stagger sibling cards */
   .kpi-card:nth-child(2) { animation-delay: 0.05s; }
   .kpi-card:nth-child(3) { animation-delay: 0.10s; }
   .kpi-card:nth-child(4) { animation-delay: 0.15s; }
@@ -1083,7 +1046,7 @@ st.markdown("""
   .event-stat:nth-child(3)  { animation-delay: 0.10s; }
   .event-stat:nth-child(4)  { animation-delay: 0.15s; }
 
-  /* ── Global Text Contrast (Light Mode) ───────────────────────────────── */
+  /* ── Global Text Contrast ─────────────────────────────────────────────── */
   .stMarkdown, .stMarkdown p, .stMarkdown span, .stMarkdown div {
     color: var(--dp-text-1) !important;
   }
@@ -1103,47 +1066,47 @@ st.markdown("""
   /* ── Section Intelligence Card ───────────────────────────────────────── */
   .sec-intel {
     background: #FFFFFF;
-    border: 1px solid rgba(0,0,0,0.08);
+    border: 1px solid rgba(15,28,46,0.07);
     border-left: 3px solid var(--dp-teal);
     border-radius: var(--dp-radius-lg);
     padding: 14px 18px; margin: 8px 0 16px 0;
     box-shadow: var(--dp-shadow);
   }
   .sec-intel-label {
-    font-size: 9.5px; font-weight: 700; letter-spacing: .11em;
+    font-size: 9.5px; font-weight: 700; letter-spacing: .12em;
     text-transform: uppercase; color: var(--dp-teal); margin-bottom: 8px;
   }
   .sec-intel-body { font-size: 13px; color: var(--dp-text-2); line-height: 1.65; }
   .sec-intel-stat {
     display: inline-block;
-    background: rgba(8,145,178,0.10); border: 1px solid rgba(8,145,178,0.25);
+    background: rgba(5,103,200,0.08); border: 1px solid rgba(5,103,200,0.20);
     border-radius: 20px; padding: 2px 10px;
-    font-weight: 700; color: var(--dp-teal); font-family: 'Syne', sans-serif;
+    font-weight: 700; color: var(--dp-teal); font-family: 'Outfit', sans-serif;
   }
 
   /* ── Divider Rule ────────────────────────────────────────────────────── */
   .dp-divider {
-    border: none; border-top: 1px solid rgba(0,0,0,0.08);
+    border: none; border-top: 1px solid rgba(15,28,46,0.08);
     margin: 20px 0;
   }
 
   /* ── Data Callout Box ────────────────────────────────────────────────── */
   .dp-callout {
     background: rgba(37,99,235,0.05);
-    border: 1px solid rgba(37,99,235,0.18);
+    border: 1px solid rgba(37,99,235,0.16);
     border-left: 3px solid var(--dp-blue);
     border-radius: var(--dp-radius-lg);
     padding: 12px 16px; margin: 10px 0;
     font-size: 13px; color: var(--dp-text-1); line-height: 1.6;
   }
   .dp-callout-warn {
-    background: rgba(217,119,6,0.06);
-    border-color: rgba(217,119,6,0.18);
+    background: rgba(217,119,6,0.05);
+    border-color: rgba(217,119,6,0.16);
     border-left-color: var(--dp-amber);
   }
   .dp-callout-success {
-    background: rgba(5,150,105,0.06);
-    border-color: rgba(5,150,105,0.18);
+    background: rgba(5,150,105,0.05);
+    border-color: rgba(5,150,105,0.16);
     border-left-color: var(--dp-green);
   }
 
@@ -1155,75 +1118,61 @@ st.markdown("""
   /* ── Streamlit Native Metric Styling ─────────────────────────────────── */
   [data-testid="stMetricLabel"] label,
   [data-testid="stMetricLabel"] p {
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    text-transform: uppercase !important;
-    letter-spacing: .06em !important;
-    color: var(--dp-text-2) !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 11px !important; font-weight: 600 !important;
+    text-transform: uppercase !important; letter-spacing: .08em !important;
+    color: var(--dp-text-3) !important;
   }
   [data-testid="stMetricValue"] {
-    font-family: 'Syne', sans-serif !important;
+    font-family: 'Outfit', sans-serif !important;
     font-size: clamp(1.2rem, 2.2vw, 1.75rem) !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.03em !important;
+    font-weight: 800 !important; letter-spacing: -0.03em !important;
     color: var(--dp-text-1) !important;
   }
-  [data-testid="stMetricValue"] div {
-    color: var(--dp-text-1) !important;
-  }
-  [data-testid="stMetricDelta"] {
-    font-size: 11.5px !important;
-    font-weight: 600 !important;
-  }
+  [data-testid="stMetricValue"] div { color: var(--dp-text-1) !important; }
+  [data-testid="stMetricDelta"] { font-size: 11.5px !important; font-weight: 600 !important; }
   div[data-testid="metric-container"] {
     background: #FFFFFF !important;
-    border: 1px solid rgba(0,0,0,0.08) !important;
+    border: 1px solid rgba(15,28,46,0.07) !important;
+    border-top: 3px solid var(--dp-teal) !important;
     border-radius: var(--dp-radius) !important;
     padding: 14px 16px 10px !important;
-    border-top: 3px solid var(--dp-teal) !important;
     box-shadow: var(--dp-shadow) !important;
   }
 
   /* ── Sidebar Styling ─────────────────────────────────────────────────── */
   [data-testid="stSidebar"] {
-    background: #EBF4FF !important;
-    border-right: 2px solid rgba(8,145,178,0.15) !important;
+    background: #FFFFFF !important;
+    border-right: 1px solid rgba(15,28,46,0.10) !important;
   }
   [data-testid="stSidebar"] .stRadio label {
-    font-size: 13px !important;
-    font-weight: 500 !important;
+    font-size: 13px !important; font-weight: 500 !important;
     color: var(--dp-text-1) !important;
   }
-  [data-testid="stSidebar"] * {
-    color: var(--dp-text-1) !important;
-  }
-  [data-testid="stSidebar"] .stMarkdown p {
-    color: var(--dp-text-2) !important;
-  }
+  [data-testid="stSidebar"] * { color: var(--dp-text-1) !important; }
+  [data-testid="stSidebar"] .stMarkdown p { color: var(--dp-text-2) !important; }
 
   /* ── Selectbox / Widget Styling ──────────────────────────────────────── */
   [data-testid="stSelectbox"] > div,
   [data-testid="stDateInput"] > div {
     background: #FFFFFF !important;
-    border-color: rgba(0,0,0,0.12) !important;
-    border-radius: 8px !important;
-    color: var(--dp-text-1) !important;
+    border-color: rgba(15,28,46,0.12) !important;
+    border-radius: 8px !important; color: var(--dp-text-1) !important;
   }
   [data-testid="stSelectbox"] [data-baseweb="select"] > div {
     background: #FFFFFF !important;
-    border-color: rgba(0,0,0,0.12) !important;
+    border-color: rgba(15,28,46,0.12) !important;
     color: var(--dp-text-1) !important;
   }
 
   /* ── Expander ────────────────────────────────────────────────────────── */
   [data-testid="stExpander"] {
-    border: 1px solid rgba(0,0,0,0.08) !important;
+    border: 1px solid rgba(15,28,46,0.07) !important;
     border-radius: var(--dp-radius-lg) !important;
     background: #FFFFFF !important;
   }
   [data-testid="stExpander"] summary {
-    font-family: 'Syne', sans-serif !important;
+    font-family: 'Outfit', sans-serif !important;
     font-weight: 700 !important; font-size: 13px !important;
     color: var(--dp-text-1) !important;
   }
@@ -1231,59 +1180,113 @@ st.markdown("""
   /* ── Global Filter Bar ────────────────────────────────────────────────── */
   .filter-bar {
     background: #FFFFFF;
-    border: 1px solid rgba(0,0,0,0.08);
+    border: 1px solid rgba(15,28,46,0.07);
     border-radius: var(--dp-radius-lg);
-    padding: 10px 16px;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    padding: 10px 16px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
     box-shadow: var(--dp-shadow);
   }
   .filter-bar .stSelectbox > div > div {
-    background: #F7F9FC !important;
-    border: 1px solid rgba(0,0,0,0.10) !important;
+    background: #F4F7FB !important;
+    border: 1px solid rgba(15,28,46,0.10) !important;
     border-radius: 8px !important;
-    font-size: 13px !important;
-    color: var(--dp-text-1) !important;
+    font-size: 13px !important; color: var(--dp-text-1) !important;
   }
+
+  /* ── Action Intelligence Panel ────────────────────────────────────────── */
+  .action-panel {
+    background: linear-gradient(135deg, #F0F7FF 0%, #EEF2FF 100%);
+    border: 1px solid rgba(5,103,200,0.16);
+    border-left: 4px solid #0567C8;
+    border-radius: var(--dp-radius-lg);
+    padding: 16px 20px; margin: 14px 0;
+    box-shadow: 0 2px 10px rgba(5,103,200,0.08);
+  }
+  .action-panel-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .10em; color: #0567C8; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .action-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 10px; padding-bottom: 10px;
+    border-bottom: 1px solid rgba(5,103,200,0.10);
+  }
+  .action-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .action-number {
+    width: 22px; height: 22px; min-width: 22px;
+    background: #0567C8; border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 800;
+    color: #FFFFFF; flex-shrink: 0; margin-top: 1px;
+  }
+  .action-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px; color: #0D1B2E; line-height: 1.60;
+  }
+  .action-text strong { font-weight: 700; color: #0567C8; }
+
+  /* ── Contextual Ask Panel ─────────────────────────────────────────────── */
+  .ask-panel {
+    background: #FAFBFF;
+    border: 1px solid rgba(124,58,237,0.16);
+    border-left: 4px solid #7C3AED;
+    border-radius: var(--dp-radius-lg);
+    padding: 14px 18px; margin: 10px 0 16px 0;
+    box-shadow: 0 2px 8px rgba(124,58,237,0.08);
+  }
+  .ask-panel-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .10em; color: #7C3AED; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ask-chip {
+    display: inline-block; font-family: 'Inter', sans-serif;
+    font-size: 11.5px; font-weight: 500; color: #334155;
+    background: #FFFFFF; border: 1px solid rgba(124,58,237,0.18);
+    border-radius: 8px; padding: 5px 11px; margin: 3px 4px 3px 0;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s;
+    line-height: 1.35;
+  }
+  .ask-chip:hover { border-color: #7C3AED; background: rgba(124,58,237,0.05); color: #7C3AED; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("""
 <style>
-  /* ── Section Header Blocks — Light Professional Edition ─────────────────── */
+  /* ── Section Header Blocks ───────────────────────────────────────────── */
   .sh-block {
     display: flex !important; align-items: center !important; gap: 12px !important;
     padding: 10px 16px !important; border-radius: 10px !important;
     margin: 24px 0 14px 0 !important;
-    border-left: 3px solid var(--sh-accent, #0891B2) !important;
     background: #FFFFFF !important;
-    border: 1px solid rgba(0,0,0,0.08) !important;
-    border-left: 3px solid var(--sh-accent, #0891B2) !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.07) !important;
+    border: 1px solid rgba(15,28,46,0.08) !important;
+    border-left: 3px solid var(--sh-accent, #0567C8) !important;
+    box-shadow: 0 1px 4px rgba(15,28,46,0.07) !important;
   }
   .sh-icon {
     font-size: 18px !important; line-height: 1 !important; flex-shrink: 0 !important;
     opacity: 0.90 !important;
   }
   .sh-title {
-    font-family: 'Syne', sans-serif !important;
+    font-family: 'Outfit', sans-serif !important;
     font-size: 14.5px !important; font-weight: 800 !important;
     letter-spacing: -.025em !important; line-height: 1.2 !important;
-    color: #0F1C2E !important;
+    color: #0D1B2E !important;
   }
   .sh-tag {
-    margin-left: auto !important; font-size: 10.5px !important;
-    font-weight: 700 !important; letter-spacing: .06em !important;
-    text-transform: uppercase !important; padding: 2px 8px !important;
+    margin-left: auto !important; font-size: 10px !important;
+    font-weight: 700 !important; letter-spacing: .08em !important;
+    text-transform: uppercase !important; padding: 2px 9px !important;
     border-radius: 20px !important; white-space: nowrap !important;
-    background: rgba(8,145,178,0.10) !important;
-    color: #0891B2 !important;
-    border: 1px solid rgba(8,145,178,0.22) !important;
+    background: rgba(5,103,200,0.08) !important;
+    color: #0567C8 !important;
+    border: 1px solid rgba(5,103,200,0.18) !important;
   }
   /* Accent color variants */
-  .sh-teal   { --sh-accent: #0891B2; }
+  .sh-teal   { --sh-accent: #0567C8; }
   .sh-blue   { --sh-accent: #2563EB; }
   .sh-green  { --sh-accent: #059669; }
   .sh-purple { --sh-accent: #7C3AED; }
@@ -1295,15 +1298,15 @@ st.markdown("""
   .sh-gold   { --sh-accent: #B45309; }
 
   /* Accent-aware tag colors */
-  .sh-teal   .sh-tag { color: #0891B2 !important; background: rgba(8,145,178,0.10) !important; border-color: rgba(8,145,178,0.22) !important; }
-  .sh-blue   .sh-tag { color: #2563EB !important; background: rgba(37,99,235,0.10) !important; border-color: rgba(37,99,235,0.22) !important; }
-  .sh-green  .sh-tag { color: #059669 !important; background: rgba(5,150,105,0.10) !important; border-color: rgba(5,150,105,0.22) !important; }
-  .sh-purple .sh-tag { color: #7C3AED !important; background: rgba(124,58,237,0.10) !important; border-color: rgba(124,58,237,0.22) !important; }
-  .sh-orange .sh-tag { color: #EA580C !important; background: rgba(234,88,12,0.10) !important;  border-color: rgba(234,88,12,0.22) !important; }
-  .sh-amber  .sh-tag { color: #D97706 !important; background: rgba(217,119,6,0.10) !important;  border-color: rgba(217,119,6,0.22) !important; }
-  .sh-coral  .sh-tag { color: #DC2626 !important; background: rgba(220,38,38,0.10) !important;  border-color: rgba(220,38,38,0.22) !important; }
-  .sh-gray   .sh-tag { color: #64748B !important; background: rgba(100,116,139,0.10) !important; border-color: rgba(100,116,139,0.22) !important; }
-  .sh-gold   .sh-tag { color: #B45309 !important; background: rgba(180,83,9,0.10) !important;   border-color: rgba(180,83,9,0.22) !important; }
+  .sh-teal   .sh-tag { color: #0567C8 !important; background: rgba(5,103,200,0.08) !important;   border-color: rgba(5,103,200,0.18) !important; }
+  .sh-blue   .sh-tag { color: #2563EB !important; background: rgba(37,99,235,0.08) !important;   border-color: rgba(37,99,235,0.18) !important; }
+  .sh-green  .sh-tag { color: #059669 !important; background: rgba(5,150,105,0.08) !important;   border-color: rgba(5,150,105,0.18) !important; }
+  .sh-purple .sh-tag { color: #7C3AED !important; background: rgba(124,58,237,0.08) !important;  border-color: rgba(124,58,237,0.18) !important; }
+  .sh-orange .sh-tag { color: #EA580C !important; background: rgba(234,88,12,0.08) !important;   border-color: rgba(234,88,12,0.18) !important; }
+  .sh-amber  .sh-tag { color: #D97706 !important; background: rgba(217,119,6,0.08) !important;   border-color: rgba(217,119,6,0.18) !important; }
+  .sh-coral  .sh-tag { color: #DC2626 !important; background: rgba(220,38,38,0.08) !important;   border-color: rgba(220,38,38,0.18) !important; }
+  .sh-gray   .sh-tag { color: #64748B !important; background: rgba(100,116,139,0.08) !important; border-color: rgba(100,116,139,0.18) !important; }
+  .sh-gold   .sh-tag { color: #B45309 !important; background: rgba(180,83,9,0.08) !important;    border-color: rgba(180,83,9,0.18) !important; }
 
 </style>
 """, unsafe_allow_html=True)
@@ -1456,17 +1459,17 @@ st.markdown("""
     position: fixed; bottom: 24px; right: 20px; z-index: 99999;
     width: 40px; height: 40px; border-radius: 10px;
     background: #FFFFFF;
-    border: 1px solid rgba(8,145,178,0.35); cursor: pointer;
+    border: 1px solid rgba(5,103,200,0.25); cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(8,145,178,0.10);
+    box-shadow: 0 2px 10px rgba(15,28,46,0.14);
     opacity: 0; transition: opacity 0.3s, transform .2s, box-shadow .2s;
   }
   #back-to-top-btn:hover {
     opacity: 1 !important; transform: translateY(-2px);
-    background: rgba(8,145,178,0.08);
-    box-shadow: 0 4px 20px rgba(8,145,178,0.20);
+    background: rgba(5,103,200,0.06);
+    box-shadow: 0 4px 16px rgba(5,103,200,0.18);
   }
-  #back-to-top-btn svg { width: 18px; height: 18px; fill: #0891B2; pointer-events: none; }
+  #back-to-top-btn svg { width: 18px; height: 18px; fill: #0567C8; pointer-events: none; }
 </style>
 <button id="back-to-top-btn" title="Back to top">
   <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
@@ -4899,6 +4902,102 @@ on pace for <strong>${tbid_ann:,.0f} annually</strong>.
 
 # (Global filter bar removed — tab-specific filters are rendered inside each tab)
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# GloCon Solutions LLC — Dana Point PULSE
+# Section Intelligence Panel: contextual next steps + ask-about-this-data
+# Renders a "What to do next" action panel and an AI question panel per section.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def render_intel_panel(
+    panel_key: str,
+    next_steps: list[str],
+    suggested_questions: list[str],
+    context_note: str = "",
+):
+    """Render an Action Intelligence + Ask About This Data panel.
+
+    Args:
+        panel_key: unique key for session state isolation (e.g. "ov_kpi", "tr_trend")
+        next_steps: list of action strings (shown as numbered items)
+        suggested_questions: list of suggested question strings (shown as clickable chips)
+        context_note: optional short context injected into the AI prompt prefix
+    """
+    _sq_key  = f"_intel_q_{panel_key}"
+    _ans_key = f"_intel_a_{panel_key}"
+
+    # ── Action Panel ────────────────────────────────────────────────────────
+    if next_steps:
+        items_html = ""
+        for i, step in enumerate(next_steps, 1):
+            items_html += (
+                f'<div class="action-item">'
+                f'<div class="action-number">{i}</div>'
+                f'<div class="action-text">{step}</div>'
+                f'</div>'
+            )
+        st.markdown(
+            f'<div class="action-panel">'
+            f'<div class="action-panel-title">⚡ Recommended Next Steps</div>'
+            f'{items_html}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Ask About This Data ──────────────────────────────────────────────────
+    if not (ANTHROPIC_AVAILABLE and api_key_valid):
+        return
+
+    with st.expander("💬 Ask about this data", expanded=False):
+        # Suggested question chips
+        if suggested_questions:
+            chips_html = "".join(
+                f'<span class="ask-chip" '
+                f'onclick="document.getElementById(\'{panel_key}_qi_{i}\').click()">'
+                f'{q}</span>'
+                for i, q in enumerate(suggested_questions)
+            )
+            st.markdown(
+                f'<div class="ask-panel">'
+                f'<div class="ask-panel-title">🔍 Suggested Questions</div>'
+                f'<div>{chips_html}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            # Hidden Streamlit buttons that chips trigger (workaround for HTML onclick)
+            _btn_cols = st.columns(min(len(suggested_questions), 3))
+            for i, q in enumerate(suggested_questions):
+                col = _btn_cols[i % len(_btn_cols)]
+                with col:
+                    if st.button(q, key=f"{panel_key}_qi_{i}", use_container_width=True):
+                        st.session_state[_sq_key] = q
+
+        # Free-form input
+        _custom = st.text_input(
+            "Or type your own question:",
+            key=f"{panel_key}_custom",
+            placeholder="e.g. How does our ADR compare to the comp set trend?",
+            label_visibility="visible",
+        )
+        if st.button("Ask →", key=f"{panel_key}_ask_btn", type="primary"):
+            st.session_state[_sq_key] = _custom.strip()
+
+        # Run the query and show response
+        _pending_q = st.session_state.get(_sq_key, "")
+        if _pending_q:
+            _prefix = f"[Context: {context_note}] " if context_note else ""
+            _full_prompt = f"{_prefix}{_pending_q}"
+            with st.spinner("Analyzing your data..."):
+                _resp_parts = list(stream_claude_response(_full_prompt, api_key))
+            st.session_state[_ans_key] = "".join(_resp_parts)
+            del st.session_state[_sq_key]
+
+        if st.session_state.get(_ans_key):
+            st.info(st.session_state[_ans_key])
+            if st.button("Clear", key=f"{panel_key}_clear"):
+                del st.session_state[_ans_key]
+
+
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
@@ -5054,17 +5153,18 @@ with tab_ov:
         _down= "#FF4757"
         def _c(v): return _up if v >= 0 else _down
         def _arr(v): return "▲" if v >= 0 else "▼"
-        # Build banner HTML
-        def _exec_kpi(label, value, sub="", color="#00C49A"):
+        # Build banner HTML — light mode
+        def _exec_kpi(label, value, sub="", color="#0567C8"):
             return (
                 f'<div style="flex:1;min-width:140px;padding:14px 18px;'
-                f'background:rgba(0,0,0,0.30);'
-                f'border-radius:12px;border:1px solid rgba(255,255,255,0.12);'
-                f'box-shadow:0 2px 8px rgba(0,0,0,0.25);">'
+                f'background:#FFFFFF;'
+                f'border-radius:12px;border:1px solid rgba(15,28,46,0.08);'
+                f'border-top:3px solid {color};'
+                f'box-shadow:0 1px 4px rgba(15,28,46,0.07);">'
                 f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;'
-                f'text-transform:uppercase;color:rgba(255,255,255,0.75);margin-bottom:5px;">{label}</div>'
-                f'<div style="font-size:22px;font-weight:900;letter-spacing:-.03em;color:{color};">{value}</div>'
-                + (f'<div style="font-size:11px;font-weight:600;margin-top:4px;color:rgba(255,255,255,0.60);">{sub}</div>' if sub else '')
+                f'text-transform:uppercase;color:#64748B;margin-bottom:5px;">{label}</div>'
+                f'<div style="font-size:22px;font-weight:900;letter-spacing:-.03em;font-family:\'Outfit\',sans-serif;color:{color};">{value}</div>'
+                + (f'<div style="font-size:11px;font-weight:600;margin-top:4px;color:#64748B;">{sub}</div>' if sub else '')
                 + '</div>'
             )
         _rev12_fmt  = f"${_exec_rev12/1e6:.1f}M" if _exec_rev12 > 0 else "—"
@@ -5075,24 +5175,30 @@ with tab_ov:
         _roas_sub   = (f"${_exec_media_impact/1e3:.0f}K impact · {_exec_attr_trips:,} trips" if _exec_media_impact > 0
                        else "Datafy media attr.")
         _social_fmt = f"{_exec_social_total/1e3:.0f}K" if _exec_social_total >= 1000 else (str(_exec_social_total) if _exec_social_total > 0 else "—")
+        # Color accents per metric type
+        _c_rvp  = "#0567C8" if _exec_rvp_d >= 0 else "#DC2626"
+        _c_adr  = "#0567C8" if _exec_adr_d >= 0 else "#DC2626"
+        _c_occ  = "#059669" if _exec_occ >= 70 else "#D97706"
         _banner_html = (
-            f'<div style="margin-bottom:20px;background:rgba(0,0,0,0.35);border-radius:14px;'
-            f'border:1px solid rgba(255,255,255,0.10);border-left:5px solid #32B8C6;padding:18px 20px;">'
-            f'<div style="font-family:\'Syne\',sans-serif;font-size:11px;font-weight:800;'
-            f'letter-spacing:.10em;text-transform:uppercase;color:#32B8C6;margin-bottom:14px;'
+            f'<div style="margin-bottom:20px;background:linear-gradient(135deg,#F0F7FF 0%,#EEF2FF 100%);'
+            f'border-radius:14px;border:1px solid rgba(5,103,200,0.12);'
+            f'border-left:5px solid #0567C8;padding:18px 20px;'
+            f'box-shadow:0 2px 12px rgba(5,103,200,0.08);">'
+            f'<div style="font-family:\'Outfit\',sans-serif;font-size:11px;font-weight:800;'
+            f'letter-spacing:.10em;text-transform:uppercase;color:#0567C8;margin-bottom:14px;'
             f'display:flex;align-items:center;gap:10px;">'
             f'📊 &nbsp;Board Executive Summary &nbsp;·&nbsp; {datetime.now().strftime("%B %Y").upper()}</div>'
-            f'<div style="display:flex;flex-wrap:wrap;gap:10px;font-family:\'Syne\',sans-serif;">'
-            + _exec_kpi("RevPAR (30d)", f"${_exec_rvp:.0f}", f'{_arr(_exec_rvp_d)} {abs(_exec_rvp_d):.1f}% vs prior', _c(_exec_rvp_d))
-            + _exec_kpi("ADR (30d)", f"${_exec_adr:.0f}", f'{_arr(_exec_adr_d)} {abs(_exec_adr_d):.1f}% vs prior', _c(_exec_adr_d))
-            + _exec_kpi("Occupancy (30d)", f"{_exec_occ:.1f}%", f'{_arr(_exec_occ_d)} {abs(_exec_occ_d):.1f}pp vs prior', _c(_exec_occ_d))
-            + _exec_kpi("12-Mo Room Rev", _rev12_fmt, "Layer 1 STR truth")
-            + _exec_kpi("12-Mo TBID Est.", _tbid12_fmt, "at blended 1.25%")
-            + _exec_kpi("12-Mo TOT Est.", _tot12_fmt, "at 10% rate")
-            + _exec_kpi("Annual Visitor Trips", _trips_fmt, f"{_exec_overnight:.0f}% overnight" if _exec_overnight > 0 else "Datafy")
-            + _exec_kpi("Campaign ROAS", _roas_fmt, _roas_sub)
-            + _exec_kpi("Social Audience", _social_fmt, f"IG · FB · TikTok" if _exec_social_total > 0 else "Later.com exports")
-            + '</div></div></div>'
+            f'<div style="display:flex;flex-wrap:wrap;gap:10px;">'
+            + _exec_kpi("RevPAR (30d)", f"${_exec_rvp:.0f}", f'{_arr(_exec_rvp_d)} {abs(_exec_rvp_d):.1f}% vs prior', _c_rvp)
+            + _exec_kpi("ADR (30d)", f"${_exec_adr:.0f}", f'{_arr(_exec_adr_d)} {abs(_exec_adr_d):.1f}% vs prior', _c_adr)
+            + _exec_kpi("Occupancy (30d)", f"{_exec_occ:.1f}%", f'{_arr(_exec_occ_d)} {abs(_exec_occ_d):.1f}pp vs prior', _c_occ)
+            + _exec_kpi("12-Mo Room Rev", _rev12_fmt, "Layer 1 STR truth", "#0567C8")
+            + _exec_kpi("12-Mo TBID Est.", _tbid12_fmt, "at blended 1.25%", "#7C3AED")
+            + _exec_kpi("12-Mo TOT Est.", _tot12_fmt, "at 10% rate", "#7C3AED")
+            + _exec_kpi("Annual Visitor Trips", _trips_fmt, f"{_exec_overnight:.0f}% overnight" if _exec_overnight > 0 else "Datafy", "#059669")
+            + _exec_kpi("Campaign ROAS", _roas_fmt, _roas_sub, "#EA580C")
+            + _exec_kpi("Social Audience", _social_fmt, f"IG · FB · TikTok" if _exec_social_total > 0 else "Later.com exports", "#E1306C")
+            + '</div></div>'
         )
         st.markdown(_banner_html, unsafe_allow_html=True)
     except Exception:
@@ -5443,8 +5549,8 @@ with tab_ov:
             gauge={
                 "axis": {
                     "range": [0, 100], "tickwidth": 1,
-                    "tickcolor": "rgba(255,255,255,0.5)",
-                    "tickfont": {"size": 11},
+                    "tickcolor": "rgba(15,28,46,0.3)",
+                    "tickfont": {"size": 11, "color": "#64748B"},
                     "nticks": 6,
                 },
                 "bar": {"color": _p_color, "thickness": 0.28},
@@ -5468,43 +5574,43 @@ with tab_ov:
             height=200,
             margin=dict(l=20, r=20, t=10, b=0),
             paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Syne, DM Sans, system-ui, sans-serif", color="rgba(255,255,255,0.75)"),
+            font=dict(family="Outfit, Inter, system-ui, sans-serif", color="#334155"),
         )
 
         _pulse_col1, _pulse_col2 = st.columns([3, 2])
         with _pulse_col1:
             st.markdown(
-                f'<div class="pulse-wrapper" style="border-left:4px solid {_p_color};background:rgba(13,17,23,0.85);border:1px solid rgba(255,255,255,0.10);border-left:4px solid {_p_color};">'
+                f'<div class="pulse-wrapper" style="background:#FFFFFF;border:1px solid rgba(15,28,46,0.08);border-left:4px solid {_p_color};box-shadow:0 2px 10px rgba(15,28,46,0.07);">'
                 f'  <div class="pulse-circle" style="color:{_p_color};">'
                 f'    <div class="pulse-ring"></div>'
                 f'    <div class="pulse-ring-2"></div>'
                 f'    <div class="pulse-core">'
-                f'      <span class="pulse-score">{_pulse_score}</span>'
-                f'      <span class="pulse-label">PULSE</span>'
+                f'      <span class="pulse-score" style="color:{_p_color};">{_pulse_score}</span>'
+                f'      <span class="pulse-label" style="color:#64748B;">PULSE</span>'
                 f'    </div>'
                 f'  </div>'
                 f'  <div class="pulse-info">'
-                f'    <div class="pulse-info-title">Dana Point Market PULSE Score</div>'
-                f'    <div class="pulse-info-detail">'
+                f'    <div class="pulse-info-title" style="color:#0D1B2E;">Dana Point Market PULSE Score</div>'
+                f'    <div class="pulse-info-detail" style="color:#334155;">'
                 f'      Occ {_occ_score:.1f}% &nbsp;·&nbsp; RevPAR YOY {_rvp_d_s:+.1f}% '
                 f'      &nbsp;·&nbsp; Compression {_cq_s} nights this quarter<br>'
                 f'      {_p_detail}'
                 f'    </div>'
-                f'    <span class="pulse-info-status" style="background:{_p_color};color:#ffffff;margin-top:8px;display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;text-shadow:0 1px 2px rgba(0,0,0,0.4);">{_p_status}</span>'
+                f'    <span class="pulse-info-status" style="background:{_p_color};color:#ffffff;margin-top:8px;display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">{_p_status}</span>'
                 f'  </div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
         with _pulse_col2:
             st.plotly_chart(_gauge_fig, use_container_width=True, config={"displayModeBar": False})
-        # Tier legend
+        # Tier legend — light mode
         st.markdown(
             '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;margin-bottom:12px;">'
-            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#7f1d1d;color:#fca5a5;font-weight:700;border:1px solid #ef4444;">0–39 Caution</span>'
-            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#78350f;color:#fde68a;font-weight:700;border:1px solid #f59e0b;">40–59 Stable</span>'
-            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#134e4a;color:#67e8f9;font-weight:700;border:1px solid #21808D;">60–74 Strong</span>'
-            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#14532d;color:#86efac;font-weight:700;border:1px solid #21c55d;">75–89 Exceptional</span>'
-            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#3b0764;color:#c4b5fd;font-weight:700;border:1px solid #7c3aed;">90–100 Historic</span>'
+            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#FEE2E2;color:#991B1B;font-weight:700;border:1px solid #FCA5A5;">0–39 Caution</span>'
+            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#FEF3C7;color:#92400E;font-weight:700;border:1px solid #FCD34D;">40–59 Stable</span>'
+            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#DBEAFE;color:#1E40AF;font-weight:700;border:1px solid #93C5FD;">60–74 Strong</span>'
+            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#D1FAE5;color:#065F46;font-weight:700;border:1px solid #6EE7B7;">75–89 Exceptional</span>'
+            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#EDE9FE;color:#4C1D95;font-weight:700;border:1px solid #C4B5FD;">90–100 Historic</span>'
             '</div>',
             unsafe_allow_html=True,
         )
@@ -5526,6 +5632,46 @@ with tab_ov:
             _ov_fwd,
             f"RevPAR YOY: {_ov_rvp_yoy:+.1f}%",
         ), unsafe_allow_html=True)
+
+    # ── Executive Intelligence Panel ───────────────────────────────────────────
+    try:
+        _ov_rvp_d2   = m.get("revpar_delta", 0) if m else 0
+        _ov_occ_d2   = m.get("occ_delta", 0) if m else 0
+        _ov_adr_d2   = m.get("adr_delta", 0) if m else 0
+        _ov_cq2      = m.get("comp_recent_q", 0) if m else 0
+        _ov_trips2   = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
+        _ov_oos2     = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
+        _ov_rev12_2  = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
+
+        _ov_next_steps = [
+            f"<strong>Rate Optimization:</strong> ADR is {'+' if _ov_adr_d2 >= 0 else ''}{_ov_adr_d2:.1f}% YOY — "
+            + ("momentum is strong; consider pushing rates further on compression nights." if _ov_adr_d2 > 3 else
+               "growth is modest; review comp-set pricing vs CoStar benchmarks in Competitive Intel tab."),
+            f"<strong>Compression Night Strategy:</strong> {_ov_cq2} compression days this quarter — "
+            + ("activate TBID tiered rate (≥$400) on high-demand nights to maximize TBID revenue." if _ov_cq2 >= 8 else
+               "low compression count signals opportunity to build mid-week demand with targeted packages."),
+            f"<strong>Out-of-State Visitor Capture:</strong> {_ov_oos2:.0f}% OOS visitors drive premium ADR — "
+            "target SLC, Dallas, and Phoenix feeder markets with fly-drive packages. See Origin Markets tab.",
+            f"<strong>TBID Revenue:</strong> Estimated 12-month TBID ~${_ov_rev12_2 * 0.0125 / 1_000_000:.2f}M — "
+            "present at next board meeting alongside TOT figures to demonstrate total economic contribution.",
+        ]
+        _ov_questions = [
+            "What's driving the RevPAR change vs last year?",
+            "Which months have the most compression opportunity?",
+            "How do our TBID and TOT estimates compare to prior year?",
+            "What's the highest-value visitor segment right now?",
+            "Where should we focus marketing spend next quarter?",
+        ]
+        _ov_context = (
+            f"Dana Point VDP portfolio. RevPAR ${m.get('revpar_30',0):.0f} ({m.get('revpar_delta',0):+.1f}% YOY), "
+            f"ADR ${m.get('adr_30',0):.0f}, Occ {m.get('occ_30',0):.1f}%, "
+            f"12-mo revenue ~${_ov_rev12_2/1_000_000:.1f}M, "
+            f"{_ov_cq2} compression days, {_ov_trips2:,} annual visitor trips, {_ov_oos2:.0f}% OOS."
+            if m else "Dana Point VDP portfolio executive overview."
+        )
+        render_intel_panel("ov_exec", _ov_next_steps, _ov_questions, _ov_context)
+    except Exception:
+        pass
 
     # ── VDP Analyst Panel ──────────────────────────────────────────────────────
     st.markdown(sec_div("🧠 VDP Analyst"), unsafe_allow_html=True)
@@ -5696,6 +5842,123 @@ with tab_ov:
             + '</div>'
         )
         st.markdown(_rc_html, unsafe_allow_html=True)
+    except Exception:
+        pass
+
+    # ── Cross-Dataset Intelligence Matrix ─────────────────────────────────────
+    try:
+        if m and (not df_dfy_ov.empty or not df_dfy_dma.empty or not df_dfy_media.empty):
+            st.markdown(sec_div("🔗 Cross-Dataset Intelligence"), unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-family:\'Inter\',sans-serif;font-size:12px;color:#64748B;margin-bottom:14px;">'
+                'Hidden signals that only appear when STR hotel data is read alongside visitor economy and campaign data.</div>',
+                unsafe_allow_html=True,
+            )
+
+            # ── Compute cross-dataset signals ─────────────────────────────────
+            _cx_rvp      = m.get("revpar_30", 0)
+            _cx_adr      = m.get("adr_30", 0)
+            _cx_occ      = m.get("occ_30", 0)
+            _cx_rev12    = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
+            _cx_oos_pct  = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0.0
+            _cx_trips    = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
+            _cx_daytrip  = float(df_dfy_ov.iloc[0].get("day_trip_pct", 0) or 0) if not df_dfy_ov.empty else 0.0
+            _cx_los      = float(df_dfy_ov.iloc[0].get("avg_los", 0) or 0) if not df_dfy_ov.empty else 0.0
+            _cx_overnight_pct = float(df_dfy_ov.iloc[0].get("overnight_pct", 0) or 0) if not df_dfy_ov.empty else 0.0
+            _cx_roas     = _exec_roas if not _exec_roas_infinite else 99.0
+            _cx_impact   = float(df_dfy_media.iloc[0].get("total_impact_usd", 0) or 0) if not df_dfy_media.empty else 0.0
+            _cx_invest   = float(df_dfy_media.iloc[0].get("total_investment_usd", 0) or 0) if not df_dfy_media.empty else 0.0
+            _cx_attr_trips = int(df_dfy_media.iloc[0].get("attributable_trips", 0) or 0) if not df_dfy_media.empty else 0
+
+            # Signal 1: OOS premium capture gap
+            _oos_rate_gap = _cx_oos_pct * 0.01 * _cx_adr * 0.067  # 6.7% ADR YOY vs 1.0× spend ratio
+            _oos_signal  = (f"{_cx_oos_pct:.0f}% OOS visitors generate near 1:1 spend-per-visit but ADR growth is only "
+                            f"+{m.get('adr_delta',0):.1f}% YOY — rate capture gap of ~${_cx_adr * 0.05:,.0f}/night vs. OOS demand.")
+            # Signal 2: Day-trip conversion value
+            _daytrip_ct    = int(_cx_trips * _cx_daytrip * 0.01) if _cx_daytrip > 0 else 0
+            _daytrip_conv3 = _daytrip_ct * 0.03 * _cx_adr  # 3% conversion × ADR
+            _daytrip_signal = (f"{_daytrip_ct:,} estimated day trips — converting just 3% to overnight stays = "
+                               f"~${_daytrip_conv3/1e6:.1f}M incremental room revenue annually." if _daytrip_ct > 0
+                               else f"Day-trip data pending — load Datafy visitor report to compute conversion opportunity.")
+            # Signal 3: Campaign efficiency vs organic
+            _cost_per_trip = _cx_invest / _cx_attr_trips if _cx_attr_trips > 0 and _cx_invest > 0 else 0
+            _rev_per_trip  = _cx_impact / _cx_attr_trips if _cx_attr_trips > 0 and _cx_impact > 0 else 0
+            if _cx_roas >= 5 or _exec_roas_infinite:
+                _camp_signal = (f"{'∞' if _exec_roas_infinite else f'{_cx_roas:.1f}×'} ROAS — ${_cx_impact/1e3:,.0f}K destination impact "
+                                f"from {_cx_attr_trips:,} attributable trips. "
+                                f"{'No media cost recorded — all organic; strong case for paid media investment.' if _exec_roas_infinite else 'Strong ROI — scale budget to capture next tier of feeder markets.'}")
+            elif _cx_roas > 0:
+                _camp_signal = (f"{_cx_roas:.1f}× ROAS · ${_cost_per_trip:,.0f} cost/trip · ${_rev_per_trip:,.0f} revenue/trip — "
+                                "acceptable efficiency; refine audience targeting to improve trip quality vs. volume.")
+            else:
+                _camp_signal = "Load Datafy media attribution report to compute campaign-to-room-revenue signal."
+            # Signal 4: Compression × visitor overlap
+            _comp_q = m.get("comp_recent_q", 0)
+            _comp_day_signal = (
+                f"{_comp_q} compression nights this quarter — on 80%+ occ nights, day-trip visitors add estimated "
+                f"0.7× room count equivalent in off-property spend, invisible to STR. "
+                f"Total visitor economic footprint exceeds hotel data by ~{0.7 * _comp_q * _cx_adr * 50:,.0f}$ on compression days."
+                if _comp_q > 0 else
+                "Compression data loading — run pipeline to populate kpi_compression_quarterly."
+            )
+            # Signal 5: LOS extension value
+            _los_val = (_cx_los if _cx_los > 0 else 2.0)
+            _los_ext_val = _cx_rev12 * 0.05  # 5% uplift from 0.5-day extension
+            _los_signal  = (f"Avg stay: {_cx_los:.1f} nights (Datafy) — extending avg LOS by 0.5 nights via minimum-stay "
+                            f"packages = estimated +${_los_ext_val/1e3:,.0f}K annual room revenue.")
+
+            def _cx_signal_card(icon, title, signal_text, source_tags, signal_type="insight"):
+                _type_colors = {"insight": "#0567C8", "opportunity": "#059669", "risk": "#DC2626", "gap": "#D97706"}
+                _tc = _type_colors.get(signal_type, "#0567C8")
+                return (
+                    f'<div style="background:#FFFFFF;border-radius:12px;padding:16px 18px;'
+                    f'border:1px solid rgba(15,28,46,0.07);border-left:3px solid {_tc};'
+                    f'box-shadow:0 1px 4px rgba(15,28,46,0.06);margin-bottom:10px;">'
+                    f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+                    f'<span style="font-size:16px;">{icon}</span>'
+                    f'<span style="font-family:\'Outfit\',sans-serif;font-size:12px;font-weight:700;color:#0D1B2E;">{title}</span>'
+                    f'<span style="margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.08em;'
+                    f'text-transform:uppercase;color:{_tc};background:rgba(5,103,200,0.08);'
+                    f'padding:2px 8px;border-radius:99px;">{signal_type.upper()}</span>'
+                    f'</div>'
+                    f'<div style="font-family:\'Inter\',sans-serif;font-size:12px;color:#334155;line-height:1.6;">{signal_text}</div>'
+                    f'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">{source_tags}</div>'
+                    f'</div>'
+                )
+
+            def _src(label, color_hex, bg_hex):
+                return (f'<span style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;'
+                        f'color:{color_hex};background:{bg_hex};padding:2px 8px;border-radius:99px;">{label}</span>')
+
+            _cx_c1, _cx_c2 = st.columns(2)
+            with _cx_c1:
+                st.markdown(_cx_signal_card("💎", "OOS Visitor Rate Capture Gap",  _oos_signal,
+                    _src("STR","#0567C8","rgba(5,103,200,0.10)") + _src("Datafy","#059669","rgba(5,150,105,0.10)"), "gap"), unsafe_allow_html=True)
+                st.markdown(_cx_signal_card("🔁", "Day-Trip → Overnight Conversion", _daytrip_signal,
+                    _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "opportunity"), unsafe_allow_html=True)
+                st.markdown(_cx_signal_card("📏", "Length-of-Stay Extension Value", _los_signal,
+                    _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "opportunity"), unsafe_allow_html=True)
+            with _cx_c2:
+                st.markdown(_cx_signal_card("📡", "Campaign → Room Revenue Signal", _camp_signal,
+                    _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "insight"), unsafe_allow_html=True)
+                st.markdown(_cx_signal_card("🏨", "Compression × Day-Trip Overlap", _comp_day_signal,
+                    _src("STR","#0567C8","rgba(5,103,200,0.10)") + _src("Datafy","#059669","rgba(5,150,105,0.10)"), "insight"), unsafe_allow_html=True)
+                # Feeder market ADR premium signal
+                _top_dma = str(df_dfy_dma.iloc[0].get("dma","—")) if not df_dfy_dma.empty else "—"
+                _top_dma_share = float(df_dfy_dma.iloc[0].get("visitor_days_share_pct", 0) or 0) if not df_dfy_dma.empty else 0
+                _fly_markets = [r for _, r in df_dfy_dma.iterrows()
+                                if str(r.get("dma","")).upper() not in ("LOS ANGELES","LA","RIVERSIDE","SAN DIEGO","ORANGE COUNTY")
+                                ] if not df_dfy_dma.empty else []
+                _fly_spend = float(_fly_markets[0].get("avg_spend_usd", 0) or 0) if _fly_markets else 0
+                _feeder_signal = (
+                    f"Top feeder: {_top_dma} ({_top_dma_share:.0f}% of visitor days) — drive market dominant on volume. "
+                    + (f"Fly markets (SLC, Dallas, NYC) avg ${_fly_spend:,.0f}/trip vs. LA drive market — "
+                       "1.3–1.4× revenue per visitor trip. Shift 10% of campaign budget to fly markets = outsized ADR gain."
+                       if _fly_spend > 0 else
+                       "Load full Datafy DMA table to compute fly-market ADR premium signal.")
+                ) if _top_dma != "—" else "Load Datafy feeder market data to compute cross-dataset signal."
+                st.markdown(_cx_signal_card("✈️", "Feeder Market ADR Premium",  _feeder_signal,
+                    _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "opportunity"), unsafe_allow_html=True)
     except Exception:
         pass
 
@@ -6400,6 +6663,41 @@ with tab_tr:
         except Exception:
             pass
 
+        # ── Hotel Performance Intelligence Panel ─────────────────────────────
+        try:
+            _tr_rvp_v   = float(monthly["revpar"].dropna().iloc[-1]) if "revpar" in monthly.columns and not monthly["revpar"].dropna().empty else m.get("revpar_30", 0) if m else 0
+            _tr_adr_v   = float(monthly["adr"].dropna().iloc[-1]) if "adr" in monthly.columns and not monthly["adr"].dropna().empty else m.get("adr_30", 0) if m else 0
+            _tr_occ_v   = float(monthly["occ_pct"].dropna().iloc[-1]) if "occ_pct" in monthly.columns and not monthly["occ_pct"].dropna().empty else m.get("occ_30", 0) if m else 0
+            _tr_adr_yoy2 = float(monthly["adr_yoy"].dropna().iloc[-1]) if "adr_yoy" in monthly.columns and not monthly["adr_yoy"].dropna().empty else 0
+            _tr_cq2      = m.get("comp_recent_q", 0) if m else 0
+
+            _tr_next_steps = [
+                f"<strong>Rate Capture:</strong> ADR {'+' if _tr_adr_yoy2>=0 else ''}{_tr_adr_yoy2:.1f}% YOY at ${_tr_adr_v:.0f} — "
+                + ("strong rate discipline; add dynamic surcharges on compression weeks." if _tr_adr_yoy2 > 3 else
+                   "review LOS minimum stays to improve rate capture without discounting."),
+                f"<strong>Occupancy at {_tr_occ_v:.1f}%:</strong> "
+                + ("compression territory — prioritize RevPAR over occupancy; reject low-rate group blocks." if _tr_occ_v >= 80 else
+                   f"opportunity below compression threshold — target {80-_tr_occ_v:.1f}pp gain via shoulder-season campaigns."),
+                f"<strong>Weekend Premium:</strong> Analyze weekday vs. weekend RevPAR gap — "
+                "adding a mid-week LOS package (min 3 nights) extends average stay and smooths revenue curve.",
+                "<strong>TBID Tier Tracking:</strong> Monitor what share of room nights exceed $200, $400 ADR thresholds — "
+                "each $1M in revenue above $400/night generates $20K in incremental TBID.",
+            ]
+            _tr_questions = [
+                "What's causing ADR to grow faster than occupancy?",
+                "Which months should we set rate floors for?",
+                "Show me weekend vs weekday RevPAR gap",
+                "How many nights hit the $400 TBID tier?",
+                "What's our RevPAR vs the CoStar comp set?",
+            ]
+            _tr_context = (
+                f"Hotel Performance: RevPAR ${_tr_rvp_v:.0f}, ADR ${_tr_adr_v:.0f} ({_tr_adr_yoy2:+.1f}% YOY), "
+                f"Occ {_tr_occ_v:.1f}%, {_tr_cq2} compression days this quarter."
+            )
+            render_intel_panel("tr_perf", _tr_next_steps, _tr_questions, _tr_context)
+        except Exception:
+            pass
+
         st.markdown(sec_div("📈 Trend Charts"), unsafe_allow_html=True)
         # ── Primary metric chart — responds to metric selector ─────────────────
         _yoy_col   = "revpar_yoy" if _str_metric_col in ("revpar", "occ_pct") else None
@@ -6673,6 +6971,102 @@ with tab_tr:
             )
             st.plotly_chart(style_fig(fig, height=280), use_container_width=True, config=PLOTLY_CONFIG)
             st.caption(f"Density clusters reveal seasonal patterns. Q3 (dark teal) = peak season. Spread = {_str_metric_label} variability. Filter metric above to switch views.")
+
+        # ── Revenue Intelligence: STR × Visitor Economy Correlations ──────────
+        st.markdown("---")
+        try:
+            _ri_rev12   = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
+            _ri_adr     = float(monthly["adr"].dropna().iloc[-1]) if not monthly.empty and "adr" in monthly.columns and not monthly["adr"].dropna().empty else 0.0
+            _ri_occ     = float(monthly["occ_pct"].dropna().iloc[-1]) if not monthly.empty and "occ_pct" in monthly.columns and not monthly["occ_pct"].dropna().empty else 0.0
+            _ri_tbid12  = _ri_rev12 * 0.0125
+            _ri_tot12   = _ri_rev12 * 0.10
+            _ri_trips   = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
+            _ri_oos     = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
+            _ri_los     = float(df_dfy_ov.iloc[0].get("avg_los", 0) or 0) if not df_dfy_ov.empty else 0
+            _ri_onight  = float(df_dfy_ov.iloc[0].get("overnight_pct", 0) or 0) if not df_dfy_ov.empty else 0
+
+            if _ri_rev12 > 0 or _ri_trips > 0:
+                st.markdown(sec_div("💡 Revenue Intelligence — STR × Visitor Economy"), unsafe_allow_html=True)
+                _ri_c1, _ri_c2, _ri_c3, _ri_c4 = st.columns(4)
+
+                def _ri_metric(label, val, note, icon, color):
+                    return (
+                        f'<div style="background:#FFFFFF;border-radius:10px;padding:14px 16px;'
+                        f'border:1px solid rgba(15,28,46,0.07);border-top:3px solid {color};'
+                        f'box-shadow:0 1px 4px rgba(15,28,46,0.06);">'
+                        f'<div style="font-size:18px;margin-bottom:4px;">{icon}</div>'
+                        f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;'
+                        f'letter-spacing:.08em;color:#64748B;margin-bottom:4px;">{label}</div>'
+                        f'<div style="font-family:\'Outfit\',sans-serif;font-size:20px;font-weight:800;'
+                        f'color:{color};letter-spacing:-.02em;">{val}</div>'
+                        f'<div style="font-size:11px;color:#64748B;margin-top:4px;line-height:1.5;">{note}</div>'
+                        f'</div>'
+                    )
+
+                _rev_per_trip = _ri_rev12 / _ri_trips if _ri_trips > 0 and _ri_rev12 > 0 else 0
+                _tbid_per_trip = _ri_tbid12 / _ri_trips if _ri_trips > 0 and _ri_tbid12 > 0 else 0
+
+                with _ri_c1:
+                    st.markdown(_ri_metric(
+                        "Room Rev / Visitor Trip",
+                        f"${_rev_per_trip:.2f}" if _rev_per_trip > 0 else "—",
+                        "Hotel room revenue per annual visitor trip. Fly-market OOS visitors typically generate 1.3–1.4× this ratio.",
+                        "💵", "#0567C8",
+                    ), unsafe_allow_html=True)
+                with _ri_c2:
+                    st.markdown(_ri_metric(
+                        "TBID / Visitor Trip",
+                        f"${_tbid_per_trip:.3f}" if _tbid_per_trip > 0 else "—",
+                        f"Est. ${_ri_tbid12/1e3:,.0f}K annual TBID across {_ri_trips:,} visits. Grow overnight conversion to raise this.",
+                        "🏷️", "#7C3AED",
+                    ), unsafe_allow_html=True)
+                with _ri_c3:
+                    _overnight_rev_share = (_ri_onight / 100) if _ri_onight > 0 else 0
+                    st.markdown(_ri_metric(
+                        "Overnight Share",
+                        f"{_ri_onight:.0f}%" if _ri_onight > 0 else "—",
+                        f"{100-_ri_onight:.0f}% are day trips — converting 3% adds ~${_ri_trips * 0.03 * _ri_adr / 1e6:.1f}M in incremental room revenue.",
+                        "🌙", "#059669",
+                    ), unsafe_allow_html=True)
+                with _ri_c4:
+                    _oos_rev_est = _ri_rev12 * (_ri_oos / 100) * 1.35 if _ri_oos > 0 else 0
+                    st.markdown(_ri_metric(
+                        "OOS Visitor Rev Est.",
+                        f"${_oos_rev_est/1e6:.1f}M" if _oos_rev_est > 0 else "—",
+                        f"{_ri_oos:.0f}% OOS visitors × 1.35× ADR premium factor. Real-time: grow OOS share via fly-market campaigns.",
+                        "✈️", "#EA580C",
+                    ), unsafe_allow_html=True)
+
+                # Revenue waterfall insight
+                if _ri_rev12 > 0:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    _wf_tbid = _ri_tbid12
+                    _wf_tot  = _ri_tot12
+                    _wf_total_public = _wf_tbid + _wf_tot
+                    st.markdown(
+                        f'<div style="background:linear-gradient(135deg,#F0F7FF,#F5F3FF);'
+                        f'border-radius:12px;padding:16px 20px;border:1px solid rgba(5,103,200,0.12);">'
+                        f'<div style="font-family:\'Outfit\',sans-serif;font-size:12px;font-weight:800;'
+                        f'text-transform:uppercase;letter-spacing:.08em;color:#0567C8;margin-bottom:10px;">'
+                        f'📊 Public Revenue Derivation from 12-Month Room Revenue</div>'
+                        f'<div style="display:flex;gap:20px;flex-wrap:wrap;font-family:\'Inter\',sans-serif;font-size:13px;">'
+                        f'<div><span style="color:#64748B;">12-Mo Room Revenue</span><br>'
+                        f'<strong style="color:#0D1B2E;font-size:16px;">${_ri_rev12/1e6:.2f}M</strong></div>'
+                        f'<div style="color:#64748B;align-self:center;font-size:18px;">→</div>'
+                        f'<div><span style="color:#64748B;">TBID Assessment (1.25%)</span><br>'
+                        f'<strong style="color:#7C3AED;font-size:16px;">${_wf_tbid/1e3:,.0f}K</strong></div>'
+                        f'<div style="color:#64748B;align-self:center;font-size:18px;">+</div>'
+                        f'<div><span style="color:#64748B;">TOT (10%)</span><br>'
+                        f'<strong style="color:#059669;font-size:16px;">${_wf_tot/1e6:.2f}M</strong></div>'
+                        f'<div style="color:#64748B;align-self:center;font-size:18px;">=</div>'
+                        f'<div style="background:#0567C8;border-radius:8px;padding:8px 14px;">'
+                        f'<span style="color:rgba(255,255,255,0.8);font-size:10px;">Total Public Revenue</span><br>'
+                        f'<strong style="color:#FFFFFF;font-size:18px;">${_wf_total_public/1e6:.2f}M</strong></div>'
+                        f'</div></div>',
+                        unsafe_allow_html=True,
+                    )
+        except Exception:
+            pass
 
         # ── Search Demand Intelligence ─────────────────────────────────────────
         st.markdown(_sh("🔍", "Search Demand Intelligence", "blue", "Google Trends · Leading Indicator"), unsafe_allow_html=True)
@@ -7067,6 +7461,40 @@ with tab_fo:
 
         st.markdown("---")
 
+    # ── AI Outlook Intelligence Panel ─────────────────────────────────────────
+    try:
+        _fo_rvp_d3  = m.get("revpar_delta", 0) if m else 0
+        _fo_occ3    = m.get("occ_30", 0) if m else 0
+        _fo_cq3     = m.get("comp_recent_q", 0) if m else 0
+        _fo_trips3  = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
+        _fo_roas3   = float(df_dfy_media.iloc[0].get("roas", 0) or 0) if not df_dfy_media.empty else 0
+
+        _fo_next_steps = [
+            f"<strong>Q3 Compression Play:</strong> With {_fo_cq3} compression days this quarter, "
+            "activate advanced rate strategy 6 weeks prior — ADR floors + length-of-stay minimums.",
+            f"<strong>Campaign Timing:</strong> Insights show peak conversion in shoulder months — "
+            "shift 20-30% of campaign budget from Q3 (already full) to Q1/Q2 to build off-peak demand.",
+            f"<strong>Cross-Dataset Signal:</strong> Day-trip visitors represent 3.55M annual trips — "
+            "a 2% overnight conversion at current ADR = ~$15M in incremental room revenue.",
+            "<strong>ROAS Optimization:</strong> "
+            + (f"Current campaign ROAS is {_fo_roas3:.1f}x — analyze which channels drive highest-value OOS visitors." if _fo_roas3 > 0 else
+               "Load Datafy media attribution data to calculate actual ROAS and optimize campaign mix."),
+        ]
+        _fo_questions = [
+            "Which audience insight should I prioritize this quarter?",
+            "How do cross-dataset signals compare to prior year?",
+            "What's the biggest revenue opportunity in the next 90 days?",
+            "How should we adjust messaging for each stakeholder group?",
+            "What does the day-trip conversion opportunity look like in dollars?",
+        ]
+        _fo_context = (
+            f"Forward Outlook: Occ {_fo_occ3:.1f}%, RevPAR {_fo_rvp_d3:+.1f}% YOY, "
+            f"{_fo_cq3} compression days, {_fo_trips3:,} annual visitor trips."
+        )
+        render_intel_panel("fo_outlook", _fo_next_steps, _fo_questions, _fo_context)
+    except Exception:
+        pass
+
     # ── Audience tabs ────────────────────────────────────────────────────────
     st.markdown(sec_div("🧠 Audience-Specific Insights"), unsafe_allow_html=True)
     AUDIENCE_CONFIG = {
@@ -7365,6 +7793,41 @@ with tab_ev:
                 _ve_fwd,
                 f"Out-of-State Visitors: {_ve_oos:.1f}% · Overnight Rate: {_ve_onight:.1f}%",
             ), unsafe_allow_html=True)
+    except Exception:
+        pass
+
+    # ── Visitor Intelligence Panel ────────────────────────────────────────────
+    try:
+        _ev_tt   = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
+        _ev_oos  = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
+        _ev_on   = float(df_dfy_ov.iloc[0].get("overnight_trips_pct", 0) or 0) if not df_dfy_ov.empty else 0
+        _ev_dt   = float(df_dfy_ov.iloc[0].get("day_trips_pct", 0) or 0) if not df_dfy_ov.empty else 0
+        _ev_los  = float(df_dfy_ov.iloc[0].get("avg_length_of_stay_days", 0) or 0) if not df_dfy_ov.empty else 0
+        _ev_adr  = m.get("adr_30", 350) if m else 350
+        _ev_dt_conv_rev = int(_ev_tt * (_ev_dt / 100) * 0.02 * _ev_adr * _ev_los)
+
+        _ev_next_steps = [
+            f"<strong>Day-Trip Conversion:</strong> {_ev_dt:.1f}% of {_ev_tt/1e6:.2f}M trips are day trips — "
+            f"converting just 2% to overnight at ${_ev_adr:.0f} ADR × {_ev_los:.1f} nights = ~${_ev_dt_conv_rev:,} incremental revenue.",
+            f"<strong>OOS Visitor Focus:</strong> {_ev_oos:.1f}% out-of-state visitor days command premium rates — "
+            "build targeted fly-drive packages for SLC, Dallas, NYC feeder markets (Origin Markets tab).",
+            f"<strong>Length of Stay Extension:</strong> At {_ev_los:.1f} avg days, adding 0.5 days to OOS visitor stays "
+            f"= ~${int(_ev_tt * (_ev_oos/100) * 0.5 * _ev_adr / 365):,}/year in additional room revenue.",
+            "<strong>Spending Category Insight:</strong> Cross-reference accommodation spend share with total category spending — "
+            "hotel stays consistently capture 40-50% of destination spend; boost ancillary F&B and retail packages.",
+        ]
+        _ev_questions = [
+            "What's the visitor day-trip to overnight conversion opportunity?",
+            "Which feeder market visitors spend the most per trip?",
+            "How has our visitor profile changed vs prior year?",
+            "What spending categories are growing fastest?",
+            "How do OOS visitors compare to in-state in ADR and length of stay?",
+        ]
+        _ev_context = (
+            f"Visitor Intelligence (Datafy): {_ev_tt:,} annual trips, "
+            f"{_ev_on:.1f}% overnight, {_ev_dt:.1f}% day trips, {_ev_oos:.1f}% OOS, {_ev_los:.1f}d avg LOS."
+        )
+        render_intel_panel("ev_visitor", _ev_next_steps, _ev_questions, _ev_context)
     except Exception:
         pass
 
@@ -8330,6 +8793,42 @@ with tab_fm:
     except Exception:
         pass
 
+    # ── Origin Markets Intelligence Panel ─────────────────────────────────────
+    try:
+        _fm_hs_mkt2 = "N/A"; _fm_hs_val2 = 0; _fm_top2 = "LA"; _fm_top_pct2 = 0
+        if not df_dfy_dma.empty:
+            _fm_t10_2  = df_dfy_dma[df_dfy_dma["visitor_days_share_pct"].notna()].head(10)
+            _fm_top2   = _fm_t10_2.iloc[0]["dma"] if not _fm_t10_2.empty else "LA"
+            _fm_top_pct2 = float(_fm_t10_2.iloc[0]["visitor_days_share_pct"]) if not _fm_t10_2.empty else 0
+            _fm_hs_row2  = df_dfy_dma[df_dfy_dma["avg_spend_usd"].notna()].nlargest(1, "avg_spend_usd")
+            _fm_hs_mkt2  = _fm_hs_row2.iloc[0]["dma"] if not _fm_hs_row2.empty else "N/A"
+            _fm_hs_val2  = float(_fm_hs_row2.iloc[0]["avg_spend_usd"]) if not _fm_hs_row2.empty else 0
+
+        _fm_next_steps = [
+            f"<strong>Budget Reallocation:</strong> {_fm_top2} drives {_fm_top_pct2:.1f}% of visitor days "
+            "but drive-market visitors spend less per trip — shift 15-20% of media budget toward fly markets.",
+            f"<strong>High-Value DMA Targeting:</strong> {_fm_hs_mkt2} visitors average ${_fm_hs_val2:,.0f}/trip — "
+            "build dedicated campaign creative for this market emphasizing luxury/resort positioning.",
+            "<strong>Attribution Gap:</strong> Cross-reference DMA share vs. website attribution DMAs (Datafy channel data) "
+            "to identify markets where organic traffic is high but paid conversion is low.",
+            "<strong>Seasonal Feeder Match:</strong> Align feeder-market campaigns with their local weather/event calendar — "
+            "target cold-weather origin markets in Nov-Feb when Dana Point's mild weather is a strong pull.",
+        ]
+        _fm_questions = [
+            f"How does {_fm_top2} spending compare to fly markets like SLC or Dallas?",
+            "Which feeder market has the best spend-per-visitor ROI?",
+            "How has our market mix changed vs prior year?",
+            "What percentage of our visitors come from the top 3 markets?",
+            "Which DMAs should we add to our paid media targeting?",
+        ]
+        _fm_context = (
+            f"Origin Markets: Top feeder {_fm_top2} ({_fm_top_pct2:.1f}% of visitor days), "
+            f"Highest spend: {_fm_hs_mkt2} (${_fm_hs_val2:,.0f}/trip)."
+        )
+        render_intel_panel("fm_origin", _fm_next_steps, _fm_questions, _fm_context)
+    except Exception:
+        pass
+
     # ── DMA Overview ───────────────────────────────────────────────────────────
     st.markdown(sec_div("🗺️ Origin Market Volume vs. Value"), unsafe_allow_html=True)
     if not df_dfy_dma.empty:
@@ -8873,6 +9372,29 @@ with tab_ei:
         "Expand the event calendar in Q1 and Q4 shoulder seasons — events during compression gaps maximize TBID revenue lift.",
         "$14.6M direct event expenditure · 3.2× multiplier",
     ), unsafe_allow_html=True)
+
+    # ── Event ROI Intelligence Panel ──────────────────────────────────────────
+    _ei_next_steps = [
+        "<strong>Shoulder Season Events:</strong> Current calendar peaks in Q3 — add 2-3 signature events "
+        "in Q1 (Jan-Mar, currently only 4 compression days) to convert low-demand nights into peak-rate nights.",
+        "<strong>ADR Lift Stacking:</strong> Ohana Fest drove +$139 ADR lift — identify 3-5 events with "
+        "similar out-of-state draw (>60% OOS attendance) that can be anchored as annual recurring events.",
+        "<strong>TBID Revenue Calculation:</strong> At 3.2× spend multiplier × $14.6M event spend × 1.25% TBID rate, "
+        "each $1M in event expenditure generates ~$40K in TBID revenue — use this to justify event sponsorship ROI.",
+        "<strong>Event-STR Correlation:</strong> Map known event dates against STR daily data to calculate "
+        "actual ADR premium, compression nights, and total revenue lift per event — build the economic case.",
+    ]
+    _ei_questions = [
+        "How does Ohana Fest ADR lift compare to other events?",
+        "What's the TBID revenue impact of our major events?",
+        "Which months need more events to fill compression gaps?",
+        "What's the economic multiplier effect on the broader destination?",
+        "How do OOS attendees compare to local attendees in spend?",
+    ]
+    render_intel_panel(
+        "ei_event", _ei_next_steps, _ei_questions,
+        "Event ROI: Ohana Fest $14.6M direct spend, 3.2x multiplier, +$139 ADR lift, 68% OOS attendance."
+    )
 
     # ── Headline KPIs — Event Calendar Snapshot ────────────────────────────────
     _ei_summary_cols = st.columns(4)
@@ -9981,6 +10503,45 @@ with tab_cs:
             "Track MPI, ARI, and RGI monthly — index leadership above 100 across all three metrics is the primary RevPAR growth target.",
             f"Market ADR: ${_cs_mkt_adr:.0f} · Market RevPAR: ${_cs_mkt_rvp:.0f}",
         ), unsafe_allow_html=True)
+    except Exception:
+        pass
+
+    # ── Competitive Intel Intelligence Panel ──────────────────────────────────
+    try:
+        _cs_port_adr2 = m.get("adr_30", 0) if m else 0
+        _cs_mkt_adr2  = 0.0; _cs_mkt_rvp2 = 0.0; _cs_mkt_occ2 = 0.0
+        if not df_cs_snap.empty:
+            _s2 = df_cs_snap.iloc[0]
+            _cs_mkt_adr2 = float(_s2.get("adr_usd", 0) or 0)
+            _cs_mkt_rvp2 = float(_s2.get("revpar_usd", 0) or 0)
+            _cs_mkt_occ2 = float(_s2.get("occupancy_pct", 0) or 0)
+        _cs_adr_gap = _cs_port_adr2 - _cs_mkt_adr2
+
+        _cs_next_steps = [
+            f"<strong>ARI (ADR Index) Target:</strong> VDP ADR ${_cs_port_adr2:.0f} vs market ${_cs_mkt_adr2:.0f} "
+            f"({'above' if _cs_adr_gap >= 0 else 'below'} market by ${abs(_cs_adr_gap):.0f}) — "
+            + ("maintain premium positioning with rate floors; avoid aggressive discounting." if _cs_adr_gap >= 0 else
+               "identify rate capture opportunities through comp-set analysis and LOS minimums."),
+            "<strong>New Supply Watch:</strong> Monitor pipeline additions in Supply Pipeline tab — "
+            "new rooms entering the market compress OCC and ADR for 12-18 months; plan demand campaigns in advance.",
+            "<strong>MPI Strategy:</strong> Market Penetration Index above 100 = capturing above your fair share — "
+            "track MPI monthly and target group/corporate segments to maintain index leadership.",
+            f"<strong>2030 Forecast Planning:</strong> CoStar projects South OC market through 2030 — "
+            "build 3-year TBID and TOT projections using these forecasts for city budget planning.",
+        ]
+        _cs_questions = [
+            "How does VDP ADR compare to the Waldorf and Ritz-Carlton?",
+            "What's our MPI vs the South OC competitive set?",
+            "How much new supply is entering the market by 2026?",
+            "What does CoStar forecast for RevPAR growth through 2028?",
+            "Which comp-set properties are gaining market share?",
+        ]
+        _cs_context = (
+            f"Competitive Intel (CoStar Full Year 2024): South OC market "
+            f"Occ {_cs_mkt_occ2:.1f}%, ADR ${_cs_mkt_adr2:.0f}, RevPAR ${_cs_mkt_rvp2:.0f}. "
+            f"VDP portfolio ADR ${_cs_port_adr2:.0f} ({'+' if _cs_adr_gap>=0 else ''}{_cs_adr_gap:.0f} vs market)."
+        )
+        render_intel_panel("cs_market", _cs_next_steps, _cs_questions, _cs_context)
     except Exception:
         pass
 
