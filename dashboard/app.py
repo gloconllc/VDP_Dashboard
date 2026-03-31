@@ -95,6 +95,7 @@ def _render_login_page():
     # Full-page login CSS
     st.markdown("""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&display=swap');
     .login-wrap {
         max-width: 420px; margin: 80px auto 0 auto;
         background: rgba(255,255,255,0.05);
@@ -572,7 +573,7 @@ st.markdown("""
   ════════════════════════════════════════════════════════════════════════ */
 
   /* ── Google Fonts ────────────────────────────────────────────────────── */
-  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
   /* ── Design Tokens ───────────────────────────────────────────────────── */
   :root {
@@ -620,46 +621,46 @@ st.markdown("""
   .kpi-card {
     background: #FFFFFF;
     border-radius: var(--dp-radius-lg);
-    padding: 20px 22px 16px 22px;
-    border: 1px solid rgba(15,28,46,0.08);
-    border-top: 3px solid var(--dp-teal);
+    padding: 22px 22px 18px 22px;
+    border: 1px solid rgba(15,28,46,0.07);
+    border-bottom: 3px solid var(--dp-teal);
     color: var(--dp-text-1);
     margin-bottom: 14px;
     position: relative;
     overflow: hidden;
-    transition: box-shadow 0.24s ease, transform 0.24s ease;
-    box-shadow: var(--dp-shadow);
+    transition: box-shadow 0.24s cubic-bezier(0.28,0,0.49,1),
+                transform 0.24s cubic-bezier(0.28,0,0.49,1);
+    box-shadow: 0 1px 3px rgba(15,28,46,0.05), 0 4px 14px rgba(15,28,46,0.07);
   }
   .kpi-card::before {
     content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(5,103,200,0.025) 0%, transparent 60%);
-    pointer-events: none;
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 40%; pointer-events: none;
+    background: linear-gradient(0deg, rgba(5,103,200,0.02) 0%, transparent 100%);
   }
   .kpi-card::after { content: none; }
   .kpi-card:hover {
     box-shadow: var(--dp-shadow-hover);
-    transform: translateY(-3px);
-    border-top-color: #2563EB;
+    transform: translateY(-4px);
   }
   .kpi-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
   }
   .kpi-label {
-    font-family: 'DM Sans', 'Inter', sans-serif;
-    font-size: 10px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .14em;
+    font-family: 'Syne', 'DM Sans', 'Inter', sans-serif;
+    font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .15em;
     color: var(--dp-text-3);
   }
   .kpi-icon-svg { flex-shrink: 0; line-height: 0; opacity: 0.55; }
   .kpi-value {
-    font-family: 'Outfit', sans-serif;
-    font-size: 34px; font-weight: 900;
-    letter-spacing: -.05em; line-height: 1.0;
+    font-family: 'Syne', 'Outfit', sans-serif;
+    font-size: 36px; font-weight: 800;
+    letter-spacing: -.04em; line-height: 1.0;
     color: var(--dp-text-1);
     -webkit-text-fill-color: var(--dp-text-1);
-    margin: 4px 0 8px 0;
+    margin: 6px 0 8px 0;
   }
   .kpi-delta-pos     { color: #059669; font-size: 12px; font-weight: 700; display:flex; align-items:center; gap:4px; }
   .kpi-delta-neg     { color: #DC2626; font-size: 12px; font-weight: 700; display:flex; align-items:center; gap:4px; }
@@ -830,45 +831,69 @@ st.markdown("""
   }
 
   /* ── Hero Banner ─────────────────────────────────────────────────────── */
+  @keyframes hero-grid-drift {
+    0%   { background-position: 0 0; }
+    100% { background-position: 60px 60px; }
+  }
+  @keyframes hero-glow-pulse {
+    0%,100% { opacity: 0.12; transform: scale(1); }
+    50%      { opacity: 0.22; transform: scale(1.08); }
+  }
+  @keyframes hero-line-in {
+    from { transform: scaleX(0); transform-origin: left; }
+    to   { transform: scaleX(1); transform-origin: left; }
+  }
   .hero-banner {
     position: sticky !important;
     top: 0; z-index: 999;
-    background: linear-gradient(135deg, #06111F 0%, #0A1A30 60%, #0D2140 100%) !important;
+    background: #06111F !important;
+    background-image:
+      radial-gradient(circle at 80% 20%, rgba(5,103,200,0.18) 0%, transparent 55%),
+      radial-gradient(circle at 10% 80%, rgba(56,189,248,0.08) 0%, transparent 45%),
+      linear-gradient(180deg, #06111F 0%, #091628 100%) !important;
     border-radius: 0 !important;
     margin: -1rem -1rem 1.25rem -1rem;
-    padding: 18px 32px 16px 32px;
-    border-bottom: 1px solid rgba(5,103,200,0.35) !important;
-    box-shadow: 0 4px 24px rgba(15,28,46,0.35) !important;
+    padding: 20px 36px 18px 36px;
+    border-bottom: 1px solid rgba(5,103,200,0.30) !important;
+    box-shadow: 0 2px 0 rgba(5,103,200,0.18), 0 6px 32px rgba(15,28,46,0.40) !important;
     overflow: hidden;
-    backdrop-filter: blur(0px);
   }
   .hero-banner::before {
     content: '';
     position: absolute; top: 0; left: 0; right: 0;
     height: 2px;
-    background: linear-gradient(90deg, #0567C8 0%, #38BDF8 40%, #7DD3FC 70%, transparent 100%);
-    opacity: 0.90;
+    background: linear-gradient(90deg, transparent 0%, #0567C8 20%, #38BDF8 50%, #7DD3FC 75%, transparent 100%);
+    animation: hero-line-in 0.9s cubic-bezier(0.37,0,0.22,1) both;
+    opacity: 1;
   }
   .hero-banner::after {
     content: '';
-    position: absolute; top: -60px; right: -60px;
-    width: 220px; height: 220px;
-    background: radial-gradient(circle, rgba(5,103,200,0.15) 0%, transparent 70%);
+    position: absolute; top: -80px; right: -80px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(5,103,200,0.20) 0%, transparent 65%);
     pointer-events: none;
+    animation: hero-glow-pulse 5s ease-in-out infinite;
   }
   .hero-title {
-    font-family: 'Outfit', sans-serif;
-    font-size: 1.95rem; font-weight: 900; letter-spacing: -0.05em; line-height: 1.05;
-    color: #FFFFFF; margin-bottom: 7px; position: relative;
+    font-family: 'Syne', 'Outfit', sans-serif;
+    font-size: 2.1rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.0;
+    color: #FFFFFF; margin-bottom: 8px; position: relative;
   }
   .hero-title span {
-    background: linear-gradient(120deg, #38BDF8 0%, #7DD3FC 45%, #BAE6FD 100%);
+    background: linear-gradient(110deg, #38BDF8 0%, #7DD3FC 40%, #BAE6FD 75%, #38BDF8 100%);
+    background-size: 200% auto;
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    animation: shimmer 4s linear infinite;
+  }
+  @keyframes shimmer {
+    0%   { background-position: 0% center; }
+    100% { background-position: 200% center; }
   }
   .hero-subtitle {
     font-family: 'DM Sans', 'Inter', sans-serif;
-    font-size: 12px; font-weight: 400; color: rgba(255,255,255,0.55);
-    letter-spacing: 0.02em; margin-top: 3px; position: relative;
+    font-size: 11.5px; font-weight: 400; color: rgba(255,255,255,0.48);
+    letter-spacing: 0.04em; margin-top: 4px; position: relative;
+    text-transform: uppercase;
   }
 
   /* ── Home button title ───────────────────────────────────────────────── */
@@ -987,13 +1012,14 @@ st.markdown("""
     box-shadow: var(--dp-shadow);
   }
   .chart-header {
-    font-family: 'Outfit', sans-serif;
-    font-size: 15px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 3px;
+    font-family: 'Syne', 'Outfit', sans-serif;
+    font-size: 14.5px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 3px;
     color: var(--dp-text-1);
   }
   .chart-caption {
     font-family: 'DM Sans', sans-serif;
-    font-size: 12px; color: var(--dp-text-3); font-weight: 500; margin-bottom: 10px;
+    font-size: 11.5px; color: var(--dp-text-3); font-weight: 400; margin-bottom: 10px;
+    letter-spacing: 0.01em;
   }
 
   /* ── Sidebar Brand ───────────────────────────────────────────────────── */
@@ -1237,23 +1263,39 @@ st.markdown("""
 
   /* ── Section Intelligence Card ───────────────────────────────────────── */
   .sec-intel {
-    background: #FFFFFF;
-    border: 1px solid rgba(15,28,46,0.07);
+    background: linear-gradient(135deg, rgba(5,103,200,0.04) 0%, rgba(5,103,200,0.01) 100%);
+    border: 1px solid rgba(5,103,200,0.14);
     border-left: 3px solid var(--dp-teal);
     border-radius: var(--dp-radius-lg);
-    padding: 14px 18px; margin: 8px 0 16px 0;
-    box-shadow: var(--dp-shadow);
+    padding: 16px 20px; margin: 8px 0 16px 0;
+    box-shadow: 0 2px 12px rgba(5,103,200,0.06);
+    position: relative; overflow: hidden;
+  }
+  .sec-intel::after {
+    content: 'INTEL';
+    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    font-family: 'Syne', sans-serif; font-size: 52px; font-weight: 800;
+    color: rgba(5,103,200,0.04); letter-spacing: -0.04em;
+    pointer-events: none; user-select: none;
   }
   .sec-intel-label {
-    font-size: 9.5px; font-weight: 700; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--dp-teal); margin-bottom: 8px;
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-size: 9px; font-weight: 700; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--dp-teal); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
   }
-  .sec-intel-body { font-size: 13px; color: var(--dp-text-2); line-height: 1.65; }
+  .sec-intel-label::before {
+    content: ''; display: inline-block;
+    width: 14px; height: 2px; background: var(--dp-teal); border-radius: 1px;
+  }
+  .sec-intel-body { font-size: 13px; color: var(--dp-text-2); line-height: 1.72; }
   .sec-intel-stat {
     display: inline-block;
     background: rgba(5,103,200,0.08); border: 1px solid rgba(5,103,200,0.20);
-    border-radius: 20px; padding: 2px 10px;
-    font-weight: 700; color: var(--dp-teal); font-family: 'Outfit', sans-serif;
+    border-radius: 20px; padding: 3px 12px;
+    font-weight: 700; color: var(--dp-teal);
+    font-family: 'Syne', 'Outfit', sans-serif;
+    font-size: 11.5px; letter-spacing: -0.01em;
   }
 
   /* ── Divider Rule ────────────────────────────────────────────────────── */
@@ -1436,21 +1478,26 @@ st.markdown("""
   /* ── Section Header Blocks ───────────────────────────────────────────── */
   .sh-block {
     display: flex !important; align-items: center !important; gap: 12px !important;
-    padding: 10px 16px !important; border-radius: 10px !important;
-    margin: 24px 0 14px 0 !important;
+    padding: 11px 18px !important; border-radius: 10px !important;
+    margin: 28px 0 14px 0 !important;
     background: #FFFFFF !important;
-    border: 1px solid rgba(15,28,46,0.08) !important;
+    border: 1px solid rgba(15,28,46,0.07) !important;
     border-left: 3px solid var(--sh-accent, #0567C8) !important;
-    box-shadow: 0 1px 4px rgba(15,28,46,0.07) !important;
+    box-shadow: 0 1px 3px rgba(15,28,46,0.05), 0 2px 8px rgba(15,28,46,0.04) !important;
+    transition: box-shadow 0.22s ease, transform 0.22s ease !important;
+  }
+  .sh-block:hover {
+    box-shadow: 0 2px 12px rgba(15,28,46,0.10) !important;
+    transform: translateY(-1px) !important;
   }
   .sh-icon {
     font-size: 18px !important; line-height: 1 !important; flex-shrink: 0 !important;
-    opacity: 0.90 !important;
+    opacity: 0.85 !important;
   }
   .sh-title {
-    font-family: 'Outfit', sans-serif !important;
-    font-size: 14.5px !important; font-weight: 800 !important;
-    letter-spacing: -.025em !important; line-height: 1.2 !important;
+    font-family: 'Syne', 'Outfit', sans-serif !important;
+    font-size: 14px !important; font-weight: 700 !important;
+    letter-spacing: -.015em !important; line-height: 1.2 !important;
     color: #0D1B2E !important;
   }
   .sh-tag {
@@ -1563,46 +1610,70 @@ st.markdown("""
   /* ── KPI Ticker (1ax / Bloomberg) ────────────────────────────────────── */
   .pulse-ticker-wrap {
     overflow: hidden;
-    background: #07111F;
-    border-bottom: 1px solid rgba(5,103,200,0.28);
+    background: linear-gradient(180deg, #07111F 0%, #0A1828 100%);
+    border-bottom: 1px solid rgba(5,103,200,0.32);
     margin: 0 -1rem 0 -1rem;
     padding: 0;
     position: relative;
     z-index: 998;
   }
+  /* Edge fade-out (1ax style) */
+  .pulse-ticker-wrap::before,
+  .pulse-ticker-wrap::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 10;
+    pointer-events: none;
+  }
+  .pulse-ticker-wrap::before {
+    left: 0;
+    background: linear-gradient(90deg, #07111F 0%, transparent 100%);
+  }
+  .pulse-ticker-wrap::after {
+    right: 0;
+    background: linear-gradient(270deg, #07111F 0%, transparent 100%);
+  }
   .pulse-ticker-track {
     display: flex;
     width: max-content;
-    padding: 9px 0;
+    padding: 10px 0;
   }
-  .pulse-ticker-track.left  { animation: ticker-left  28s linear infinite; }
-  .pulse-ticker-track.right { animation: ticker-right 34s linear infinite; }
+  .pulse-ticker-track.left  { animation: ticker-left  32s linear infinite; }
+  .pulse-ticker-track.right { animation: ticker-right 40s linear infinite; }
   .pulse-ticker-track:hover { animation-play-state: paused; }
   .pulse-ticker-item {
-    display: flex; align-items: center; gap: 6px;
-    padding: 0 24px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 28px;
     font-family: 'DM Sans', 'Inter', sans-serif;
     font-size: 12px; font-weight: 600;
-    color: rgba(255,255,255,0.70);
+    color: rgba(255,255,255,0.65);
     white-space: nowrap;
-    border-right: 1px solid rgba(255,255,255,0.08);
+    border-right: 1px solid rgba(255,255,255,0.07);
+    transition: color 0.2s ease;
   }
+  .pulse-ticker-item:hover { color: rgba(255,255,255,0.90); }
   .pulse-ticker-item:last-child { border-right: none; }
   .pulse-ticker-label {
-    font-size: 9px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .12em; color: rgba(255,255,255,0.35);
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-size: 8.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .14em; color: rgba(255,255,255,0.28);
   }
-  .pulse-ticker-val { color: #FFFFFF; font-size: 13px; font-weight: 700; }
-  .pulse-ticker-pos { color: #34D399; font-size: 11px; }
-  .pulse-ticker-neg { color: #F87171; font-size: 11px; }
+  .pulse-ticker-val {
+    color: #FFFFFF;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px; font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .pulse-ticker-pos { color: #34D399; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+  .pulse-ticker-neg { color: #F87171; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
   .pulse-ticker-dot {
-    width: 5px; height: 5px; border-radius: 50%;
-    background: #22D3EE; animation: ticker-pulse 1.8s ease-in-out infinite;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #22D3EE;
+    box-shadow: 0 0 6px rgba(34,211,238,0.60);
+    animation: ticker-pulse 1.8s ease-in-out infinite;
     flex-shrink: 0;
   }
-  @keyframes ticker-left  { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
-  @keyframes ticker-right { 0%{transform:translateX(-50%)} 100%{transform:translateX(0)} }
-  @keyframes ticker-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+  @keyframes ticker-left  { 0%{transform:translateX(0)} 100%{transform:translateX(-33.333%)} }
+  @keyframes ticker-right { 0%{transform:translateX(-33.333%)} 100%{transform:translateX(0)} }
+  @keyframes ticker-pulse { 0%,100%{opacity:1;transform:scale(1);box-shadow:0 0 6px rgba(34,211,238,0.60);} 50%{opacity:.4;transform:scale(.65);box-shadow:0 0 0 rgba(34,211,238,0);} }
 
   /* ── Scroll-Reveal Animations (byhook clip-path style) ───────────────── */
   .reveal-card {
@@ -3704,9 +3775,12 @@ def event_stat(val, label, icon: str = "", date: str = "") -> str:
 
 
 def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
-    """Apply cutting-edge analytics chart theme — Dana Point PULSE design system v5."""
-    _font  = "DM Sans, Inter, system-ui, sans-serif"
-    _title = "Outfit, DM Sans, system-ui, sans-serif"
+    """Apply cutting-edge analytics chart theme — Dana Point PULSE design system v6.
+
+    codeandtheory.com-inspired: gradient fills, crisp grid, bold hover labels.
+    """
+    _font  = "Syne, DM Sans, Inter, system-ui, sans-serif"
+    _title = "Syne, Outfit, DM Sans, system-ui, sans-serif"
     # High-contrast, distinguishable color sequence (Webby/Bloomberg standard)
     _colorway = [
         "#0567C8",  # primary blue
@@ -3724,54 +3798,60 @@ def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
         font    = dict(family=_font, size=12, color="#1E293B"),
         height  = height,
         margin  = dict(l=4, r=8, t=44, b=4),
-        transition = {"duration": 450, "easing": "cubic-in-out"},
+        transition = {"duration": 500, "easing": "cubic-in-out"},
         legend = dict(
             orientation = "h",
             yanchor = "bottom", y = 1.02,
             xanchor = "left",   x = 0,
-            font    = dict(size=11.5, family=_font, color="#334155"),
-            bgcolor = "rgba(255,255,255,0.92)",
-            bordercolor = "rgba(15,28,46,0.10)",
-            borderwidth = 1,
+            font    = dict(size=11, family=_font, color="#475569"),
+            bgcolor = "rgba(255,255,255,0.0)",
+            borderwidth = 0,
         ),
         hoverlabel = dict(
             bgcolor     = "#07111F",
-            bordercolor = "#0567C8",
-            font        = dict(size=13, family=_font, color="#F8FAFC"),
+            bordercolor = "rgba(5,103,200,0.50)",
+            font        = dict(size=13, family=_font, color="#F1F5F9"),
             namelength  = -1,
             align       = "left",
         ),
         colorway = _colorway,
         modebar = dict(
             bgcolor     = "rgba(0,0,0,0)",
-            color       = "#94A3B8",
+            color       = "#CBD5E1",
             activecolor = "#0567C8",
         ),
     )
     fig.update_xaxes(
         showgrid    = False,
         zeroline    = False,
-        tickfont    = dict(size=11, family=_font, color="#475569"),
-        linecolor   = "rgba(15,28,46,0.10)",
+        tickfont    = dict(size=10.5, family=_font, color="#64748B"),
+        linecolor   = "rgba(15,28,46,0.08)",
         linewidth   = 1,
         showline    = True,
         ticks       = "outside",
         ticklen     = 3,
-        tickcolor   = "rgba(15,28,46,0.10)",
+        tickcolor   = "rgba(15,28,46,0.08)",
     )
     fig.update_yaxes(
-        gridcolor   = "rgba(15,28,46,0.06)",
+        gridcolor   = "rgba(15,28,46,0.05)",
         gridwidth   = 1,
         griddash    = "dot",
         zeroline    = False,
-        tickfont    = dict(size=11, family=_font, color="#475569"),
+        tickfont    = dict(size=10.5, family=_font, color="#64748B"),
         showline    = False,
         ticks       = "",
     )
+    # Add gradient fill to Scatter traces that don't already have fill set
+    for trace in fig.data:
+        if hasattr(trace, "fill") and trace.fill in (None, "none"):
+            if hasattr(trace, "mode") and trace.mode and "lines" in str(trace.mode):
+                trace.fill = "tozeroy"
+                _c = trace.line.color if (hasattr(trace.line, "color") and trace.line.color) else "#0567C8"
+                trace.fillcolor = _c.replace("rgb(", "rgba(").replace(")", ",0.08)") if "rgb(" in str(_c) else f"rgba(5,103,200,0.06)"
     # Title styling
     if fig.layout.title and fig.layout.title.text:
         fig.update_layout(
-            title_font = dict(family=_title, size=14, color="#07111F"),
+            title_font = dict(family=_title, size=13.5, color="#07111F"),
             title_x    = 0,
             title_pad  = dict(l=4, t=4),
         )
@@ -8675,7 +8755,7 @@ with tab_fo:
 
     with _s1:
         # Google Trends chart
-        if not df_trends.empty and "week_date" in df_trends.columns:
+        if not df_trends.empty and "week_date" in df_trends.columns and "interest_idx" in df_trends.columns:
             _trend_terms = df_trends["term"].unique().tolist() if "term" in df_trends.columns else []
             _trend_colors = ["#00C8E0", "#10B981", "#F43F5E", "#A78BFA", "#F59E0B"]
             fig_trend = go.Figure()
@@ -8683,10 +8763,10 @@ with tab_fo:
                 _td = df_trends[df_trends["term"] == term].copy()
                 _td = _td.sort_values("week_date")
                 fig_trend.add_trace(go.Scatter(
-                    x=_td["week_date"], y=_td["interest"],
+                    x=_td["week_date"], y=_td["interest_idx"],
                     name=term, mode="lines",
                     line=dict(color=_trend_colors[i % len(_trend_colors)], width=2),
-                    hovertemplate="%{x|%b %d}<br>Interest: %{y}<extra>" + term + "</extra>"
+                    hovertemplate="%{x|%b %d}<br>Interest Index: %{y}<extra>" + term + "</extra>"
                 ))
             fig_trend.update_layout(
                 title="Search Demand Index — Dana Point vs. Competitors",
@@ -8872,8 +8952,12 @@ with tab_ev:
             _ve_daytrip = float(_ve_ov.get("day_trips_pct", 0) or 0)
             _ve_conv_trips = int(_ve_trips * (_ve_daytrip / 100) * 0.03)
             _ve_trips_fmt = f"{_ve_trips/1e6:.2f}M" if _ve_trips >= 1e6 else f"{_ve_trips/1e3:.0f}K"
-            _ve_insight = (f"{_ve_daytrip:.1f}% of {_ve_trips_fmt} trips are same-day visits. "
-                           f"A 3% day-trip conversion adds ~{_ve_conv_trips:,} overnight stays — roughly $15M incremental room revenue.")
+            _ve_insight = (
+                f'<span class="data-hl-amber">{_ve_daytrip:.1f}%</span> of '
+                f'<span class="data-hl">{_ve_trips_fmt}</span> trips are same-day visits. '
+                f'A 3% day-trip conversion adds ~<span class="data-hl-pos">{_ve_conv_trips:,}</span> overnight stays '
+                f'— roughly <span class="data-hl-pos">$15M</span> incremental room revenue.'
+            )
             _ve_fwd = "Target day-tripper conversion campaigns in LA and OC DMAs — highest ROI channel for incremental room revenue."
             st.markdown(sec_intel(
                 "Visitor Economy",
@@ -8950,13 +9034,15 @@ with tab_ev:
         ]
         for i, (val, lbl, delta, pos) in enumerate(_ev_kpis):
             with ev_cols[i % 3]:
-                delta_color = "#21808D" if pos else "#E68161"
+                delta_cls = "kpi-delta-pos" if pos else "kpi-delta-neg"
+                arrow = "↑" if pos else "↓"
                 st.markdown(
-                    f'<div style="background:rgba(33,128,141,0.06);border:1px solid rgba(33,128,141,0.15);'
-                    f'border-radius:10px;padding:14px 16px;margin-bottom:10px;">'
-                    f'<div style="font-size:1.5rem;font-weight:800;color:#21808D;letter-spacing:-0.02em;">{val}</div>'
-                    f'<div style="font-size:11px;font-weight:600;opacity:0.70;margin-top:2px;">{lbl}</div>'
-                    f'<div style="font-size:11px;color:{delta_color};font-weight:600;margin-top:4px;">{delta}</div>'
+                    f'<div class="kpi-card reveal-card">'
+                    f'<div class="kpi-header">'
+                    f'<span class="kpi-label">{lbl}</span>'
+                    f'</div>'
+                    f'<div class="kpi-value">{val}</div>'
+                    f'<div class="{delta_cls}">{arrow} {delta}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
