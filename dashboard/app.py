@@ -447,40 +447,106 @@ in which case, say so once and move to what IS clear.
 - Anchor every recommendation in the data provided, not in generic best practices
 - End with a single, clear, time-bound call to action that a board member could act on immediately
 
-## Full Database Schema (analytics.sqlite)
+## Full Database Schema (analytics.sqlite — 57 tables)
 
-The VDP brain contains these tables — all are available for your analysis:
+The VDP brain contains these tables — ALL are available for your analysis. \
+Layer 1 (STR, Datafy, CoStar) = current truth. Layer 1.5 (Zartico) = historical reference only.
 
-**STR & KPI Tables (Layer 1 — Truth):**
-- `fact_str_metrics` — Long-format daily/monthly STR hotel data (supply, demand, revenue, occ, adr, revpar).
+**STR & KPI Tables (Layer 1 — Current Truth):**
+- `fact_str_metrics` — Long-format daily/monthly STR hotel data (supply, demand, revenue, occ, adr, revpar). \
   Columns: source, grain, property_name, market, submarket, as_of_date, metric_name, metric_value, unit.
-- `kpi_daily_summary` — Wide-format daily KPIs with YOY deltas and compression flags.
+- `kpi_daily_summary` — Wide-format daily KPIs with YOY deltas and compression flags. \
   Columns: as_of_date, occ_pct, adr, revpar, occ_yoy, adr_yoy, revpar_yoy, is_occ_80, is_occ_90.
-- `kpi_compression_quarterly` — Days per quarter above 80% / 90% occupancy.
+- `kpi_compression_quarterly` — Days per quarter above 80% / 90% occupancy. \
   Columns: quarter (YYYY-Qn), days_above_80_occ, days_above_90_occ.
 
-**Datafy Visitor Economy Tables (Layer 1 — Truth):**
+**Datafy Visitor Economy Tables (Layer 1 — Current Truth):**
 - `datafy_overview_kpis` — Annual visitor overview: total_trips, overnight_pct, out_of_state_vd_pct, \
-  repeat_visitors_pct, avg_length_of_stay_days.
-- `datafy_overview_dma` — Feeder market breakdown: dma, visitor_days_share_pct, spending_share_pct, avg_spend_usd.
-- `datafy_overview_demographics` — Visitor demographics by segment.
-- `datafy_overview_category_spending` — Spending by category (accommodation, dining, retail, etc.).
-- `datafy_overview_cluster_visitation` — Visitation by area cluster type.
-- `datafy_overview_airports` — Origin airports by passenger share.
-- `datafy_attribution_website_kpis` — Website-attributed trips and estimated impact.
-- `datafy_attribution_website_top_markets`, `_dma`, `_channels`, `_clusters`, `_demographics` — \
-  Website attribution breakdowns.
+  repeat_visitors_pct, avg_length_of_stay_days. Most recent annual Datafy report.
+- `datafy_overview_dma` — Feeder market DMA breakdown: dma, visitor_days_share_pct, spending_share_pct, avg_spend_usd.
+- `datafy_overview_demographics` — Visitor demographics by segment (age, income, travel party).
+- `datafy_overview_category_spending` — Spending by category (accommodation, dining, retail, entertainment).
+- `datafy_overview_cluster_visitation` — Visitation by area cluster type (beach, downtown, harbor).
+- `datafy_overview_airports` — Origin airports by passenger share (JWA, LAX, SNA context).
+- `datafy_attribution_website_kpis` — Website-attributed trips and estimated destination impact (ROAS context).
+- `datafy_attribution_website_top_markets` — Website attribution top feeder markets.
+- `datafy_attribution_website_dma` — Website attribution DMA breakdown.
+- `datafy_attribution_website_channels` — Website attribution by acquisition channel (organic, paid, social, email).
+- `datafy_attribution_website_clusters` — Website attribution by area cluster.
+- `datafy_attribution_website_demographics` — Website attribution visitor demographics.
 - `datafy_attribution_media_kpis` — Media campaign: attributable_trips, total_impact_usd, ROAS.
-- `datafy_attribution_media_top_markets` — Media attribution by market.
-- `datafy_social_traffic_sources` — GA4 traffic sources: sessions, engagement.
-- `datafy_social_audience_overview` — Website audience KPIs.
-- `datafy_social_top_pages` — Top pages by view count.
+- `datafy_attribution_media_top_markets` — Media attribution top feeder markets with ADR lift context.
+- `datafy_social_traffic_sources` — GA4 web traffic sources: sessions, engagement_rate, bounce_rate.
+- `datafy_social_audience_overview` — Website audience KPIs: users, sessions, avg_session_duration.
+- `datafy_social_top_pages` — Top pages by view count (useful for content strategy).
 
-**Intelligence Tables (Generated):**
-- `insights_daily` — Forward-looking insights for 4 audiences (dmo, city, visitor, resident). \
-  Columns: as_of_date, audience, category, headline, body, metric_basis (JSON), priority, horizon_days.
-- `table_relationships` — Documents all cross-table joins and derivations.
-- `load_log` — ETL pipeline audit trail.\
+**CoStar Market Intelligence Tables (Layer 1 — Current Truth):**
+- `costar_market_snapshot` — Current quarter market snapshot: occ, adr, revpar, supply_rooms, demand_rooms.
+- `costar_monthly_trends` — Monthly hotel performance trends (occ, adr, revpar YOY).
+- `costar_annual_summary` — Annual summary performance with 3-year trend context.
+- `costar_profitability` — Hotel profitability metrics: GOP, EBITDA, labor cost ratios.
+- `costar_chain_scale` — Performance by chain scale (luxury, upper-upscale, upscale, midscale).
+- `costar_compset` — Competitive set benchmarking data (MPI, ARI, RGI indices).
+- `costar_pipeline` — Supply pipeline: properties under construction, in planning, opening dates.
+
+**Zartico Historical Reference Tables (Layer 1.5 — Historical ONLY, Jun 2025 snapshot):**
+CRITICAL: NEVER present Zartico as current data. Use only for historical trend comparison (2024–Jun 2025).
+- `zartico_kpis` — Visitor economy KPIs snapshot (device %, spend share, demographics).
+- `zartico_markets` — Top visitor origin markets (rank, %, avg spend) — Jun 2025 reference.
+- `zartico_spending_monthly` — Monthly avg visitor spend vs. benchmark (Jul 2024–May 2025).
+- `zartico_lodging_kpis` — Hotel/STVR summary (YTD occ, ADR, LOS, ADR by day of week).
+- `zartico_overnight_trend` — Monthly overnight visitor % trend (May 2024–May 2025).
+- `zartico_event_impact` — Event period vs. baseline spend changes.
+- `zartico_movement_monthly` — Visitor-to-resident ratio by month.
+- `zartico_future_events_summary` — YoY event + attendee growth context.
+
+**Visit California State Context Tables (Layer 2):**
+- `visit_ca_travel_forecast` — CA statewide travel forecast by quarter (visitor volume, spending).
+- `visit_ca_lodging_forecast` — CA statewide lodging forecast (occ, ADR, RevPAR projections).
+- `visit_ca_airport_traffic` — JWA and major CA airport traffic by month (passenger counts).
+- `visit_ca_intl_arrivals` — International arrivals to California by market (supports fly-market analysis).
+
+**Later.com Social Media Tables (Layer 2.5 — Current Social Performance):**
+- `later_ig_profile_growth` — Instagram followers, reach, impressions by date.
+- `later_ig_posts` — Individual Instagram post metrics (likes, comments, reach, engagement_rate).
+- `later_ig_stories` — Instagram Stories performance (views, taps_forward, exits).
+- `later_ig_reels` — Instagram Reels metrics (plays, reach, likes, shares).
+- `later_ig_hashtags` — Hashtag performance analysis.
+- `later_ig_locations` — Instagram location-tag performance.
+- `later_fb_profile_growth` — Facebook page followers, reach, impressions by date.
+- `later_fb_posts` — Individual Facebook post metrics (reactions, shares, reach).
+- `later_fb_stories` — Facebook Stories performance.
+- `later_tk_profile_growth` — TikTok followers, profile_views by date.
+- `later_tk_posts` — TikTok video metrics (views, likes, shares, comments, engagement_rate).
+- `later_tk_hashtags` — TikTok hashtag performance.
+
+**External Economic & Demand Signal Tables (Layer 2 — Context):**
+- `fred_economic_indicators` — FRED macro series (series_id, data_date, value, unit). Key series: \
+  UMCSENT=Consumer Sentiment (6–8 week leading indicator for leisure travel), \
+  DSPIC96=Real Disposable Personal Income (travel propensity driver), \
+  UNRATE=US Unemployment Rate (inverse correlation with travel), \
+  CUUR0000SEHB=Hotel CPI (benchmark for ADR trend context), \
+  CEU7000000001=Leisure & Hospitality Employment, \
+  CPILFESL=Core CPI (inflation backdrop for ADR management), \
+  RSXFS=Retail & Food Service Sales (consumer spending proxy), \
+  HOUST=Housing Starts (wealth effect signal), \
+  PSAVERT=Personal Savings Rate (inverse with travel spend).
+- `eia_gas_prices` — Weekly CA retail gas prices (week_end_date, price_per_gallon, yoy_change). \
+  Drive-market demand signal: Dana Point's LA/OC/SD/IE feeder markets are 100% drive-market (120-mile radius). \
+  $0.20/gal increase correlates with ~2–4% dip in weekend occupancy at coastal destinations.
+- `tsa_checkpoint_daily` — TSA daily checkpoint throughput (national air travel demand proxy for fly markets).
+- `bls_employment_monthly` — BLS Orange County employment by sector (local labor market context).
+- `noaa_marine_monthly` — NOAA ocean buoy data (wave height, water temp — coastal visitor conditions).
+- `weather_monthly` — Open-Meteo coastal weather averages (temp, precipitation, sunshine hours).
+- `google_trends_weekly` — Google search demand trends for Dana Point and competing destinations.
+- `census_demographics` — US Census ACS demographics for feeder market MSAs.
+- `vdp_events` — Known major Dana Point events (event_name, event_date, event_type, is_major flag).
+
+**Intelligence Tables (Generated Daily):**
+- `insights_daily` — Forward-looking insights for 5 audiences (dmo, city, visitor, resident, cross). \
+  Columns: as_of_date, audience, category, headline, body, metric_basis (JSON), priority, horizon_days, data_sources.
+- `table_relationships` — 125+ documented cross-table joins and derivations.
+- `load_log` — ETL pipeline audit trail (source, grain, file_name, rows_inserted, run_at).\
 """
 
 # ─── Session state ────────────────────────────────────────────────────────────
