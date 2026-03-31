@@ -9,12 +9,18 @@ logs/*.log
 __pycache__/
 *.pyc
 .env
+.env.save
 venv/
 .streamlit/
 
 # Database — analytics.sqlite is committed intentionally (STR market data, no PII)
 # Raw/temp DBs excluded
 *.db
+# Junk SQLite URI artifact (0-byte file created by sqlite3 URI bug)
+data/analytics.sqlite?*
+
+# Claude Code internals
+.claude/worktrees/
 
 # macOS metadata
 .DS_Store
