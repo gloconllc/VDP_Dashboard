@@ -34,9 +34,12 @@ import sqlite3
 import requests
 from datetime import datetime, date
 from pathlib import Path
+from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
 DB   = ROOT / "data" / "analytics.sqlite"
+
+load_dotenv(ROOT / ".env")
 
 EIA_API_KEY  = os.getenv("EIA_API_KEY", "")
 EIA_BASE     = "https://api.eia.gov/v2/petroleum/pri/gnd/data/"
