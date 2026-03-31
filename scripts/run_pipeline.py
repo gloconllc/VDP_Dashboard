@@ -1,34 +1,51 @@
 """
 run_pipeline.py
 ---------------
-Orchestrates the full VDP analytics pipeline in order:
+Orchestrates the full VDP analytics pipeline in order.
 
-  1. load_str_daily_sqlite.py    — ingest STR daily export into fact_str_metrics
-  2. load_str_monthly_sqlite.py  — ingest STR monthly export into fact_str_metrics
-  3. compute_kpis.py             — pivot fact_str_metrics into kpi_daily_summary
-  4. load_datafy_reports.py      — load Datafy visitor economy CSVs (skip-safe)
-  5. load_costar_reports.py      — load CoStar hospitality market data (skip-safe)
-  6. compute_insights.py         — generate forward-looking insights for all audiences
-  7. load_zartico_reports.py     — load Zartico historical reference data (skip-safe)
-  8. fetch_vdp_events.py         — scrape VDP event calendar (skip-safe)
-  9. load_visit_ca.py            — load Visit California state context data (skip-safe)
- 10. load_later_reports.py       — load Later.com social media data (IG/FB/TikTok) (skip-safe)
- 11. audit_data.py               — data-quality audit; prints summary to stdout (skip-safe)
- 12. fetch_fred_data.py          — FRED economic indicators (hotel CPI, disposable income) (skip-safe, needs FRED_API_KEY)
- 13. fetch_google_trends.py      — Google Trends search demand signals (skip-safe)
- 14. fetch_weather_data.py       — Open-Meteo coastal weather + beach day score (skip-safe)
- 15. fetch_bls_data.py           — BLS OC hospitality employment data (skip-safe)
- 16. fetch_eia_gas.py            — EIA California weekly gas prices (drive-market demand signal, skip-safe)
- 17. fetch_tsa_data.py           — TSA checkpoint throughput (national air travel demand, skip-safe)
- 18. fetch_noaa_marine.py        — NOAA buoy wave/ocean conditions for Dana Point (skip-safe)
- 19. fetch_census_acs.py         — US Census ACS feeder market demographics OC/LA/SD (skip-safe)
+STANDARD PROCESS — follow every time new data or logic is added:
+  1. Drop raw files into data/<source_name>/  (CSV, Excel, PDF)
+  2. Write or update scripts/load_<source>.py to parse → analytics.sqlite table(s)
+  3. Add new relationship entries to scripts/build_table_relationships.py
+  4. Add the loader to the STEPS list below
+  5. Run: python scripts/run_pipeline.py
+  6. Step 20 (build_relationships) always runs last — auto-refreshes all relationships
+  7. Commit: git add data/analytics.sqlite data/<source>/ scripts/ && git commit
 
-Steps 4–15 are SKIP-SAFE: if input files are absent, API keys are missing, or the
-script fails, the step logs a warning and continues (exit code 0). Steps 1, 2, 3, 6
-are FAIL-FAST: any failure aborts.
+Pipeline steps:
+   1. load_str_daily_sqlite.py    — ingest STR daily export     → fact_str_metrics
+   2. load_str_monthly_sqlite.py  — ingest STR monthly export   → fact_str_metrics
+   3. compute_kpis.py             — pivot STR                   → kpi_daily_summary, kpi_compression_quarterly
+   4. load_datafy_reports.py      — Datafy visitor economy CSVs → 17 datafy_* tables (skip-safe)
+   5. load_costar_reports.py      — CoStar market data          → 7 costar_* tables (skip-safe)
+   6. compute_insights.py         — AI insights engine          → insights_daily (FAIL-FAST)
+   7. load_zartico_reports.py     — Zartico historical PDFs     → 8 zartico_* tables (skip-safe)
+   8. fetch_vdp_events.py         — VDP event calendar scraper  → vdp_events (skip-safe)
+   9. load_visit_ca.py            — Visit California Excel      → 4 visit_ca_* tables (skip-safe)
+  10. load_later_reports.py       — Later.com social CSVs       → 14 later_* tables (skip-safe)
+  11. audit_data.py               — data-quality audit; stdout summary (skip-safe)
+  12. fetch_fred_data.py          — FRED macro indicators       → fred_economic_indicators (skip-safe, needs FRED_API_KEY)
+  13. fetch_google_trends.py      — Google search demand        → google_trends_weekly (skip-safe)
+  14. fetch_weather_data.py       — Open-Meteo coastal weather  → weather_monthly (skip-safe)
+  15. fetch_bls_data.py           — BLS OC employment           → bls_employment_monthly (skip-safe)
+  16. fetch_eia_gas.py            — EIA CA gas prices           → eia_gas_prices (skip-safe)
+  17. fetch_tsa_data.py           — TSA checkpoint throughput   → tsa_checkpoint_daily (skip-safe)
+  18. fetch_noaa_marine.py        — NOAA ocean buoy data        → noaa_marine_monthly (skip-safe)
+  19. fetch_census_acs.py         — US Census ACS demographics  → census_demographics (skip-safe)
+  20. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
 
-Each step is logged to logs/pipeline.log as:
+Steps 1, 2, 3, 6 are FAIL-FAST (abort on failure). All others are skip-safe.
+Each step is logged to logs/pipeline.log:
   YYYY-MM-DD HH:MM:SS | STEP                 | OK/FAIL | message
+
+Raw data directories:
+  data/str/           — STR Excel exports (str_daily.xlsx, str_monthly.xlsx)
+  data/datafy/        — Datafy CSV exports (attribution_media/, attribution_website/, social/, overview/)
+  data/costar/        — CoStar PDFs + CSVs
+  data/Zartico/       — Zartico PDF reports
+  data/Visit_California/ — Visit California Excel files
+  data/later/         — Later.com CSV exports (IG/, FB/, TikTok/)
+  downloads/          — Staging area for new raw files before moving to data/<source>/
 
 Run:
     python3 scripts/run_pipeline.py
@@ -69,8 +86,11 @@ STEPS = [
     ("fetch_bls",         os.path.join(BASE_DIR, "fetch_bls_data.py"),          False),
     ("fetch_eia_gas",     os.path.join(BASE_DIR, "fetch_eia_gas.py"),           False),
     ("fetch_tsa",         os.path.join(BASE_DIR, "fetch_tsa_data.py"),          False),
-    ("fetch_noaa_marine", os.path.join(BASE_DIR, "fetch_noaa_marine.py"),       False),
-    ("fetch_census_acs",  os.path.join(BASE_DIR, "fetch_census_acs.py"),        False),
+    ("fetch_noaa_marine", os.path.join(BASE_DIR, "fetch_noaa_marine.py"),         False),
+    ("fetch_census_acs",  os.path.join(BASE_DIR, "fetch_census_acs.py"),         False),
+    # ALWAYS LAST — rebuilds all table relationships after every pipeline run
+    # Add new relationship entries to build_table_relationships.py when adding new data sources
+    ("build_relationships", os.path.join(BASE_DIR, "build_table_relationships.py"), False),
 ]
 
 

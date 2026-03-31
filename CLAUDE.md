@@ -214,6 +214,34 @@ One row per audience/category per day (UPSERT on `as_of_date + audience + catego
 
 ---
 
+## Standard Process — Adding New Data (ALWAYS FOLLOW)
+
+Every time new data, a new source, or new logic is added:
+
+```
+1. Raw files  →  data/<source_name>/        (CSV, Excel, PDF — committed to git)
+2. Loader     →  scripts/load_<source>.py   (parse → analytics.sqlite table)
+3. Relations  →  scripts/build_table_relationships.py   (add entries for new tables)
+4. Pipeline   →  scripts/run_pipeline.py    (add new step to STEPS list)
+5. Run        →  python scripts/run_pipeline.py
+   Step 20 (build_relationships) ALWAYS runs last — auto-refreshes all relationships
+6. Dashboard  →  dashboard/app.py           (add loader + visualization for new table)
+7. Commit     →  git add data/analytics.sqlite data/<source>/ scripts/ dashboard/
+               →  git commit -m "Add <source>: N rows → N tables + N relationships"
+               →  git push origin main
+```
+
+Raw data directories (canonical locations):
+```
+data/str/             ← STR Excel exports (str_daily.xlsx, str_monthly.xlsx)
+data/datafy/          ← Datafy CSV exports (4 subdirs)
+data/costar/          ← CoStar PDFs + CSVs
+data/Zartico/         ← Zartico PDF reports
+data/Visit_California/← Visit California Excel files
+data/later/           ← Later.com CSV exports (IG/, FB/, TikTok/)
+downloads/            ← Staging area only — move files to data/<source>/ before running pipeline
+```
+
 ## Commands
 
 ```bash
@@ -221,11 +249,14 @@ One row per audience/category per day (UPSERT on `as_of_date + audience + catego
 source venv/bin/activate
 streamlit run dashboard/app.py
 
-# Full refresh (all tables → KPIs → insights)
+# Full refresh (all tables → KPIs → insights → relationships)
 python scripts/run_pipeline.py
 
 # Full refresh + latest code from GitHub
 git pull origin main && python scripts/run_pipeline.py
+
+# Rebuild ONLY table relationships (after schema change, no new data)
+python scripts/build_table_relationships.py
 
 # Deploy — ALWAYS commit directly to main, never create feature branches
 git add <specific files> && git commit -m "description" && git push origin main
@@ -251,8 +282,10 @@ git add <specific files> && git commit -m "description" && git push origin main
 - NEVER commit `.env`, `venv/`, or API keys to git
 - `data/analytics.sqlite` IS committed intentionally — it contains STR market data (no PII). Commit after every pipeline run that inserts new rows.
 - NEVER override Layer 1 data with Layer 2/3 sources
-- ALWAYS run `python scripts/run_pipeline.py` after schema changes
+- ALWAYS run `python scripts/run_pipeline.py` after schema changes — step 20 auto-rebuilds all table relationships
 - ALWAYS reference this CLAUDE.md before making changes
+- ALWAYS add new table relationships to `build_table_relationships.py` when adding new data sources
+- Raw data MUST live in `data/<source_name>/` — never parse from `downloads/` permanently
 - Dashboard is customer-facing — no API key fields, no debug output
 - Admin-only features (API key field, Pipeline Controls) are gated by `st.query_params.get("admin","").lower() == "true"` — append `?admin=true` to URL to access. Never expose to customers.
 - The Anthropic API key is set server-side via `ANTHROPIC_API_KEY` env var only
@@ -290,6 +323,10 @@ After every session or error correction:
 - `visit_ca_airport_traffic` and `visit_ca_intl_arrivals` use column `month` (not `month_num`) — wrong name causes silent exception → empty DataFrame → ⚫ sidebar indicator.
 - Data loaders use `try/except: return pd.DataFrame()` — a ⚫ indicator means the loader threw silently. Diagnose by running SQL directly: `python3 -c "import sqlite3,pandas as pd; print(pd.read_sql_query('SELECT * FROM <table> LIMIT 1', sqlite3.connect('data/analytics.sqlite')))"`.
 - ALWAYS commit directly to `main` — never create feature branches. User explicitly requires this.
+- Raw data MUST go in `data/<source>/` (not `downloads/`). Loaders read from `data/str/`, `data/datafy/`, etc. — downloads/ is a staging area only.
+- `build_table_relationships.py` is the LAST step (step 20) in `run_pipeline.py` — it auto-rebuilds ALL 120+ relationships from the RELATIONSHIPS registry. Always add new entries there when adding tables.
+- `table_relationships.created_at` is the correct column name (not `updated_at`) — check schema with `PRAGMA table_info(table_relationships)` before writing UPSERT SQL.
+- Multi-model AI: `stream_ai_response(prompt, model_key, _ai_keys)` routes to Anthropic/OpenAI/Google/Perplexity. `_ai_keys` is computed in the sidebar; `selected_model` is stored in session_state. Both have module-level defaults before sidebar renders to prevent NameError.
 
 ---
 
@@ -325,3 +362,5 @@ After every session or error correction:
 | 2026-03-17 | Rebrand to Dana Point PULSE; 9-tab layout (+ Feeder Markets, Event Impact, Supply & Pipeline); Visit California ⚫ bug fix; admin mode (?admin=true); PULSE Score widget; footer with GloCon branding + glossary; direct-to-main commit workflow | Claude + John Picou |
 | 2026-03-25 | Later.com social media integration (IG/FB/TikTok → 12 tables); Pipeline step 10; Pipeline Status dot; Data & Downloads card; Datafy GA4 summary in Board Report; Performance Command Center card+chart pairs; PULSE Score whitespace fix + scale readability; STR chart animations; Key Forward Metrics date references | Claude + John Picou |
 | 2026-03-30 | EIA gas prices + TSA checkpoint data sources (pipeline steps 16+17); intel panels added to tab_sp and tab_dl; gas price correlation section in Market Intelligence; EIA/TSA source health cards in Data Vault; updated DB inventory; EIA/TSA sidebar status dots | Claude + John Picou |
+| 2026-03-31 | Multi-model AI engine (Claude + GPT-4o + Gemini + Perplexity Sonar — 8 models); universal stream_ai_response() router; sidebar model selector; Live Market Intelligence panel; all charts downloadable (scale=3, 1600×800); 7 new CSV download buttons; style_fig v4 | Claude + John Picou |
+| 2026-03-31 | Data organization standard: all raw data in data/<source>/ canonical dirs; STR files moved to data/str/; build_table_relationships.py (step 20, always-last); 120 relationships (from 37); FRED_API_KEY placeholder; Standard Process section in CLAUDE.md | Claude + John Picou |
