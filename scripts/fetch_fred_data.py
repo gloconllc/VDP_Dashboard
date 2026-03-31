@@ -34,9 +34,12 @@ import sqlite3
 import requests
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
 DB   = ROOT / "data" / "analytics.sqlite"
+
+load_dotenv(ROOT / ".env")
 
 FRED_API_KEY = os.getenv("FRED_API_KEY", "")
 FRED_BASE    = "https://api.stlouisfed.org/fred/series/observations"
