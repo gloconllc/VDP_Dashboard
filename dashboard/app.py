@@ -1534,22 +1534,192 @@ st.markdown("""
     .js-plotly-plot .plotly { overflow-x: auto !important; }
   }
 
-  /* ── Streamlit Button Light Style ────────────────────────────────────── */
+  /* ── Pill Button Style (byhook) ──────────────────────────────────────── */
   [data-testid="stButton"] > button {
     background: #FFFFFF !important;
-    border: 1px solid rgba(0,0,0,0.12) !important;
-    border-radius: 8px !important;
-    color: var(--dp-text-1) !important;
+    border: 1.5px solid rgba(5,103,200,0.22) !important;
+    border-radius: 100em !important;
+    color: var(--dp-text-2) !important;
     font-family: 'DM Sans', sans-serif !important;
     font-weight: 600 !important;
     font-size: 13px !important;
-    transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease !important;
+    letter-spacing: -0.01em !important;
+    padding: 6px 20px !important;
+    transition: background 0.22s cubic-bezier(0.37,0,0.22,1),
+                color 0.22s cubic-bezier(0.37,0,0.22,1),
+                border-color 0.22s ease,
+                box-shadow 0.22s ease !important;
   }
   [data-testid="stButton"] > button:hover {
-    background: rgba(8,145,178,0.08) !important;
-    border-color: rgba(8,145,178,0.30) !important;
-    box-shadow: 0 2px 8px rgba(8,145,178,0.12) !important;
-    color: var(--dp-teal) !important;
+    background: #0567C8 !important;
+    border-color: #0567C8 !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 14px rgba(5,103,200,0.30) !important;
+  }
+  [data-testid="stButton"] > button:active {
+    transform: scale(0.97) !important;
+  }
+
+  /* ── KPI Ticker (1ax / Bloomberg) ────────────────────────────────────── */
+  .pulse-ticker-wrap {
+    overflow: hidden;
+    background: #07111F;
+    border-bottom: 1px solid rgba(5,103,200,0.28);
+    margin: 0 -1rem 0 -1rem;
+    padding: 0;
+    position: relative;
+    z-index: 998;
+  }
+  .pulse-ticker-track {
+    display: flex;
+    width: max-content;
+    padding: 9px 0;
+  }
+  .pulse-ticker-track.left  { animation: ticker-left  28s linear infinite; }
+  .pulse-ticker-track.right { animation: ticker-right 34s linear infinite; }
+  .pulse-ticker-track:hover { animation-play-state: paused; }
+  .pulse-ticker-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 24px;
+    font-family: 'DM Sans', 'Inter', sans-serif;
+    font-size: 12px; font-weight: 600;
+    color: rgba(255,255,255,0.70);
+    white-space: nowrap;
+    border-right: 1px solid rgba(255,255,255,0.08);
+  }
+  .pulse-ticker-item:last-child { border-right: none; }
+  .pulse-ticker-label {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .12em; color: rgba(255,255,255,0.35);
+  }
+  .pulse-ticker-val { color: #FFFFFF; font-size: 13px; font-weight: 700; }
+  .pulse-ticker-pos { color: #34D399; font-size: 11px; }
+  .pulse-ticker-neg { color: #F87171; font-size: 11px; }
+  .pulse-ticker-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #22D3EE; animation: ticker-pulse 1.8s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes ticker-left  { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+  @keyframes ticker-right { 0%{transform:translateX(-50%)} 100%{transform:translateX(0)} }
+  @keyframes ticker-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+  /* ── Scroll-Reveal Animations (byhook clip-path style) ───────────────── */
+  .reveal-card {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 0.55s cubic-bezier(0.28,0,0.49,1),
+                transform 0.55s cubic-bezier(0.28,0,0.49,1);
+  }
+  .reveal-card.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .reveal-clip {
+    clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
+    transition: clip-path 0.65s cubic-bezier(0.37,0,0.22,1);
+  }
+  .reveal-clip.is-visible {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+  .reveal-left {
+    opacity: 0; transform: translateX(-20px);
+    transition: opacity 0.5s cubic-bezier(0.28,0,0.49,1),
+                transform 0.5s cubic-bezier(0.28,0,0.49,1);
+  }
+  .reveal-left.is-visible { opacity: 1; transform: translateX(0); }
+
+  /* ── CNN-style Inline Data Highlights ───────────────────────────────── */
+  .data-hl {
+    background: linear-gradient(120deg, rgba(5,103,200,0.15) 0%, rgba(5,103,200,0.08) 100%);
+    color: #0567C8;
+    font-weight: 800;
+    border-radius: 4px;
+    padding: 0 4px;
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.02em;
+    border-bottom: 2px solid rgba(5,103,200,0.35);
+    display: inline;
+  }
+  .data-hl-pos {
+    background: linear-gradient(120deg, rgba(5,150,105,0.14) 0%, rgba(5,150,105,0.07) 100%);
+    color: #059669; border-bottom-color: rgba(5,150,105,0.35);
+    font-weight: 800; border-radius: 4px; padding: 0 4px;
+    font-family: 'Outfit', sans-serif; letter-spacing: -0.02em; display: inline;
+  }
+  .data-hl-neg {
+    background: linear-gradient(120deg, rgba(220,38,38,0.12) 0%, rgba(220,38,38,0.06) 100%);
+    color: #DC2626; border-bottom: 2px solid rgba(220,38,38,0.30);
+    font-weight: 800; border-radius: 4px; padding: 0 4px;
+    font-family: 'Outfit', sans-serif; letter-spacing: -0.02em; display: inline;
+  }
+  .data-hl-amber {
+    background: linear-gradient(120deg, rgba(217,119,6,0.14) 0%, rgba(217,119,6,0.07) 100%);
+    color: #D97706; border-bottom: 2px solid rgba(217,119,6,0.32);
+    font-weight: 800; border-radius: 4px; padding: 0 4px;
+    font-family: 'Outfit', sans-serif; letter-spacing: -0.02em; display: inline;
+  }
+
+  /* ── Painted Heatmap (Giorgia Lupi / Long-Covid density style) ───────── */
+  .painted-legend {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    margin: 8px 0 14px 0;
+  }
+  .painted-swatch {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10.5px; font-weight: 600; color: var(--dp-text-3);
+  }
+  .painted-dot {
+    width: 12px; height: 12px; border-radius: 3px; display: inline-block;
+  }
+
+  /* ── Event Type Cards (Dumbar type-based treatments) ─────────────────── */
+  .evt-card {
+    border-radius: var(--dp-radius-lg); padding: 16px 18px; margin-bottom: 10px;
+    border: 1px solid rgba(15,28,46,0.08); position: relative; overflow: hidden;
+    transition: box-shadow 0.24s ease, transform 0.24s ease;
+    box-shadow: var(--dp-shadow); cursor: default;
+  }
+  .evt-card:hover { box-shadow: var(--dp-shadow-hover); transform: translateY(-3px); }
+  .evt-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .evt-festival::before  { background: linear-gradient(90deg, #7C3AED, #C084FC); }
+  .evt-surf::before      { background: linear-gradient(90deg, #0567C8, #38BDF8); }
+  .evt-maritime::before  { background: linear-gradient(90deg, #059669, #34D399); }
+  .evt-holiday::before   { background: linear-gradient(90deg, #DC2626, #F87171); }
+  .evt-race::before      { background: linear-gradient(90deg, #D97706, #FCD34D); }
+  .evt-default::before   { background: linear-gradient(90deg, #64748B, #94A3B8); }
+  .evt-festival  { background: rgba(124,58,237,0.03); border-color: rgba(124,58,237,0.14); }
+  .evt-surf      { background: rgba(5,103,200,0.03);  border-color: rgba(5,103,200,0.14); }
+  .evt-maritime  { background: rgba(5,150,105,0.03);  border-color: rgba(5,150,105,0.14); }
+  .evt-holiday   { background: rgba(220,38,38,0.03);  border-color: rgba(220,38,38,0.14); }
+  .evt-race      { background: rgba(217,119,6,0.03);  border-color: rgba(217,119,6,0.14); }
+  .evt-type-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em;
+    padding: 2px 9px; border-radius: 20px;
+    border: 1px solid transparent; margin-bottom: 8px;
+  }
+  .evt-type-festival { color: #7C3AED; background: rgba(124,58,237,0.10); border-color: rgba(124,58,237,0.22); }
+  .evt-type-surf     { color: #0567C8; background: rgba(5,103,200,0.10);  border-color: rgba(5,103,200,0.22); }
+  .evt-type-maritime { color: #059669; background: rgba(5,150,105,0.10);  border-color: rgba(5,150,105,0.22); }
+  .evt-type-holiday  { color: #DC2626; background: rgba(220,38,38,0.10);  border-color: rgba(220,38,38,0.22); }
+  .evt-type-race     { color: #D97706; background: rgba(217,119,6,0.10);  border-color: rgba(217,119,6,0.22); }
+  .evt-type-default  { color: #475569; background: rgba(71,85,105,0.10);  border-color: rgba(71,85,105,0.22); }
+  .evt-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px; font-weight: 800; letter-spacing: -0.03em; color: var(--dp-text-1);
+    margin-bottom: 4px;
+  }
+  .evt-date {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 500; color: var(--dp-text-3); margin-bottom: 8px;
+  }
+  .evt-impact {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--dp-text-2); line-height: 1.65;
   }
 
   /* ── Streamlit Input / Selectbox light style ─────────────────────────── */
@@ -3619,6 +3789,214 @@ def sec_div(title: str) -> str:
     )
 
 
+def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
+                      df_later_ig: "pd.DataFrame") -> str:
+    """Bloomberg/1ax-style dual-row KPI ticker with live data."""
+    import math
+
+    def _item(label: str, val: str, delta: str = "", positive: bool | None = None) -> str:
+        delta_cls = ""
+        if delta and positive is True:   delta_cls = "pulse-ticker-pos"
+        elif delta and positive is False: delta_cls = "pulse-ticker-neg"
+        delta_html = f'<span class="{delta_cls}">{delta}</span>' if delta else ""
+        return (
+            f'<div class="pulse-ticker-item">'
+            f'<span class="pulse-ticker-label">{label}</span>'
+            f'<span class="pulse-ticker-val">{val}</span>'
+            f'{delta_html}'
+            f'</div>'
+        )
+
+    # ── Pull live metrics ──────────────────────────────────────────────────────
+    occ_val   = adr_val = rvp_val = "—"
+    occ_d     = adr_d   = rvp_d   = ""
+    occ_pos   = adr_pos = rvp_pos = None
+    if not df_kpi.empty:
+        _rec = df_kpi.sort_values("as_of_date").iloc[-1]
+        try:
+            occ_val = f"{float(_rec.get('occ_pct', 0)):.1f}%"
+            _od = float(_rec.get("occ_yoy", 0))
+            occ_d = f"{'▲' if _od>=0 else '▼'}{abs(_od):.1f}pp"; occ_pos = _od >= 0
+        except Exception: pass
+        try:
+            adr_val = f"${float(_rec.get('adr', 0)):,.0f}"
+            _ad = float(_rec.get("adr_yoy", 0))
+            adr_d = f"{'▲' if _ad>=0 else '▼'}{abs(_ad):.1f}%"; adr_pos = _ad >= 0
+        except Exception: pass
+        try:
+            rvp_val = f"${float(_rec.get('revpar', 0)):,.0f}"
+            _rd = float(_rec.get("revpar_yoy", 0))
+            rvp_d = f"{'▲' if _rd>=0 else '▼'}{abs(_rd):.1f}%"; rvp_pos = _rd >= 0
+        except Exception: pass
+
+    trips_val = "—"; oos_val = "—"; roas_val = "—"; top_dma = "—"
+    if not df_dfy.empty:
+        try:
+            _r = df_dfy.iloc[0]
+            trips_val = f"{float(_r.get('total_trips',0))/1e6:.2f}M" if _r.get('total_trips') else "—"
+            oos_val   = f"{float(_r.get('out_of_state_vd_pct',0)):.0f}%"
+            roas_val  = f"{float(_r.get('media_roas',0)):.1f}×" if _r.get('media_roas') else "—"
+            top_dma   = str(_r.get("top_dma","Los Angeles"))
+        except Exception: pass
+
+    ig_val = "—"
+    if not df_later_ig.empty:
+        try:
+            _ig = df_later_ig.sort_values("date").iloc[-1]
+            ig_val = f"{int(float(_ig.get('followers',0))):,}" if _ig.get('followers') else "—"
+        except Exception: pass
+
+    # ── Build rows ─────────────────────────────────────────────────────────────
+    row1_items = [
+        _item("⬤ LIVE", "DANA POINT PULSE"),
+        _item("OCCUPANCY", occ_val, occ_d, occ_pos),
+        _item("ADR", adr_val, adr_d, adr_pos),
+        _item("REVPAR", rvp_val, rvp_d, rvp_pos),
+        _item("ANNUAL TRIPS", trips_val),
+        _item("OUT-OF-STATE", oos_val),
+        _item("MEDIA ROAS", roas_val),
+        _item("TOP FEEDER DMA", top_dma),
+        _item("IG FOLLOWING", ig_val),
+    ]
+    row2_items = [
+        _item("TBID BLEND", "1.25%"),
+        _item("TOT RATE", "10%"),
+        _item("OHANA FEST ADR LIFT", "+$139"),
+        _item("SPEND MULTIPLIER", "3.2×"),
+        _item("OOS VISITORS", "68%"),
+        _item("AVG LOS", "2.0 days"),
+        _item("DAYTRIP CONVERSION OPP", "~$15M"),
+        _item("PIPELINE ROOMS", "CoStar"),
+        _item("DATA SOURCES", "STR · Datafy · CoStar"),
+    ]
+    # Duplicate for seamless loop
+    row1_html = "".join(row1_items * 3)
+    row2_html = "".join(row2_items * 3)
+
+    return (
+        f'<div class="pulse-ticker-wrap">'
+        f'<div class="pulse-ticker-track left">{row1_html}</div>'
+        f'<div class="pulse-ticker-track right" style="border-top:1px solid rgba(255,255,255,0.05);">{row2_html}</div>'
+        f'</div>'
+    )
+
+
+def render_painted_occ_heatmap(df_kpi_daily: "pd.DataFrame") -> "go.Figure | None":
+    """Giorgia Lupi / Long-Covid painted-density occupancy calendar.
+
+    Instead of bars, renders a 7-column weekly calendar grid where each cell
+    is a scatter bubble sized + colored by occupancy — density = intensity.
+    Returns a Plotly figure, or None if insufficient data.
+    """
+    if df_kpi_daily is None or df_kpi_daily.empty:
+        return None
+    try:
+        _df = df_kpi_daily.copy()
+        _df["as_of_date"] = pd.to_datetime(_df["as_of_date"], errors="coerce")
+        _df = _df.dropna(subset=["as_of_date", "occ_pct"]).copy()
+        if len(_df) < 30:
+            return None
+        # Keep last 365 days
+        _cutoff = _df["as_of_date"].max() - pd.Timedelta(days=365)
+        _df = _df[_df["as_of_date"] >= _cutoff].copy()
+        _df["week"]    = _df["as_of_date"].dt.isocalendar().week.astype(int)
+        _df["dow"]     = _df["as_of_date"].dt.dayofweek   # 0=Mon … 6=Sun
+        _df["year"]    = _df["as_of_date"].dt.year
+        # Create week-index for X axis (unique per year-week)
+        _df = _df.sort_values("as_of_date")
+        _df["week_idx"] = (
+            (_df["year"] - _df["year"].min()) * 53 + _df["week"]
+        )
+        _df["week_idx"] = _df["week_idx"] - _df["week_idx"].min()
+        # Colour scale: pale → saturated teal at 80%, flame at 90%+
+        # Map occ_pct to color intensity
+        def _occ_color(v: float) -> str:
+            v = max(0, min(100, v))
+            if v >= 90:   return f"rgba(234,88,12,{min(0.92,0.55+v/200):.2f})"   # flame orange
+            if v >= 80:   return f"rgba(5,103,200,{min(0.90,0.40+v/180):.2f})"   # deep teal
+            if v >= 65:   return f"rgba(5,103,200,{0.18+v/280:.2f})"              # medium teal
+            return f"rgba(5,103,200,{0.06+v/400:.2f})"                             # pale wash
+
+        _df["color"] = _df["occ_pct"].apply(_occ_color)
+        # Bubble size scales with occupancy — bigger = higher pressure
+        _df["size"]  = _df["occ_pct"].clip(40,100).apply(lambda v: 6 + (v-40)/60*14)
+
+        # Month label for x-axis ticks
+        _df["month_label"] = _df["as_of_date"].dt.strftime("%b %Y")
+        _dow_labels = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=_df["week_idx"],
+            y=_df["dow"],
+            mode="markers",
+            marker=dict(
+                size=_df["size"],
+                color=_df["color"],
+                line=dict(width=0),
+                symbol="circle",
+            ),
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "Occupancy: <b>%{customdata[1]:.1f}%</b><br>"
+                "%{customdata[2]}"
+                "<extra></extra>"
+            ),
+            customdata=list(zip(
+                _df["as_of_date"].dt.strftime("%a %b %d, %Y"),
+                _df["occ_pct"],
+                _df["occ_pct"].apply(
+                    lambda v: "🔥 COMPRESSION — rate premium justified"
+                    if v >= 90 else ("🎯 High demand" if v >= 80 else "")
+                ),
+            )),
+            showlegend=False,
+        ))
+        # Month boundary lines
+        _month_starts = _df.groupby(_df["as_of_date"].dt.to_period("M"))["week_idx"].min()
+        for _ms in _month_starts.values[1:]:
+            fig.add_vline(x=_ms - 0.5, line_width=1,
+                         line_color="rgba(15,28,46,0.12)", line_dash="dot")
+        # Month labels
+        _tick_vals = _month_starts.values
+        _tick_text = [str(k) for k in _month_starts.index]
+        fig.update_xaxes(
+            tickvals=_tick_vals, ticktext=_tick_text,
+            showgrid=False, zeroline=False,
+            tickfont=dict(size=10),
+        )
+        fig.update_yaxes(
+            tickvals=list(range(7)), ticktext=_dow_labels,
+            showgrid=False, zeroline=False,
+            tickfont=dict(size=10),
+            autorange="reversed",
+        )
+        fig.update_layout(
+            title="Occupancy Density Calendar — 365-Day View",
+            height=200,
+            margin=dict(l=4, r=4, t=40, b=8),
+        )
+        return style_fig(fig, height=200)
+    except Exception:
+        return None
+
+
+def evt_type_class(event_type: str) -> tuple[str, str]:
+    """Return (card_class, pill_class) for a given event type string."""
+    t = (event_type or "").lower()
+    if any(x in t for x in ["festival","music","concert","ohana","doheny"]):
+        return "evt-card evt-festival", "evt-type-pill evt-type-festival", "🎵"
+    if any(x in t for x in ["surf","wave","beach","paddl"]):
+        return "evt-card evt-surf", "evt-type-pill evt-type-surf", "🏄"
+    if any(x in t for x in ["tall ships","maritime","sail","harbor","whale","ocean"]):
+        return "evt-card evt-maritime", "evt-type-pill evt-type-maritime", "⚓"
+    if any(x in t for x in ["holiday","4th","fourth","christmas","firework","parade"]):
+        return "evt-card evt-holiday", "evt-type-pill evt-type-holiday", "🎆"
+    if any(x in t for x in ["race","run","triathlon","marathon","cycling"]):
+        return "evt-card evt-race", "evt-type-pill evt-type-race", "🏁"
+    return "evt-card evt-default", "evt-type-pill evt-type-default", "📅"
+
+
 def tab_summary(text: str) -> str:
     """Returns HTML for a tab-level summary card."""
     return f'<div class="tab-summary">{text}</div>'
@@ -3907,14 +4285,46 @@ PLOTLY_CONFIG = {
     "scrollZoom": False,
 }
 
-# ─── Sticky header JS ─────────────────────────────────────────────────────────
+# ─── Scroll-reveal IntersectionObserver + hero entry animation ────────────────
 st.markdown("""
 <script>
-// Pin hero banner to top when it scrolls out of normal flow
-window.addEventListener('scroll', function() {
-  const banner = window.parent.document.querySelector('.hero-banner');
-  if (banner) banner.style.position = 'sticky';
-});
+(function(){
+  // --- Scroll-reveal cards (byhook clip-path style) ---
+  function initReveal(){
+    var root = window.parent && window.parent.document ? window.parent.document : document;
+    var els = root.querySelectorAll('.reveal-card,.reveal-clip,.reveal-left');
+    if(!els.length) return;
+    if(root.IntersectionObserver){
+      var io = new root.defaultView.IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){
+            e.target.classList.add('is-visible');
+            io.unobserve(e.target);
+          }
+        });
+      },{threshold:0.08, rootMargin:'0px 0px -40px 0px'});
+      els.forEach(function(el){ io.observe(el); });
+    } else {
+      els.forEach(function(el){ el.classList.add('is-visible'); });
+    }
+  }
+  // --- Hero entry fade-in on load ---
+  function heroEntry(){
+    var root = window.parent && window.parent.document ? window.parent.document : document;
+    var hero = root.querySelector('.hero-banner');
+    if(hero){
+      hero.style.opacity='0'; hero.style.transition='opacity 0.7s ease';
+      setTimeout(function(){ hero.style.opacity='1'; },80);
+    }
+  }
+  setTimeout(initReveal, 300);
+  setTimeout(initReveal, 800);
+  setTimeout(heroEntry, 50);
+  if(window.MutationObserver){
+    var doc = window.parent && window.parent.document ? window.parent.document : document;
+    new MutationObserver(function(){ initReveal(); }).observe(doc.body,{childList:true,subtree:true});
+  }
+})();
 </script>
 """, unsafe_allow_html=True)
 
@@ -4383,6 +4793,15 @@ st.markdown(
     f'</div>',
     unsafe_allow_html=True,
 )
+
+# ── Live KPI Ticker (1ax / Bloomberg dual-row marquee) ─────────────────────
+try:
+    st.markdown(
+        render_kpi_ticker(df_kpi, df_dfy_ov, df_later_ig_profile),
+        unsafe_allow_html=True,
+    )
+except Exception:
+    pass  # Ticker is non-fatal — never crash the page
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BOARD REPORT HTML GENERATOR
@@ -7446,6 +7865,31 @@ with tab_tr:
                 "Run compute_kpis.py to populate kpi_compression_quarterly.",
             ), unsafe_allow_html=True)
 
+        # ── Painted density calendar (Giorgia Lupi / Long-Covid style) ──────────
+        _painted_fig = render_painted_occ_heatmap(df_daily if not df_daily.empty else df_kpi)
+        if _painted_fig is not None:
+            st.markdown(sec_div("🎨 Occupancy Density Calendar"), unsafe_allow_html=True)
+            st.markdown(
+                '<div class="chart-header">365-Day Occupancy Density Calendar</div>'
+                '<div class="chart-caption">'
+                'Each bubble = one day &nbsp;·&nbsp; <b>size &amp; color intensity = occupancy pressure</b> &nbsp;·&nbsp; '
+                '<span class="data-hl">Blue</span> = demand building &nbsp;·&nbsp; '
+                '<span class="data-hl-neg">Orange</span> = 90%+ compression &nbsp;·&nbsp; '
+                'Inspired by Giorgia Lupi\'s painted data approach</div>',
+                unsafe_allow_html=True,
+            )
+            # Painted legend
+            st.markdown(
+                '<div class="painted-legend">'
+                '<div class="painted-swatch"><span class="painted-dot" style="background:rgba(5,103,200,0.12);"></span> Low demand (≤65%)</div>'
+                '<div class="painted-swatch"><span class="painted-dot" style="background:rgba(5,103,200,0.45);"></span> Moderate (65–80%)</div>'
+                '<div class="painted-swatch"><span class="painted-dot" style="background:rgba(5,103,200,0.85);"></span> High (80–90%)</div>'
+                '<div class="painted-swatch"><span class="painted-dot" style="background:rgba(234,88,12,0.85);"></span> Compression (90%+)</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+            st.plotly_chart(_painted_fig, use_container_width=True, config=PLOTLY_CONFIG)
+
         st.markdown("---")
 
         # ── Full history line chart ─────────────────────────────────────────────
@@ -10395,27 +10839,31 @@ with tab_ei:
 
         if has_data:
             metrics_html = (
-                f'<span style="font-size:11px;opacity:0.75;margin-right:14px;">OCC {sc["e_occ"]:.1f}% ({occ_tag})</span>'
-                f'<span style="font-size:11px;opacity:0.75;margin-right:14px;">ADR ${sc["e_adr"]:.0f} ({adr_tag} vs baseline)</span>'
-                f'<span style="font-size:11px;opacity:0.75;">RevPAR ${sc["e_revpar"]:.0f} ({rvp_tag})</span>'
+                f'<span class="data-hl">{sc["e_occ"]:.1f}%</span>'
+                f'<span style="font-size:12px;color:var(--dp-text-3);margin:0 10px 0 4px;">occ ({occ_tag})</span>'
+                f'<span class="data-hl">${sc["e_adr"]:.0f}</span>'
+                f'<span style="font-size:12px;color:var(--dp-text-3);margin:0 10px 0 4px;">ADR ({adr_tag} vs baseline)</span>'
+                f'<span class="data-hl">${sc["e_revpar"]:.0f}</span>'
+                f'<span style="font-size:12px;color:var(--dp-text-3);margin-left:4px;">RevPAR ({rvp_tag})</span>'
             )
         else:
-            metrics_html = '<span style="font-size:11px;opacity:0.50;font-style:italic;">STR data not yet available for this window</span>'
+            metrics_html = '<span style="font-size:12px;color:var(--dp-text-3);font-style:italic;">STR window data pending — run pipeline after event date</span>'
 
+        # Type-based card treatment (Dumbar style)
+        _card_cls, _pill_cls, _type_icon = evt_type_class(ev["category"])
         st.markdown(
-            f'<div style="border:1px solid rgba(0,0,0,0.08);border-left:4px solid {tier_color};'
-            f'border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:8px;background:rgba(0,0,0,0.02);">'
-            f'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:4px;">'
-            f'<div>'
-            f'<span style="font-weight:700;font-size:13px;">{tier_badge} {ev["name"]}</span>'
-            f'<span style="font-size:10px;background:{tier_color}22;color:{tier_color};border-radius:4px;'
-            f'padding:1px 6px;margin-left:8px;font-weight:600;">{ev["tier"]}</span>'
-            f'<span style="font-size:10px;opacity:0.50;margin-left:8px;">{ev["category"]}</span>'
+            f'<div class="{_card_cls} reveal-card">'
+            f'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:6px;">'
+            f'<div style="display:flex;align-items:center;gap:8px;">'
+            f'<span class="{_pill_cls}">{_type_icon} {ev["category"].upper()}</span>'
+            f'<span style="font-size:10px;background:{tier_color}22;color:{tier_color};border-radius:20px;'
+            f'padding:2px 9px;font-weight:700;letter-spacing:.06em;">{tier_badge} {ev["tier"]}</span>'
             f'</div>'
-            f'<div style="font-size:11px;opacity:0.55;">📅 {ev["dates"]}</div>'
+            f'<div class="evt-date">📅 {ev["dates"]}</div>'
             f'</div>'
-            f'<div style="margin-top:5px;">{metrics_html}</div>'
-            f'<div style="font-size:10px;opacity:0.50;margin-top:3px;font-style:italic;">{ev["note"]}</div>'
+            f'<div class="evt-name">{ev["name"]}</div>'
+            f'<div class="evt-impact" style="margin-top:7px;">{metrics_html}</div>'
+            f'<div style="font-size:11px;color:var(--dp-text-3);margin-top:6px;font-style:italic;">{ev["note"]}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
