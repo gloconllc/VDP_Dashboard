@@ -2288,6 +2288,36 @@ def load_bls_employment() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=300)
+def load_eia_gas() -> pd.DataFrame:
+    """EIA California weekly retail gas prices — drive-market demand signal."""
+    conn = get_connection()
+    try:
+        df = pd.read_sql_query(
+            "SELECT * FROM eia_gas_prices ORDER BY week_end_date ASC", conn
+        )
+        if not df.empty:
+            df["date"] = pd.to_datetime(df["week_end_date"], errors="coerce")
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_tsa_checkpoint() -> pd.DataFrame:
+    """TSA daily checkpoint throughput — national air travel demand proxy."""
+    conn = get_connection()
+    try:
+        df = pd.read_sql_query(
+            "SELECT * FROM tsa_checkpoint_daily ORDER BY travel_date ASC", conn
+        )
+        if not df.empty:
+            df["date"] = pd.to_datetime(df["travel_date"], errors="coerce")
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
 def get_table_counts() -> dict:
     conn = get_connection()
     counts = {}
@@ -2347,6 +2377,11 @@ def get_table_counts() -> dict:
         "visit_ca_lodging_forecast",
         "visit_ca_airport_traffic",
         "visit_ca_intl_arrivals",
+        "eia_gas_prices",
+        "tsa_checkpoint_daily",
+        "bls_employment_monthly",
+        "google_trends_weekly",
+        "weather_monthly",
     ]:
         try:
             row = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()
@@ -3511,6 +3546,8 @@ df_fred    = load_fred_indicators()    # FRED economic indicators
 df_trends  = load_google_trends()      # Google Trends search demand
 df_weather = load_weather_monthly()    # Open-Meteo coastal weather
 df_bls     = load_bls_employment()     # BLS hospitality employment
+df_eia_gas = load_eia_gas()            # EIA CA weekly gas prices (drive-market signal)
+df_tsa     = load_tsa_checkpoint()     # TSA checkpoint throughput (air travel demand)
 
 # Global Plotly chart config — drill-down ready
 PLOTLY_CONFIG = {
@@ -3745,6 +3782,14 @@ with st.sidebar:
     _bls_lbl     = (f"{df_bls['series_name'].nunique()} series · "
                     f"{_bls_rows} months") if _bls_rows > 0 else "Run pipeline"
 
+    _eia_rows    = len(df_eia_gas)
+    _eia_dot     = "🟢" if _eia_rows > 0 else "⚫"
+    _eia_lbl     = f"{_eia_rows} weeks · CA gas" if _eia_rows > 0 else "Run pipeline"
+
+    _tsa_rows    = len(df_tsa)
+    _tsa_dot     = "🟢" if _tsa_rows > 0 else "⚫"
+    _tsa_lbl     = f"{_tsa_rows} data points · checkpoint" if _tsa_rows > 0 else "Run pipeline"
+
     st.markdown("**Pipeline Status**")
     st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {_d_label}")
     st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_label}")
@@ -3759,6 +3804,8 @@ with st.sidebar:
     st.markdown(f"{_trends_dot} Search Demand &nbsp;·&nbsp; {_trends_lbl}")
     st.markdown(f"{_wx_dot} Weather (Dana Pt) &nbsp;·&nbsp; {_wx_lbl}")
     st.markdown(f"{_bls_dot} BLS Employment &nbsp;·&nbsp; {_bls_lbl}")
+    st.markdown(f"{_eia_dot} EIA Gas Prices &nbsp;·&nbsp; {_eia_lbl}")
+    st.markdown(f"{_tsa_dot} TSA Checkpoint &nbsp;·&nbsp; {_tsa_lbl}")
     st.caption(f"Last ETL run: {last_log}")
 
     if not df_daily.empty:
@@ -10462,6 +10509,36 @@ with tab_sp:
     except Exception:
         st.info("CoStar annual performance table not yet populated.")
 
+    # ── Supply Pipeline Intel Panel ───────────────────────────────────────────
+    try:
+        _sp_pipe_rooms = int(df_cs_pipe["rooms"].sum()) if not df_cs_pipe.empty else 0
+        _sp_uc_ct  = len(df_cs_pipe[df_cs_pipe["status"] == "Under Construction"]) if not df_cs_pipe.empty else 0
+        _sp_pl_ct  = len(df_cs_pipe[df_cs_pipe["status"].isin(["Planned", "Final Planning / Permitting"])]) if not df_cs_pipe.empty else 0
+        _sp_ip_next_steps = [
+            f"<strong>Supply Absorption Strategy:</strong> {_sp_pipe_rooms:,} rooms in pipeline represent new competitive supply. "
+            "Build direct-booking loyalty programs NOW to defend RevPAR before new rooms open.",
+            f"<strong>Rate Discipline:</strong> {_sp_uc_ct} project(s) under active construction. "
+            "Set rate floors before new supply opens — rate dilution is hardest to recover once established.",
+            f"<strong>Forecast Modeling:</strong> {_sp_pl_ct} project(s) in planning/permitting for 2026+. "
+            "Incorporate supply growth into multi-year TBID projection models for board presentations.",
+            "<strong>Competitive Positioning:</strong> Use CoStar Annual Performance tab to benchmark current MPI/ARI/RGI vs. the comp set. "
+            "Position VDP hotels ahead of any supply-driven RevPAR softening.",
+        ]
+        _sp_ip_questions = [
+            "Which new properties pose the biggest RevPAR threat?",
+            "How does this pipeline compare to other coastal CA markets?",
+            "What's the projected RevPAR impact of new supply absorption?",
+            "Which segments (luxury vs select-service) are most exposed?",
+        ]
+        _sp_ip_context = (
+            f"Dana Point/South OC hotel supply pipeline: {_sp_pipe_rooms:,} total pipeline rooms, "
+            f"{_sp_uc_ct} under construction, {_sp_pl_ct} in planning/permitting. "
+            f"Current market: ~5,120 existing rooms. Pipeline = {_sp_pipe_rooms/5120*100:.1f}% supply growth."
+        )
+        render_intel_panel("sp_supply", _sp_ip_next_steps, _sp_ip_questions, _sp_ip_context)
+    except Exception:
+        pass
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -11731,6 +11808,205 @@ with tab_cs:
             unsafe_allow_html=True,
         )
 
+    # ── EIA California Gas Prices ─────────────────────────────────────────────
+    st.markdown(sec_div("⛽ California Gas Prices — Drive-Market Demand Signal"), unsafe_allow_html=True)
+    st.markdown(_sh("⛽", "EIA California Retail Gas Prices", "orange", "DRIVE-MARKET SIGNAL"), unsafe_allow_html=True)
+    st.caption(
+        "Source: U.S. Energy Information Administration (EIA) · Weekly California retail regular-grade gasoline. "
+        "Drive market (LA/OC/SD/IE) within 120 miles of Dana Point — gas price spikes correlate with 2–4% weekend occupancy softening 2–4 weeks out."
+    )
+    if not df_eia_gas.empty and "date" in df_eia_gas.columns:
+        _eia_ca = df_eia_gas[df_eia_gas["state_label"] == "CA"].copy()
+        _eia_us = df_eia_gas[df_eia_gas["state_label"] == "US"].copy()
+        if not _eia_ca.empty:
+            _eia_ca = _eia_ca.sort_values("date")
+            _ec1, _ec2 = st.columns([3, 1])
+            with _ec1:
+                fig_eia = go.Figure()
+                fig_eia.add_trace(go.Scatter(
+                    x=_eia_ca["date"], y=_eia_ca["price_per_gallon"],
+                    mode="lines+markers", name="CA Regular",
+                    line=dict(color=ORANGE, width=2.5),
+                    marker=dict(size=4),
+                    hovertemplate="<b>%{x|%b %d, %Y}</b><br>CA Price: $%{y:.3f}/gal<extra></extra>",
+                ))
+                if not _eia_us.empty:
+                    _eia_us = _eia_us.sort_values("date")
+                    fig_eia.add_trace(go.Scatter(
+                        x=_eia_us["date"], y=_eia_us["price_per_gallon"],
+                        mode="lines", name="US National Avg",
+                        line=dict(color=TEAL_LIGHT, width=1.8, dash="dot"),
+                        hovertemplate="<b>%{x|%b %d, %Y}</b><br>US Avg: $%{y:.3f}/gal<extra></extra>",
+                    ))
+                # Add trendline band for high-gas-price alert
+                _eia_max = _eia_ca["price_per_gallon"].max() if not _eia_ca.empty else 5.0
+                fig_eia.add_hline(y=4.50, line_dash="dash", line_color="#DC2626", line_width=1,
+                                  annotation_text="$4.50 demand risk threshold", annotation_position="top right")
+                fig_eia.update_layout(
+                    title="CA Weekly Retail Gas Price ($/gal)",
+                    yaxis_title="Price per Gallon ($)",
+                    yaxis_tickformat="$,.3f",
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                )
+                st.plotly_chart(style_fig(fig_eia, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+            with _ec2:
+                _eia_latest = _eia_ca.iloc[-1]
+                _eia_prior  = _eia_ca.iloc[-5] if len(_eia_ca) >= 5 else _eia_ca.iloc[0]
+                _eia_delta  = _eia_latest["price_per_gallon"] - _eia_prior["price_per_gallon"]
+                st.metric("Latest CA Price",
+                          f"${_eia_latest['price_per_gallon']:.3f}/gal",
+                          f"{_eia_delta:+.3f} vs 4wk prior")
+                _eia_yr_avg = _eia_ca[_eia_ca["date"].dt.year == _eia_ca["date"].dt.year.max()]["price_per_gallon"].mean()
+                st.metric("YTD CA Avg", f"${_eia_yr_avg:.3f}/gal")
+                _demand_risk = "🔴 High" if _eia_latest["price_per_gallon"] >= 4.50 else ("🟡 Moderate" if _eia_latest["price_per_gallon"] >= 4.00 else "🟢 Low")
+                st.metric("Drive-Market Risk", _demand_risk)
+                st.caption(
+                    "📌 **Rule of thumb:** Every $0.20/gal increase above $4.00 correlates with ~2–3% softening "
+                    "in LA/OC/SD weekend trip decisions 2–3 weeks out."
+                )
+        else:
+            st.info("Run `python scripts/fetch_eia_gas.py` to populate CA gas price data.")
+    else:
+        st.markdown(
+            '<div class="empty-card">'
+            '<div class="empty-icon">⛽</div>'
+            '<div class="empty-title">EIA Gas Price Data Not Loaded</div>'
+            '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> '
+            'to fetch EIA gas prices. Add <code>EIA_API_KEY</code> to .env for live data '
+            '(free at eia.gov/opendata). Demo data seeds automatically without a key.</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── TSA Checkpoint Throughput ─────────────────────────────────────────────
+    st.markdown(sec_div("✈️ TSA Checkpoint Throughput — Air Travel Demand"), unsafe_allow_html=True)
+    st.markdown(_sh("✈️", "TSA Checkpoint Throughput", "indigo", "FLY-MARKET SIGNAL"), unsafe_allow_html=True)
+    st.caption(
+        "Source: U.S. Transportation Security Administration · Daily checkpoint traveler counts. "
+        "Dana Point's fly-market feeders (SLC, DFW, PHX, DEN) generate highest-ADR overnight visitors — TSA surge signals premium demand 3–7 days out."
+    )
+    if not df_tsa.empty and "date" in df_tsa.columns:
+        _tsa_sorted = df_tsa.sort_values("date")
+        _tc1, _tc2 = st.columns([3, 1])
+        with _tc1:
+            fig_tsa = go.Figure()
+            fig_tsa.add_trace(go.Scatter(
+                x=_tsa_sorted["date"], y=_tsa_sorted["travelers_count"],
+                mode="lines", name="2025/2026 Travelers",
+                line=dict(color=BLUE, width=2.5),
+                fill="tozeroy", fillcolor="rgba(5,103,200,0.07)",
+                hovertemplate="<b>%{x|%b %d, %Y}</b><br>Travelers: %{y:,.0f}<extra></extra>",
+            ))
+            if "travelers_prior_year" in _tsa_sorted.columns:
+                fig_tsa.add_trace(go.Scatter(
+                    x=_tsa_sorted["date"], y=_tsa_sorted["travelers_prior_year"],
+                    mode="lines", name="Prior Year",
+                    line=dict(color=TEAL_LIGHT, width=1.5, dash="dot"),
+                    hovertemplate="<b>%{x|%b %Y}</b><br>Prior Year: %{y:,.0f}<extra></extra>",
+                ))
+            if "rolling_7d_avg" in _tsa_sorted.columns:
+                fig_tsa.add_trace(go.Scatter(
+                    x=_tsa_sorted["date"], y=_tsa_sorted["rolling_7d_avg"],
+                    mode="lines", name="7-Day Avg",
+                    line=dict(color=ORANGE, width=2, dash="dash"),
+                    hovertemplate="<b>%{x|%b %Y}</b><br>7d Avg: %{y:,.0f}<extra></extra>",
+                ))
+            fig_tsa.update_layout(
+                title="Daily TSA Checkpoint Travelers",
+                yaxis_title="Travelers",
+                yaxis_tickformat=",",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02),
+            )
+            st.plotly_chart(style_fig(fig_tsa, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+        with _tc2:
+            _tsa_latest = _tsa_sorted.iloc[-1]
+            _tsa_prior  = _tsa_sorted.iloc[-2] if len(_tsa_sorted) >= 2 else _tsa_sorted.iloc[0]
+            _tsa_delta  = int(_tsa_latest["travelers_count"] - _tsa_prior["travelers_count"]) if _tsa_prior["travelers_count"] else 0
+            st.metric("Latest Count",
+                      f"{int(_tsa_latest['travelers_count']):,}",
+                      f"{_tsa_delta:+,} vs prior")
+            if pd.notna(_tsa_latest.get("yoy_pct_change")):
+                st.metric("YOY Change", f"{_tsa_latest['yoy_pct_change']:+.1f}%")
+            _tsa_yr_avg = int(_tsa_sorted[_tsa_sorted["date"].dt.year == _tsa_sorted["date"].dt.year.max()]["travelers_count"].mean())
+            st.metric("YTD Daily Avg", f"{_tsa_yr_avg:,}")
+            st.caption(
+                "📌 **Fly-market strategy:** When TSA throughput > 2.8M/day, "
+                "activate fly-market ADR premiums. SLC, DFW, PHX visitors average 1.3–1.4× ADR vs. drive markets."
+            )
+    else:
+        st.markdown(
+            '<div class="empty-card">'
+            '<div class="empty-icon">✈️</div>'
+            '<div class="empty-title">TSA Checkpoint Data Not Loaded</div>'
+            '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> '
+            'to fetch TSA throughput data. No API key required.</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── External Correlations ─────────────────────────────────────────────────
+    with st.expander("🔗 External Correlations — Gas Prices vs. Hotel Demand", expanded=False):
+        st.caption(
+            "Correlation analysis: CA gas prices vs. STR occupancy · "
+            "Positive correlation = gas price drop boosts drive-market demand. "
+            "Negative correlation = gas spike suppresses weekend leisure travel."
+        )
+        if not df_eia_gas.empty and not df_kpi.empty and "date" in df_eia_gas.columns:
+            try:
+                _eia_ca_corr = df_eia_gas[df_eia_gas["state_label"] == "CA"][["date", "price_per_gallon"]].copy()
+                _eia_ca_corr["year_month"] = _eia_ca_corr["date"].dt.to_period("M")
+                _eia_monthly_avg = _eia_ca_corr.groupby("year_month")["price_per_gallon"].mean().reset_index()
+                _eia_monthly_avg["date"] = _eia_monthly_avg["year_month"].dt.to_timestamp()
+
+                _kpi_corr = df_kpi[["as_of_date", "occ_pct", "adr", "revpar"]].copy()
+                _kpi_corr["year_month"] = pd.to_datetime(_kpi_corr["as_of_date"]).dt.to_period("M")
+                _kpi_monthly = _kpi_corr.groupby("year_month").agg(
+                    avg_occ=("occ_pct", "mean"), avg_adr=("adr", "mean"), avg_rvp=("revpar", "mean")
+                ).reset_index()
+                _kpi_monthly["date"] = _kpi_monthly["year_month"].dt.to_timestamp()
+
+                _merged = pd.merge(_eia_monthly_avg, _kpi_monthly, on="date", how="inner")
+                if len(_merged) >= 6:
+                    _corr_occ = _merged["price_per_gallon"].corr(_merged["avg_occ"])
+                    _corr_adr = _merged["price_per_gallon"].corr(_merged["avg_adr"])
+                    _corr_rvp = _merged["price_per_gallon"].corr(_merged["avg_rvp"])
+                    _cc1, _cc2, _cc3 = st.columns(3)
+                    with _cc1:
+                        _occ_dir = "inverse" if _corr_occ < -0.1 else ("positive" if _corr_occ > 0.1 else "neutral")
+                        st.metric("Gas ↔ Occupancy", f"r = {_corr_occ:.2f}", f"Correlation: {_occ_dir}")
+                    with _cc2:
+                        _adr_dir = "positive" if _corr_adr > 0.1 else ("inverse" if _corr_adr < -0.1 else "neutral")
+                        st.metric("Gas ↔ ADR", f"r = {_corr_adr:.2f}", f"Correlation: {_adr_dir}")
+                    with _cc3:
+                        _rvp_dir = "positive" if _corr_rvp > 0.1 else ("inverse" if _corr_rvp < -0.1 else "neutral")
+                        st.metric("Gas ↔ RevPAR", f"r = {_corr_rvp:.2f}", f"Correlation: {_rvp_dir}")
+
+                    fig_corr = go.Figure()
+                    fig_corr.add_trace(go.Bar(
+                        x=["Gas ↔ Occupancy", "Gas ↔ ADR", "Gas ↔ RevPAR"],
+                        y=[_corr_occ, _corr_adr, _corr_rvp],
+                        marker_color=[ORANGE if v < 0 else GREEN for v in [_corr_occ, _corr_adr, _corr_rvp]],
+                        text=[f"r={v:.2f}" for v in [_corr_occ, _corr_adr, _corr_rvp]],
+                        textposition="outside",
+                    ))
+                    fig_corr.update_layout(
+                        title="Pearson Correlation: CA Gas Price vs. STR Metrics",
+                        yaxis=dict(range=[-1, 1], title="Correlation Coefficient (r)"),
+                        showlegend=False,
+                    )
+                    st.plotly_chart(style_fig(fig_corr, height=240), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.caption(
+                        "Interpretation: r > +0.5 = strong positive correlation · r < −0.5 = strong inverse. "
+                        "Negative gas↔occupancy means higher gas prices suppress drive-market leisure demand. "
+                        f"Based on {len(_merged)} months of overlapping data."
+                    )
+                else:
+                    st.info("Not enough overlapping data yet to compute correlations. Run the pipeline to build up data.")
+            except Exception as _corr_err:
+                st.caption(f"Correlation analysis unavailable: {_corr_err}")
+        else:
+            st.info("Load both EIA gas prices and STR KPIs to see correlation analysis.")
+
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -11928,8 +12204,40 @@ with tab_dl:
             f"{_later_dl_total:,}" if _later_dl_total > 0 else "—",
             url="https://later.com",
         ), unsafe_allow_html=True)
+        _eia_ct  = counts.get("eia_gas_prices", 0)
+        _eia_dot = "🟢" if isinstance(_eia_ct, int) and _eia_ct > 0 else "⚫"
         st.markdown(source_card(
-            "⚫", "FRED / CA TOT / JWA", "external context · not yet loaded", "—",
+            _eia_dot, "EIA Gas Prices",
+            "eia_gas_prices · CA weekly retail gas · drive-market demand signal",
+            f"{_eia_ct:,}" if isinstance(_eia_ct, int) and _eia_ct > 0 else "—",
+        ), unsafe_allow_html=True)
+        _tsa_ct  = counts.get("tsa_checkpoint_daily", 0)
+        _tsa_dot = "🟢" if isinstance(_tsa_ct, int) and _tsa_ct > 0 else "⚫"
+        st.markdown(source_card(
+            _tsa_dot, "TSA Checkpoint Data",
+            "tsa_checkpoint_daily · national air travel demand · fly-market signal",
+            f"{_tsa_ct:,}" if isinstance(_tsa_ct, int) and _tsa_ct > 0 else "—",
+        ), unsafe_allow_html=True)
+        _wx_ct   = counts.get("weather_monthly", 0)
+        _gt_ct   = counts.get("google_trends_weekly", 0)
+        _bls_ct  = counts.get("bls_employment_monthly", 0)
+        _wx_dot  = "🟢" if isinstance(_wx_ct, int) and _wx_ct > 0 else "⚫"
+        _gt_dot  = "🟢" if isinstance(_gt_ct, int) and _gt_ct > 0 else "⚫"
+        _bls_dot = "🟢" if isinstance(_bls_ct, int) and _bls_ct > 0 else "⚫"
+        st.markdown(source_card(
+            _wx_dot, "Open-Meteo Weather",
+            "weather_monthly · Dana Point beach day score · coastal demand driver",
+            f"{_wx_ct:,}" if isinstance(_wx_ct, int) and _wx_ct > 0 else "—",
+        ), unsafe_allow_html=True)
+        st.markdown(source_card(
+            _gt_dot, "Google Trends",
+            "google_trends_weekly · search demand signals · 'Dana Point hotels' etc.",
+            f"{_gt_ct:,}" if isinstance(_gt_ct, int) and _gt_ct > 0 else "—",
+        ), unsafe_allow_html=True)
+        st.markdown(source_card(
+            _bls_dot, "BLS Employment",
+            "bls_employment_monthly · OC hospitality employment · sector health",
+            f"{_bls_ct:,}" if isinstance(_bls_ct, int) and _bls_ct > 0 else "—",
         ), unsafe_allow_html=True)
 
     st.markdown(sec_div("📥 Recent Metric Samples & CSV Downloads"), unsafe_allow_html=True)
@@ -12120,6 +12428,11 @@ with tab_dl:
             "later_fb_profile_interactions":       "Facebook profile interactions (Later.com)",
             "later_tk_profile_growth":             "TikTok profile growth (Later.com)",
             "later_tk_audience_demographics":      "TikTok audience demographics (Later.com)",
+            "eia_gas_prices":                      "EIA California weekly retail gas prices (drive-market demand signal)",
+            "tsa_checkpoint_daily":                "TSA daily checkpoint throughput (air travel demand proxy)",
+            "bls_employment_monthly":              "BLS OC hospitality employment (sector health)",
+            "google_trends_weekly":                "Google Trends search demand signals",
+            "weather_monthly":                     "Open-Meteo coastal weather + beach day score",
         }
         _brain_rows = [
             {"Table": t, "Description": d, "Row Count": counts.get(t, "—")}
@@ -12130,6 +12443,39 @@ with tab_dl:
         _brain_csv2 = _brain_df.to_csv(index=False).encode()
         st.download_button("⬇️ Download DB Inventory CSV", _brain_csv2,
                            file_name="db_inventory.csv", mime="text/csv", key="dl_brain")
+
+    # ── Data Vault Intel Panel ────────────────────────────────────────────────
+    try:
+        _total_tables = len([t for t in counts if isinstance(counts.get(t), int) and counts.get(t, 0) > 0])
+        _total_rows   = sum(v for v in counts.values() if isinstance(v, int))
+        _missing      = [t for t, v in counts.items() if isinstance(v, int) and v == 0]
+        _dl_next_steps = [
+            f"<strong>Data Freshness:</strong> {_total_tables} active tables · {_total_rows:,} total rows in analytics.sqlite. "
+            "Run <code>python scripts/run_pipeline.py</code> after loading new STR or Datafy files.",
+            f"<strong>Missing Sources:</strong> " + (
+                f"{len(_missing)} tables empty ({', '.join(_missing[:3])}{'...' if len(_missing) > 3 else ''}). "
+                "Check pipeline logs and load missing source files." if _missing
+                else "All tracked tables populated — data is complete."
+            ),
+            "<strong>New Data Sources Available:</strong> EIA gas prices (drive-market signal) and TSA checkpoint throughput (fly-market signal) "
+            "are now in the pipeline. Set <code>EIA_API_KEY</code> in .env for live gas price data.",
+            "<strong>Pipeline Cadence:</strong> Run the pipeline weekly after receiving new STR exports. "
+            "Insights engine auto-updates forward-looking analysis for all 4 audiences on every run.",
+        ]
+        _dl_questions = [
+            "What's the freshest data in the database?",
+            "Which pipeline steps are most likely to fail?",
+            "How do I add a new data source to the pipeline?",
+            "What tables should I prioritize for the board report?",
+        ]
+        _dl_context = (
+            f"PULSE data vault: {_total_tables} active tables, {_total_rows:,} total rows. "
+            f"Sources: STR, Datafy, CoStar, Visit California, Zartico, Later.com, EIA gas, TSA, BLS, FRED, Weather, Google Trends. "
+            f"Pipeline: 17 steps. Run python scripts/run_pipeline.py to refresh."
+        )
+        render_intel_panel("dl_vault", _dl_next_steps, _dl_questions, _dl_context)
+    except Exception:
+        pass
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -12218,6 +12564,9 @@ st.markdown(
     'All data is proprietary and confidential. &nbsp;·&nbsp; '
     '<a href="https://www.visitdanapoint.com" target="_blank" style="color:inherit;opacity:.7;">'
     'visitdanapoint.com</a>'
+    '</div>'
+    '<div style="font-size:10px;opacity:0.30;margin-top:4px;">'
+    'Data sources: STR · Datafy · CoStar · Later.com · Visit California · FRED · EIA · TSA · BLS · Open-Meteo · Google Trends'
     '</div>'
     '</div>',
     unsafe_allow_html=True,

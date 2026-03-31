@@ -181,6 +181,8 @@ Execution order:
 | 3 | `load_datafy_reports.py` | No — log warning, continue |
 | 4 | `compute_kpis.py` | Yes — abort if fails |
 | 5 | `compute_insights.py` | Yes — runs every pipeline push |
+| 16 | `fetch_eia_gas.py` | No — skip-safe; seeds demo data if no EIA_API_KEY |
+| 17 | `fetch_tsa_data.py` | No — skip-safe; seeds benchmark data if live fetch fails |
 
 Each step: logged with timestamp + OK/SKIP/WARN/FAIL to `logs/pipeline.log`.
 `compute_insights.py` always runs last — it reads all tables and generates today's forward-looking insights.
@@ -322,3 +324,4 @@ After every session or error correction:
 | 2026-03-17 | Zartico integration (8 tables, historical reference); VDP Events table (10 seeded events); CoStar filter fix; Data & Downloads dynamic row counts; Zartico section in Visitor Economy tab; 6-point Board Report; pipeline steps 7+8 added | Claude + John Picou |
 | 2026-03-17 | Rebrand to Dana Point PULSE; 9-tab layout (+ Feeder Markets, Event Impact, Supply & Pipeline); Visit California ⚫ bug fix; admin mode (?admin=true); PULSE Score widget; footer with GloCon branding + glossary; direct-to-main commit workflow | Claude + John Picou |
 | 2026-03-25 | Later.com social media integration (IG/FB/TikTok → 12 tables); Pipeline step 10; Pipeline Status dot; Data & Downloads card; Datafy GA4 summary in Board Report; Performance Command Center card+chart pairs; PULSE Score whitespace fix + scale readability; STR chart animations; Key Forward Metrics date references | Claude + John Picou |
+| 2026-03-30 | EIA gas prices + TSA checkpoint data sources (pipeline steps 16+17); intel panels added to tab_sp and tab_dl; gas price correlation section in Market Intelligence; EIA/TSA source health cards in Data Vault; updated DB inventory; EIA/TSA sidebar status dots | Claude + John Picou |
