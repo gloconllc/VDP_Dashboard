@@ -7619,8 +7619,8 @@ with tab_ov:
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_tr:
     _tab_controls("tr")
-    # Full filters: Time Period + Daily/Monthly grain + Primary Metric
-    _str_filters("tr", show_grain=True, show_metric=True)
+    # Full filters: Time Period + Daily/Monthly grain (metric controlled by "View Metric" below)
+    _str_filters("tr", show_grain=True, show_metric=False)
     st.markdown(tab_summary(
         "<strong>Hotel Performance</strong> — STR trend analysis for RevPAR, ADR, Occupancy, Revenue, Supply, and Demand. "
         "Switch between Daily and Monthly grain using the filter above. "
