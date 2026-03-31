@@ -20,6 +20,8 @@ Orchestrates the full VDP analytics pipeline in order:
  15. fetch_bls_data.py           — BLS OC hospitality employment data (skip-safe)
  16. fetch_eia_gas.py            — EIA California weekly gas prices (drive-market demand signal, skip-safe)
  17. fetch_tsa_data.py           — TSA checkpoint throughput (national air travel demand, skip-safe)
+ 18. fetch_noaa_marine.py        — NOAA buoy wave/ocean conditions for Dana Point (skip-safe)
+ 19. fetch_census_acs.py         — US Census ACS feeder market demographics OC/LA/SD (skip-safe)
 
 Steps 4–15 are SKIP-SAFE: if input files are absent, API keys are missing, or the
 script fails, the step logs a warning and continues (exit code 0). Steps 1, 2, 3, 6
@@ -67,6 +69,8 @@ STEPS = [
     ("fetch_bls",         os.path.join(BASE_DIR, "fetch_bls_data.py"),          False),
     ("fetch_eia_gas",     os.path.join(BASE_DIR, "fetch_eia_gas.py"),           False),
     ("fetch_tsa",         os.path.join(BASE_DIR, "fetch_tsa_data.py"),          False),
+    ("fetch_noaa_marine", os.path.join(BASE_DIR, "fetch_noaa_marine.py"),       False),
+    ("fetch_census_acs",  os.path.join(BASE_DIR, "fetch_census_acs.py"),        False),
 ]
 
 

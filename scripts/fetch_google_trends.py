@@ -32,20 +32,26 @@ DB   = ROOT / "data" / "analytics.sqlite"
 # (term, market_label, category)
 SEARCH_TERMS = [
     # Dana Point — primary destination intent
-    ("dana point hotel",      "Dana Point",  "primary"),
-    ("dana point beach",      "Dana Point",  "primary"),
-    ("visit dana point",      "Dana Point",  "primary"),
-    ("doheny state beach",    "Dana Point",  "primary"),
-    # Events — seasonal demand spikes
-    ("ohana fest",            "Dana Point",  "event"),
-    ("dana point whale watch","Dana Point",  "event"),
+    ("dana point hotel",          "Dana Point",  "primary"),
+    ("dana point beach",          "Dana Point",  "primary"),
+    ("visit dana point",          "Dana Point",  "primary"),
+    ("doheny state beach",        "Dana Point",  "primary"),
+    ("dana point harbor",         "Dana Point",  "primary"),
+    ("salt creek beach",          "Dana Point",  "primary"),
+    # Events & Activities — seasonal demand spikes
+    ("ohana fest",                "Dana Point",  "event"),
+    ("dana point whale watching", "Dana Point",  "event"),
+    ("dana point fishing charter","Dana Point",  "event"),
+    ("dana point surf",           "Dana Point",  "event"),
     # Competitors — share-of-search benchmarking
-    ("laguna beach hotel",    "Competitor",  "competitor"),
-    ("san clemente hotel",    "Competitor",  "competitor"),
-    ("huntington beach hotel","Competitor",  "competitor"),
+    ("laguna beach hotel",        "Competitor",  "competitor"),
+    ("san clemente hotel",        "Competitor",  "competitor"),
+    ("huntington beach hotel",    "Competitor",  "competitor"),
+    ("newport beach hotel",       "Competitor",  "competitor"),
     # Regional travel intent
-    ("orange county hotel",   "Regional",   "regional"),
-    ("socal beach vacation",  "Regional",   "regional"),
+    ("orange county hotel",       "Regional",    "regional"),
+    ("socal beach vacation",      "Regional",    "regional"),
+    ("southern california beach vacation", "Regional", "regional"),
 ]
 
 INIT_SQL = """

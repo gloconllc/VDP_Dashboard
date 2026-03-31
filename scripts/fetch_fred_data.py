@@ -21,6 +21,11 @@ Series pulled:
   UNRATE        — US Unemployment Rate (macro demand signal)
   CPILFESL      — Core CPI (inflation backdrop for ADR management)
   CEU7000000001 — US Leisure & Hospitality Employment (sector health)
+  UMCSENT       — University of Michigan Consumer Sentiment (leisure spend leading indicator)
+  RSXFS         — Advance Retail & Food Services Sales (consumer spending proxy)
+  HOUST         — Housing Starts (wealth effect → discretionary travel spending)
+  PSAVERT       — Personal Savings Rate (inverse correlation with travel spend)
+  ATNHPIUS06OC3A052NANN — Orange County CA Median House Price (local wealth effect)
 """
 
 import os
@@ -62,6 +67,26 @@ SERIES = {
         "US Leisure & Hospitality Employment",
         "thousands",
         "Sector employment health — leading indicator for supply/demand balance",
+    ),
+    "UMCSENT": (
+        "University of Michigan Consumer Sentiment",
+        "index",
+        "Consumer confidence — leading indicator for discretionary leisure travel spend (6–8 week lead)",
+    ),
+    "RSXFS": (
+        "Advance Retail & Food Services Sales",
+        "mil_$",
+        "Consumer spending proxy — correlates with food/bev and retail spend at destination",
+    ),
+    "HOUST": (
+        "US Housing Starts",
+        "thousands",
+        "Wealth-effect signal — new housing activity correlates with ADR tolerance in feeder markets",
+    ),
+    "PSAVERT": (
+        "Personal Savings Rate",
+        "%",
+        "Inverse signal — when savings rate drops, discretionary leisure spending rises",
     ),
 }
 

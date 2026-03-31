@@ -2288,6 +2288,35 @@ def load_bls_employment() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=300)
+def load_noaa_marine() -> pd.DataFrame:
+    """NOAA buoy monthly ocean conditions — wave height, water temp, beach activity score."""
+    conn = get_connection()
+    try:
+        df = pd.read_sql_query(
+            "SELECT * FROM noaa_marine_monthly ORDER BY year ASC, month ASC", conn
+        )
+        if not df.empty:
+            df["date"] = pd.to_datetime(
+                df["year"].astype(str) + "-" + df["month"].astype(str).str.zfill(2) + "-01"
+            )
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_census_demo() -> pd.DataFrame:
+    """US Census ACS feeder market demographics — OC, LA, SD counties."""
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM census_demographics ORDER BY year ASC, geography ASC", conn
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
 def load_eia_gas() -> pd.DataFrame:
     """EIA California weekly retail gas prices — drive-market demand signal."""
     conn = get_connection()
@@ -2382,6 +2411,8 @@ def get_table_counts() -> dict:
         "bls_employment_monthly",
         "google_trends_weekly",
         "weather_monthly",
+        "noaa_marine_monthly",
+        "census_demographics",
     ]:
         try:
             row = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()
@@ -3546,8 +3577,10 @@ df_fred    = load_fred_indicators()    # FRED economic indicators
 df_trends  = load_google_trends()      # Google Trends search demand
 df_weather = load_weather_monthly()    # Open-Meteo coastal weather
 df_bls     = load_bls_employment()     # BLS hospitality employment
-df_eia_gas = load_eia_gas()            # EIA CA weekly gas prices (drive-market signal)
-df_tsa     = load_tsa_checkpoint()     # TSA checkpoint throughput (air travel demand)
+df_eia_gas   = load_eia_gas()           # EIA CA weekly gas prices (drive-market signal)
+df_tsa       = load_tsa_checkpoint()   # TSA checkpoint throughput (air travel demand)
+df_noaa      = load_noaa_marine()      # NOAA buoy ocean conditions (coastal demand driver)
+df_census    = load_census_demo()      # Census ACS feeder market demographics
 
 # Global Plotly chart config — drill-down ready
 PLOTLY_CONFIG = {
@@ -3790,6 +3823,14 @@ with st.sidebar:
     _tsa_dot     = "🟢" if _tsa_rows > 0 else "⚫"
     _tsa_lbl     = f"{_tsa_rows} data points · checkpoint" if _tsa_rows > 0 else "Run pipeline"
 
+    _noaa_sb_rows = len(df_noaa)
+    _noaa_sb_dot  = "🟢" if _noaa_sb_rows > 0 else "⚫"
+    _noaa_sb_lbl  = f"{_noaa_sb_rows} months · ocean conditions" if _noaa_sb_rows > 0 else "Run pipeline"
+
+    _cen_sb_rows  = len(df_census)
+    _cen_sb_dot   = "🟢" if _cen_sb_rows > 0 else "⚫"
+    _cen_sb_lbl   = f"{_cen_sb_rows} metrics · OC/LA/SD" if _cen_sb_rows > 0 else "Run pipeline"
+
     st.markdown("**Pipeline Status**")
     st.markdown(f"{_d_dot} STR Daily &nbsp;·&nbsp; {_d_label}")
     st.markdown(f"{_m_dot} STR Monthly &nbsp;·&nbsp; {_m_label}")
@@ -3806,6 +3847,8 @@ with st.sidebar:
     st.markdown(f"{_bls_dot} BLS Employment &nbsp;·&nbsp; {_bls_lbl}")
     st.markdown(f"{_eia_dot} EIA Gas Prices &nbsp;·&nbsp; {_eia_lbl}")
     st.markdown(f"{_tsa_dot} TSA Checkpoint &nbsp;·&nbsp; {_tsa_lbl}")
+    st.markdown(f"{_noaa_sb_dot} NOAA Ocean &nbsp;·&nbsp; {_noaa_sb_lbl}")
+    st.markdown(f"{_cen_sb_dot} Census ACS &nbsp;·&nbsp; {_cen_sb_lbl}")
     st.caption(f"Last ETL run: {last_log}")
 
     if not df_daily.empty:
@@ -7301,6 +7344,98 @@ with tab_tr:
                 unsafe_allow_html=True,
             )
 
+        # ── NOAA Ocean Conditions ──────────────────────────────────────────────
+        st.markdown(sec_div("🌊 Ocean Conditions — Dana Point Coastal Intelligence"), unsafe_allow_html=True)
+        st.markdown(_sh("🌊", "NOAA Marine Conditions · Dana Point Waters", "teal", "OCEAN DEMAND DRIVER"), unsafe_allow_html=True)
+        st.caption(
+            "Source: NOAA National Data Buoy Center · Buoy 46025 (Santa Monica Basin) · Monthly aggregates. "
+            "Dana Point is a surf, fishing, whale-watching, and sailing destination — ocean conditions drive activity bookings 7–14 days out."
+        )
+        if not df_noaa.empty and "date" in df_noaa.columns:
+            _noaa_plot = df_noaa.sort_values("date").copy()
+            _nc1, _nc2 = st.columns([3, 1])
+            with _nc1:
+                fig_noaa = go.Figure()
+                fig_noaa.add_trace(go.Bar(
+                    x=_noaa_plot["date"], y=_noaa_plot["beach_activity_score"],
+                    name="Beach Activity Score", marker_color="rgba(0,195,190,0.45)",
+                    yaxis="y",
+                    hovertemplate="<b>%{x|%b %Y}</b><br>Activity Score: %{y:.0f}<extra></extra>",
+                ))
+                if "avg_water_temp_f" in _noaa_plot.columns:
+                    fig_noaa.add_trace(go.Scatter(
+                        x=_noaa_plot["date"], y=_noaa_plot["avg_water_temp_f"],
+                        name="Water Temp (°F)", line=dict(color=ORANGE, width=2.5),
+                        yaxis="y2",
+                        hovertemplate="<b>%{x|%b %Y}</b><br>Water Temp: %{y:.1f}°F<extra></extra>",
+                    ))
+                if "avg_wave_height_ft" in _noaa_plot.columns:
+                    fig_noaa.add_trace(go.Scatter(
+                        x=_noaa_plot["date"], y=_noaa_plot["avg_wave_height_ft"],
+                        name="Avg Wave Ht (ft)", line=dict(color=BLUE, width=1.8, dash="dot"),
+                        yaxis="y3" if False else "y2",
+                        hovertemplate="<b>%{x|%b %Y}</b><br>Wave Ht: %{y:.1f} ft<extra></extra>",
+                    ))
+                fig_noaa.update_layout(
+                    title="Ocean Conditions — Dana Point",
+                    yaxis=dict(title="Beach Activity Score (0–100)", showgrid=False, range=[0, 120]),
+                    yaxis2=dict(title="Water Temp (°F) / Wave Ht (ft)", overlaying="y", side="right",
+                                showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                )
+                st.plotly_chart(style_fig(fig_noaa, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+            with _nc2:
+                _noaa_latest = _noaa_plot.iloc[-1]
+                _nm1, _nm2 = st.columns(2)
+                with _nm1:
+                    st.metric("Activity Score", f"{_noaa_latest.get('beach_activity_score', 0):.0f}/100")
+                    st.metric("Water Temp", f"{_noaa_latest.get('avg_water_temp_f', 0):.1f}°F")
+                with _nm2:
+                    st.metric("Avg Wave Ht", f"{_noaa_latest.get('avg_wave_height_ft', 0):.1f} ft")
+                    _wind = _noaa_latest.get("avg_wind_speed_kt")
+                    st.metric("Wind Speed", f"{_wind:.1f} kt" if _wind else "—")
+                st.caption(
+                    "📌 **Optimal conditions:** Water temp 65–72°F + waves 2–5ft + wind <10kt = peak charter/activity demand. "
+                    "Big swell (>8ft) drives surf enthusiasts but suppresses family/whale-watch bookings."
+                )
+
+                # Correlation with hotel demand
+                if not df_kpi.empty:
+                    try:
+                        _kpi_mo = df_kpi.copy()
+                        _kpi_mo["as_of_date"] = pd.to_datetime(_kpi_mo["as_of_date"])
+                        _kpi_mo["year"]  = _kpi_mo["as_of_date"].dt.year
+                        _kpi_mo["month"] = _kpi_mo["as_of_date"].dt.month
+                        _kpi_mo_agg = _kpi_mo.groupby(["year","month"])["occ_pct"].mean().reset_index()
+                        _noaa_plot2 = _noaa_plot[["date","beach_activity_score"]].copy()
+                        _noaa_plot2["year"]  = _noaa_plot2["date"].dt.year
+                        _noaa_plot2["month"] = _noaa_plot2["date"].dt.month
+                        _merged = pd.merge(_noaa_plot2, _kpi_mo_agg, on=["year","month"], how="inner")
+                        if len(_merged) >= 4:
+                            _r = round(_merged["beach_activity_score"].corr(_merged["occ_pct"]), 2)
+                            _color = "#059669" if abs(_r) >= 0.5 else "#D97706"
+                            st.markdown(
+                                f'<div style="background:#F0FDF4;border-radius:8px;padding:10px 14px;'
+                                f'border-left:3px solid {_color};margin-top:8px;">'
+                                f'<div style="font-size:11px;font-weight:700;color:#065F46;">Ocean ↔ Occupancy</div>'
+                                f'<div style="font-size:20px;font-weight:900;color:{_color};">R = {_r}</div>'
+                                f'<div style="font-size:10px;color:#6B7280;">{len(_merged)} months of data</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                    except Exception:
+                        pass
+        else:
+            st.markdown(
+                '<div class="empty-card">'
+                '<div class="empty-icon">🌊</div>'
+                '<div class="empty-title">NOAA Marine Data Not Loaded</div>'
+                '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> '
+                'to fetch NOAA ocean conditions. No API key required.</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — FORWARD OUTLOOK
 # ══════════════════════════════════════════════════════════════════════════════
@@ -9367,6 +9502,83 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
             "🎯", "No DMA feeder market data loaded.",
             "Run the pipeline: `python scripts/run_pipeline.py`",
         ), unsafe_allow_html=True)
+
+    # ── Census ACS Feeder Market Demographics ─────────────────────────────────
+    st.markdown(sec_div("🏛️ Feeder Market Demographics — US Census ACS"), unsafe_allow_html=True)
+    st.markdown(_sh("🏛️", "OC · LA · SD County Demographics", "indigo", "CENSUS ACS"), unsafe_allow_html=True)
+    st.caption(
+        "Source: U.S. Census Bureau, American Community Survey 1-Year Estimates. "
+        "Feeder market demographics quantify the addressable audience size and spending capacity for VDP campaigns."
+    )
+    if not df_census.empty:
+        _cen_geos   = sorted(df_census["geography"].unique().tolist())
+        _cen_years  = sorted(df_census["year"].unique().tolist(), reverse=True)
+        _cen_latest = df_census[df_census["year"] == _cen_years[0]] if _cen_years else df_census
+
+        # KPI tiles: OC, LA, SD population + income
+        _cen_cols = st.columns(len(_cen_geos))
+        for i, geo in enumerate(_cen_geos):
+            with _cen_cols[i]:
+                _geo_df = _cen_latest[_cen_latest["geography"] == geo]
+                _pop = _geo_df[_geo_df["metric_name"] == "Total Population"]["metric_value"]
+                _inc = _geo_df[_geo_df["metric_name"] == "Median Household Income"]["metric_value"]
+                _hom = _geo_df[_geo_df["metric_name"] == "Median Home Value"]["metric_value"]
+                _pop_v = f"{_pop.iloc[0]/1_000_000:.2f}M" if not _pop.empty else "—"
+                _inc_v = f"${int(_inc.iloc[0]):,}" if not _inc.empty else "—"
+                _hom_v = f"${int(_hom.iloc[0]):,}" if not _hom.empty else "—"
+                short_geo = geo.replace(" County, CA", "").replace(" County", "")
+                st.markdown(
+                    f'<div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.08);border-radius:12px;'
+                    f'border-top:3px solid #7C3AED;padding:14px 18px;">'
+                    f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748B;margin-bottom:6px;">{short_geo}</div>'
+                    f'<div style="font-size:18px;font-weight:900;color:#7C3AED;">{_pop_v}</div>'
+                    f'<div style="font-size:11px;color:#64748B;">Population</div>'
+                    f'<div style="font-size:14px;font-weight:700;color:#0F1C2E;margin-top:6px;">{_inc_v}</div>'
+                    f'<div style="font-size:11px;color:#64748B;">Median HH Income</div>'
+                    f'<div style="font-size:13px;font-weight:600;color:#0F1C2E;margin-top:4px;">{_hom_v}</div>'
+                    f'<div style="font-size:11px;color:#64748B;">Median Home Value</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Income trend over time
+        _inc_df = df_census[df_census["metric_name"] == "Median Household Income"].copy()
+        if not _inc_df.empty and len(_cen_years) >= 2:
+            fig_inc = go.Figure()
+            _geo_colors = [TEAL, ORANGE, BLUE]
+            for gi, geo in enumerate(_cen_geos):
+                _gdf = _inc_df[_inc_df["geography"] == geo].sort_values("year")
+                if not _gdf.empty:
+                    fig_inc.add_trace(go.Scatter(
+                        x=_gdf["year"], y=_gdf["metric_value"],
+                        mode="lines+markers", name=geo.replace(" County, CA",""),
+                        line=dict(color=_geo_colors[gi % len(_geo_colors)], width=2.5),
+                        marker=dict(size=7),
+                        hovertemplate=f"<b>%{{x}}</b><br>{geo}: $%{{y:,.0f}}<extra></extra>",
+                    ))
+            fig_inc.update_layout(
+                title="Median Household Income Trend — Feeder Markets",
+                yaxis_title="Median HH Income ($)",
+                yaxis_tickprefix="$", yaxis_tickformat=",",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02),
+            )
+            st.plotly_chart(style_fig(fig_inc, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+            st.caption(
+                f"Source: ACS 1-Year Estimates, {min(_cen_years)}–{max(_cen_years)}. "
+                "Higher income markets tolerate higher ADR — use for rate targeting by feeder market."
+            )
+    else:
+        st.markdown(
+            '<div class="empty-card">'
+            '<div class="empty-icon">🏛️</div>'
+            '<div class="empty-title">Census Demographics Not Loaded</div>'
+            '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> '
+            'to fetch Census ACS feeder market data. Free — add <code>CENSUS_API_KEY</code> to .env for live data.</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -12239,6 +12451,20 @@ with tab_dl:
             "bls_employment_monthly · OC hospitality employment · sector health",
             f"{_bls_ct:,}" if isinstance(_bls_ct, int) and _bls_ct > 0 else "—",
         ), unsafe_allow_html=True)
+        _noaa_ct  = counts.get("noaa_marine_monthly", 0)
+        _cen_ct   = counts.get("census_demographics", 0)
+        _noaa_dot = "🟢" if isinstance(_noaa_ct, int) and _noaa_ct > 0 else "⚫"
+        _cen_dot  = "🟢" if isinstance(_cen_ct, int) and _cen_ct > 0 else "⚫"
+        st.markdown(source_card(
+            _noaa_dot, "NOAA Marine Conditions",
+            "noaa_marine_monthly · wave height, water temp, beach activity score",
+            f"{_noaa_ct:,}" if isinstance(_noaa_ct, int) and _noaa_ct > 0 else "—",
+        ), unsafe_allow_html=True)
+        st.markdown(source_card(
+            _cen_dot, "US Census ACS",
+            "census_demographics · OC/LA/SD income, population, home values",
+            f"{_cen_ct:,}" if isinstance(_cen_ct, int) and _cen_ct > 0 else "—",
+        ), unsafe_allow_html=True)
 
     st.markdown(sec_div("📥 Recent Metric Samples & CSV Downloads"), unsafe_allow_html=True)
 
@@ -12433,6 +12659,9 @@ with tab_dl:
             "bls_employment_monthly":              "BLS OC hospitality employment (sector health)",
             "google_trends_weekly":                "Google Trends search demand signals",
             "weather_monthly":                     "Open-Meteo coastal weather + beach day score",
+            "noaa_marine_monthly":                 "NOAA buoy ocean conditions (wave height, water temp, beach activity score)",
+            "census_demographics":                 "US Census ACS feeder market demographics (OC, LA, SD counties)",
+            "fred_economic_indicators":            "FRED economic indicators (CPI, income, consumer sentiment, housing)",
         }
         _brain_rows = [
             {"Table": t, "Description": d, "Row Count": counts.get(t, "—")}
@@ -12457,8 +12686,8 @@ with tab_dl:
                 "Check pipeline logs and load missing source files." if _missing
                 else "All tracked tables populated — data is complete."
             ),
-            "<strong>New Data Sources Available:</strong> EIA gas prices (drive-market signal) and TSA checkpoint throughput (fly-market signal) "
-            "are now in the pipeline. Set <code>EIA_API_KEY</code> in .env for live gas price data.",
+            "<strong>New Data Sources Available:</strong> EIA gas prices, TSA checkpoint, NOAA ocean conditions, and Census ACS demographics "
+            "are now in the pipeline. Set <code>EIA_API_KEY</code> and <code>CENSUS_API_KEY</code> in .env for live data.",
             "<strong>Pipeline Cadence:</strong> Run the pipeline weekly after receiving new STR exports. "
             "Insights engine auto-updates forward-looking analysis for all 4 audiences on every run.",
         ]
@@ -12470,8 +12699,8 @@ with tab_dl:
         ]
         _dl_context = (
             f"PULSE data vault: {_total_tables} active tables, {_total_rows:,} total rows. "
-            f"Sources: STR, Datafy, CoStar, Visit California, Zartico, Later.com, EIA gas, TSA, BLS, FRED, Weather, Google Trends. "
-            f"Pipeline: 17 steps. Run python scripts/run_pipeline.py to refresh."
+            f"Sources: STR, Datafy, CoStar, Visit California, Zartico, Later.com, EIA gas, TSA, NOAA Marine, Census ACS, BLS, FRED, Weather, Google Trends. "
+            f"Pipeline: 19 steps. Run python scripts/run_pipeline.py to refresh."
         )
         render_intel_panel("dl_vault", _dl_next_steps, _dl_questions, _dl_context)
     except Exception:
@@ -12566,7 +12795,7 @@ st.markdown(
     'visitdanapoint.com</a>'
     '</div>'
     '<div style="font-size:10px;opacity:0.30;margin-top:4px;">'
-    'Data sources: STR · Datafy · CoStar · Later.com · Visit California · FRED · EIA · TSA · BLS · Open-Meteo · Google Trends'
+    'Data sources: STR · Datafy · CoStar · Later.com · Visit California · FRED · EIA · TSA · NOAA · Census ACS · BLS · Open-Meteo · Google Trends'
     '</div>'
     '</div>',
     unsafe_allow_html=True,
