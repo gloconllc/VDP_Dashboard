@@ -46,8 +46,23 @@ try:
 except ImportError:
     ANTHROPIC_AVAILABLE = False
 
-# Pre-load API key from env if present (can be overridden in sidebar)
-_ENV_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+try:
+    import openai as _openai_sdk
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+
+try:
+    import google.generativeai as _genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+
+# Pre-load API keys from env
+_ENV_API_KEY        = os.getenv("ANTHROPIC_API_KEY", "")
+_ENV_OPENAI_KEY     = os.getenv("OPENAI_API_KEY", "")
+_ENV_GOOGLE_AI_KEY  = os.getenv("GOOGLE_AI_API_KEY", "")
+_ENV_PERPLEXITY_KEY = os.getenv("PERPLEXITY_API_KEY", "")
 
 # ─── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -229,6 +244,58 @@ GREEN      = "#21808D"    # teal = positive to match brand
 
 # ─── AI constants ─────────────────────────────────────────────────────────────
 CLAUDE_MODEL = "claude-sonnet-4-6"
+
+# ─── Multi-Model Registry ─────────────────────────────────────────────────────
+AI_MODELS = {
+    "claude-sonnet-4-6": {
+        "label": "Claude Sonnet 4.6",
+        "provider": "anthropic",
+        "badge": "🟦",
+        "strengths": "TBID · Board reports · Deep domain reasoning",
+    },
+    "claude-opus-4-6": {
+        "label": "Claude Opus 4.6",
+        "provider": "anthropic",
+        "badge": "🔷",
+        "strengths": "Complex multi-dataset analysis · Long-form strategy",
+    },
+    "gpt-4o": {
+        "label": "GPT-4o",
+        "provider": "openai",
+        "badge": "🟩",
+        "strengths": "Revenue management · Comp set benchmarking · Pricing",
+    },
+    "o3-mini": {
+        "label": "o3-mini (reasoning)",
+        "provider": "openai",
+        "badge": "🟢",
+        "strengths": "Step-by-step quantitative analysis · Revenue modeling",
+    },
+    "gemini-2.0-flash": {
+        "label": "Gemini 2.0 Flash",
+        "provider": "google",
+        "badge": "🟨",
+        "strengths": "Fast correlations · Pattern recognition · Data analysis",
+    },
+    "gemini-1.5-pro": {
+        "label": "Gemini 1.5 Pro",
+        "provider": "google",
+        "badge": "🔶",
+        "strengths": "Long-context · Multi-document · Trend synthesis",
+    },
+    "sonar-pro": {
+        "label": "Perplexity Sonar Pro",
+        "provider": "perplexity",
+        "badge": "🟪",
+        "strengths": "Live web search · Competitor news · Travel trends",
+    },
+    "sonar": {
+        "label": "Perplexity Sonar",
+        "provider": "perplexity",
+        "badge": "🔹",
+        "strengths": "Fast live search · Market intelligence",
+    },
+}
 
 # NOTE: SYSTEM_PROMPT is pinned to the Anthropic prompt cache (cache_control ephemeral).
 # Must stay ≥ 2048 tokens (Sonnet 4.6 minimum). All static VDP domain knowledge lives here.
@@ -2812,6 +2879,103 @@ def stream_claude_response(prompt: str, api_key: str):
         else:
             yield f"⚠️ **API Error:** {err[:200]}"
 
+# ─── Multi-Model AI Router ────────────────────────────────────────────────────
+
+def _stream_openai_compat(prompt: str, model: str, api_key_val: str, base_url: str | None = None, extra_system: str = ""):
+    """Stream from any OpenAI-compatible API (OpenAI, Perplexity)."""
+    if not OPENAI_AVAILABLE:
+        yield "⚠️ `openai` package not installed. Run: `pip install openai`"
+        return
+    if not api_key_val:
+        provider = "Perplexity" if base_url else "OpenAI"
+        key_name  = "PERPLEXITY_API_KEY" if base_url else "OPENAI_API_KEY"
+        yield f"⚠️ {provider} API key not configured. Add `{key_name}` to your `.env` file."
+        return
+    try:
+        kwargs = {"api_key": api_key_val}
+        if base_url:
+            kwargs["base_url"] = base_url
+        client = _openai_sdk.OpenAI(**kwargs)
+        sys_content = SYSTEM_PROMPT + ("\n\n" + extra_system if extra_system else "")
+        with client.chat.completions.create(
+            model=model,
+            max_tokens=1500,
+            stream=True,
+            messages=[
+                {"role": "system", "content": sys_content},
+                {"role": "user",   "content": prompt},
+            ],
+        ) as stream:
+            for chunk in stream:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    yield delta
+    except Exception as e:
+        yield f"⚠️ API error: {str(e)[:300]}"
+
+
+def _stream_gemini(prompt: str, model: str, api_key_val: str):
+    """Stream from Google Gemini API."""
+    if not GEMINI_AVAILABLE:
+        yield "⚠️ `google-generativeai` not installed. Run: `pip install google-generativeai`"
+        return
+    if not api_key_val:
+        yield "⚠️ Google AI API key not configured. Add `GOOGLE_AI_API_KEY` to your `.env` file."
+        return
+    try:
+        _genai.configure(api_key=api_key_val)
+        gm = _genai.GenerativeModel(
+            model_name=model,
+            system_instruction=SYSTEM_PROMPT,
+        )
+        response = gm.generate_content(prompt, stream=True)
+        for chunk in response:
+            if hasattr(chunk, "text") and chunk.text:
+                yield chunk.text
+    except Exception as e:
+        yield f"⚠️ Gemini error: {str(e)[:300]}"
+
+
+def stream_ai_response(prompt: str, model_key: str, keys: dict | None = None):
+    """Universal AI streaming router.
+
+    Args:
+        prompt:    The user prompt (with data context injected)
+        model_key: Key from AI_MODELS registry
+        keys:      dict with provider API keys: {"anthropic", "openai", "google", "perplexity"}
+                   Defaults to env-loaded keys if not supplied.
+    """
+    if keys is None:
+        keys = {}
+    model_info = AI_MODELS.get(model_key, AI_MODELS["claude-sonnet-4-6"])
+    provider   = model_info["provider"]
+
+    if provider == "anthropic":
+        ant_key = keys.get("anthropic", _ENV_API_KEY)
+        yield from stream_claude_response(prompt, ant_key)
+
+    elif provider == "openai":
+        oai_key = keys.get("openai", _ENV_OPENAI_KEY)
+        yield from _stream_openai_compat(prompt, model_key, oai_key)
+
+    elif provider == "google":
+        g_key = keys.get("google", _ENV_GOOGLE_AI_KEY)
+        yield from _stream_gemini(prompt, model_key, g_key)
+
+    elif provider == "perplexity":
+        p_key = keys.get("perplexity", _ENV_PERPLEXITY_KEY)
+        yield from _stream_openai_compat(
+            prompt, model_key, p_key,
+            base_url="https://api.perplexity.ai",
+            extra_system=(
+                "Search the live web for current market data, competitor news, and travel industry "
+                "trends relevant to the query. Cite your sources inline with [Source: URL]."
+            ),
+        )
+    else:
+        yield "⚠️ Unknown model provider."
+
+
 # ─── SVG Icon Library ─────────────────────────────────────────────────────────
 
 def kpi_metric_svg(label: str, positive: bool = True, raw_value: float = 0.0, sparkline_values: list = None) -> str:
@@ -3527,6 +3691,19 @@ def grain_badge(g: str) -> str:
     return f'<span class="grain-badge">{g}</span>'
 
 
+# ─── AI runtime defaults (overridden by sidebar on each rerun) ───────────────
+# These ensure render_intel_panel and tab renderers never NameError on first load.
+selected_model  = st.session_state.get("selected_model", CLAUDE_MODEL)
+_OPENAI_KEY     = _ENV_OPENAI_KEY
+_GOOGLE_AI_KEY  = _ENV_GOOGLE_AI_KEY
+_PERPLEXITY_KEY = _ENV_PERPLEXITY_KEY
+_ai_keys        = {
+    "anthropic":  _ENV_API_KEY,
+    "openai":     _OPENAI_KEY,
+    "google":     _GOOGLE_AI_KEY,
+    "perplexity": _PERPLEXITY_KEY,
+}
+
 # ─── Load data ────────────────────────────────────────────────────────────────
 df_daily    = load_str_daily()     # source='STR', grain='daily'
 df_monthly  = load_str_monthly()   # source='STR', grain='monthly'
@@ -3661,29 +3838,118 @@ with st.sidebar:
     _qp = st.query_params
     _is_admin = str(_qp.get("admin", "")).lower() == "true"
 
-    # ── VDP Analyst config ────────────────────────────────────────────────────
+    # ── VDP Analyst — Multi-Model AI Config ──────────────────────────────────
     st.markdown("**🧠 VDP Analyst**")
 
-    # API key input: only show in admin mode; otherwise use env key silently
+    # API keys: admin can override, otherwise load from env silently
     if _is_admin:
         api_key_raw = st.text_input(
             "Anthropic API Key",
-            type="password",
-            placeholder="sk-ant-api03-…",
-            value=_ENV_API_KEY,          # pre-fills from .env if set
-            help="Loaded from .env ANTHROPIC_API_KEY · override here anytime.",
+            type="password", placeholder="sk-ant-api03-…",
+            value=_ENV_API_KEY,
+            help="ANTHROPIC_API_KEY from .env",
             key="api_key_field",
+        )
+        _oa_raw = st.text_input(
+            "OpenAI API Key",
+            type="password", placeholder="sk-…",
+            value=_ENV_OPENAI_KEY,
+            help="OPENAI_API_KEY from .env — enables GPT-4o, o3-mini",
+            key="openai_key_field",
+        )
+        _ga_raw = st.text_input(
+            "Google AI API Key",
+            type="password", placeholder="AIzaSy…",
+            value=_ENV_GOOGLE_AI_KEY,
+            help="GOOGLE_AI_API_KEY from .env — enables Gemini 2.0 Flash, 1.5 Pro",
+            key="google_key_field",
+        )
+        _px_raw = st.text_input(
+            "Perplexity API Key",
+            type="password", placeholder="pplx-…",
+            value=_ENV_PERPLEXITY_KEY,
+            help="PERPLEXITY_API_KEY from .env — enables live web search (Sonar Pro)",
+            key="perplexity_key_field",
         )
     else:
         api_key_raw = _ENV_API_KEY
+        _oa_raw     = _ENV_OPENAI_KEY
+        _ga_raw     = _ENV_GOOGLE_AI_KEY
+        _px_raw     = _ENV_PERPLEXITY_KEY
 
     api_key       = api_key_raw.strip()
+    _OPENAI_KEY   = _oa_raw.strip()
+    _GOOGLE_AI_KEY = _ga_raw.strip()
+    _PERPLEXITY_KEY = _px_raw.strip()
+
     api_key_valid = bool(api_key) and api_key.startswith("sk-ant-") and len(api_key) > 20
 
-    if api_key_valid:
-        st.caption(f"🟢 VDP Analyst Connected · {CLAUDE_MODEL}")
+    # Build active model list based on available keys
+    _avail_models = {}
+    for _mk, _mi in AI_MODELS.items():
+        _prov = _mi["provider"]
+        if _prov == "anthropic" and api_key_valid and ANTHROPIC_AVAILABLE:
+            _avail_models[_mk] = _mi
+        elif _prov == "openai" and _OPENAI_KEY and OPENAI_AVAILABLE:
+            _avail_models[_mk] = _mi
+        elif _prov == "google" and _GOOGLE_AI_KEY and GEMINI_AVAILABLE:
+            _avail_models[_mk] = _mi
+        elif _prov == "perplexity" and _PERPLEXITY_KEY and OPENAI_AVAILABLE:
+            _avail_models[_mk] = _mi
+
+    # Model selector
+    _model_opts   = list(_avail_models.keys()) or ["claude-sonnet-4-6"]
+    _model_labels = [f"{_avail_models[k]['badge']} {_avail_models[k]['label']}" if k in _avail_models else "🟦 Claude Sonnet 4.6" for k in _model_opts]
+    _default_idx  = 0
+    _saved_model  = st.session_state.get("selected_model", "claude-sonnet-4-6")
+    if _saved_model in _model_opts:
+        _default_idx = _model_opts.index(_saved_model)
+
+    if len(_model_opts) > 1:
+        _sel_label = st.selectbox(
+            "Active AI Model",
+            options=_model_labels,
+            index=_default_idx,
+            key="model_selector",
+            help="Select the AI model for all analyst panels",
+        )
+        selected_model = _model_opts[_model_labels.index(_sel_label)]
     else:
-        st.caption("⚪ VDP Analyst — local mode active")
+        selected_model = _model_opts[0]
+        if _avail_models:
+            _mi_sel = _avail_models.get(selected_model, {})
+            st.caption(f"{_mi_sel.get('badge','🟦')} {_mi_sel.get('label', selected_model)}")
+
+    st.session_state["selected_model"] = selected_model
+
+    # Build keys dict for downstream routing
+    _ai_keys = {
+        "anthropic":  api_key,
+        "openai":     _OPENAI_KEY,
+        "google":     _GOOGLE_AI_KEY,
+        "perplexity": _PERPLEXITY_KEY,
+    }
+
+    # Status indicators for each provider
+    _provider_status = [
+        ("Claude",     ANTHROPIC_AVAILABLE and api_key_valid,          "🟦"),
+        ("GPT-4o",     OPENAI_AVAILABLE and bool(_OPENAI_KEY),         "🟩"),
+        ("Gemini",     GEMINI_AVAILABLE and bool(_GOOGLE_AI_KEY),       "🟨"),
+        ("Perplexity", OPENAI_AVAILABLE and bool(_PERPLEXITY_KEY),     "🟪"),
+    ]
+    _dots = "  ".join(
+        f"{'🟢' if ok else '⚫'} {name}"
+        for name, ok, _ in _provider_status
+        if ok or _is_admin
+    )
+    if _dots:
+        st.caption(_dots)
+
+    _active_count = sum(1 for _, ok, _ in _provider_status if ok)
+    if _active_count == 0:
+        st.caption("⚪ Local mode — add API keys for AI analysis")
+    elif _active_count == 1:
+        st.caption(f"1 AI model active · Add more keys to unlock model selection")
 
     if not ANTHROPIC_AVAILABLE:
         st.warning("`anthropic` not installed.\nRun: `pip install anthropic`", icon="⚠️")
@@ -5095,12 +5361,19 @@ def render_intel_panel(
         if _pending_q:
             _prefix = f"[Context: {context_note}] " if context_note else ""
             _full_prompt = f"{_prefix}{_pending_q}"
-            with st.spinner("Analyzing your data..."):
-                _resp_parts = list(stream_claude_response(_full_prompt, api_key))
+            _mdl  = st.session_state.get("selected_model", CLAUDE_MODEL)
+            _mdl_info = AI_MODELS.get(_mdl, {})
+            _mdl_label = f"{_mdl_info.get('badge','🟦')} {_mdl_info.get('label', _mdl)}"
+            with st.spinner(f"Analyzing with {_mdl_label}…"):
+                _resp_parts = list(stream_ai_response(_full_prompt, _mdl, _ai_keys))
             st.session_state[_ans_key] = "".join(_resp_parts)
+            st.session_state[f"{_ans_key}_model"] = _mdl_label
             del st.session_state[_sq_key]
 
         if st.session_state.get(_ans_key):
+            _used_model = st.session_state.get(f"{_ans_key}_model", "")
+            if _used_model:
+                st.caption(f"Response from {_used_model}")
             st.info(st.session_state[_ans_key])
             if st.button("Clear", key=f"{panel_key}_clear"):
                 del st.session_state[_ans_key]
@@ -5837,12 +6110,23 @@ with tab_ov:
                     (k for lbl, k in PROMPTS_META
                      if lbl == st.session_state.ai_prompt_label), "default"
                 )
-                if api_key_valid and ANTHROPIC_AVAILABLE:
+                _active_mdl = st.session_state.get("selected_model", CLAUDE_MODEL)
+                _active_info = AI_MODELS.get(_active_mdl, {})
+                _active_label = f"{_active_info.get('badge','🟦')} {_active_info.get('label', _active_mdl)}"
+                _any_ai_active = (
+                    (api_key_valid and ANTHROPIC_AVAILABLE) or
+                    (bool(_OPENAI_KEY) and OPENAI_AVAILABLE) or
+                    (bool(_GOOGLE_AI_KEY) and GEMINI_AVAILABLE) or
+                    (bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE)
+                )
+                if _any_ai_active:
+                    st.caption(f"Running {_active_label}…")
                     with st.chat_message("assistant", avatar="🌊"):
                         response = st.write_stream(
-                            stream_claude_response(prompt_to_run, api_key)
+                            stream_ai_response(prompt_to_run, _active_mdl, _ai_keys)
                         )
                     st.session_state.ai_result = response
+                    st.session_state.ai_result_model = _active_label
                 else:
                     response = local_fallback(matched_key, m)
                     with st.chat_message("assistant", avatar="🌊"):
@@ -5850,7 +6134,7 @@ with tab_ov:
                     st.session_state.ai_result = response
                     if not api_key_valid:
                         st.caption(
-                            "💡 Add your Anthropic API key in the sidebar (VDP Analyst) for live streaming."
+                            "💡 Add API keys in the sidebar (VDP Analyst) to activate AI streaming."
                         )
                 st.session_state.ai_needs_call = False
 
@@ -10962,9 +11246,19 @@ with tab_cs:
             st.session_state.ai_needs_call = False
             label_disp = st.session_state.get("ai_prompt_label", "Analysis")
             st.markdown(f"**{label_disp}**")
-            if api_key_valid:
-                with st.spinner("Analyzing market data…"):
-                    st.write_stream(stream_claude_response(st.session_state.ai_current_prompt, api_key))
+            _cs_mdl = st.session_state.get("selected_model", CLAUDE_MODEL)
+            _cs_info = AI_MODELS.get(_cs_mdl, {})
+            _cs_label = f"{_cs_info.get('badge','🟦')} {_cs_info.get('label', _cs_mdl)}"
+            _cs_any_ai = (
+                (api_key_valid and ANTHROPIC_AVAILABLE) or
+                (bool(_OPENAI_KEY) and OPENAI_AVAILABLE) or
+                (bool(_GOOGLE_AI_KEY) and GEMINI_AVAILABLE) or
+                (bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE)
+            )
+            if _cs_any_ai:
+                st.caption(f"Analyzing with {_cs_label}")
+                with st.spinner("Running deep market analysis…"):
+                    st.write_stream(stream_ai_response(st.session_state.ai_current_prompt, _cs_mdl, _ai_keys))
             else:
                 st.info(local_fallback("board", m) if m else "No data. Run the pipeline first.")
 
@@ -12242,8 +12536,91 @@ with tab_cs:
         else:
             st.info("Load both EIA gas prices and STR KPIs to see correlation analysis.")
 
-# ══════════════════════════════════════════════════════════════════════════════
+    # ── Live Market Intelligence (Perplexity Sonar) ──────────────────────────
+    st.markdown(sec_div("🌐 Live Market Intelligence"), unsafe_allow_html=True)
+    st.markdown(_sh("🌐", "Live Competitive Intelligence — Real-Time Web Search", "indigo", "PERPLEXITY SONAR"), unsafe_allow_html=True)
+    st.caption(
+        "Powered by Perplexity Sonar Pro — searches the live web for competitor news, travel trends, and market events. "
+        "Configure PERPLEXITY_API_KEY in .env to activate. Claude / GPT-4o can be used for offline analysis."
+    )
 
+    _LIVE_INTEL_PROMPTS = [
+        ("🏨 Dana Point Competitor News",
+         "Search for the latest news about Waldorf Astoria Monarch Beach, Ritz-Carlton Laguna Niguel, "
+         "and Laguna Cliffs Marriott. Any new renovations, rate changes, or ownership updates in 2025–2026? "
+         "How does this affect Dana Point's competitive position?"),
+        ("✈️ SoCal Travel Demand Trends",
+         "What are the current travel demand trends for Southern California coastal destinations in 2026? "
+         "Any data on visitor volume, ADR trends, or booking pace for Orange County hotels?"),
+        ("📈 OC Hotel Market News",
+         "What is the latest news about Orange County hotel market performance in 2025–2026? "
+         "Any new hotel openings, closures, renovations, or major group bookings in Dana Point or South OC?"),
+        ("🎪 Dana Point Events 2026",
+         "What major events are coming to Dana Point, California in 2026? "
+         "Include festivals, sporting events, concerts, and community events that drive hotel demand."),
+        ("⛽ Gas Price Impact on SoCal Drive Markets",
+         "What are the current California gas prices and trends as of 2026? "
+         "How is this affecting drive-market leisure travel to Orange County coastal destinations like Dana Point?"),
+        ("💡 DMO Best Practices 2026",
+         "What are the most innovative destination marketing strategies being used by California coastal DMOs in 2026? "
+         "Any case studies of successful TBID campaigns or visitor economy growth initiatives?"),
+    ]
+
+    _li_cols = st.columns(3)
+    for _li_i, (_li_lbl, _li_prompt) in enumerate(_LIVE_INTEL_PROMPTS):
+        with _li_cols[_li_i % 3]:
+            if st.button(_li_lbl, key=f"li_btn_{_li_i}", use_container_width=True):
+                st.session_state["li_pending_prompt"] = _li_prompt
+                st.session_state["li_pending_label"]  = _li_lbl
+
+    _li_custom = st.text_input(
+        "Or search any market intelligence question:",
+        key="li_custom_q",
+        placeholder="e.g. What new hotel brands are expanding in Orange County in 2026?",
+    )
+    _li_model_opts = [k for k, v in AI_MODELS.items() if v["provider"] == "perplexity" and bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE]
+    _li_model_opts += [k for k, v in AI_MODELS.items() if v["provider"] in ("anthropic", "openai", "google")]
+    _li_model_sel = AI_MODELS.get(st.session_state.get("selected_model", CLAUDE_MODEL), AI_MODELS[CLAUDE_MODEL])
+    _li_use_model = st.session_state.get("selected_model", CLAUDE_MODEL)
+
+    _li_col1, _li_col2 = st.columns([1, 4])
+    with _li_col1:
+        if st.button("🔍 Search", key="li_search_btn", type="primary", use_container_width=True):
+            if _li_custom.strip():
+                st.session_state["li_pending_prompt"] = _li_custom.strip()
+                st.session_state["li_pending_label"]  = f"💬 {_li_custom.strip()[:50]}"
+
+    _li_pend = st.session_state.get("li_pending_prompt", "")
+    if _li_pend:
+        _li_lbl_disp = st.session_state.get("li_pending_label", "Search")
+        _li_mdl      = st.session_state.get("selected_model", CLAUDE_MODEL)
+        _li_mdl_info = AI_MODELS.get(_li_mdl, {})
+        _li_badge    = f"{_li_mdl_info.get('badge','🟦')} {_li_mdl_info.get('label', _li_mdl)}"
+        _li_any_ai   = (
+            (api_key_valid and ANTHROPIC_AVAILABLE) or
+            (bool(_OPENAI_KEY) and OPENAI_AVAILABLE) or
+            (bool(_GOOGLE_AI_KEY) and GEMINI_AVAILABLE) or
+            (bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE)
+        )
+        if _li_any_ai:
+            st.markdown(f"**{_li_lbl_disp}** — via {_li_badge}")
+            with st.spinner(f"Searching with {_li_badge}…"):
+                _li_result = st.write_stream(stream_ai_response(_li_pend, _li_mdl, _ai_keys))
+            if _li_result:
+                _li_dl = f"# {_li_lbl_disp}\n\n{_li_result}"
+                st.download_button(
+                    "⬇️ Download Intelligence Report",
+                    _li_dl.encode(),
+                    file_name=f"live_intel_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
+                    mime="text/markdown",
+                    key="li_dl_btn",
+                )
+            del st.session_state["li_pending_prompt"]
+        else:
+            st.info("💡 Add an API key in the sidebar (Anthropic, OpenAI, Google AI, or Perplexity) to activate Live Intelligence.")
+            del st.session_state["li_pending_prompt"]
+
+# ══════════════════════════════════════════════════════════════════════════════
 
 
 # TAB 5 — DATA LOG
