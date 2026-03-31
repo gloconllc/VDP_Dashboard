@@ -3260,55 +3260,65 @@ def event_stat(val, label, icon: str = "", date: str = "") -> str:
 
 
 def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
-    """Apply clean light analytics chart theme — Dana Point PULSE design system v3."""
+    """Apply cutting-edge analytics chart theme — Dana Point PULSE design system v4."""
     _font  = "DM Sans, Syne, system-ui, sans-serif"
     _title = "Syne, DM Sans, system-ui, sans-serif"
     fig.update_layout(
-        plot_bgcolor  = "#FFFFFF",
+        plot_bgcolor  = "rgba(248,250,252,0.60)",
         paper_bgcolor = "rgba(0,0,0,0)",
-        font    = dict(family=_font, size=12, color="#4A5568"),
+        font    = dict(family=_font, size=12, color="#374151"),
         height  = height,
-        margin  = dict(l=0, r=2, t=36, b=0),
-        transition = {"duration": 600, "easing": "cubic-in-out"},
+        margin  = dict(l=4, r=8, t=40, b=4),
+        transition = {"duration": 400, "easing": "cubic-in-out"},
         legend = dict(
             orientation = "h",
             yanchor = "bottom", y = 1.02,
             xanchor = "left",   x = 0,
             font    = dict(size=11, family=_font, color="#4A5568"),
-            bgcolor = "rgba(0,0,0,0)", borderwidth=0,
+            bgcolor = "rgba(255,255,255,0.80)",
+            bordercolor = "rgba(0,0,0,0.06)",
+            borderwidth = 1,
         ),
         hoverlabel = dict(
-            bgcolor     = "#FFFFFF",
-            bordercolor = "rgba(8,145,178,0.40)",
-            font        = dict(size=13, family=_title, color="#0F1C2E"),
+            bgcolor     = "#0F1C2E",
+            bordercolor = "#00C8E0",
+            font        = dict(size=13, family=_title, color="#FFFFFF"),
             namelength  = -1,
+            align       = "left",
         ),
         colorway = ["#0891B2", "#2563EB", "#059669", "#D97706", "#7C3AED", "#EA580C", "#DC2626"],
+        modebar = dict(
+            bgcolor     = "rgba(0,0,0,0)",
+            color       = "#94A3B8",
+            activecolor = "#0891B2",
+        ),
     )
     fig.update_xaxes(
         showgrid    = False,
         zeroline    = False,
-        tickfont    = dict(size=11, family=_font, color="#718096"),
-        linecolor   = "rgba(0,0,0,0.10)",
+        tickfont    = dict(size=11, family=_font, color="#6B7280"),
+        linecolor   = "rgba(0,0,0,0.08)",
         linewidth   = 1,
         showline    = True,
-        ticks       = "",
+        ticks       = "outside",
+        ticklen     = 3,
+        tickcolor   = "rgba(0,0,0,0.08)",
     )
     fig.update_yaxes(
-        gridcolor   = "rgba(0,0,0,0.06)",
+        gridcolor   = "rgba(0,0,0,0.05)",
         gridwidth   = 1,
-        griddash    = "solid",
+        griddash    = "dot",
         zeroline    = False,
-        tickfont    = dict(size=11, family=_font, color="#718096"),
+        tickfont    = dict(size=11, family=_font, color="#6B7280"),
         showline    = False,
         ticks       = "",
     )
     # Update title font if present
     if fig.layout.title and fig.layout.title.text:
         fig.update_layout(
-            title_font = dict(family=_title, size=14, color="#0F1C2E"),
+            title_font = dict(family=_title, size=14, color="#0F1C2E", weight=700),
             title_x    = 0,
-            title_pad  = dict(l=0, t=0),
+            title_pad  = dict(l=4, t=4),
         )
     return fig
 
@@ -3587,8 +3597,16 @@ PLOTLY_CONFIG = {
     "displayModeBar": True,
     "displaylogo": False,
     "modeBarButtonsToRemove": ["lasso2d", "select2d"],
-    "toImageButtonOptions": {"format": "png", "filename": "dana_point_pulse_chart", "scale": 2},
+    "modeBarButtonsToAdd": ["v1hovermode"],
+    "toImageButtonOptions": {
+        "format": "png",
+        "filename": "dana_point_pulse_chart",
+        "scale": 3,
+        "width": 1600,
+        "height": 800,
+    },
     "responsive": True,
+    "scrollZoom": False,
 }
 
 # ─── Sticky header JS ─────────────────────────────────────────────────────────
@@ -5630,6 +5648,7 @@ with tab_ov:
                 import pandas as _pd_bd
                 _bd_df = _pd_bd.DataFrame(_breakdown, columns=["Component","Signal","Points","Weight"])
                 st.dataframe(_bd_df, use_container_width=True, hide_index=True)
+                st.download_button("⬇️ Download PULSE Score Breakdown CSV", _bd_df.to_csv(index=False).encode(), "pulse_score_breakdown.csv", "text/csv", key="dl_pulse_bd")
 
         # ── Gauge bar chart ─────────────────────────────────────────────────
         _gauge_fig = go.Figure(go.Indicator(
@@ -7791,7 +7810,7 @@ with tab_fo:
                 plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 font=dict(family="DM Sans", color="#4A5568")
             )
-            st.plotly_chart(fig_trend, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(fig_trend, use_container_width=True, config=PLOTLY_CONFIG)
         else:
             st.info("Google Trends data not available. Run `fetch_google_trends.py`.")
 
@@ -7821,7 +7840,7 @@ with tab_fo:
                         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                         font=dict(family="DM Sans", color="#4A5568")
                     )
-                    st.plotly_chart(fig_wx, use_container_width=True, config={"displayModeBar": False})
+                    st.plotly_chart(fig_wx, use_container_width=True, config=PLOTLY_CONFIG)
                 else:
                     st.info("Weather temperature data column not found.")
             else:
@@ -7866,7 +7885,7 @@ with tab_fo:
                         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                         font=dict(family="DM Sans", color="#4A5568")
                     )
-                    st.plotly_chart(fig_bls, use_container_width=True, config={"displayModeBar": False})
+                    st.plotly_chart(fig_bls, use_container_width=True, config=PLOTLY_CONFIG)
                 else:
                     st.info("BLS data value column not found.")
             else:
@@ -7903,7 +7922,7 @@ with tab_fo:
                     plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                     font=dict(family="DM Sans", color="#4A5568")
                 )
-                st.plotly_chart(fig_comp, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(fig_comp, use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.info("Occupancy data not available for compression calendar.")
         else:
@@ -8563,6 +8582,7 @@ with tab_ev:
             st.plotly_chart(style_fig(fig_cl, height=280), use_container_width=True, config=PLOTLY_CONFIG)
             with st.expander("View raw cluster data"):
                 st.dataframe(_cl.reset_index(drop=True), use_container_width=True)
+                st.download_button("⬇️ Download Cluster Data CSV", _cl.to_csv(index=False).encode(), "cluster_visitation.csv", "text/csv", key="dl_cluster")
 
     # ── Social & Web Analytics ────────────────────────────────────────────────
     st.markdown(_sh("📱", "Social & Web Analytics — visitdanapoint.com", "teal", "GA4 · DATAFY"), unsafe_allow_html=True)
@@ -10661,6 +10681,7 @@ with tab_sp:
         _sp_display.columns = ["Property", "City", "Segment", "Rooms",
                                 "Status", "Opens", "Brand", "Developer"]
         st.dataframe(_sp_display, use_container_width=True, hide_index=True)
+        st.download_button("⬇️ Download Pipeline CSV", _sp_display.to_csv(index=False).encode(), "supply_pipeline.csv", "text/csv", key="dl_sp_pipe")
 
         # ── Supply impact insight ─────────────────────────────────────────────
         _supply_impact_pct = _pipe_total / 5120 * 100
@@ -11189,6 +11210,7 @@ with tab_cs:
         _chain_display["RevPAR $"]    = _chain_display["RevPAR $"].map("${:,.2f}".format)
         _chain_display["Mkt Share %"] = _chain_display["Mkt Share %"].map("{:.1f}%".format)
         st.dataframe(_chain_display, use_container_width=True, hide_index=True)
+        st.download_button("⬇️ Download Chain Scale CSV", _chain_display.to_csv(index=False).encode(), "chain_scale_performance.csv", "text/csv", key="dl_chain")
 
         # Key insight
         luxury_row = chain_2024[chain_2024["chain_scale"] == "Luxury"].iloc[0]
@@ -11277,6 +11299,7 @@ with tab_cs:
         _pipe_display.columns = ["Property","City","Segment","Rooms",
                                   "Status","Opens","Brand","Developer"]
         st.dataframe(_pipe_display, use_container_width=True, hide_index=True)
+        st.download_button("⬇️ Download Pipeline CSV", _pipe_display.to_csv(index=False).encode(), "hotel_pipeline.csv", "text/csv", key="dl_cs_pipe")
 
         # Supply impact insight
         market_supply_pct = (pipe_total / 5120 * 100)
@@ -11390,6 +11413,7 @@ with tab_cs:
         _comp_display["ARI"]     = _comp_display["ARI"].map("{:.1f}".format)
         _comp_display["RGI"]     = _comp_display["RGI"].map("{:.1f}".format)
         st.dataframe(_comp_display, use_container_width=True, hide_index=True)
+        st.download_button("⬇️ Download Comp Set CSV", _comp_display.to_csv(index=False).encode(), "competitive_set.csv", "text/csv", key="dl_compset")
     else:
         st.markdown(empty_state("🏆", "No competitive set data.",
             "Run scripts/load_costar_reports.py to populate competitive benchmarks."),
@@ -11848,10 +11872,9 @@ with tab_cs:
             _sc_df["Board Note"]  = _sc_df.apply(lambda r: (
                 "Maintain pricing discipline — demand supports premium." if r["Gap"] > 0
                 else "Investigate comp set — close rate gap strategy needed."), axis=1)
-            st.dataframe(
-                _sc_df[["Metric","VDP Portfolio","S. OC Market","Gap vs Mkt","Signal","Board Note"]],
-                use_container_width=True, hide_index=True,
-            )
+            _sc_dl = _sc_df[["Metric","VDP Portfolio","S. OC Market","Gap vs Mkt","Signal","Board Note"]]
+            st.dataframe(_sc_dl, use_container_width=True, hide_index=True)
+            st.download_button("⬇️ Download Scorecard CSV", _sc_dl.to_csv(index=False).encode(), "vdp_vs_market_scorecard.csv", "text/csv", key="dl_scorecard")
             # Visual comparison bar chart
             _sc_fig = go.Figure()
             for _sci, (_scm, _scvdp, _scmkt, _scgap, _scu) in enumerate(_sc_rows):
