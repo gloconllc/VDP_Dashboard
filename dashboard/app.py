@@ -77,7 +77,7 @@ st.set_page_config(
 # Supports simple credential login now; Google/Microsoft OAuth can be added once
 # OAuth client IDs are configured in .env (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
 # MS_CLIENT_ID, MS_CLIENT_SECRET). Set LOGIN_ENABLED=false in .env to bypass for local dev.
-_LOGIN_ENABLED = os.getenv("LOGIN_ENABLED", "true").lower() != "false"
+_LOGIN_ENABLED = False  # Login removed per owner request — admin controls at ?admin=true
 
 def _render_login_page():
     """Render the login page with Dana Point branding.
@@ -2036,13 +2036,13 @@ st.markdown("""
 }
 #pulse-splash.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
 .spl-title {
-  font-family: 'Syne', 'Outfit', sans-serif;
-  font-size: 3rem; font-weight: 800; letter-spacing: -0.04em; color: #FFFFFF;
+  font-family: 'Syne', 'Outfit', Arial, sans-serif;
+  font-size: 3rem; font-weight: 800; letter-spacing: -0.04em;
+  color: #FFFFFF; text-shadow: 0 2px 24px rgba(0,0,0,0.5);
   animation: spl-in 0.65s cubic-bezier(0.37,0,0.22,1) both;
 }
 .spl-title span {
-  background: linear-gradient(110deg, #38BDF8 0%, #7DD3FC 50%, #BAE6FD 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  color: #38BDF8;
 }
 .spl-tag {
   font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600;
