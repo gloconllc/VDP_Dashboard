@@ -91,6 +91,8 @@ STEPS = [
     # ALWAYS LAST — rebuilds all table relationships after every pipeline run
     # Add new relationship entries to build_table_relationships.py when adding new data sources
     ("build_relationships", os.path.join(BASE_DIR, "build_table_relationships.py"), False),
+    # POST-PIPELINE AUDIT — runs after all steps; non-fatal, logs to logs/audit_report.json
+    ("audit_app",           os.path.join(BASE_DIR, "audit_app.py"),                False),
 ]
 
 

@@ -891,8 +891,8 @@ st.markdown("""
   }
   .hero-subtitle {
     font-family: 'DM Sans', 'Inter', sans-serif;
-    font-size: 11.5px; font-weight: 400; color: rgba(255,255,255,0.48);
-    letter-spacing: 0.04em; margin-top: 4px; position: relative;
+    font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.72);
+    letter-spacing: 0.06em; margin-top: 4px; position: relative;
     text-transform: uppercase;
   }
 
@@ -931,10 +931,15 @@ st.markdown("""
 
   /* ── Section Sub-header Label ────────────────────────────────────────── */
   .section-label {
-    font-family: 'Inter', sans-serif;
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .10em; color: var(--dp-text-3);
-    margin-bottom: 8px; margin-top: 2px;
+    font-family: 'Syne', 'Inter', sans-serif;
+    font-size: 11.5px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .12em; color: #0567C8;
+    margin-bottom: 10px; margin-top: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, rgba(5,103,200,0.20), transparent);
   }
 
   /* ── Section Divider ─────────────────────────────────────────────────── */
@@ -1013,13 +1018,20 @@ st.markdown("""
   }
   .chart-header {
     font-family: 'Syne', 'Outfit', sans-serif;
-    font-size: 14.5px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 3px;
-    color: var(--dp-text-1);
+    font-size: 17px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 5px;
+    color: #07111F; -webkit-text-fill-color: #07111F;
+    display: flex; align-items: center; gap: 8px;
+    padding-left: 10px; position: relative;
+  }
+  .chart-header::before {
+    content: ''; position: absolute; left: 0; top: 2px; bottom: 2px;
+    width: 3px; border-radius: 2px;
+    background: linear-gradient(180deg, #0567C8, #38BDF8);
   }
   .chart-caption {
     font-family: 'DM Sans', sans-serif;
-    font-size: 11.5px; color: var(--dp-text-3); font-weight: 400; margin-bottom: 10px;
-    letter-spacing: 0.01em;
+    font-size: 12px; color: #475569; font-weight: 500; margin-bottom: 12px;
+    letter-spacing: 0.01em; padding-left: 10px;
   }
 
   /* ── Sidebar Brand ───────────────────────────────────────────────────── */
@@ -1809,6 +1821,146 @@ st.markdown("""
     border-radius: var(--dp-radius) !important;
     border: 1px solid rgba(0,0,0,0.08) !important;
   }
+
+  /* ── Master Data Card (sensat.co style) ──────────────────────────────── */
+  .master-card {
+    background: linear-gradient(135deg, #07111F 0%, #0D1F3C 60%, #0A2240 100%);
+    border-radius: var(--dp-radius-lg); padding: 28px 32px;
+    border: 1px solid rgba(5,103,200,0.30); position: relative; overflow: hidden;
+    box-shadow: 0 4px 32px rgba(5,103,200,0.18), 0 1px 4px rgba(0,0,0,0.30);
+    margin-bottom: 14px; animation: fadeSlideUp 0.4s ease both;
+  }
+  .master-card::before {
+    content: ''; position: absolute; top: -60px; right: -60px;
+    width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(5,103,200,0.22) 0%, transparent 65%);
+    pointer-events: none; animation: hero-glow-pulse 5s ease-in-out infinite;
+  }
+  .master-card::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent 0%, #0567C8 30%, #38BDF8 60%, transparent 100%);
+  }
+  .master-card-label {
+    font-family: 'Syne', 'DM Sans', sans-serif; font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .18em; color: rgba(255,255,255,0.40); margin-bottom: 8px;
+  }
+  .master-card-value {
+    font-family: 'Syne', 'Outfit', sans-serif; font-size: 3.8rem; font-weight: 800;
+    letter-spacing: -0.05em; line-height: 1; margin-bottom: 6px;
+    background: linear-gradient(110deg, #FFFFFF 40%, #7DD3FC 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .master-card-body {
+    font-family: 'DM Sans', sans-serif; font-size: 13px; color: rgba(255,255,255,0.55);
+    line-height: 1.65; border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 10px; margin-top: 4px;
+  }
+  .master-card-body strong { color: rgba(255,255,255,0.85); }
+
+  /* ── Timeline (decimalstudios × CNN style) ───────────────────────────── */
+  .pulse-timeline { position: relative; padding: 4px 0; margin: 16px 0; }
+  .pulse-timeline::before {
+    content: ''; position: absolute; left: 16px; top: 0; bottom: 0; width: 2px;
+    background: linear-gradient(180deg, rgba(5,103,200,0.60) 0%, rgba(5,103,200,0.08) 100%);
+    border-radius: 2px;
+  }
+  .tl-item {
+    display: flex; gap: 20px; margin-bottom: 18px; padding-left: 4px;
+    animation: fadeSlideUp 0.4s ease both;
+  }
+  .tl-item:nth-child(2){animation-delay:.06s} .tl-item:nth-child(3){animation-delay:.12s}
+  .tl-item:nth-child(4){animation-delay:.18s} .tl-item:nth-child(5){animation-delay:.24s}
+  .tl-dot {
+    width: 30px; height: 30px; min-width: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
+    position: relative; z-index: 1; margin-left: 2px; box-shadow: 0 0 0 4px var(--dp-bg);
+  }
+  .tl-dot-high   { background:rgba(5,103,200,0.15);   color:#0567C8; border:2px solid #0567C8; }
+  .tl-dot-peak   { background:rgba(5,150,105,0.15);   color:#059669; border:2px solid #059669; }
+  .tl-dot-low    { background:rgba(220,38,38,0.12);   color:#DC2626; border:2px solid #DC2626; }
+  .tl-dot-event  { background:rgba(124,58,237,0.12);  color:#7C3AED; border:2px solid #7C3AED; }
+  .tl-dot-warn   { background:rgba(217,119,6,0.12);   color:#D97706; border:2px solid #D97706; }
+  .tl-content {
+    background: #FFFFFF; border: 1px solid rgba(15,28,46,0.08);
+    border-radius: var(--dp-radius); padding: 12px 16px; flex: 1;
+    box-shadow: var(--dp-shadow);
+    transition: box-shadow 0.22s ease, transform 0.22s ease;
+  }
+  .tl-content:hover { box-shadow: var(--dp-shadow-hover); transform: translateX(3px); }
+  .tl-date {
+    font-family: 'Syne', 'DM Sans', sans-serif; font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .12em; color: #64748B; margin-bottom: 3px;
+  }
+  .tl-headline {
+    font-family: 'Outfit', sans-serif; font-size: 13.5px; font-weight: 800;
+    letter-spacing: -.02em; color: #07111F; margin-bottom: 4px;
+  }
+  .tl-body  { font-size: 12.5px; color: #475569; line-height: 1.60; }
+  .tl-stat  {
+    display: inline-block; margin-top: 6px; font-family: 'Outfit', sans-serif;
+    font-size: 11.5px; font-weight: 800; padding: 2px 10px; border-radius: 20px;
+    background: rgba(5,103,200,0.08); color: #0567C8; border: 1px solid rgba(5,103,200,0.20);
+  }
+
+  /* ── Datamotive.io clean data cards ──────────────────────────────────── */
+  .dm-card {
+    background: #FFFFFF; border: 1px solid rgba(15,28,46,0.07); border-radius: var(--dp-radius-lg);
+    padding: 20px 22px; position: relative; overflow: hidden;
+    transition: box-shadow 0.22s ease, transform 0.22s ease;
+    box-shadow: 0 1px 2px rgba(15,28,46,0.04), 0 3px 12px rgba(15,28,46,0.06); margin-bottom: 12px;
+  }
+  .dm-card:hover { box-shadow: var(--dp-shadow-hover); transform: translateY(-3px); }
+  .dm-card-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 16px 16px 0 0; }
+  .dm-card-value {
+    font-family: 'Syne', 'Outfit', sans-serif; font-size: 2.4rem; font-weight: 800;
+    letter-spacing: -0.05em; color: #07111F; line-height: 1; margin-bottom: 4px;
+  }
+  .dm-card-label {
+    font-family: 'DM Sans', 'Inter', sans-serif; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .12em; color: #64748B; margin-bottom: 8px;
+  }
+  .dm-card-sub {
+    font-size: 12.5px; color: #475569; line-height: 1.55;
+    border-top: 1px solid rgba(15,28,46,0.06); padding-top: 8px; margin-top: 6px;
+  }
+
+  /* ── Levinriegner.com narrative card ─────────────────────────────────── */
+  .levi-card {
+    border-radius: var(--dp-radius-lg); padding: 28px 30px; background: #FFFFFF;
+    border: 1px solid rgba(15,28,46,0.08); box-shadow: var(--dp-shadow);
+    position: relative; overflow: hidden; margin-bottom: 14px; animation: fadeSlideUp 0.5s ease both;
+  }
+  .levi-card-eyebrow {
+    font-family: 'Syne', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: .20em;
+    text-transform: uppercase; color: #0567C8; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .levi-card-eyebrow::before { content:''; width:20px; height:2px; background:#0567C8; border-radius:1px; }
+  .levi-card-headline {
+    font-family: 'Syne', 'Outfit', sans-serif; font-size: 1.9rem; font-weight: 800;
+    letter-spacing: -0.04em; color: #07111F; line-height: 1.15; margin-bottom: 14px;
+  }
+  .levi-card-headline em {
+    font-style: normal;
+    background: linear-gradient(110deg, #0567C8, #38BDF8);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .levi-card-body { font-family: 'DM Sans', sans-serif; font-size: 14px; color: #475569; line-height: 1.75; }
+  .levi-card-stats {
+    display: flex; gap: 24px; flex-wrap: wrap;
+    border-top: 1px solid rgba(15,28,46,0.07); margin-top: 18px; padding-top: 18px;
+  }
+  .levi-stat-value {
+    font-family: 'Outfit', sans-serif; font-size: 1.6rem; font-weight: 900;
+    letter-spacing: -0.04em; color: #07111F; line-height: 1;
+  }
+  .levi-stat-label {
+    font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .10em; color: #94A3B8;
+  }
+
+  /* ── Global smooth scroll ─────────────────────────────────────────────── */
+  html { scroll-behavior: smooth; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1872,6 +2024,58 @@ st.markdown("""
 
 # ── Back-to-top button (fixed action button)
 st.markdown("""
+<style>
+/* ── Hanzo.es-style loading splash ──────────────────────────────────────── */
+#pulse-splash {
+  position: fixed; inset: 0; z-index: 9999999;
+  background: #06111F;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 18px;
+  transition: opacity 0.65s cubic-bezier(0.37,0,0.22,1), visibility 0.65s;
+  pointer-events: all;
+}
+#pulse-splash.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.spl-title {
+  font-family: 'Syne', 'Outfit', sans-serif;
+  font-size: 3rem; font-weight: 800; letter-spacing: -0.04em; color: #FFFFFF;
+  animation: spl-in 0.65s cubic-bezier(0.37,0,0.22,1) both;
+}
+.spl-title span {
+  background: linear-gradient(110deg, #38BDF8 0%, #7DD3FC 50%, #BAE6FD 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.spl-tag {
+  font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600;
+  letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,0.38);
+  animation: spl-in 0.65s 0.08s cubic-bezier(0.37,0,0.22,1) both;
+}
+.spl-bar { width: 160px; height: 2px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+.spl-bar-inner {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #0567C8, #38BDF8);
+  border-radius: 2px;
+  animation: spl-load 1.1s 0.25s cubic-bezier(0.37,0,0.22,1) forwards;
+}
+@keyframes spl-in   { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+@keyframes spl-load { from{width:0%} to{width:100%} }
+</style>
+<div id="pulse-splash">
+  <div class="spl-title">Dana Point <span>PULSE</span></div>
+  <div class="spl-tag">Destination Intelligence Platform</div>
+  <div class="spl-bar"><div class="spl-bar-inner"></div></div>
+</div>
+<script>
+(function(){
+  function hideSplash(){
+    var sp = document.getElementById('pulse-splash');
+    if(!sp) return;
+    sp.classList.add('hidden');
+    setTimeout(function(){ if(sp && sp.parentNode) sp.style.display='none'; }, 750);
+  }
+  setTimeout(hideSplash, 1350);
+  window.addEventListener('load', function(){ setTimeout(hideSplash, 500); });
+})();
+</script>
 <style>
   #back-to-top-btn {
     position: fixed; bottom: 24px; right: 20px; z-index: 99999;
@@ -3775,13 +3979,11 @@ def event_stat(val, label, icon: str = "", date: str = "") -> str:
 
 
 def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
-    """Apply cutting-edge analytics chart theme — Dana Point PULSE design system v6.
-
-    codeandtheory.com-inspired: gradient fills, crisp grid, bold hover labels.
+    """Painted-data chart theme — Dana Point PULSE v7.
+    codeandtheory.com × levinriegner.com: organic fills, bold type, expressive color.
     """
     _font  = "Syne, DM Sans, Inter, system-ui, sans-serif"
     _title = "Syne, Outfit, DM Sans, system-ui, sans-serif"
-    # High-contrast, distinguishable color sequence (Webby/Bloomberg standard)
     _colorway = [
         "#0567C8",  # primary blue
         "#EA580C",  # vivid orange
@@ -3795,22 +3997,23 @@ def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
     fig.update_layout(
         plot_bgcolor  = "rgba(0,0,0,0)",
         paper_bgcolor = "rgba(0,0,0,0)",
-        font    = dict(family=_font, size=12, color="#1E293B"),
+        font    = dict(family=_font, size=12.5, color="#1E293B"),
         height  = height,
-        margin  = dict(l=4, r=8, t=44, b=4),
-        transition = {"duration": 500, "easing": "cubic-in-out"},
+        margin  = dict(l=4, r=8, t=52, b=8),
+        transition = {"duration": 600, "easing": "cubic-in-out"},
         legend = dict(
             orientation = "h",
-            yanchor = "bottom", y = 1.02,
+            yanchor = "bottom", y = 1.04,
             xanchor = "left",   x = 0,
-            font    = dict(size=11, family=_font, color="#475569"),
+            font    = dict(size=11.5, family=_font, color="#475569"),
             bgcolor = "rgba(255,255,255,0.0)",
             borderwidth = 0,
+            itemsizing = "constant",
         ),
         hoverlabel = dict(
             bgcolor     = "#07111F",
-            bordercolor = "rgba(5,103,200,0.50)",
-            font        = dict(size=13, family=_font, color="#F1F5F9"),
+            bordercolor = "rgba(5,103,200,0.60)",
+            font        = dict(size=13.5, family=_font, color="#F1F5F9"),
             namelength  = -1,
             align       = "left",
         ),
@@ -3824,36 +4027,66 @@ def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
     fig.update_xaxes(
         showgrid    = False,
         zeroline    = False,
-        tickfont    = dict(size=10.5, family=_font, color="#64748B"),
-        linecolor   = "rgba(15,28,46,0.08)",
+        tickfont    = dict(size=11, family=_font, color="#64748B"),
+        linecolor   = "rgba(15,28,46,0.10)",
         linewidth   = 1,
         showline    = True,
         ticks       = "outside",
-        ticklen     = 3,
-        tickcolor   = "rgba(15,28,46,0.08)",
+        ticklen     = 4,
+        tickcolor   = "rgba(15,28,46,0.10)",
     )
     fig.update_yaxes(
-        gridcolor   = "rgba(15,28,46,0.05)",
+        gridcolor   = "rgba(15,28,46,0.04)",
         gridwidth   = 1,
         griddash    = "dot",
         zeroline    = False,
-        tickfont    = dict(size=10.5, family=_font, color="#64748B"),
+        tickfont    = dict(size=11, family=_font, color="#64748B"),
         showline    = False,
         ticks       = "",
     )
-    # Add gradient fill to Scatter traces that don't already have fill set
+    # ── Painted-data: organic gradient fills + smooth spline lines ────────
+    _fill_palette = [
+        "rgba(5,103,200,0.09)", "rgba(234,88,12,0.08)", "rgba(5,150,105,0.08)",
+        "rgba(124,58,237,0.08)", "rgba(217,119,6,0.08)",
+    ]
+    _fill_idx = 0
     for trace in fig.data:
-        if hasattr(trace, "fill") and trace.fill in (None, "none"):
-            if hasattr(trace, "mode") and trace.mode and "lines" in str(trace.mode):
+        ttype = type(trace).__name__
+        if ttype in ("Scatter", "Scattergl"):
+            mode = str(getattr(trace, "mode", "") or "")
+            if "lines" in mode and getattr(trace, "fill", None) in (None, "none"):
                 trace.fill = "tozeroy"
-                _c = trace.line.color if (hasattr(trace.line, "color") and trace.line.color) else "#0567C8"
-                trace.fillcolor = _c.replace("rgb(", "rgba(").replace(")", ",0.08)") if "rgb(" in str(_c) else f"rgba(5,103,200,0.06)"
-    # Title styling
+                _c = (getattr(trace.line, "color", None) or _colorway[0])
+                if "rgb(" in str(_c):
+                    trace.fillcolor = _c.replace("rgb(", "rgba(").replace(")", ",0.09)")
+                else:
+                    trace.fillcolor = _fill_palette[_fill_idx % len(_fill_palette)]
+                    _fill_idx += 1
+            # Smooth spline for organic painted feel
+            if hasattr(trace, "line") and trace.line is not None:
+                if not getattr(trace.line, "shape", None):
+                    try:
+                        trace.line.shape = "spline"
+                        trace.line.smoothing = 0.85
+                    except Exception:
+                        pass
+                if getattr(trace.line, "width", None) is None or getattr(trace.line, "width", 2) < 2:
+                    try:
+                        trace.line.width = 2.5
+                    except Exception:
+                        pass
+        elif ttype == "Bar":
+            try:
+                if not getattr(trace.marker, "cornerradius", None):
+                    trace.marker.cornerradius = 4
+            except Exception:
+                pass
+    # ── Title styling ──────────────────────────────────────────────────────
     if fig.layout.title and fig.layout.title.text:
         fig.update_layout(
-            title_font = dict(family=_title, size=13.5, color="#07111F"),
+            title_font = dict(family=_title, size=15, color="#07111F"),
             title_x    = 0,
-            title_pad  = dict(l=4, t=4),
+            title_pad  = dict(l=4, t=6),
         )
     return fig
 
@@ -4397,12 +4630,39 @@ st.markdown("""
       setTimeout(function(){ hero.style.opacity='1'; },80);
     }
   }
+  // --- Sticky tab bar: override parent overflow + watch scroll ---
+  function initStickyTabs(){
+    var doc = window.parent && window.parent.document ? window.parent.document : document;
+    var tabEl = doc.querySelector('[data-testid="stTabs"]');
+    if(!tabEl) return;
+    var heroEl = doc.querySelector('.hero-banner');
+    // Allow sticky to work by making parent containers non-overflow-hidden
+    ['stMain','stAppViewContainer','block-container','stVerticalBlock'].forEach(function(k){
+      var els2 = doc.querySelectorAll('[data-testid="'+k+'"], .'+k);
+      els2.forEach(function(p){ if(p) p.style.overflow='visible'; });
+    });
+    // Make tab bar sticky via inline style — more reliable than CSS-only in Streamlit
+    tabEl.style.cssText += [
+      'position:sticky!important',
+      'top:0!important',
+      'z-index:9990!important',
+      'background:rgba(238,242,248,0.97)!important',
+      'backdrop-filter:blur(14px)!important',
+      '-webkit-backdrop-filter:blur(14px)!important',
+      'border-bottom:1px solid rgba(15,28,46,0.08)!important',
+      'box-shadow:0 2px 16px rgba(15,28,46,0.09)!important',
+      'padding-top:6px!important',
+      'padding-bottom:4px!important',
+    ].join(';');
+  }
   setTimeout(initReveal, 300);
-  setTimeout(initReveal, 800);
+  setTimeout(initReveal, 900);
   setTimeout(heroEntry, 50);
+  setTimeout(initStickyTabs, 700);
+  setTimeout(initStickyTabs, 1800);
   if(window.MutationObserver){
     var doc = window.parent && window.parent.document ? window.parent.document : document;
-    new MutationObserver(function(){ initReveal(); }).observe(doc.body,{childList:true,subtree:true});
+    new MutationObserver(function(){ initReveal(); setTimeout(initStickyTabs,250); }).observe(doc.body,{childList:true,subtree:true});
   }
 })();
 </script>
@@ -4866,9 +5126,9 @@ st.markdown(
     f'<span style="font-size:10px;font-weight:700;color:#22D3EE;letter-spacing:.07em;'
     f'text-transform:uppercase;background:rgba(34,211,238,0.15);border:1px solid rgba(34,211,238,0.35);'
     f'padding:2px 10px;border-radius:20px;">⬤ LIVE</span>'
-    f'<span style="font-size:11px;color:#4A5568;font-weight:500;">{range_label} window</span>'
-    f'<span style="font-size:11px;color:#A0AEC0;">·</span>'
-    f'<span style="font-size:11px;color:#4A5568;font-weight:500;">Updated {last_upd}</span>'
+    f'<span style="font-size:11px;color:rgba(255,255,255,0.62);font-weight:500;">{range_label} window</span>'
+    f'<span style="font-size:11px;color:rgba(255,255,255,0.30);">·</span>'
+    f'<span style="font-size:11px;color:rgba(255,255,255,0.62);font-weight:500;">Updated {last_upd}</span>'
     f'</div>'
     f'</div>',
     unsafe_allow_html=True,
@@ -10690,9 +10950,9 @@ with tab_ei:
     if not df_vdp_events.empty:
         _evts = df_vdp_events.copy()
         _evts["event_date"] = pd.to_datetime(_evts["event_date"], errors="coerce")
-        _evts["end_date"]   = pd.to_datetime(_evts.get("end_date", _evts["event_date"]), errors="coerce")
+        _evts["end_date"]   = pd.to_datetime(_evts.get("event_end_date", _evts["event_date"]), errors="coerce")
         _evts["end_date"]   = _evts.apply(
-            lambda r: r["end_date"] if pd.notna(r["end_date"]) else r["event_date"] + timedelta(days=3),
+            lambda r: r["end_date"] if pd.notna(r["end_date"]) else r["event_date"] + timedelta(days=2),
             axis=1,
         )
         _evts = _evts.dropna(subset=["event_date"]).sort_values("event_date")
@@ -10715,7 +10975,7 @@ with tab_ei:
             _date_str = _er["event_date"].strftime("%b %d")
             _end_str  = _er["end_date"].strftime("%b %d, %Y") if _dur > 1 else ""
             _gantt_fig.add_trace(go.Bar(
-                x=[_dur],
+                x=[_dur * 86400 * 1000],   # convert days → milliseconds to match timestamp x-axis
                 y=[_name],
                 orientation="h",
                 base=[_er["event_date"].timestamp() * 1000],
@@ -10747,8 +11007,12 @@ with tab_ei:
                 tickvals=[
                     int(pd.Timestamp(f"2025-{m:02d}-01").timestamp() * 1000)
                     for m in range(1, 13)
+                ] + [
+                    int(pd.Timestamp(f"2026-{m:02d}-01").timestamp() * 1000)
+                    for m in range(1, 5)
                 ],
-                ticktext=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+                ticktext=["Jan '25","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec '25",
+                          "Jan '26","Feb","Mar","Apr '26"],
                 tickfont=dict(size=12, color="#C9D1D9"),
                 gridcolor="rgba(0,0,0,0.06)",
                 zeroline=False,
@@ -10938,7 +11202,7 @@ with tab_ei:
         # Type-based card treatment (Dumbar style)
         _card_cls, _pill_cls, _type_icon = evt_type_class(ev["category"])
         st.markdown(
-            f'<div class="{_card_cls} reveal-card">'
+            f'<div class="{_card_cls}">'
             f'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:6px;">'
             f'<div style="display:flex;align-items:center;gap:8px;">'
             f'<span class="{_pill_cls}">{_type_icon} {ev["category"].upper()}</span>'
@@ -11700,25 +11964,187 @@ with tab_sp:
             "SELECT * FROM costar_annual_performance ORDER BY year_label ASC", conn_sp
         )
         if not df_cs_annual.empty:
-            _current_year = 2026
-            df_cs_annual["data_type"] = df_cs_annual["year_label"].apply(
-                lambda y: "Forecast" if (str(y).isdigit() and int(y) > 2024) else "Actual"
+            # ── Filter to Newport Beach/Dana Point submarket, Overall scope, numeric years ──
+            _ann = df_cs_annual[
+                (df_cs_annual["market"] == "Newport Beach/Dana Point") &
+                (df_cs_annual["report_scope"] == "Overall") &
+                (df_cs_annual["year_label"].apply(lambda y: str(y).isdigit()))
+            ].copy()
+            _ann["year"] = _ann["year_label"].astype(int)
+            _ann = _ann.sort_values("year")
+            _ann["data_type"] = _ann["year"].apply(lambda y: "Forecast" if y > 2024 else "Actual")
+            _actuals_ann = _ann[_ann["data_type"] == "Actual"]
+            _forecasts_ann = _ann[_ann["data_type"] == "Forecast"]
+
+            if not _actuals_ann.empty:
+                st.success(f"✅ Latest actual: Full Year **{_actuals_ann['year'].max()}** · {len(_actuals_ann)} years of historical data (2016–2024)")
+            if not _forecasts_ann.empty:
+                st.info(f"📈 CoStar forecasts: **{_forecasts_ann['year'].min()}–{_forecasts_ann['year'].max()}** · Directional context only")
+
+            # ── KPI summary row ────────────────────────────────────────────────────
+            _latest_ann = _actuals_ann.iloc[-1] if not _actuals_ann.empty else None
+            _prior_ann  = _actuals_ann.iloc[-2] if len(_actuals_ann) >= 2 else None
+            if _latest_ann is not None:
+                _ann_cols = st.columns(4)
+                _ann_kpis = [
+                    ("RevPAR", f"${float(_latest_ann.get('revpar_usd',0)):.0f}",
+                     f"{float(_latest_ann.get('revpar_yoy_pct',0)):+.1f}% YOY",
+                     float(_latest_ann.get('revpar_yoy_pct',0)) >= 0),
+                    ("ADR", f"${float(_latest_ann.get('adr_usd',0)):.0f}",
+                     f"{float(_latest_ann.get('adr_yoy_pct',0)):+.1f}% YOY",
+                     float(_latest_ann.get('adr_yoy_pct',0)) >= 0),
+                    ("Occupancy", f"{float(_latest_ann.get('occupancy_pct',0)):.1f}%",
+                     f"{float(_latest_ann.get('occ_yoy_pct',0)):+.1f}pp YOY",
+                     float(_latest_ann.get('occ_yoy_pct',0)) >= 0),
+                    ("2030 RevPAR Forecast",
+                     f"${float(_forecasts_ann.iloc[-1].get('revpar_usd',0)):.0f}" if not _forecasts_ann.empty else "—",
+                     "CoStar market projection", None),
+                ]
+                for _ci, (_lbl, _val, _sub, _pos) in enumerate(_ann_kpis):
+                    with _ann_cols[_ci]:
+                        _delta_color = "#059669" if _pos else ("#DC2626" if _pos is False else "#0567C8")
+                        st.markdown(
+                            f'<div class="kpi-card" style="border-bottom-color:{_delta_color};">'
+                            f'<div class="kpi-label">{_lbl}</div>'
+                            f'<div class="kpi-value">{_val}</div>'
+                            f'<div style="font-size:11px;font-weight:700;color:{_delta_color};">{_sub}</div>'
+                            f'</div>', unsafe_allow_html=True)
+
+            # ── Chart row 1: RevPAR + ADR Trends ──────────────────────────────────
+            st.markdown('<div class="chart-header">RevPAR & ADR Trend · 2016–2030</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">Newport Beach/Dana Point Submarket · Actuals 2016–2024 · CoStar Forecasts 2025–2030</div>', unsafe_allow_html=True)
+
+            _fig_rvp = go.Figure()
+            # Actuals: solid lines
+            _fig_rvp.add_trace(go.Scatter(
+                x=_actuals_ann["year"], y=_actuals_ann["revpar_usd"],
+                mode="lines+markers", name="RevPAR (Actual)",
+                line=dict(color="#0567C8", width=2.5),
+                marker=dict(size=7, color="#0567C8"),
+                hovertemplate="<b>%{x} RevPAR</b><br>$%{y:.0f}<extra></extra>",
+            ))
+            _fig_rvp.add_trace(go.Scatter(
+                x=_actuals_ann["year"], y=_actuals_ann["adr_usd"],
+                mode="lines+markers", name="ADR (Actual)",
+                line=dict(color="#059669", width=2.5),
+                marker=dict(size=7, color="#059669"),
+                hovertemplate="<b>%{x} ADR</b><br>$%{y:.0f}<extra></extra>",
+            ))
+            # Forecasts: dashed
+            _fc_connect_rvp = pd.concat([_actuals_ann.tail(1), _forecasts_ann])
+            _fc_connect_adr = pd.concat([_actuals_ann.tail(1), _forecasts_ann])
+            _fig_rvp.add_trace(go.Scatter(
+                x=_fc_connect_rvp["year"], y=_fc_connect_rvp["revpar_usd"],
+                mode="lines+markers", name="RevPAR (Forecast)",
+                line=dict(color="#0567C8", width=1.8, dash="dot"),
+                marker=dict(size=5, color="#0567C8", opacity=0.6),
+                hovertemplate="<b>%{x} RevPAR Forecast</b><br>$%{y:.0f}<extra></extra>",
+            ))
+            _fig_rvp.add_trace(go.Scatter(
+                x=_fc_connect_adr["year"], y=_fc_connect_adr["adr_usd"],
+                mode="lines+markers", name="ADR (Forecast)",
+                line=dict(color="#059669", width=1.8, dash="dot"),
+                marker=dict(size=5, color="#059669", opacity=0.6),
+                hovertemplate="<b>%{x} ADR Forecast</b><br>$%{y:.0f}<extra></extra>",
+            ))
+            # COVID shade
+            _fig_rvp.add_vrect(x0=2019.5, x1=2020.5,
+                fillcolor="rgba(220,38,38,0.07)", line_width=0,
+                annotation_text="COVID", annotation_position="top left",
+                annotation_font_size=9, annotation_font_color="#DC2626")
+            # Forecast zone
+            _fig_rvp.add_vrect(x0=2024.5, x1=2030.5,
+                fillcolor="rgba(5,103,200,0.04)", line_width=0,
+                annotation_text="Forecast Zone", annotation_position="top right",
+                annotation_font_size=9, annotation_font_color="#0567C8")
+            _fig_rvp.update_layout(
+                yaxis_tickprefix="$", yaxis_title="USD ($)",
+                xaxis=dict(dtick=1, title="Year"),
             )
-            _actuals = df_cs_annual[df_cs_annual["data_type"] == "Actual"]
-            _forecasts = df_cs_annual[df_cs_annual["data_type"] == "Forecast"]
-            if not _actuals.empty:
-                st.info(f"✅ Latest actual data: Full Year **{_actuals['year_label'].max()}** · {len(_actuals)} years of historical actuals (2016–2024)")
-            if not _forecasts.empty:
-                st.info(f"📈 CoStar forecasts available: **{_forecasts['year_label'].min()}–{_forecasts['year_label'].max()}** · Use as directional context only, not guaranteed projections")
-            with st.expander("📊 View Full Annual Performance Dataset (Actuals + Forecasts)"):
+            st.plotly_chart(style_fig(_fig_rvp, height=320), use_container_width=True, config=PLOTLY_CONFIG)
+
+            # ── Chart row 2: Occupancy trend + YOY bar ───────────────────────────
+            _ann_c1, _ann_c2 = st.columns(2)
+            with _ann_c1:
+                st.markdown('<div class="chart-header">Occupancy Rate · 2016–2030</div>', unsafe_allow_html=True)
+                _fig_occ = go.Figure()
+                _fig_occ.add_trace(go.Bar(
+                    x=_actuals_ann["year"], y=_actuals_ann["occupancy_pct"],
+                    name="Occ % (Actual)",
+                    marker_color=[
+                        "rgba(220,38,38,0.70)" if y == 2020 else "rgba(5,103,200,0.75)"
+                        for y in _actuals_ann["year"]
+                    ],
+                    hovertemplate="<b>%{x}</b><br>Occ: %{y:.1f}%<extra></extra>",
+                ))
+                _fig_occ.add_trace(go.Bar(
+                    x=_forecasts_ann["year"], y=_forecasts_ann["occupancy_pct"],
+                    name="Occ % (Forecast)",
+                    marker_color="rgba(5,103,200,0.30)",
+                    marker_pattern_shape="/",
+                    hovertemplate="<b>%{x} Forecast</b><br>Occ: %{y:.1f}%<extra></extra>",
+                ))
+                # Target line at 70%
+                _fig_occ.add_hline(y=70, line_dash="dot", line_color="rgba(5,150,105,0.50)",
+                                   annotation_text="70% target", annotation_font_size=9)
+                _fig_occ.update_layout(barmode="group", yaxis_ticksuffix="%", yaxis_title="Occupancy %")
+                st.plotly_chart(style_fig(_fig_occ, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+
+            with _ann_c2:
+                st.markdown('<div class="chart-header">RevPAR YOY Growth % · 2017–2024</div>', unsafe_allow_html=True)
+                _yoy_data = _actuals_ann[_actuals_ann["year"] >= 2017].copy()
+                _yoy_data["revpar_yoy_pct"] = pd.to_numeric(_yoy_data["revpar_yoy_pct"], errors="coerce")
+                _fig_yoy = go.Figure(go.Bar(
+                    x=_yoy_data["year"],
+                    y=_yoy_data["revpar_yoy_pct"],
+                    marker_color=[
+                        "rgba(220,38,38,0.80)" if v < 0 else "rgba(5,150,105,0.80)"
+                        for v in _yoy_data["revpar_yoy_pct"].fillna(0)
+                    ],
+                    text=[f"{v:+.1f}%" if pd.notna(v) else "" for v in _yoy_data["revpar_yoy_pct"]],
+                    textposition="outside",
+                    hovertemplate="<b>%{x}</b><br>RevPAR YOY: %{y:+.1f}%<extra></extra>",
+                ))
+                _fig_yoy.add_hline(y=0, line_color="rgba(15,28,46,0.15)", line_width=1)
+                _fig_yoy.update_layout(yaxis_ticksuffix="%", yaxis_title="RevPAR YOY %")
+                st.plotly_chart(style_fig(_fig_yoy, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+
+            # ── OC vs US benchmark comparison ─────────────────────────────────────
+            st.markdown('<div class="chart-header">Submarket vs. Orange County vs. US National · RevPAR 2024</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-caption">Newport Beach/Dana Point commands a significant premium vs. broader markets</div>', unsafe_allow_html=True)
+            _bench_2024 = df_cs_annual[
+                df_cs_annual["year_label"].astype(str) == "2024"
+            ].copy()
+            if not _bench_2024.empty:
+                _bench_2024 = _bench_2024.fillna(0)
+                _fig_bench = go.Figure()
+                _bench_markets = _bench_2024["market"].tolist()
+                _bench_rvp = _bench_2024["revpar_usd"].tolist()
+                _bench_adr = _bench_2024["adr_usd"].tolist()
+                _bench_occ = _bench_2024["occupancy_pct"].tolist()
+                _bar_colors = ["#0567C8" if m == "Newport Beach/Dana Point" else "rgba(5,103,200,0.35)"
+                               for m in _bench_markets]
+                _fig_bench.add_trace(go.Bar(name="RevPAR", x=_bench_markets, y=_bench_rvp,
+                    marker_color=_bar_colors,
+                    text=[f"${v:.0f}" for v in _bench_rvp], textposition="outside",
+                    hovertemplate="<b>%{x}</b><br>RevPAR: $%{y:.0f}<extra></extra>"))
+                _fig_bench.add_trace(go.Bar(name="ADR", x=_bench_markets, y=_bench_adr,
+                    marker_color=["rgba(5,150,105,0.80)" if m == "Newport Beach/Dana Point" else "rgba(5,150,105,0.35)"
+                                  for m in _bench_markets],
+                    text=[f"${v:.0f}" for v in _bench_adr], textposition="outside",
+                    hovertemplate="<b>%{x}</b><br>ADR: $%{y:.0f}<extra></extra>"))
+                _fig_bench.update_layout(barmode="group", yaxis_tickprefix="$")
+                st.plotly_chart(style_fig(_fig_bench, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+
+            with st.expander("📊 Full Dataset — Actuals + Forecasts"):
                 st.dataframe(df_cs_annual, use_container_width=True, hide_index=True)
                 _ann_csv = df_cs_annual.to_csv(index=False).encode()
                 st.download_button("⬇️ Download Annual Data CSV", _ann_csv,
                                    file_name="costar_annual_performance.csv", mime="text/csv")
         else:
             st.info("No annual CoStar performance data loaded.")
-    except Exception:
-        st.info("CoStar annual performance table not yet populated.")
+    except Exception as _ann_err:
+        st.info(f"CoStar annual performance table not yet populated. ({_ann_err})")
 
     # ── Supply Pipeline Intel Panel ───────────────────────────────────────────
     try:
