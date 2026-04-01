@@ -763,11 +763,23 @@ st.markdown("""
   [data-testid="stToolbar"]             { visibility: hidden !important; }
   [data-testid="stDecoration"]          { display:    none    !important; }
   [data-testid="stStatusWidget"]        { visibility: hidden !important; }
-  [data-testid="stHeader"]              { background: transparent !important; }
+  [data-testid="stHeader"]              { background: transparent !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; }
   .viewerBadge_container__1QSob        { display:    none    !important; }
   .styles_viewerBadge__CvC9N           { display:    none    !important; }
   a[href*="streamlit.io"]               { display:    none    !important; }
   a[href*="github.com/streamlit"]       { display:    none    !important; }
+
+  /* ── Prevent parent containers from blocking sticky ──────────────────── */
+  [data-testid="stAppViewContainer"],
+  [data-testid="stMain"],
+  .main, section.main,
+  [data-testid="stVerticalBlock"] {
+    overflow: visible !important;
+  }
+  /* Keep only the outermost scroll container */
+  [data-testid="stAppViewContainer"] > div:first-child {
+    overflow-y: auto !important;
+  }
 
   /* ── Custom Scrollbar ────────────────────────────────────────────────── */
   ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -880,10 +892,15 @@ st.markdown("""
     color: #FFFFFF; margin-bottom: 8px; position: relative;
   }
   .hero-title span {
+    color: #38BDF8; /* fallback for non-webkit */
     background: linear-gradient(110deg, #38BDF8 0%, #7DD3FC 40%, #BAE6FD 75%, #38BDF8 100%);
     background-size: 200% auto;
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     animation: shimmer 4s linear infinite;
+  }
+  /* Force color visibility if background-clip text fails */
+  @supports not (-webkit-background-clip: text) {
+    .hero-title span { color: #38BDF8 !important; background: none !important; }
   }
   @keyframes shimmer {
     0%   { background-position: 0% center; }
@@ -1337,7 +1354,7 @@ st.markdown("""
   }
 
   /* ── Layout Spacing ──────────────────────────────────────────────────── */
-  .block-container { padding-top: 1rem !important; }
+  .block-container { padding-top: 0.5rem !important; overflow: visible !important; }
   [data-testid="stPlotlyChart"] { margin-bottom: 4px !important; }
   div[data-testid="stHorizontalBlock"] { gap: 10px !important; }
 
@@ -4578,30 +4595,34 @@ st.markdown("""
       setTimeout(function(){ hero.style.opacity='1'; },80);
     }
   }
-  // --- Sticky tab bar: override parent overflow + watch scroll ---
+  // --- Sticky tab bar: walk DOM tree to remove overflow:hidden on all ancestors ---
   function initStickyTabs(){
     var doc = window.parent && window.parent.document ? window.parent.document : document;
     var tabEl = doc.querySelector('[data-testid="stTabs"]');
     if(!tabEl) return;
-    var heroEl = doc.querySelector('.hero-banner');
-    // Allow sticky to work by making parent containers non-overflow-hidden
-    ['stMain','stAppViewContainer','block-container','stVerticalBlock'].forEach(function(k){
-      var els2 = doc.querySelectorAll('[data-testid="'+k+'"], .'+k);
-      els2.forEach(function(p){ if(p) p.style.overflow='visible'; });
-    });
-    // Make tab bar sticky via inline style — more reliable than CSS-only in Streamlit
-    tabEl.style.cssText += [
-      'position:sticky!important',
-      'top:0!important',
-      'z-index:9990!important',
-      'background:rgba(238,242,248,0.97)!important',
-      'backdrop-filter:blur(14px)!important',
-      '-webkit-backdrop-filter:blur(14px)!important',
-      'border-bottom:1px solid rgba(15,28,46,0.08)!important',
-      'box-shadow:0 2px 16px rgba(15,28,46,0.09)!important',
-      'padding-top:6px!important',
-      'padding-bottom:4px!important',
-    ].join(';');
+    // Walk up the DOM tree and remove overflow:hidden on all ancestors
+    var el = tabEl.parentElement;
+    while(el && el !== doc.body){
+      var s = doc.defaultView.getComputedStyle(el);
+      if(s.overflow === 'hidden' || s.overflowY === 'hidden'){
+        el.style.overflow = 'visible';
+        el.style.overflowY = 'visible';
+      }
+      el = el.parentElement;
+    }
+    // Apply sticky styles via cssText (replaces previous value for reliability)
+    tabEl.style.cssText = [
+      'position:sticky',
+      'top:0',
+      'z-index:9999',
+      'background:rgba(238,242,248,0.97)',
+      'backdrop-filter:blur(16px)',
+      '-webkit-backdrop-filter:blur(16px)',
+      'border-bottom:2px solid rgba(5,103,200,0.18)',
+      'box-shadow:0 4px 24px rgba(15,28,46,0.12)',
+      'padding:6px 0 4px 0',
+      'margin-bottom:0',
+    ].join('!important;') + '!important';
   }
   setTimeout(initReveal, 300);
   setTimeout(initReveal, 900);
@@ -10917,16 +10938,16 @@ with tab_ei:
 
         for _, _er in _evts_sorted.iterrows():
             _is_maj = _er.get("is_major") == 1
-            _dur = max((_er["end_date"] - _er["event_date"]).days, 1)
+            _dur = max((_er["end_date"] - _er["event_date"]).days + 1, 1)
             _bar_color = _major_color if _is_maj else _standard_color
             _name = str(_er.get("event_name", "Event"))
             _date_str = _er["event_date"].strftime("%b %d")
             _end_str  = _er["end_date"].strftime("%b %d, %Y") if _dur > 1 else ""
             _gantt_fig.add_trace(go.Bar(
-                x=[_dur * 86400 * 1000],   # convert days → milliseconds to match timestamp x-axis
+                x=[_dur * 86400 * 1000],   # duration in milliseconds for date-type axis
                 y=[_name],
                 orientation="h",
-                base=[_er["event_date"].timestamp() * 1000],
+                base=[_er["event_date"].strftime("%Y-%m-%d")],
                 marker=dict(
                     color=_bar_color,
                     opacity=0.90,
@@ -10943,30 +10964,17 @@ with tab_ei:
                 showlegend=False,
             ))
 
-        # X-axis: use unix-ms → format as month names
-        _min_ts = int(_evts_sorted["event_date"].min().timestamp() * 1000) - 86400000 * 10
-        _max_ts = int(_evts_sorted["end_date"].max().timestamp() * 1000) + 86400000 * 10
         _gantt_fig.update_layout(
             barmode="overlay",
             xaxis=dict(
-                type="linear",
-                range=[_min_ts, _max_ts],
-                tickmode="array",
-                tickvals=[
-                    int(pd.Timestamp(f"2025-{m:02d}-01").timestamp() * 1000)
-                    for m in range(1, 13)
-                ] + [
-                    int(pd.Timestamp(f"2026-{m:02d}-01").timestamp() * 1000)
-                    for m in range(1, 5)
-                ],
-                ticktext=["Jan '25","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec '25",
-                          "Jan '26","Feb","Mar","Apr '26"],
-                tickfont=dict(size=12, color="#C9D1D9"),
+                type="date",
+                tickformat="%b '%y",
+                tickfont=dict(size=11, color="#475569"),
                 gridcolor="rgba(0,0,0,0.06)",
                 zeroline=False,
             ),
             yaxis=dict(
-                tickfont=dict(size=11, color="#E6EDF3"),
+                tickfont=dict(size=11, color="#1E293B"),
                 gridcolor="rgba(0,0,0,0.05)",
                 automargin=True,
             ),
@@ -11117,7 +11125,7 @@ with tab_ei:
         adr_lp = sc["adr_lift_pct"]
         rvp_lp = sc["rvp_lift_pct"]
         occ_l  = sc["occ_lift"]
-        has_data = sc["e_adr"] > 0
+        has_data = sc["e_adr"] > 1.0  # Ensure it's actually real data, not an uninitialized zero
 
         adr_tag = (
             f'<span style="color:{"#21808D" if (adr_lp or 0) >= 0 else "#E53E3E"};font-weight:700;">'
@@ -13691,6 +13699,139 @@ with tab_cs:
 # ══════════════════════════════════════════════════════════════════════════════
 
 
+def render_audit_report() -> None:
+    """Generate and render a comprehensive data audit for the PULSE app."""
+    import datetime as _dt
+
+    st.markdown(_sh("🔍", "App Audit Report", color="indigo", tag="LIVE"), unsafe_allow_html=True)
+
+    _now = _dt.datetime.now()
+    _checks = []
+
+    # ── DataFrame emptiness checks ────────────────────────────────────────────
+    _df_registry = {
+        "STR Daily":           df_daily,
+        "STR Monthly":         df_monthly,
+        "KPI Daily Summary":   df_kpi,
+        "Compression Qtrs":    df_comp,
+        "CoStar Monthly":      df_cs_mon,
+        "CoStar Snapshot":     df_cs_snap,
+        "CoStar Pipeline":     df_cs_pipe,
+        "Datafy Overview":     df_dfy_ov,
+        "Datafy DMA":          df_dfy_dma,
+        "Datafy Spending":     df_dfy_spend,
+        "Datafy Media KPIs":   df_dfy_media,
+        "Datafy Website KPIs": df_dfy_web,
+        "Insights Daily":      df_insights,
+        "EIA Gas Prices":      df_eia_gas,
+        "TSA Checkpoint":      df_tsa,
+    }
+    _empty = []
+    _populated = []
+    for _lbl, _df in _df_registry.items():
+        if _df is None or (hasattr(_df, "empty") and _df.empty):
+            _empty.append(_lbl)
+            _checks.append(("🔴", _lbl, "Empty — source not loaded or pipeline step failed"))
+        else:
+            _populated.append(_lbl)
+            _checks.append(("🟢", _lbl, f"{len(_df):,} rows loaded"))
+
+    # ── Insights freshness check ──────────────────────────────────────────────
+    _insights_status = "🔴 No insights — run pipeline"
+    _insights_detail = "insights_daily is empty"
+    if not df_insights.empty and "as_of_date" in df_insights.columns:
+        try:
+            _latest_ins = pd.to_datetime(df_insights["as_of_date"]).max()
+            _ins_age = (_now.date() - _latest_ins.date()).days
+            if _ins_age == 0:
+                _insights_status = "🟢 Current"
+                _insights_detail = f"Insights generated today ({_latest_ins.strftime('%Y-%m-%d')})"
+            elif _ins_age <= 7:
+                _insights_status = "🟡 Recent"
+                _insights_detail = f"Last updated {_ins_age}d ago ({_latest_ins.strftime('%Y-%m-%d')})"
+            else:
+                _insights_status = "🔴 Stale"
+                _insights_detail = f"Last updated {_ins_age}d ago — run pipeline to refresh"
+        except Exception:
+            pass
+
+    # ── STR data recency check ────────────────────────────────────────────────
+    _str_status = "🔴 No STR data"
+    _str_detail = "fact_str_metrics is empty"
+    if not df_daily.empty and "as_of_date" in df_daily.columns:
+        try:
+            _latest_str = pd.to_datetime(df_daily["as_of_date"]).max()
+            _str_age = (_now.date() - _latest_str.date()).days
+            if _str_age <= 14:
+                _str_status = "🟢 Current"
+            elif _str_age <= 45:
+                _str_status = "🟡 Recent"
+            else:
+                _str_status = "🔴 Stale (>45 days)"
+            _str_detail = f"Latest STR date: {_latest_str.strftime('%Y-%m-%d')} ({_str_age}d ago)"
+        except Exception:
+            pass
+
+    # ── Render audit summary cards ────────────────────────────────────────────
+    _ac1, _ac2, _ac3 = st.columns(3)
+    with _ac1:
+        st.markdown(
+            f'<div style="background:#FFFFFF;border:1px solid rgba(5,150,105,0.20);border-left:3px solid #059669;'
+            f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
+            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#059669;margin-bottom:4px;">Populated Sources</div>'
+            f'<div style="font-size:28px;font-weight:800;color:#0D1B2E;">{len(_populated)}</div>'
+            f'<div style="font-size:12px;color:#64748B;">of {len(_df_registry)} tracked DataFrames</div>'
+            f'</div>', unsafe_allow_html=True)
+    with _ac2:
+        _ac2_color = "#DC2626" if _empty else "#059669"
+        st.markdown(
+            f'<div style="background:#FFFFFF;border:1px solid rgba(220,38,38,0.20);border-left:3px solid {_ac2_color};'
+            f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
+            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:{_ac2_color};margin-bottom:4px;">Empty Sources</div>'
+            f'<div style="font-size:28px;font-weight:800;color:#0D1B2E;">{len(_empty)}</div>'
+            f'<div style="font-size:12px;color:#64748B;">{"Run pipeline to fix" if _empty else "All sources healthy"}</div>'
+            f'</div>', unsafe_allow_html=True)
+    with _ac3:
+        st.markdown(
+            f'<div style="background:#FFFFFF;border:1px solid rgba(5,103,200,0.20);border-left:3px solid #0567C8;'
+            f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
+            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0567C8;margin-bottom:4px;">Insights Status</div>'
+            f'<div style="font-size:18px;font-weight:800;color:#0D1B2E;">{_insights_status}</div>'
+            f'<div style="font-size:12px;color:#64748B;">{_insights_detail}</div>'
+            f'</div>', unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+
+    # ── STR recency + detailed checklist ─────────────────────────────────────
+    _ac4, _ac5 = st.columns([1, 2])
+    with _ac4:
+        st.markdown(
+            f'<div style="background:#FFFFFF;border:1px solid rgba(5,103,200,0.15);border-left:3px solid #0567C8;'
+            f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
+            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0567C8;margin-bottom:4px;">STR Data Recency</div>'
+            f'<div style="font-size:18px;font-weight:800;color:#0D1B2E;">{_str_status}</div>'
+            f'<div style="font-size:12px;color:#64748B;">{_str_detail}</div>'
+            f'</div>', unsafe_allow_html=True)
+    with _ac5:
+        with st.expander("📋 Full DataFrame Status Checklist", expanded=False):
+            _rows_html = ""
+            for _dot, _lbl, _msg in _checks:
+                _rows_html += (
+                    f'<div style="display:flex;align-items:center;gap:10px;padding:5px 0;'
+                    f'border-bottom:1px solid rgba(0,0,0,0.05);">'
+                    f'<span style="font-size:14px;">{_dot}</span>'
+                    f'<span style="font-weight:600;color:#0D1B2E;min-width:160px;font-size:13px;">{_lbl}</span>'
+                    f'<span style="color:#64748B;font-size:12px;">{_msg}</span>'
+                    f'</div>'
+                )
+            st.markdown(
+                f'<div style="background:#F8FAFC;border-radius:8px;padding:10px 14px;">'
+                f'{_rows_html}</div>',
+                unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
+
+
 # TAB 5 — DATA LOG
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_dl:
@@ -14140,6 +14281,9 @@ with tab_dl:
         _brain_csv2 = _brain_df.to_csv(index=False).encode()
         st.download_button("⬇️ Download DB Inventory CSV", _brain_csv2,
                            file_name="db_inventory.csv", mime="text/csv", key="dl_brain")
+
+    # ── App Audit Report ──────────────────────────────────────────────────────
+    render_audit_report()
 
     # ── Data Vault Intel Panel ────────────────────────────────────────────────
     try:
