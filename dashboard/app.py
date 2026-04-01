@@ -769,16 +769,18 @@ st.markdown("""
   a[href*="streamlit.io"]               { display:    none    !important; }
   a[href*="github.com/streamlit"]       { display:    none    !important; }
 
-  /* ── Prevent parent containers from blocking sticky ──────────────────── */
-  [data-testid="stAppViewContainer"],
+  /* ── Fix sticky: inner containers must not clip overflow ────────────── */
+  /* Do NOT change stAppViewContainer — it provides the page scroll */
   [data-testid="stMain"],
-  .main, section.main,
-  [data-testid="stVerticalBlock"] {
+  section.main,
+  .main > div,
+  [data-testid="stVerticalBlock"],
+  [data-testid="stVerticalBlockBorderWrapper"] {
     overflow: visible !important;
   }
-  /* Keep only the outermost scroll container */
-  [data-testid="stAppViewContainer"] > div:first-child {
-    overflow-y: auto !important;
+  /* block-container is direct parent of hero + tabs — must be visible */
+  .block-container {
+    overflow: visible !important;
   }
 
   /* ── Custom Scrollbar ────────────────────────────────────────────────── */
@@ -856,18 +858,15 @@ st.markdown("""
     to   { transform: scaleX(1); transform-origin: left; }
   }
   .hero-banner {
-    position: sticky !important;
-    top: 0; z-index: 999;
     background: #06111F !important;
     background-image:
       radial-gradient(circle at 80% 20%, rgba(5,103,200,0.18) 0%, transparent 55%),
       radial-gradient(circle at 10% 80%, rgba(56,189,248,0.08) 0%, transparent 45%),
       linear-gradient(180deg, #06111F 0%, #091628 100%) !important;
     border-radius: 0 !important;
-    margin: -1rem -1rem 1.25rem -1rem;
-    padding: 20px 36px 18px 36px;
-    border-bottom: 1px solid rgba(5,103,200,0.30) !important;
-    box-shadow: 0 2px 0 rgba(5,103,200,0.18), 0 6px 32px rgba(15,28,46,0.40) !important;
+    margin: -1rem -1rem 0 -1rem;
+    padding: 22px 36px 20px 36px;
+    border-bottom: none !important;
     overflow: hidden;
   }
   .hero-banner::before {
@@ -908,8 +907,8 @@ st.markdown("""
   }
   .hero-subtitle {
     font-family: 'DM Sans', 'Inter', sans-serif;
-    font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.72);
-    letter-spacing: 0.06em; margin-top: 4px; position: relative;
+    font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.88);
+    letter-spacing: 0.04em; margin-top: 6px; position: relative;
     text-transform: uppercase;
   }
 
@@ -1637,11 +1636,13 @@ st.markdown("""
   }
 
   /* ── KPI Ticker (1ax / Bloomberg) ────────────────────────────────────── */
+  /* Seamlessly extends the hero banner — same dark bg, no gap */
   .pulse-ticker-wrap {
     overflow: hidden;
-    background: linear-gradient(180deg, #07111F 0%, #0A1828 100%);
-    border-bottom: 1px solid rgba(5,103,200,0.32);
-    margin: 0 -1rem 0 -1rem;
+    background: linear-gradient(180deg, #091628 0%, #0A1C30 100%);
+    border-bottom: 2px solid rgba(5,103,200,0.35);
+    box-shadow: 0 4px 28px rgba(0,0,0,0.35);
+    margin: 0 -1rem 1.5rem -1rem;
     padding: 0;
     position: relative;
     z-index: 998;
@@ -1654,11 +1655,11 @@ st.markdown("""
   }
   .pulse-ticker-wrap::before {
     left: 0;
-    background: linear-gradient(90deg, #07111F 0%, transparent 100%);
+    background: linear-gradient(90deg, #0A1C30 0%, transparent 100%);
   }
   .pulse-ticker-wrap::after {
     right: 0;
-    background: linear-gradient(270deg, #07111F 0%, transparent 100%);
+    background: linear-gradient(270deg, #0A1C30 0%, transparent 100%);
   }
   .pulse-ticker-track {
     display: flex;
