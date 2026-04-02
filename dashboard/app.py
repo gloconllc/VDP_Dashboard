@@ -1760,6 +1760,53 @@ st.markdown("""
     font-weight: 800; border-radius: 4px; padding: 0 4px;
     font-family: 'Outfit', sans-serif; letter-spacing: -0.02em; display: inline;
   }
+  /* ── CNN interactive — compact inline highlight variants ─────────────── */
+  .data-hl-green {
+    display: inline-block; font-family: 'Outfit', sans-serif;
+    font-size: 1.15em; font-weight: 900; letter-spacing: -0.03em;
+    color: #059669; padding: 0 2px;
+    border-bottom: 2px solid rgba(5,150,105,0.30); line-height: 1;
+  }
+  .data-hl-red {
+    display: inline-block; font-family: 'Outfit', sans-serif;
+    font-size: 1.15em; font-weight: 900; letter-spacing: -0.03em;
+    color: #DC2626; padding: 0 2px;
+    border-bottom: 2px solid rgba(220,38,38,0.30); line-height: 1;
+  }
+  .data-hl-gold {
+    display: inline-block; font-family: 'Outfit', sans-serif;
+    font-size: 1.15em; font-weight: 900; letter-spacing: -0.03em;
+    color: #D97706; padding: 0 2px;
+    border-bottom: 2px solid rgba(217,119,6,0.30); line-height: 1;
+  }
+  /* ── Section pull-quote (CNN interactive "big stat" style) ───────────── */
+  .pull-stat-display {
+    display: block; font-family: 'Syne', 'Outfit', sans-serif;
+    font-size: 3rem; font-weight: 900; letter-spacing: -0.05em;
+    line-height: 1; color: #07111F; margin: 8px 0 4px 0;
+  }
+  .pull-stat-label {
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .10em; color: #64748B;
+  }
+  /* ── Hero banner stats row ────────────────────────────────────────────── */
+  .hero-stats-row {
+    display: flex; gap: 32px; margin-top: 14px; flex-wrap: wrap;
+    border-top: 1px solid rgba(255,255,255,0.10); padding-top: 14px;
+  }
+  .hero-stat { display: flex; flex-direction: column; gap: 2px; }
+  .hero-stat-val {
+    font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 900;
+    letter-spacing: -0.04em; color: #FFFFFF; line-height: 1;
+  }
+  .hero-stat-label {
+    font-family: 'DM Sans', sans-serif; font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .12em;
+    color: rgba(255,255,255,0.55);
+  }
+  .hero-stat-delta { font-size: 11px; font-weight: 700; }
+  .hero-stat-pos { color: #34D399; }
+  .hero-stat-neg { color: #F87171; }
 
   /* ── Painted Heatmap (Giorgia Lupi / Long-Covid density style) ───────── */
   .painted-legend {
@@ -5084,6 +5131,24 @@ elif not df_daily.empty:
 else:
     last_upd = "N/A"
 
+# ── Hero banner stat values ───────────────────────────────────────────────
+_h_occ   = m.get("occ_30", 0)   if m else 0
+_h_adr   = m.get("adr_30", 0)   if m else 0
+_h_rvp   = m.get("revpar_30", 0) if m else 0
+_h_occ_d = m.get("occ_delta", 0) if m else 0
+_h_rvp_d = m.get("revpar_delta", 0) if m else 0
+_h_tbid  = m.get("tbid_monthly", 0) if m else 0
+_h_occ_str  = f"{_h_occ:.1f}%"  if _h_occ else "—"
+_h_adr_str  = f"${_h_adr:.0f}"  if _h_adr else "—"
+_h_rvp_str  = f"${_h_rvp:.0f}"  if _h_rvp else "—"
+_h_tbid_str = f"${_h_tbid/1000:.0f}K" if _h_tbid >= 1000 else (f"${_h_tbid:.0f}" if _h_tbid else "—")
+def _h_delta_html(v, fmt="pct"):
+    if v == 0: return ""
+    cls = "hero-stat-pos" if v >= 0 else "hero-stat-neg"
+    arrow = "▲" if v >= 0 else "▼"
+    val_str = f"{v:+.1f}%" if fmt == "pct" else f"{v:+.1f}pp"
+    return f'<span class="hero-stat-delta {cls}">{arrow} {val_str}</span>'
+
 st.markdown(
     f'<div class="hero-banner">'
     f'<a href="?" style="text-decoration:none;">'
@@ -5099,6 +5164,26 @@ st.markdown(
     f'<span style="font-size:11px;color:rgba(255,255,255,0.62);font-weight:500;">{range_label} window</span>'
     f'<span style="font-size:11px;color:rgba(255,255,255,0.30);">·</span>'
     f'<span style="font-size:11px;color:rgba(255,255,255,0.62);font-weight:500;">Updated {last_upd}</span>'
+    f'</div>'
+    f'<div class="hero-stats-row">'
+    f'<div class="hero-stat">'
+    f'  <span class="hero-stat-val">{_h_occ_str}</span>'
+    f'  <span class="hero-stat-label">OCC %</span>'
+    f'  {_h_delta_html(_h_occ_d, "pct")}'
+    f'</div>'
+    f'<div class="hero-stat">'
+    f'  <span class="hero-stat-val">{_h_adr_str}</span>'
+    f'  <span class="hero-stat-label">ADR</span>'
+    f'</div>'
+    f'<div class="hero-stat">'
+    f'  <span class="hero-stat-val">{_h_rvp_str}</span>'
+    f'  <span class="hero-stat-label">RevPAR</span>'
+    f'  {_h_delta_html(_h_rvp_d, "pct")}'
+    f'</div>'
+    f'<div class="hero-stat">'
+    f'  <span class="hero-stat-val">{_h_tbid_str}</span>'
+    f'  <span class="hero-stat-label">TBID Est.</span>'
+    f'</div>'
     f'</div>'
     f'</div>',
     unsafe_allow_html=True,
@@ -6435,1418 +6520,1430 @@ with tab_ov:
     except Exception:
         pass
 
-    # ── Board Report (auto-generated, always visible) ──────────────────────────
-    st.markdown(sec_div("📋 Board Intelligence Report"), unsafe_allow_html=True)
-    with st.expander("📋 VDP Board Report — Auto-Generated Talking Points", expanded=True):
-        st.markdown('<span class="ai-chip">BOARD READY</span>', unsafe_allow_html=True)
 
-        if m:
-            _rvp   = m.get("revpar_30", 0)
-            _rvp_d = m.get("revpar_delta", 0)
-            _adr   = m.get("adr_30", 0)
-            _adr_d = m.get("adr_delta", 0)
-            _occ   = m.get("occ_30", 0)
-            _occ_d = m.get("occ_delta", 0)
-            _tbid  = m.get("tbid_monthly", 0)
-            _cq    = m.get("comp_recent_q", 0)
-            _cpq   = m.get("comp_prior_q", 0)
-            _wknd  = m.get("wknd_revpar", 0)
-            _wkdy  = m.get("wkdy_revpar", 0)
-            _gap   = ((_wknd - _wkdy) / _wkdy * 100) if _wkdy else 0
+    # ── Overview Sub-Tabs ──────────────────────────────────────────────────────
+    _ov_t1, _ov_t2, _ov_t3 = st.tabs(["📊 Key Metrics", "📄 Board Report", "🧠 AI Analysis"])
 
-            _oos_pct  = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
-            _trips_m  = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) / 1_000_000 if not df_dfy_ov.empty else 0
-            _overnight = float(df_dfy_ov.iloc[0].get("overnight_pct", 0) or 0) if not df_dfy_ov.empty else 0
+    # ── Board Report → sub-tab 2 ──────────────────────────────────────────────
+    with _ov_t2:
+        # ── Board Report (auto-generated, always visible) ──────────────────────────
+        st.markdown(sec_div("📋 Board Intelligence Report"), unsafe_allow_html=True)
+        with st.expander("📋 VDP Board Report — Auto-Generated Talking Points", expanded=True):
+            st.markdown('<span class="ai-chip">BOARD READY</span>', unsafe_allow_html=True)
 
-            _dir_arrow = "▲" if _rvp_d >= 0 else "▼"
-            _dir_color = "#21808D" if _rvp_d >= 0 else "#c0152f"
+            if m:
+                _rvp   = m.get("revpar_30", 0)
+                _rvp_d = m.get("revpar_delta", 0)
+                _adr   = m.get("adr_30", 0)
+                _adr_d = m.get("adr_delta", 0)
+                _occ   = m.get("occ_30", 0)
+                _occ_d = m.get("occ_delta", 0)
+                _tbid  = m.get("tbid_monthly", 0)
+                _cq    = m.get("comp_recent_q", 0)
+                _cpq   = m.get("comp_prior_q", 0)
+                _wknd  = m.get("wknd_revpar", 0)
+                _wkdy  = m.get("wkdy_revpar", 0)
+                _gap   = ((_wknd - _wkdy) / _wkdy * 100) if _wkdy else 0
 
-            # Zartico historical context for board report
-            _zrt_ctx = "Visitor devices share: 21.2% · Visitor spend share: 48.0% · Avg. visitor spend peaked at $204 in Jul 2024. OOS visitor rate: 23%."
-            if not df_zrt_kpis.empty:
-                _zk = df_zrt_kpis.iloc[0]
-                _zrt_ctx = (
-                    f"Visitor devices: {_zk.get('pct_devices_visitors', 21.2):.1f}% of local devices · "
-                    f"Visitor spend: {_zk.get('pct_spend_visitors', 48.0):.1f}% of total · "
-                    f"Accommodation spend: {_zk.get('pct_accommodation_spend_visitors', 76.0):.0f}% from visitors. "
-                    f"Top feeder: LA ({df_zrt_markets[df_zrt_markets['rank']==1]['pct_visitors'].values[0]:.1f}% of visits) · "
-                    "Peak avg. spend $204/visitor (Jul 2024)."
-                ) if not df_zrt_markets.empty else (
-                    f"Visitor devices: {_zk.get('pct_devices_visitors', 21.2):.1f}% · "
-                    f"Visitor spend: {_zk.get('pct_spend_visitors', 48.0):.1f}% · "
-                    f"Accommodation: {_zk.get('pct_accommodation_spend_visitors', 76.0):.0f}%."
-                )
+                _oos_pct  = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
+                _trips_m  = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) / 1_000_000 if not df_dfy_ov.empty else 0
+                _overnight = float(df_dfy_ov.iloc[0].get("overnight_pct", 0) or 0) if not df_dfy_ov.empty else 0
 
-            # Source badge row
-            _src_row = (
-                '<span class="nlm-tag nlm-tag-str">STR</span>'
-                + (' <span class="nlm-tag nlm-tag-datafy">Datafy</span>' if _trips_m > 0 else '')
-                + ' <span class="nlm-tag nlm-tag-ai">VDP Insights</span>'
-            )
-            _midweek_opp_lbl = f"${(_wknd - _wkdy) * 0.2 * 90 / 7 * 12:,.0f}/year"
-            # Datafy GA4 web analytics summary
-            if not df_dfy_social_aud.empty:
-                _ga4_sessions = int(df_dfy_social_aud.iloc[0].get("total_sessions", 0) or 0)
-                _ga4_eng      = float(df_dfy_social_aud.iloc[0].get("engagement_rate", 0) or 0)
-                _ga4_top_page = df_dfy_social_pages.iloc[0].get("page_path", "—") if not df_dfy_social_pages.empty else "—"
-                _ga4_lbl = (
-                    f"Website sessions: <strong>{_ga4_sessions:,}</strong> &nbsp;·&nbsp; "
-                    f"Engagement rate: <strong>{_ga4_eng:.1f}%</strong> &nbsp;·&nbsp; "
-                    f"Top page: <strong>{_ga4_top_page}</strong>."
-                )
-            else:
-                _ga4_lbl = "Run pipeline to load Datafy GA4 web analytics data."
-            # Later.com social stats for board report
-            _ig_fol = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
-            _fb_fol = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
-            _tk_fol = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
-            _ig_posts_ct = len(df_later_ig_posts)
-            _ig_eng_avg  = float(df_later_ig_posts["engagement_rate"].mean()) if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns else 0.0
-            _social_reach_total = (
-                int(df_later_ig_profile["reach"].sum()) if not df_later_ig_profile.empty and "reach" in df_later_ig_profile.columns else 0
-            ) + (
-                int(df_later_fb_profile["reach"].sum()) if not df_later_fb_profile.empty and "reach" in df_later_fb_profile.columns else 0
-            )
-            _social_lbl = (
-                f"IG: <strong>{_ig_fol:,}</strong> followers · "
-                f"FB: <strong>{_fb_fol:,}</strong> followers · "
-                f"TK: <strong>{_tk_fol:,}</strong> followers. "
-                f"Avg engagement rate: <strong>{_ig_eng_avg:.1f}%</strong> · "
-                f"{_ig_posts_ct} IG posts this period · "
-                f"Total cross-platform reach: <strong>{_social_reach_total:,}</strong>."
-            ) if _ig_fol + _fb_fol > 0 else _ga4_lbl
-            _visitor_lbl = (
-                f"<strong>{_trips_m:.2f}M</strong> annual visitor trips · "
-                f"<strong>{_overnight:.1f}%</strong> overnight stays · "
-                f"<strong>{_oos_pct:.1f}%</strong> out-of-state visitors generating higher per-trip spend."
-                if _trips_m > 0 else "Run pipeline to load Datafy visitor data."
-            )
-            # FRED macro context for board report
-            _fred_macro_lbl = ""
-            if not df_fred.empty:
-                try:
-                    _sent_row  = df_fred[df_fred["series_id"]=="UMCSENT"].sort_values("data_date").dropna(subset=["value"]).tail(2)
-                    _unrate_row = df_fred[df_fred["series_id"]=="UNRATE"].sort_values("data_date").dropna(subset=["value"]).tail(1)
-                    _disp_row  = df_fred[df_fred["series_id"]=="DSPIC96"].sort_values("data_date").dropna(subset=["value"]).tail(1)
-                    _save_row  = df_fred[df_fred["series_id"]=="PSAVERT"].sort_values("data_date").dropna(subset=["value"]).tail(1)
-                    _sent_val  = float(_sent_row.iloc[-1]["value"]) if not _sent_row.empty else None
-                    _sent_prev = float(_sent_row.iloc[-2]["value"]) if len(_sent_row) >= 2 else None
-                    _sent_chg  = round(_sent_val - _sent_prev, 1) if _sent_val and _sent_prev else 0
-                    _unrate    = float(_unrate_row.iloc[0]["value"]) if not _unrate_row.empty else None
-                    _disp      = float(_disp_row.iloc[0]["value"]) if not _disp_row.empty else None
-                    _save      = float(_save_row.iloc[0]["value"]) if not _save_row.empty else None
-                    _sent_tier = "🟢 Strong" if (_sent_val or 0) > 90 else "🟡 Moderate" if (_sent_val or 0) > 70 else "🔴 Cautious"
-                    _sent_dir  = f"({'+' if _sent_chg >= 0 else ''}{_sent_chg:.1f} pts vs. prior)" if _sent_chg else ""
-                    _fred_macro_lbl = (
-                        f"Consumer Sentiment: <strong>{_sent_val:.1f}</strong> {_sent_tier} {_sent_dir} "
-                        f"&nbsp;·&nbsp; Unemployment: <strong>{_unrate:.1f}%</strong>"
-                        f"{'&nbsp;·&nbsp; Disposable Income: <strong>$' + f'{_disp:,.0f}B</strong>' if _disp else ''}"
-                        f"{'&nbsp;·&nbsp; Savings Rate: <strong>' + f'{_save:.1f}%</strong>' if _save else ''}."
+                _dir_arrow = "▲" if _rvp_d >= 0 else "▼"
+                _dir_color = "#21808D" if _rvp_d >= 0 else "#c0152f"
+
+                # Zartico historical context for board report
+                _zrt_ctx = "Visitor devices share: 21.2% · Visitor spend share: 48.0% · Avg. visitor spend peaked at $204 in Jul 2024. OOS visitor rate: 23%."
+                if not df_zrt_kpis.empty:
+                    _zk = df_zrt_kpis.iloc[0]
+                    _zrt_ctx = (
+                        f"Visitor devices: {_zk.get('pct_devices_visitors', 21.2):.1f}% of local devices · "
+                        f"Visitor spend: {_zk.get('pct_spend_visitors', 48.0):.1f}% of total · "
+                        f"Accommodation spend: {_zk.get('pct_accommodation_spend_visitors', 76.0):.0f}% from visitors. "
+                        f"Top feeder: LA ({df_zrt_markets[df_zrt_markets['rank']==1]['pct_visitors'].values[0]:.1f}% of visits) · "
+                        "Peak avg. spend $204/visitor (Jul 2024)."
+                    ) if not df_zrt_markets.empty else (
+                        f"Visitor devices: {_zk.get('pct_devices_visitors', 21.2):.1f}% · "
+                        f"Visitor spend: {_zk.get('pct_spend_visitors', 48.0):.1f}% · "
+                        f"Accommodation: {_zk.get('pct_accommodation_spend_visitors', 76.0):.0f}%."
                     )
-                except Exception:
-                    _fred_macro_lbl = "FRED data loaded — see Economic Climate tab for details."
-            # EIA gas price context for board report
-            _eia_lbl = ""
-            if not df_eia_gas.empty:
-                try:
-                    _eia_ca = df_eia_gas[df_eia_gas["series_id"].str.contains("SCA", na=False)].sort_values("week_end_date").tail(1)
-                    if not _eia_ca.empty:
-                        _gas_px = float(_eia_ca.iloc[0]["price_per_gallon"])
-                        _gas_yoy = float(_eia_ca.iloc[0]["yoy_change"]) if pd.notna(_eia_ca.iloc[0].get("yoy_change")) else None
-                        _gas_risk = "🔴 HIGH" if _gas_px > 4.50 else "🟡 MODERATE" if _gas_px > 4.00 else "🟢 LOW"
-                        _eia_lbl = (
-                            f"CA gas: <strong>${_gas_px:.2f}/gal</strong> {_gas_risk} drive-market risk"
-                            + (f" ({'+' if (_gas_yoy or 0) >= 0 else ''}${_gas_yoy:.2f} YOY)" if _gas_yoy else "")
-                            + ". Drive-market visitors (LA/OC/SD/IE) = ~55% of total — gas is a direct booking headwind above $4.50."
+
+                # Source badge row
+                _src_row = (
+                    '<span class="nlm-tag nlm-tag-str">STR</span>'
+                    + (' <span class="nlm-tag nlm-tag-datafy">Datafy</span>' if _trips_m > 0 else '')
+                    + ' <span class="nlm-tag nlm-tag-ai">VDP Insights</span>'
+                )
+                _midweek_opp_lbl = f"${(_wknd - _wkdy) * 0.2 * 90 / 7 * 12:,.0f}/year"
+                # Datafy GA4 web analytics summary
+                if not df_dfy_social_aud.empty:
+                    _ga4_sessions = int(df_dfy_social_aud.iloc[0].get("total_sessions", 0) or 0)
+                    _ga4_eng      = float(df_dfy_social_aud.iloc[0].get("engagement_rate", 0) or 0)
+                    _ga4_top_page = df_dfy_social_pages.iloc[0].get("page_path", "—") if not df_dfy_social_pages.empty else "—"
+                    _ga4_lbl = (
+                        f"Website sessions: <strong>{_ga4_sessions:,}</strong> &nbsp;·&nbsp; "
+                        f"Engagement rate: <strong>{_ga4_eng:.1f}%</strong> &nbsp;·&nbsp; "
+                        f"Top page: <strong>{_ga4_top_page}</strong>."
+                    )
+                else:
+                    _ga4_lbl = "Run pipeline to load Datafy GA4 web analytics data."
+                # Later.com social stats for board report
+                _ig_fol = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
+                _fb_fol = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
+                _tk_fol = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
+                _ig_posts_ct = len(df_later_ig_posts)
+                _ig_eng_avg  = float(df_later_ig_posts["engagement_rate"].mean()) if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns else 0.0
+                _social_reach_total = (
+                    int(df_later_ig_profile["reach"].sum()) if not df_later_ig_profile.empty and "reach" in df_later_ig_profile.columns else 0
+                ) + (
+                    int(df_later_fb_profile["reach"].sum()) if not df_later_fb_profile.empty and "reach" in df_later_fb_profile.columns else 0
+                )
+                _social_lbl = (
+                    f"IG: <strong>{_ig_fol:,}</strong> followers · "
+                    f"FB: <strong>{_fb_fol:,}</strong> followers · "
+                    f"TK: <strong>{_tk_fol:,}</strong> followers. "
+                    f"Avg engagement rate: <strong>{_ig_eng_avg:.1f}%</strong> · "
+                    f"{_ig_posts_ct} IG posts this period · "
+                    f"Total cross-platform reach: <strong>{_social_reach_total:,}</strong>."
+                ) if _ig_fol + _fb_fol > 0 else _ga4_lbl
+                _visitor_lbl = (
+                    f"<strong>{_trips_m:.2f}M</strong> annual visitor trips · "
+                    f"<strong>{_overnight:.1f}%</strong> overnight stays · "
+                    f"<strong>{_oos_pct:.1f}%</strong> out-of-state visitors generating higher per-trip spend."
+                    if _trips_m > 0 else "Run pipeline to load Datafy visitor data."
+                )
+                # FRED macro context for board report
+                _fred_macro_lbl = ""
+                if not df_fred.empty:
+                    try:
+                        _sent_row  = df_fred[df_fred["series_id"]=="UMCSENT"].sort_values("data_date").dropna(subset=["value"]).tail(2)
+                        _unrate_row = df_fred[df_fred["series_id"]=="UNRATE"].sort_values("data_date").dropna(subset=["value"]).tail(1)
+                        _disp_row  = df_fred[df_fred["series_id"]=="DSPIC96"].sort_values("data_date").dropna(subset=["value"]).tail(1)
+                        _save_row  = df_fred[df_fred["series_id"]=="PSAVERT"].sort_values("data_date").dropna(subset=["value"]).tail(1)
+                        _sent_val  = float(_sent_row.iloc[-1]["value"]) if not _sent_row.empty else None
+                        _sent_prev = float(_sent_row.iloc[-2]["value"]) if len(_sent_row) >= 2 else None
+                        _sent_chg  = round(_sent_val - _sent_prev, 1) if _sent_val and _sent_prev else 0
+                        _unrate    = float(_unrate_row.iloc[0]["value"]) if not _unrate_row.empty else None
+                        _disp      = float(_disp_row.iloc[0]["value"]) if not _disp_row.empty else None
+                        _save      = float(_save_row.iloc[0]["value"]) if not _save_row.empty else None
+                        _sent_tier = "🟢 Strong" if (_sent_val or 0) > 90 else "🟡 Moderate" if (_sent_val or 0) > 70 else "🔴 Cautious"
+                        _sent_dir  = f"({'+' if _sent_chg >= 0 else ''}{_sent_chg:.1f} pts vs. prior)" if _sent_chg else ""
+                        _fred_macro_lbl = (
+                            f"Consumer Sentiment: <strong>{_sent_val:.1f}</strong> {_sent_tier} {_sent_dir} "
+                            f"&nbsp;·&nbsp; Unemployment: <strong>{_unrate:.1f}%</strong>"
+                            f"{'&nbsp;·&nbsp; Disposable Income: <strong>$' + f'{_disp:,.0f}B</strong>' if _disp else ''}"
+                            f"{'&nbsp;·&nbsp; Savings Rate: <strong>' + f'{_save:.1f}%</strong>' if _save else ''}."
                         )
-                except Exception:
-                    _eia_lbl = ""
-            st.markdown(f"""
-<div class="nlm-briefing">
-<div class="nlm-briefing-title">
-  🎙 Dana Point Hotel Market — Intelligence Briefing &nbsp;·&nbsp; {datetime.now().strftime("%B %Y").upper()}
-  &nbsp; {_src_row}
-</div>
+                    except Exception:
+                        _fred_macro_lbl = "FRED data loaded — see Economic Climate tab for details."
+                # EIA gas price context for board report
+                _eia_lbl = ""
+                if not df_eia_gas.empty:
+                    try:
+                        _eia_ca = df_eia_gas[df_eia_gas["series_id"].str.contains("SCA", na=False)].sort_values("week_end_date").tail(1)
+                        if not _eia_ca.empty:
+                            _gas_px = float(_eia_ca.iloc[0]["price_per_gallon"])
+                            _gas_yoy = float(_eia_ca.iloc[0]["yoy_change"]) if pd.notna(_eia_ca.iloc[0].get("yoy_change")) else None
+                            _gas_risk = "🔴 HIGH" if _gas_px > 4.50 else "🟡 MODERATE" if _gas_px > 4.00 else "🟢 LOW"
+                            _eia_lbl = (
+                                f"CA gas: <strong>${_gas_px:.2f}/gal</strong> {_gas_risk} drive-market risk"
+                                + (f" ({'+' if (_gas_yoy or 0) >= 0 else ''}${_gas_yoy:.2f} YOY)" if _gas_yoy else "")
+                                + ". Drive-market visitors (LA/OC/SD/IE) = ~55% of total — gas is a direct booking headwind above $4.50."
+                            )
+                    except Exception:
+                        _eia_lbl = ""
+                st.markdown(f"""
+    <div class="nlm-briefing">
+    <div class="nlm-briefing-title">
+      🎙 Dana Point Hotel Market — Intelligence Briefing &nbsp;·&nbsp; {datetime.now().strftime("%B %Y").upper()}
+      &nbsp; {_src_row}
+    </div>
 
-<div class="nlm-point">
-  <strong>Revenue Momentum</strong> &nbsp;<span style="color:{_dir_color};font-weight:700;">{_dir_arrow} {_rvp_d:+.1f}%</span><br>
-  RevPAR is <strong>${_rvp:.0f}</strong> over the last 30 days ({_rvp_d:+.1f}% vs. prior period).
-  ADR is <strong>${_adr:.0f}</strong> ({_adr_d:+.1f}%) · Occupancy at <strong>{_occ:.1f}%</strong> ({_occ_d:+.1f}pp).
-  <br><em style="opacity:.72">→ {"Maintain pricing discipline — demand supports current rate levels." if _rvp_d >= 0 else "Examine rate softness drivers; consider targeted packages for shoulder periods."}</em>
-</div>
+    <div class="nlm-point">
+      <strong>Revenue Momentum</strong> &nbsp;<span style="color:{_dir_color};font-weight:700;">{_dir_arrow} {_rvp_d:+.1f}%</span><br>
+      RevPAR is <strong>${_rvp:.0f}</strong> over the last 30 days ({_rvp_d:+.1f}% vs. prior period).
+      ADR is <strong>${_adr:.0f}</strong> ({_adr_d:+.1f}%) · Occupancy at <strong>{_occ:.1f}%</strong> ({_occ_d:+.1f}pp).
+      <br><em style="opacity:.72">→ {"Maintain pricing discipline — demand supports current rate levels." if _rvp_d >= 0 else "Examine rate softness drivers; consider targeted packages for shoulder periods."}</em>
+    </div>
 
-<div class="nlm-point">
-  <strong>TBID Revenue Projection</strong> <span class="nlm-tag nlm-tag-str">STR</span><br>
-  Monthly TBID assessment: <strong>${_tbid:,.0f}</strong> (blended 1.25% rate).
-  Compression: <strong>{_cq}</strong> nights above 90% occ this quarter vs. {_cpq} prior.
-  <br><em style="opacity:.72">→ {"Rate increase justified on compression nights — file recommendation with board." if _cq > _cpq else "Shoulder season underperforming — prioritize demand generation budget request."}</em>
-</div>
+    <div class="nlm-point">
+      <strong>TBID Revenue Projection</strong> <span class="nlm-tag nlm-tag-str">STR</span><br>
+      Monthly TBID assessment: <strong>${_tbid:,.0f}</strong> (blended 1.25% rate).
+      Compression: <strong>{_cq}</strong> nights above 90% occ this quarter vs. {_cpq} prior.
+      <br><em style="opacity:.72">→ {"Rate increase justified on compression nights — file recommendation with board." if _cq > _cpq else "Shoulder season underperforming — prioritize demand generation budget request."}</em>
+    </div>
 
-<div class="nlm-point">
-  <strong>Visitor Economy</strong> <span class="nlm-tag nlm-tag-datafy">Datafy</span><br>
-  {_visitor_lbl}
-  <br><em style="opacity:.72">→ Target OOS feeder markets (SLC, DFW, NYC) with fly-drive campaign — 1.3–1.4× room revenue per trip vs. LA drive market.</em>
-</div>
+    <div class="nlm-point">
+      <strong>Visitor Economy</strong> <span class="nlm-tag nlm-tag-datafy">Datafy</span><br>
+      {_visitor_lbl}
+      <br><em style="opacity:.72">→ Target OOS feeder markets (SLC, DFW, NYC) with fly-drive campaign — 1.3–1.4× room revenue per trip vs. LA drive market.</em>
+    </div>
 
-<div class="nlm-point">
-  <strong>Digital & Social Performance</strong> <span class="nlm-tag nlm-tag-datafy">Datafy GA4</span> <span class="nlm-tag" style="background:rgba(225,48,108,0.12);color:#e1306c;">Instagram</span><br>
-  {_ga4_lbl}<br>
-  {_social_lbl}
-  <br><em style="opacity:.72">→ Digital engagement reflects destination intent; top pages signal content demand for campaign alignment.</em>
-</div>
+    <div class="nlm-point">
+      <strong>Digital & Social Performance</strong> <span class="nlm-tag nlm-tag-datafy">Datafy GA4</span> <span class="nlm-tag" style="background:rgba(225,48,108,0.12);color:#e1306c;">Instagram</span><br>
+      {_ga4_lbl}<br>
+      {_social_lbl}
+      <br><em style="opacity:.72">→ Digital engagement reflects destination intent; top pages signal content demand for campaign alignment.</em>
+    </div>
 
-<div class="nlm-point">
-  <strong>Weekend / Midweek Gap</strong> <span class="nlm-tag nlm-tag-str">STR</span><br>
-  Weekend RevPAR: <strong>${_wknd:.0f}</strong> · Midweek: <strong>${_wkdy:.0f}</strong> · Gap: <strong>{_gap:.0f}%</strong>.
-  <br><em style="opacity:.72">→ Closing 20% of this gap adds ~{_midweek_opp_lbl} in incremental portfolio room revenue.</em>
-</div>
+    <div class="nlm-point">
+      <strong>Weekend / Midweek Gap</strong> <span class="nlm-tag nlm-tag-str">STR</span><br>
+      Weekend RevPAR: <strong>${_wknd:.0f}</strong> · Midweek: <strong>${_wkdy:.0f}</strong> · Gap: <strong>{_gap:.0f}%</strong>.
+      <br><em style="opacity:.72">→ Closing 20% of this gap adds ~{_midweek_opp_lbl} in incremental portfolio room revenue.</em>
+    </div>
 
-<div class="nlm-point">
-  <strong>Market Positioning</strong> <span class="nlm-tag nlm-tag-ai">CoStar</span><br>
-  Dana Point/South OC market ADR forecast: $285+ through 2025. VDP portfolio maintains premium positioning above market average.
-  <br><em style="opacity:.72">→ Present updated comp set analysis at next board meeting; request approval for rate strategy review.</em>
-</div>
+    <div class="nlm-point">
+      <strong>Market Positioning</strong> <span class="nlm-tag nlm-tag-ai">CoStar</span><br>
+      Dana Point/South OC market ADR forecast: $285+ through 2025. VDP portfolio maintains premium positioning above market average.
+      <br><em style="opacity:.72">→ Present updated comp set analysis at next board meeting; request approval for rate strategy review.</em>
+    </div>
 
-<div class="nlm-point">
-  <strong>Historical Context (Zartico 2024–25) (Historical Reference)</strong> <span class="nlm-tag" style="background:rgba(121,82,179,0.15);color:#7952b3;">Zartico</span><br>
-  {_zrt_ctx}
-  <br><em style="opacity:.72">→ Zartico historical data provides independent validation of Datafy trends; present alongside for board credibility. Note: Zartico is historical reference only (Jun 2025 snapshot) — not current data.</em>
-</div>
-</div>
-""", unsafe_allow_html=True)
-        else:
-            st.info("Run the pipeline to load STR data for board report generation.")
-
-        # ── Download button ────────────────────────────────────────────────────
-        st.markdown("<br>", unsafe_allow_html=True)
-        _dl_col, _sp_col = st.columns([1, 3])
-        with _dl_col:
-            _report_html = generate_board_report_html(
-                m or {},
-                df_kpi,
-                df_dfy_ov,
-                df_dfy_dma,
-                df_cs_snap,
-                df_insights,
-                df_dfy_media,
-            )
-            st.download_button(
-                label="📥 Download Board Report (Print-Ready HTML)",
-                data=_report_html.encode("utf-8"),
-                file_name=f"VDP_Board_Report_{datetime.now().strftime('%Y-%m')}.html",
-                mime="text/html",
-                use_container_width=True,
-                type="primary",
-                help="Download → open in browser → Cmd+P / Ctrl+P → Save as PDF",
-            )
-        with _sp_col:
-            st.caption(
-                "Opens as a formatted HTML document. To save as PDF: open in browser → "
-                "File → Print → 'Save as PDF'. Optimized for A4/Letter paper."
-            )
-            # Share via email button
-            _report_period = datetime.now().strftime("%B %Y")
-            _mailto_subject = f"Dana Point PULSE Board Report — {_report_period}"
-            _mailto_body = (
-                f"Please find attached the Dana Point PULSE Board Report for {_report_period}. "
-                f"Download from the dashboard and open in your browser to print to PDF."
-            )
-            _mailto_link = (
-                f"mailto:?subject={_urlparse.quote(_mailto_subject)}"
-                f"&body={_urlparse.quote(_mailto_body)}"
-            )
-            st.markdown(
-                f'<a href="{_mailto_link}" style="display:inline-block;margin-top:6px;'
-                f'font-size:12px;color:#21808D;text-decoration:none;font-weight:600;">'
-                f'📧 Share via Email</a>',
-                unsafe_allow_html=True,
-            )
-
-    # ── Full Data Summary by Section — mini data cards ─────────────────────
-    try:
-        _ds_occ   = f"{m.get('occ_30', 0):.1f}%" if m else "—"
-        _ds_adr   = f"${m.get('adr_30', 0):,.0f}" if m else "—"
-        _ds_rvp   = f"${m.get('revpar_30', 0):,.0f}" if m else "—"
-        _ds_rvpd  = f"{m.get('revpar_delta', 0):+.1f}%" if m else "—"
-        _ds_cq80  = "—"; _ds_cq90 = "—"
-        if not df_comp.empty and "days_above_80_occ" in df_comp.columns:
-            _ds_cq80 = str(df_comp["days_above_80_occ"].iloc[-1]) + " days"
-            if "days_above_90_occ" in df_comp.columns:
-                _ds_cq90 = str(df_comp["days_above_90_occ"].iloc[-1]) + " days"
-        _ds_trips  = "—"; _ds_oos = "—"
-        if not df_dfy_ov.empty:
-            _dv = df_dfy_ov.iloc[0]
-            _ds_tt = int(_dv.get("total_trips", 0) or 0)
-            _ds_trips = f"{_ds_tt/1e6:.2f}M" if _ds_tt >= 1e6 else f"{_ds_tt:,}"
-            _ds_oos = f"{float(_dv.get('out_of_state_vd_pct', 0) or 0):.1f}%"
-        _ds_top_dma = "—"
-        if not df_dfy_dma.empty:
-            _ds_top_dma = str(df_dfy_dma.iloc[0].get("dma", "—"))
-        _ds_pipe_rooms = f"{int(df_cs_pipe['rooms'].sum()):,}" if not df_cs_pipe.empty else "—"
-        _ds_roas = "—"
-        if not df_dfy_media.empty:
-            _dm = df_dfy_media.iloc[0]
-            _mi = float(_dm.get("total_impact_usd", 0) or 0)
-            _inv = float(_dm.get("total_investment_usd", 0) or 0)
-            _ds_roas = f"{_mi/_inv:.1f}×" if _inv > 0 and _mi > 0 else ("∞" if _mi > 0 else "—")
-        _ds_ig = "—"
-        try:
-            _cxn = sqlite3.connect(DB_PATH)
-            _ig_r = pd.read_sql_query("SELECT followers FROM later_ig_profile_growth ORDER BY data_date DESC LIMIT 1", _cxn)
-            _cxn.close()
-            if not _ig_r.empty: _ds_ig = f"{int(_ig_r.iloc[0,0] or 0):,}"
-        except Exception:
-            pass
-        def _mini_card(label, value, sub=""):
-            return (
-                f'<div class="mini-data-card">'
-                f'<div class="mini-data-card-label">{label}</div>'
-                f'<div class="mini-data-card-value">{value}</div>'
-                + (f'<div class="mini-data-card-sub">{sub}</div>' if sub else '')
-                + '</div>'
-            )
-        _cards = [
-            _mini_card("Occupancy (30d)", _ds_occ, "30-day avg"),
-            _mini_card("ADR (30d)", _ds_adr, "avg daily rate"),
-            _mini_card("RevPAR (30d)", _ds_rvp, f"YOY {_ds_rvpd}"),
-            _mini_card("Compression 80%+", _ds_cq80, "days this quarter"),
-            _mini_card("Compression 90%+", _ds_cq90, "days this quarter"),
-            _mini_card("Annual Visitor Trips", _ds_trips, f"{_ds_oos} out-of-state"),
-            _mini_card("Top Feeder DMA", _ds_top_dma, "by visitor days"),
-            _mini_card("Pipeline Rooms", _ds_pipe_rooms, "CoStar supply"),
-            _mini_card("Campaign ROAS", _ds_roas, "Datafy media attr."),
-            _mini_card("IG Followers", _ds_ig, "Later.com export"),
-            _mini_card("TOT Rate", "10%", "transient occupancy tax"),
-        ]
-        st.markdown(sec_div("📊 Full Data Summary — All Sections"), unsafe_allow_html=True)
-        # 4 cards per row
-        for _row_start in range(0, len(_cards), 4):
-            _row_cards = _cards[_row_start:_row_start+4]
-            _cols = st.columns(len(_row_cards))
-            for _ci, _card_html in enumerate(_row_cards):
-                with _cols[_ci]:
-                    st.markdown(_card_html, unsafe_allow_html=True)
-    except Exception:
-        pass
-
-    # ── PULSE Score Widget ─────────────────────────────────────────────────────
-    st.markdown(sec_div("⚡ PULSE Performance Score"), unsafe_allow_html=True)
-    if m:
-        _occ_score  = m.get("occ_30", 0)
-        _rvp_d_s    = m.get("revpar_delta", 0)
-        _cq_s       = m.get("comp_recent_q", 0)
-        # Score components: occupancy vs 70% baseline (max 50pts), RevPAR YOY (max 30pts), compression (max 20pts)
-        _comp_occ   = min(50, max(0, (_occ_score / 70) * 50))
-        _comp_rvp   = min(30, max(0, 15 + (_rvp_d_s * 1.5)))
-        _comp_cmp   = min(20, max(0, _cq_s * 2.0))
-        _pulse_score = int(round(_comp_occ + _comp_rvp + _comp_cmp))
-        _pulse_score = max(0, min(100, _pulse_score))
-
-        if _pulse_score >= 90:
-            _p_color  = "#7C3AED"   # purple — historic
-            _p_status = "HISTORIC"
-            _p_detail = "Exceptional market conditions — this is a benchmark period. Document rate levels and compression patterns for future board reference."
-        elif _pulse_score >= 75:
-            _p_color  = "#21C55D"   # green — exceptional
-            _p_status = "EXCEPTIONAL"
-            _p_detail = "Market significantly outperforming baseline. Occupancy, rate, and compression all trending strongly positive — capitalize with rate increases now."
-        elif _pulse_score >= 60:
-            _p_color  = "#21808D"   # teal — strong
-            _p_status = "STRONG"
-            _p_detail = "Market performing above expectations. Occupancy, rate, and compression trending positive. Maintain pricing discipline."
-        elif _pulse_score >= 40:
-            _p_color  = "#F59E0B"   # amber — stable
-            _p_status = "STABLE"
-            _p_detail = "Market showing steady signals. Core metrics at or near baseline; monitor rate pressure and shoulder demand generation."
-        else:
-            _p_color  = "#EF4444"   # red — caution
-            _p_status = "CAUTION"
-            _p_detail = "Market below baseline performance. Revenue and/or occupancy need attention — review demand drivers and rate strategy immediately."
-
-        # ── Custom weighting expander ───────────────────────────────────────
-        with st.expander("⚙️ Score Weighting — Customize for Your Strategy", expanded=False):
-            st.markdown(
-                '<div style="font-size:12px;opacity:0.70;margin-bottom:12px;">'
-                'The <strong>PULSE Score (0–100)</strong> measures market health across 4 dimensions. '
-                'Adjust the weights below to reflect your organization\'s priorities. '
-                'All weights must sum to 100%.</div>',
-                unsafe_allow_html=True,
-            )
-            _pw_c1, _pw_c2, _pw_c3, _pw_c4 = st.columns(4)
-            with _pw_c1:
-                _w_occ = st.slider("Occupancy Weight", 0, 100, 25, 5, key="pw_occ", help="Weight for occupancy vs 70% baseline")
-            with _pw_c2:
-                _w_adr = st.slider("ADR / Rate Weight", 0, 100, 25, 5, key="pw_adr", help="Weight for rate momentum")
-            with _pw_c3:
-                _w_rvp = st.slider("RevPAR YOY Weight", 0, 100, 25, 5, key="pw_rvp", help="Weight for RevPAR year-over-year change")
-            with _pw_c4:
-                _w_cmp = st.slider("Compression Weight", 0, 100, 25, 5, key="pw_cmp", help="Weight for compression nights this quarter")
-            _w_total = _w_occ + _w_adr + _w_rvp + _w_cmp
-            if _w_total != 100:
-                st.warning(f"Weights sum to {_w_total}% — adjust to reach 100% for a valid score.")
+    <div class="nlm-point">
+      <strong>Historical Context (Zartico 2024–25) (Historical Reference)</strong> <span class="nlm-tag" style="background:rgba(121,82,179,0.15);color:#7952b3;">Zartico</span><br>
+      {_zrt_ctx}
+      <br><em style="opacity:.72">→ Zartico historical data provides independent validation of Datafy trends; present alongside for board credibility. Note: Zartico is historical reference only (Jun 2025 snapshot) — not current data.</em>
+    </div>
+    </div>
+    """, unsafe_allow_html=True)
             else:
-                # Recompute score with custom weights (normalize each component to 0–1 then apply weight)
-                _c_occ_n  = min(1.0, max(0.0, _occ_score / 70))
-                _c_rvp_n  = min(1.0, max(0.0, (15 + _rvp_d_s * 1.5) / 30))
-                _c_cmp_n  = min(1.0, max(0.0, _cq_s * 2.0 / 20))
-                _c_adr_n  = min(1.0, max(0.0, (15 + _rvp_d_s * 1.0) / 30))   # proxy for ADR using RevPAR delta
-                _custom_score = int(round(
-                    _c_occ_n * _w_occ + _c_rvp_n * _w_rvp + _c_adr_n * _w_adr + _c_cmp_n * _w_cmp
-                ))
-                _custom_score = max(0, min(100, _custom_score))
+                st.info("Run the pipeline to load STR data for board report generation.")
+
+            # ── Download button ────────────────────────────────────────────────────
+            st.markdown("<br>", unsafe_allow_html=True)
+            _dl_col, _sp_col = st.columns([1, 3])
+            with _dl_col:
+                _report_html = generate_board_report_html(
+                    m or {},
+                    df_kpi,
+                    df_dfy_ov,
+                    df_dfy_dma,
+                    df_cs_snap,
+                    df_insights,
+                    df_dfy_media,
+                )
+                st.download_button(
+                    label="📥 Download Board Report (Print-Ready HTML)",
+                    data=_report_html.encode("utf-8"),
+                    file_name=f"VDP_Board_Report_{datetime.now().strftime('%Y-%m')}.html",
+                    mime="text/html",
+                    use_container_width=True,
+                    type="primary",
+                    help="Download → open in browser → Cmd+P / Ctrl+P → Save as PDF",
+                )
+            with _sp_col:
+                st.caption(
+                    "Opens as a formatted HTML document. To save as PDF: open in browser → "
+                    "File → Print → 'Save as PDF'. Optimized for A4/Letter paper."
+                )
+                # Share via email button
+                _report_period = datetime.now().strftime("%B %Y")
+                _mailto_subject = f"Dana Point PULSE Board Report — {_report_period}"
+                _mailto_body = (
+                    f"Please find attached the Dana Point PULSE Board Report for {_report_period}. "
+                    f"Download from the dashboard and open in your browser to print to PDF."
+                )
+                _mailto_link = (
+                    f"mailto:?subject={_urlparse.quote(_mailto_subject)}"
+                    f"&body={_urlparse.quote(_mailto_body)}"
+                )
                 st.markdown(
-                    f'<div style="font-size:13px;margin-top:4px;margin-bottom:6px;">'
-                    f'Custom weighted score: <strong style="color:{_p_color};font-size:18px;">{_custom_score}</strong> / 100'
-                    f'</div>',
+                    f'<a href="{_mailto_link}" style="display:inline-block;margin-top:6px;'
+                    f'font-size:12px;color:#21808D;text-decoration:none;font-weight:600;">'
+                    f'📧 Share via Email</a>',
                     unsafe_allow_html=True,
                 )
-                # Breakdown table
-                _breakdown = [
-                    ("Occupancy",   f"{_occ_score:.1f}% vs 70% baseline", f"{_c_occ_n*_w_occ:.1f}",  f"{_w_occ}%"),
-                    ("ADR / Rate",  f"proxy via RevPAR delta",            f"{_c_adr_n*_w_adr:.1f}",  f"{_w_adr}%"),
-                    ("RevPAR YOY",  f"{_rvp_d_s:+.1f}%",                 f"{_c_rvp_n*_w_rvp:.1f}",  f"{_w_rvp}%"),
-                    ("Compression", f"{_cq_s} nights this quarter",       f"{_c_cmp_n*_w_cmp:.1f}",  f"{_w_cmp}%"),
-                ]
-                import pandas as _pd_bd
-                _bd_df = _pd_bd.DataFrame(_breakdown, columns=["Component","Signal","Points","Weight"])
-                st.dataframe(_bd_df, use_container_width=True, hide_index=True)
-                st.download_button("⬇️ Download PULSE Score Breakdown CSV", _bd_df.to_csv(index=False).encode(), "pulse_score_breakdown.csv", "text/csv", key="dl_pulse_bd")
 
-        # ── Gauge bar chart ─────────────────────────────────────────────────
-        _gauge_fig = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=_pulse_score,
-            title={"text": "PULSE Score", "font": {"size": 12}},
-            gauge={
-                "axis": {
-                    "range": [0, 100], "tickwidth": 1,
-                    "tickcolor": "rgba(15,28,46,0.3)",
-                    "tickfont": {"size": 11, "color": "#64748B"},
-                    "nticks": 6,
-                },
-                "bar": {"color": _p_color, "thickness": 0.28},
-                "bgcolor": "rgba(0,0,0,0)",
-                "borderwidth": 0,
-                "steps": [
-                    {"range": [0, 40],  "color": "rgba(192,21,47,0.12)"},
-                    {"range": [40, 60], "color": "rgba(245,158,11,0.12)"},
-                    {"range": [60, 80], "color": "rgba(33,128,141,0.12)"},
-                    {"range": [80, 100],"color": "rgba(33,197,93,0.12)"},
-                ],
-                "threshold": {
-                    "line": {"color": _p_color, "width": 3},
-                    "thickness": 0.8,
-                    "value": _pulse_score,
-                },
-            },
-            number={"font": {"size": 32, "color": _p_color}, "suffix": ""},
-        ))
-        _gauge_fig.update_layout(
-            height=200,
-            margin=dict(l=20, r=20, t=10, b=0),
-            paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Outfit, Inter, system-ui, sans-serif", color="#334155"),
-        )
-
-        _pulse_col1, _pulse_col2 = st.columns([3, 2])
-        with _pulse_col1:
-            st.markdown(
-                f'<div class="pulse-wrapper" style="background:#FFFFFF;border:1px solid rgba(15,28,46,0.08);border-left:4px solid {_p_color};box-shadow:0 2px 10px rgba(15,28,46,0.07);">'
-                f'  <div class="pulse-circle" style="color:{_p_color};">'
-                f'    <div class="pulse-ring"></div>'
-                f'    <div class="pulse-ring-2"></div>'
-                f'    <div class="pulse-core">'
-                f'      <span class="pulse-score" style="color:{_p_color};">{_pulse_score}</span>'
-                f'      <span class="pulse-label" style="color:#64748B;">PULSE</span>'
-                f'    </div>'
-                f'  </div>'
-                f'  <div class="pulse-info">'
-                f'    <div class="pulse-info-title" style="color:#0D1B2E;">Dana Point Market PULSE Score</div>'
-                f'    <div class="pulse-info-detail" style="color:#334155;">'
-                f'      Occ {_occ_score:.1f}% &nbsp;·&nbsp; RevPAR YOY {_rvp_d_s:+.1f}% '
-                f'      &nbsp;·&nbsp; Compression {_cq_s} nights this quarter<br>'
-                f'      {_p_detail}'
-                f'    </div>'
-                f'    <span class="pulse-info-status" style="background:{_p_color};color:#ffffff;margin-top:8px;display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">{_p_status}</span>'
-                f'  </div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-        with _pulse_col2:
-            st.plotly_chart(_gauge_fig, use_container_width=True, config={"displayModeBar": False})
-        # Tier legend — light mode
-        st.markdown(
-            '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;margin-bottom:12px;">'
-            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#FEE2E2;color:#991B1B;font-weight:700;border:1px solid #FCA5A5;">0–39 Caution</span>'
-            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#FEF3C7;color:#92400E;font-weight:700;border:1px solid #FCD34D;">40–59 Stable</span>'
-            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#DBEAFE;color:#1E40AF;font-weight:700;border:1px solid #93C5FD;">60–74 Strong</span>'
-            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#D1FAE5;color:#065F46;font-weight:700;border:1px solid #6EE7B7;">75–89 Exceptional</span>'
-            '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#EDE9FE;color:#4C1D95;font-weight:700;border:1px solid #C4B5FD;">90–100 Historic</span>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-
-    # ── Overview Section Intelligence ─────────────────────────────────────────
-    if m:
-        _ov_rvp_yoy   = m.get("revpar_delta", 0)
-        _ov_occ       = m.get("occ_30", 0)
-        _ov_rvp       = m.get("revpar_30", 0)
-        _ov_cq        = m.get("comp_recent_q", 0)
-        _ov_rate_vs   = "outpacing occupancy — strong rate discipline" if _ov_rvp_yoy > 0 else "lagging occupancy — rate capture gap"
-        _ov_fwd       = ("Maintain pricing strength; advance rate floors before Q3 compression window."
-                         if _ov_occ >= 70 else "Focus shoulder demand generation; protect RevPAR floor.")
-        st.markdown(sec_intel(
-            "Overview Brain",
-            "hotel market health for the VDP Select 12-property portfolio",
-            f"RevPAR YOY is {_ov_rvp_yoy:+.1f}%, {_ov_rate_vs}. "
-            f"{_ov_cq} compression nights this quarter signal {'strong' if _ov_cq >= 10 else 'moderate'} pricing power.",
-            _ov_fwd,
-            f"RevPAR YOY: {_ov_rvp_yoy:+.1f}%",
-        ), unsafe_allow_html=True)
-
-    # ── Executive Intelligence Panel ───────────────────────────────────────────
-    try:
-        _ov_rvp_d2   = m.get("revpar_delta", 0) if m else 0
-        _ov_occ_d2   = m.get("occ_delta", 0) if m else 0
-        _ov_adr_d2   = m.get("adr_delta", 0) if m else 0
-        _ov_cq2      = m.get("comp_recent_q", 0) if m else 0
-        _ov_trips2   = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
-        _ov_oos2     = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
-        _ov_rev12_2  = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
-
-        _ov_next_steps = [
-            f"<strong>Rate Optimization:</strong> ADR is {'+' if _ov_adr_d2 >= 0 else ''}{_ov_adr_d2:.1f}% YOY — "
-            + ("momentum is strong; consider pushing rates further on compression nights." if _ov_adr_d2 > 3 else
-               "growth is modest; review comp-set pricing vs CoStar benchmarks in Competitive Intel tab."),
-            f"<strong>Compression Night Strategy:</strong> {_ov_cq2} compression days this quarter — "
-            + ("activate TBID tiered rate (≥$400) on high-demand nights to maximize TBID revenue." if _ov_cq2 >= 8 else
-               "low compression count signals opportunity to build mid-week demand with targeted packages."),
-            f"<strong>Out-of-State Visitor Capture:</strong> {_ov_oos2:.0f}% OOS visitors drive premium ADR — "
-            "target SLC, Dallas, and Phoenix feeder markets with fly-drive packages. See Origin Markets tab.",
-            f"<strong>TBID Revenue:</strong> Estimated 12-month TBID ~${_ov_rev12_2 * 0.0125 / 1_000_000:.2f}M — "
-            "present at next board meeting alongside TOT figures to demonstrate total economic contribution.",
-        ]
-        _ov_questions = [
-            "What's driving the RevPAR change vs last year?",
-            "Which months have the most compression opportunity?",
-            "How do our TBID and TOT estimates compare to prior year?",
-            "What's the highest-value visitor segment right now?",
-            "Where should we focus marketing spend next quarter?",
-        ]
-        _ov_context = (
-            f"Dana Point VDP portfolio. RevPAR ${m.get('revpar_30',0):.0f} ({m.get('revpar_delta',0):+.1f}% YOY), "
-            f"ADR ${m.get('adr_30',0):.0f}, Occ {m.get('occ_30',0):.1f}%, "
-            f"12-mo revenue ~${_ov_rev12_2/1_000_000:.1f}M, "
-            f"{_ov_cq2} compression days, {_ov_trips2:,} annual visitor trips, {_ov_oos2:.0f}% OOS."
-            if m else "Dana Point VDP portfolio executive overview."
-        )
-        render_intel_panel("ov_exec", _ov_next_steps, _ov_questions, _ov_context)
-    except Exception:
-        pass
-
-    # ── VDP Analyst Panel ──────────────────────────────────────────────────────
-    st.markdown(sec_div("🧠 VDP Analyst"), unsafe_allow_html=True)
-    with st.expander("🧠 PULSE VDP Analyst — Interrogate your data", expanded=False):
-        st.markdown('<span class="ai-chip">AI ANALYST</span>', unsafe_allow_html=True)
-
-        PROMPTS_META = [
-            ("💹 RevPAR Drivers",       "revpar"),
-            ("📅 Opportunity Nights",   "opportunity"),
-            ("🗺️ Visitor Economy",      "visitor_econ"),
-            ("📋 Board Talking Points", "board"),
-            ("🌙 Weekend vs Midweek",   "midweek"),
-            ("🏨 TBID Revenue Est.",    "tbid"),
-            ("🔍 Detect Anomalies",     "anomaly"),
-            ("📈 30-Day Forecast",      "forecast"),
-        ]
-
-        btn_cols = st.columns(4)
-        for i, (label, key) in enumerate(PROMPTS_META):
-            with btn_cols[i % 4]:
-                if st.button(label, key=f"ai_btn_{key}", use_container_width=True):
-                    st.session_state.ai_current_prompt = build_prompt(key, m)
-                    st.session_state.ai_prompt_label   = label
-                    st.session_state.ai_result         = ""
-                    st.session_state.ai_needs_call     = True
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        inp_col, btn_col = st.columns([5, 1])
-        with inp_col:
-            custom_q = st.text_input(
-                "custom_q", label_visibility="collapsed",
-                placeholder="Ask anything about your VDP portfolio data…",
-                key="ai_custom_input",
-            )
-        with btn_col:
-            if st.button("⚡ Brief Me", type="primary", use_container_width=True):
-                if custom_q.strip():
-                    st.session_state.ai_current_prompt = build_custom_prompt(custom_q, m)
-                    st.session_state.ai_prompt_label   = f"💬 {custom_q.strip()[:60]}"
-                    st.session_state.ai_result         = ""
-                    st.session_state.ai_needs_call     = True
-
-        # ── Response area ──────────────────────────────────────────────────────
-        if st.session_state.ai_needs_call or st.session_state.ai_result:
-            st.markdown("---")
-            if st.session_state.ai_prompt_label:
-                st.caption(f"**Query:** {st.session_state.ai_prompt_label}")
-
-            if st.session_state.ai_needs_call:
-                prompt_to_run = st.session_state.ai_current_prompt
-                # Detect which preset key matches the label
-                matched_key = next(
-                    (k for lbl, k in PROMPTS_META
-                     if lbl == st.session_state.ai_prompt_label), "default"
-                )
-                _active_mdl = st.session_state.get("selected_model", CLAUDE_MODEL)
-                _active_info = AI_MODELS.get(_active_mdl, {})
-                _active_label = f"{_active_info.get('badge','🟦')} {_active_info.get('label', _active_mdl)}"
-                _any_ai_active = (
-                    (api_key_valid and ANTHROPIC_AVAILABLE) or
-                    (bool(_OPENAI_KEY) and OPENAI_AVAILABLE) or
-                    (bool(_GOOGLE_AI_KEY) and GEMINI_AVAILABLE) or
-                    (bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE)
-                )
-                if _any_ai_active:
-                    st.caption(f"Running {_active_label}…")
-                    with st.chat_message("assistant", avatar="🌊"):
-                        response = st.write_stream(
-                            stream_ai_response(prompt_to_run, _active_mdl, _ai_keys)
-                        )
-                    st.session_state.ai_result = response
-                    st.session_state.ai_result_model = _active_label
-                else:
-                    response = local_fallback(matched_key, m)
-                    with st.chat_message("assistant", avatar="🌊"):
-                        st.markdown(response)
-                    st.session_state.ai_result = response
-                    if not api_key_valid:
-                        st.caption(
-                            "💡 Add API keys in the sidebar (VDP Analyst) to activate AI streaming."
-                        )
-                st.session_state.ai_needs_call = False
-
-            elif st.session_state.ai_result:
-                with st.chat_message("assistant", avatar="🌊"):
-                    st.markdown(st.session_state.ai_result)
-
-    # ── AI Insight Cards ───────────────────────────────────────────────────────
-    if m:
-        st.markdown(
-            '<div style="font-family:\'Syne\',sans-serif;font-size:14px;'
-            'font-weight:700;letter-spacing:-0.01em;margin-bottom:2px;">🔥 Market Intelligence Signals</div>'
-            '<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:8px;">'
-            'Pattern analysis from the selected date range</div>',
-            unsafe_allow_html=True,
-        )
-        insights = generate_ai_insights(df_sel, df_comp, m)
-        if insights:
-            ic = st.columns(len(insights))
-            for i, ins in enumerate(insights):
-                with ic[i]:
-                    st.markdown(
-                        insight_card(ins["title"], ins["body"], ins["kind"],
-                                     ins.get("icon", ""), ins.get("date_label", "")),
-                        unsafe_allow_html=True,
-                    )
-        st.markdown("<br>", unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # ── Board Report Card (Traffic Light) ─────────────────────────────────────
-    try:
-        st.markdown(_sh("📋", "Board Report Card", "gold", "TRAFFIC LIGHT"), unsafe_allow_html=True)
-        st.caption("Traffic-light assessment for board presentation · Updates with every pipeline run")
-
-        def _report_card_row(metric, value, status, note, source):
-            _dot_map = {
-                "green":  ("🟢", "#059669", "On Track"),
-                "yellow": ("🟡", "#D97706", "Watch"),
-                "red":    ("🔴", "#DC2626", "Action Required"),
-            }
-            _dot, _col, _lbl = _dot_map.get(status, ("⚫", "#8FA3B8", "Unknown"))
-            return (
-                f'<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;'
-                f'border-bottom:1px solid rgba(0,0,0,0.08);font-family:\'Syne\',sans-serif;'
-                f'background:#FFFFFF;">'
-                f'<div style="font-size:16px;flex-shrink:0;">{_dot}</div>'
-                f'<div style="flex:1.4;font-size:13px;font-weight:700;color:#0F1C2E;">{metric}</div>'
-                f'<div style="flex:0.8;font-size:14px;font-weight:900;color:{_col};">{value}</div>'
-                f'<div style="flex:1;font-size:11px;font-weight:800;color:{_col};text-transform:uppercase;'
-                f'letter-spacing:.06em;">{_lbl}</div>'
-                f'<div style="flex:2;font-size:12px;color:#4A5568;line-height:1.4;">{note}</div>'
-                f'<div style="flex:0.8;font-size:10px;font-weight:700;letter-spacing:.05em;'
-                f'color:#A0AEC0;text-transform:uppercase;">{source}</div>'
-                f'</div>'
-            )
-
-        _rc_occ_status    = "green" if _exec_occ >= 75 else ("yellow" if _exec_occ >= 60 else "red")
-        _rc_revpar_status = "green" if _exec_rvp_d >= 2 else ("yellow" if _exec_rvp_d >= -2 else "red")
-        _rc_adr_status    = "green" if _exec_adr_d >= 3 else ("yellow" if _exec_adr_d >= 0 else "red")
-        _rc_roas_status   = ("green" if (_exec_roas_infinite or _exec_roas >= 5) else ("yellow" if _exec_roas >= 2 else "red")) if (_exec_roas > 0 or _exec_roas_infinite) else "yellow"
-        _rc_social_status = ("green" if _exec_ig_fol >= 20000 else ("yellow" if _exec_ig_fol >= 10000 else "red")) if _exec_ig_fol > 0 else "yellow"
-        _rc_trips_status  = ("green" if _exec_trips >= 1000000 else ("yellow" if _exec_trips >= 500000 else "red")) if _exec_trips > 0 else "yellow"
-
-        _rc_occ_note    = f"{_exec_occ:.1f}% occ · {_arr(_exec_occ_d)}{abs(_exec_occ_d):.1f}pp vs prior · {'Maintain pricing discipline.' if _exec_occ >= 75 else 'Demand generation programs needed.'}"
-        _rc_revpar_note = f"${_exec_rvp:.0f} RevPAR · {_arr(_exec_rvp_d)}{abs(_exec_rvp_d):.1f}% YOY · {'Rate strategy working.' if _exec_rvp_d >= 2 else 'Review rate strategy and comp set positioning.'}"
-        _rc_adr_note    = f"${_exec_adr:.0f} ADR · {'Premium rate capture on track.' if _exec_adr_d >= 3 else 'Rate pressure — audit discount patterns and channel mix.'}"
-        _rc_roas_note   = (
-            f"∞ ROAS (no media cost recorded) · ${_exec_media_impact:,.0f} est. campaign impact · {_exec_attr_trips:,} attributable trips · Organic performance — strong case for paid investment."
-            if _exec_roas_infinite else
-            (f"{_roas_fmt} return · {_exec_attr_trips:,} attributable trips · {'Strong ROI — recommend budget increase.' if _exec_roas >= 5 else 'Acceptable ROI.' if _exec_roas >= 2 else 'Investigate attribution model and campaign targeting.'}") if _exec_roas > 0
-            else "Run Datafy media attribution pipeline to populate."
-        )
-        _rc_social_note = (f"IG {_exec_ig_fol:,} · FB {_exec_fb_fol:,} · TK {_exec_tk_fol:,} · {'Healthy audience scale for a DMO.' if _exec_ig_fol >= 20000 else 'Growth campaigns recommended.'}") if _exec_social_total > 0 else "Load Later.com exports."
-        _rc_trips_note  = (f"{_trips_fmt} annual trips · {_exec_overnight:.0f}% overnight · {'Strong visitation base.' if _exec_trips >= 1e6 else 'Opportunity to grow overnight conversion.'}") if _exec_trips > 0 else "Run Datafy pipeline."
-
-        _rc_html = (
-            '<div style="background:#FFFFFF;border-radius:14px;'
-            'border:1px solid rgba(0,0,0,0.08);border-left:5px solid #D97706;'
-            'overflow:hidden;font-family:\'Syne\',sans-serif;margin-bottom:16px;'
-            'box-shadow:0 2px 8px rgba(0,0,0,0.08);">'
-            '<div style="padding:11px 16px;background:#F7F9FC;'
-            'border-bottom:1px solid rgba(0,0,0,0.08);font-size:10px;font-weight:800;'
-            'letter-spacing:.07em;text-transform:uppercase;color:#718096;display:flex;gap:40px;">'
-            '<span style="flex:0.15"></span>'
-            '<span style="flex:1.4">Metric</span>'
-            '<span style="flex:0.8">Current</span>'
-            '<span style="flex:1">Status</span>'
-            '<span style="flex:2">Board Note</span>'
-            '<span style="flex:0.8">Source</span>'
-            '</div>'
-            + _report_card_row("Occupancy Rate",       f"{_exec_occ:.1f}%",     _rc_occ_status,    _rc_occ_note,    "STR")
-            + _report_card_row("RevPAR Growth",        f"{_exec_rvp_d:+.1f}%",  _rc_revpar_status, _rc_revpar_note, "STR")
-            + _report_card_row("ADR Growth",           f"{_exec_adr_d:+.1f}%",  _rc_adr_status,    _rc_adr_note,    "STR")
-            + _report_card_row("Campaign ROAS",        _roas_fmt,               _rc_roas_status,   _rc_roas_note,   "Datafy")
-            + _report_card_row("Social Audience",      _social_fmt,             _rc_social_status, _rc_social_note, "Later.com")
-            + _report_card_row("Annual Visitor Trips", _trips_fmt,              _rc_trips_status,  _rc_trips_note,  "Datafy")
-            + '</div>'
-        )
-        st.markdown(_rc_html, unsafe_allow_html=True)
-    except Exception:
-        pass
-
-    # ── Cross-Dataset Intelligence Matrix ─────────────────────────────────────
-    try:
-        if m and (not df_dfy_ov.empty or not df_dfy_dma.empty or not df_dfy_media.empty):
-            st.markdown(sec_div("🔗 Cross-Dataset Intelligence"), unsafe_allow_html=True)
-            st.markdown(
-                '<div style="font-family:\'Inter\',sans-serif;font-size:12px;color:#64748B;margin-bottom:14px;">'
-                'Hidden signals that only appear when STR hotel data is read alongside visitor economy and campaign data.</div>',
-                unsafe_allow_html=True,
-            )
-
-            # ── Compute cross-dataset signals ─────────────────────────────────
-            _cx_rvp      = m.get("revpar_30", 0)
-            _cx_adr      = m.get("adr_30", 0)
-            _cx_occ      = m.get("occ_30", 0)
-            _cx_rev12    = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
-            _cx_oos_pct  = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0.0
-            _cx_trips    = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
-            _cx_daytrip  = float(df_dfy_ov.iloc[0].get("day_trip_pct", 0) or 0) if not df_dfy_ov.empty else 0.0
-            _cx_los      = float(df_dfy_ov.iloc[0].get("avg_los", 0) or 0) if not df_dfy_ov.empty else 0.0
-            _cx_overnight_pct = float(df_dfy_ov.iloc[0].get("overnight_pct", 0) or 0) if not df_dfy_ov.empty else 0.0
-            _cx_roas     = _exec_roas if not _exec_roas_infinite else 99.0
-            _cx_impact   = float(df_dfy_media.iloc[0].get("total_impact_usd", 0) or 0) if not df_dfy_media.empty else 0.0
-            _cx_invest   = float(df_dfy_media.iloc[0].get("total_investment_usd", 0) or 0) if not df_dfy_media.empty else 0.0
-            _cx_attr_trips = int(df_dfy_media.iloc[0].get("attributable_trips", 0) or 0) if not df_dfy_media.empty else 0
-
-            # Signal 1: OOS premium capture gap
-            _oos_rate_gap = _cx_oos_pct * 0.01 * _cx_adr * 0.067  # 6.7% ADR YOY vs 1.0× spend ratio
-            _oos_signal  = (f"{_cx_oos_pct:.0f}% OOS visitors generate near 1:1 spend-per-visit but ADR growth is only "
-                            f"+{m.get('adr_delta',0):.1f}% YOY — rate capture gap of ~${_cx_adr * 0.05:,.0f}/night vs. OOS demand.")
-            # Signal 2: Day-trip conversion value
-            _daytrip_ct    = int(_cx_trips * _cx_daytrip * 0.01) if _cx_daytrip > 0 else 0
-            _daytrip_conv3 = _daytrip_ct * 0.03 * _cx_adr  # 3% conversion × ADR
-            _daytrip_signal = (f"{_daytrip_ct:,} estimated day trips — converting just 3% to overnight stays = "
-                               f"~${_daytrip_conv3/1e6:.1f}M incremental room revenue annually." if _daytrip_ct > 0
-                               else f"Day-trip data pending — load Datafy visitor report to compute conversion opportunity.")
-            # Signal 3: Campaign efficiency vs organic
-            _cost_per_trip = _cx_invest / _cx_attr_trips if _cx_attr_trips > 0 and _cx_invest > 0 else 0
-            _rev_per_trip  = _cx_impact / _cx_attr_trips if _cx_attr_trips > 0 and _cx_impact > 0 else 0
-            if _cx_roas >= 5 or _exec_roas_infinite:
-                _camp_signal = (f"{'∞' if _exec_roas_infinite else f'{_cx_roas:.1f}×'} ROAS — ${_cx_impact/1e3:,.0f}K destination impact "
-                                f"from {_cx_attr_trips:,} attributable trips. "
-                                f"{'No media cost recorded — all organic; strong case for paid media investment.' if _exec_roas_infinite else 'Strong ROI — scale budget to capture next tier of feeder markets.'}")
-            elif _cx_roas > 0:
-                _camp_signal = (f"{_cx_roas:.1f}× ROAS · ${_cost_per_trip:,.0f} cost/trip · ${_rev_per_trip:,.0f} revenue/trip — "
-                                "acceptable efficiency; refine audience targeting to improve trip quality vs. volume.")
-            else:
-                _camp_signal = "Load Datafy media attribution report to compute campaign-to-room-revenue signal."
-            # Signal 4: Compression × visitor overlap
-            _comp_q = m.get("comp_recent_q", 0)
-            _comp_day_signal = (
-                f"{_comp_q} compression nights this quarter — on 80%+ occ nights, day-trip visitors add estimated "
-                f"0.7× room count equivalent in off-property spend, invisible to STR. "
-                f"Total visitor economic footprint exceeds hotel data by ~{0.7 * _comp_q * _cx_adr * 50:,.0f}$ on compression days."
-                if _comp_q > 0 else
-                "Compression data loading — run pipeline to populate kpi_compression_quarterly."
-            )
-            # Signal 5: LOS extension value
-            _los_val = (_cx_los if _cx_los > 0 else 2.0)
-            _los_ext_val = _cx_rev12 * 0.05  # 5% uplift from 0.5-day extension
-            _los_signal  = (f"Avg stay: {_cx_los:.1f} nights (Datafy) — extending avg LOS by 0.5 nights via minimum-stay "
-                            f"packages = estimated +${_los_ext_val/1e3:,.0f}K annual room revenue.")
-
-            def _cx_signal_card(icon, title, signal_text, source_tags, signal_type="insight"):
-                _type_colors = {"insight": "#0567C8", "opportunity": "#059669", "risk": "#DC2626", "gap": "#D97706"}
-                _tc = _type_colors.get(signal_type, "#0567C8")
+    # ── Key Metrics → sub-tab 1 ────────────────────────────────────────────────
+    with _ov_t1:
+        # ── Full Data Summary by Section — mini data cards ─────────────────────
+        try:
+            _ds_occ   = f"{m.get('occ_30', 0):.1f}%" if m else "—"
+            _ds_adr   = f"${m.get('adr_30', 0):,.0f}" if m else "—"
+            _ds_rvp   = f"${m.get('revpar_30', 0):,.0f}" if m else "—"
+            _ds_rvpd  = f"{m.get('revpar_delta', 0):+.1f}%" if m else "—"
+            _ds_cq80  = "—"; _ds_cq90 = "—"
+            if not df_comp.empty and "days_above_80_occ" in df_comp.columns:
+                _ds_cq80 = str(df_comp["days_above_80_occ"].iloc[-1]) + " days"
+                if "days_above_90_occ" in df_comp.columns:
+                    _ds_cq90 = str(df_comp["days_above_90_occ"].iloc[-1]) + " days"
+            _ds_trips  = "—"; _ds_oos = "—"
+            if not df_dfy_ov.empty:
+                _dv = df_dfy_ov.iloc[0]
+                _ds_tt = int(_dv.get("total_trips", 0) or 0)
+                _ds_trips = f"{_ds_tt/1e6:.2f}M" if _ds_tt >= 1e6 else f"{_ds_tt:,}"
+                _ds_oos = f"{float(_dv.get('out_of_state_vd_pct', 0) or 0):.1f}%"
+            _ds_top_dma = "—"
+            if not df_dfy_dma.empty:
+                _ds_top_dma = str(df_dfy_dma.iloc[0].get("dma", "—"))
+            _ds_pipe_rooms = f"{int(df_cs_pipe['rooms'].sum()):,}" if not df_cs_pipe.empty else "—"
+            _ds_roas = "—"
+            if not df_dfy_media.empty:
+                _dm = df_dfy_media.iloc[0]
+                _mi = float(_dm.get("total_impact_usd", 0) or 0)
+                _inv = float(_dm.get("total_investment_usd", 0) or 0)
+                _ds_roas = f"{_mi/_inv:.1f}×" if _inv > 0 and _mi > 0 else ("∞" if _mi > 0 else "—")
+            _ds_ig = "—"
+            try:
+                _cxn = sqlite3.connect(DB_PATH)
+                _ig_r = pd.read_sql_query("SELECT followers FROM later_ig_profile_growth ORDER BY data_date DESC LIMIT 1", _cxn)
+                _cxn.close()
+                if not _ig_r.empty: _ds_ig = f"{int(_ig_r.iloc[0,0] or 0):,}"
+            except Exception:
+                pass
+            def _mini_card(label, value, sub=""):
                 return (
-                    f'<div style="background:#FFFFFF;border-radius:12px;padding:16px 18px;'
-                    f'border:1px solid rgba(15,28,46,0.07);border-left:3px solid {_tc};'
-                    f'box-shadow:0 1px 4px rgba(15,28,46,0.06);margin-bottom:10px;">'
-                    f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
-                    f'<span style="font-size:16px;">{icon}</span>'
-                    f'<span style="font-family:\'Outfit\',sans-serif;font-size:12px;font-weight:700;color:#0D1B2E;">{title}</span>'
-                    f'<span style="margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.08em;'
-                    f'text-transform:uppercase;color:{_tc};background:rgba(5,103,200,0.08);'
-                    f'padding:2px 8px;border-radius:99px;">{signal_type.upper()}</span>'
-                    f'</div>'
-                    f'<div style="font-family:\'Inter\',sans-serif;font-size:12px;color:#334155;line-height:1.6;">{signal_text}</div>'
-                    f'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">{source_tags}</div>'
-                    f'</div>'
+                    f'<div class="mini-data-card">'
+                    f'<div class="mini-data-card-label">{label}</div>'
+                    f'<div class="mini-data-card-value">{value}</div>'
+                    + (f'<div class="mini-data-card-sub">{sub}</div>' if sub else '')
+                    + '</div>'
                 )
+            _cards = [
+                _mini_card("Occupancy (30d)", _ds_occ, "30-day avg"),
+                _mini_card("ADR (30d)", _ds_adr, "avg daily rate"),
+                _mini_card("RevPAR (30d)", _ds_rvp, f"YOY {_ds_rvpd}"),
+                _mini_card("Compression 80%+", _ds_cq80, "days this quarter"),
+                _mini_card("Compression 90%+", _ds_cq90, "days this quarter"),
+                _mini_card("Annual Visitor Trips", _ds_trips, f"{_ds_oos} out-of-state"),
+                _mini_card("Top Feeder DMA", _ds_top_dma, "by visitor days"),
+                _mini_card("Pipeline Rooms", _ds_pipe_rooms, "CoStar supply"),
+                _mini_card("Campaign ROAS", _ds_roas, "Datafy media attr."),
+                _mini_card("IG Followers", _ds_ig, "Later.com export"),
+                _mini_card("TOT Rate", "10%", "transient occupancy tax"),
+            ]
+            st.markdown(sec_div("📊 Full Data Summary — All Sections"), unsafe_allow_html=True)
+            # 4 cards per row
+            for _row_start in range(0, len(_cards), 4):
+                _row_cards = _cards[_row_start:_row_start+4]
+                _cols = st.columns(len(_row_cards))
+                for _ci, _card_html in enumerate(_row_cards):
+                    with _cols[_ci]:
+                        st.markdown(_card_html, unsafe_allow_html=True)
+        except Exception:
+            pass
 
-            def _src(label, color_hex, bg_hex):
-                return (f'<span style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;'
-                        f'color:{color_hex};background:{bg_hex};padding:2px 8px;border-radius:99px;">{label}</span>')
+        # ── PULSE Score Widget ─────────────────────────────────────────────────────
+        st.markdown(sec_div("⚡ PULSE Performance Score"), unsafe_allow_html=True)
+        if m:
+            _occ_score  = m.get("occ_30", 0)
+            _rvp_d_s    = m.get("revpar_delta", 0)
+            _cq_s       = m.get("comp_recent_q", 0)
+            # Score components: occupancy vs 70% baseline (max 50pts), RevPAR YOY (max 30pts), compression (max 20pts)
+            _comp_occ   = min(50, max(0, (_occ_score / 70) * 50))
+            _comp_rvp   = min(30, max(0, 15 + (_rvp_d_s * 1.5)))
+            _comp_cmp   = min(20, max(0, _cq_s * 2.0))
+            _pulse_score = int(round(_comp_occ + _comp_rvp + _comp_cmp))
+            _pulse_score = max(0, min(100, _pulse_score))
 
-            _cx_c1, _cx_c2 = st.columns(2)
-            with _cx_c1:
-                st.markdown(_cx_signal_card("💎", "OOS Visitor Rate Capture Gap",  _oos_signal,
-                    _src("STR","#0567C8","rgba(5,103,200,0.10)") + _src("Datafy","#059669","rgba(5,150,105,0.10)"), "gap"), unsafe_allow_html=True)
-                st.markdown(_cx_signal_card("🔁", "Day-Trip → Overnight Conversion", _daytrip_signal,
-                    _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "opportunity"), unsafe_allow_html=True)
-                st.markdown(_cx_signal_card("📏", "Length-of-Stay Extension Value", _los_signal,
-                    _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "opportunity"), unsafe_allow_html=True)
-            with _cx_c2:
-                st.markdown(_cx_signal_card("📡", "Campaign → Room Revenue Signal", _camp_signal,
-                    _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "insight"), unsafe_allow_html=True)
-                st.markdown(_cx_signal_card("🏨", "Compression × Day-Trip Overlap", _comp_day_signal,
-                    _src("STR","#0567C8","rgba(5,103,200,0.10)") + _src("Datafy","#059669","rgba(5,150,105,0.10)"), "insight"), unsafe_allow_html=True)
-                # Feeder market ADR premium signal
-                _top_dma = str(df_dfy_dma.iloc[0].get("dma","—")) if not df_dfy_dma.empty else "—"
-                _top_dma_share = float(df_dfy_dma.iloc[0].get("visitor_days_share_pct", 0) or 0) if not df_dfy_dma.empty else 0
-                _fly_markets = [r for _, r in df_dfy_dma.iterrows()
-                                if str(r.get("dma","")).upper() not in ("LOS ANGELES","LA","RIVERSIDE","SAN DIEGO","ORANGE COUNTY")
-                                ] if not df_dfy_dma.empty else []
-                _fly_spend = float(_fly_markets[0].get("avg_spend_usd", 0) or 0) if _fly_markets else 0
-                _feeder_signal = (
-                    f"Top feeder: {_top_dma} ({_top_dma_share:.0f}% of visitor days) — drive market dominant on volume. "
-                    + (f"Fly markets (SLC, Dallas, NYC) avg ${_fly_spend:,.0f}/trip vs. LA drive market — "
-                       "1.3–1.4× revenue per visitor trip. Shift 10% of campaign budget to fly markets = outsized ADR gain."
-                       if _fly_spend > 0 else
-                       "Load full Datafy DMA table to compute fly-market ADR premium signal.")
-                ) if _top_dma != "—" else "Load Datafy feeder market data to compute cross-dataset signal."
-                st.markdown(_cx_signal_card("✈️", "Feeder Market ADR Premium",  _feeder_signal,
-                    _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "opportunity"), unsafe_allow_html=True)
-    except Exception:
-        pass
+            if _pulse_score >= 90:
+                _p_color  = "#7C3AED"   # purple — historic
+                _p_status = "HISTORIC"
+                _p_detail = "Exceptional market conditions — this is a benchmark period. Document rate levels and compression patterns for future board reference."
+            elif _pulse_score >= 75:
+                _p_color  = "#21C55D"   # green — exceptional
+                _p_status = "EXCEPTIONAL"
+                _p_detail = "Market significantly outperforming baseline. Occupancy, rate, and compression all trending strongly positive — capitalize with rate increases now."
+            elif _pulse_score >= 60:
+                _p_color  = "#21808D"   # teal — strong
+                _p_status = "STRONG"
+                _p_detail = "Market performing above expectations. Occupancy, rate, and compression trending positive. Maintain pricing discipline."
+            elif _pulse_score >= 40:
+                _p_color  = "#F59E0B"   # amber — stable
+                _p_status = "STABLE"
+                _p_detail = "Market showing steady signals. Core metrics at or near baseline; monitor rate pressure and shoulder demand generation."
+            else:
+                _p_color  = "#EF4444"   # red — caution
+                _p_status = "CAUTION"
+                _p_detail = "Market below baseline performance. Revenue and/or occupancy need attention — review demand drivers and rate strategy immediately."
 
-    # ── KPI Cards ──────────────────────────────────────────────────────────────
-    kpis = compute_overview_kpis(df_sel, grain)
-    if not kpis:
-        st.markdown(empty_state(
-            "📊",
-            f"No {grain.lower()} data in the selected range.",
-            "Adjust the date range or run the pipeline to load data.",
-        ), unsafe_allow_html=True)
-    else:
-        st.markdown(sec_div("📊 Key Performance Indicators"), unsafe_allow_html=True)
-        st.markdown(
-            '<div style="font-family:\'Syne\',sans-serif;font-size:14px;'
-            'font-weight:700;letter-spacing:-0.01em;margin-bottom:8px;">Performance Command Center</div>',
-            unsafe_allow_html=True,
-        )
-        # ── Per-metric color palette (cutting-edge, distinct) ─────────────────
-        _METRIC_COLORS = {
-            "RevPAR":        ("#00C4CC", "rgba(0,196,204,0.18)"),
-            "ADR":           ("#8B5CF6", "rgba(139,92,246,0.18)"),
-            "Occupancy":     ("#0EA5E9", "rgba(14,165,233,0.18)"),
-            "Room Revenue":  ("#10B981", "rgba(16,185,129,0.18)"),
-            "Rooms Sold":    ("#F97316", "rgba(249,115,22,0.18)"),
-            "Est. TBID Rev": ("#F59E0B", "rgba(245,158,11,0.18)"),
-            "TBID":          ("#F59E0B", "rgba(245,158,11,0.18)"),
-            "Demand":        ("#F97316", "rgba(249,115,22,0.18)"),
-            "Supply":        ("#6366F1", "rgba(99,102,241,0.18)"),
-            "Revenue":       ("#10B981", "rgba(16,185,129,0.18)"),
-        }
-        def _metric_color(label, positive=True):
-            for k, v in _METRIC_COLORS.items():
-                if k.lower() in label.lower():
-                    return v
-            return ("#00C4CC", "rgba(0,196,204,0.18)") if positive else ("#F97316", "rgba(249,115,22,0.18)")
-
-        # Render each KPI as [card | mini sparkline chart] pairs, 2 per row
-        def _mini_spark_fig(values, label="", positive=True, chart_key=""):
-            # Always render — if no data, show placeholder flat line
-            if not values or len(values) < 2:
-                values = [0, 0]
-            _line_color, _fill_color = _metric_color(label, positive)
-            _fig = go.Figure()
-            _fig.add_trace(go.Scatter(
-                y=values,
-                mode="lines",
-                line=dict(color=_line_color, width=2.5, shape="spline", smoothing=0.8),
-                fill="tozeroy",
-                fillcolor=_fill_color,
-                hoverinfo="skip",
-            ))
-            # Accent dot at latest value
-            _fig.add_trace(go.Scatter(
-                x=[len(values) - 1], y=[values[-1]],
-                mode="markers",
-                marker=dict(color=_line_color, size=6, line=dict(color="white", width=1.5)),
-                hoverinfo="skip",
-            ))
-            _fig.update_layout(
-                height=88, margin=dict(l=2, r=2, t=2, b=2),
-                xaxis=dict(visible=False, fixedrange=True),
-                yaxis=dict(visible=False, fixedrange=True),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                showlegend=False,
-                transition={"duration": 500, "easing": "cubic-in-out"},
-            )
-            return _fig
-
-        _kpi_rows = [kpis[i:i+2] for i in range(0, len(kpis), 2)]
-        for _ri, _row_kpis in enumerate(_kpi_rows):
-            _rcols = st.columns([1.1, 1.0, 1.1, 1.0])
-            for _idx, _k in enumerate(_row_kpis):
-                # Use columns at indices 0,1 for first KPI and 2,3 for second
-                _card_col  = _rcols[0 if _idx == 0 else 2]
-                _chart_col = _rcols[1 if _idx == 0 else 3]
-                _chart_key = f"kpi30_spark_{_ri}_{_idx}_{_k['label'].replace(' ','_').replace('.','')}"
-                with _card_col:
-                    _card_html = kpi_card(_k["label"], _k["value"], _k["delta"],
-                                 _k.get("positive", True), _k.get("neutral", False),
-                                 "", _k.get("date_label", ""), _k.get("raw_value", 0.0),
-                                 [])
-                    # Map metric label to tab index for navigation
-                    _tab_map = {"RevPAR": 1, "ADR": 1, "Occupancy": 1, "Room Revenue": 1,
-                                "Rooms Sold": 1, "Est. TBID Rev": 1, "TBID": 1,
-                                "Demand": 1, "Supply": 1, "Revenue": 1}
-                    _tab_idx = next((v for k,v in _tab_map.items() if k.lower() in _k["label"].lower()), 1)
+            # ── Custom weighting expander ───────────────────────────────────────
+            with st.expander("⚙️ Score Weighting — Customize for Your Strategy", expanded=False):
+                st.markdown(
+                    '<div style="font-size:12px;opacity:0.70;margin-bottom:12px;">'
+                    'The <strong>PULSE Score (0–100)</strong> measures market health across 4 dimensions. '
+                    'Adjust the weights below to reflect your organization\'s priorities. '
+                    'All weights must sum to 100%.</div>',
+                    unsafe_allow_html=True,
+                )
+                _pw_c1, _pw_c2, _pw_c3, _pw_c4 = st.columns(4)
+                with _pw_c1:
+                    _w_occ = st.slider("Occupancy Weight", 0, 100, 25, 5, key="pw_occ", help="Weight for occupancy vs 70% baseline")
+                with _pw_c2:
+                    _w_adr = st.slider("ADR / Rate Weight", 0, 100, 25, 5, key="pw_adr", help="Weight for rate momentum")
+                with _pw_c3:
+                    _w_rvp = st.slider("RevPAR YOY Weight", 0, 100, 25, 5, key="pw_rvp", help="Weight for RevPAR year-over-year change")
+                with _pw_c4:
+                    _w_cmp = st.slider("Compression Weight", 0, 100, 25, 5, key="pw_cmp", help="Weight for compression nights this quarter")
+                _w_total = _w_occ + _w_adr + _w_rvp + _w_cmp
+                if _w_total != 100:
+                    st.warning(f"Weights sum to {_w_total}% — adjust to reach 100% for a valid score.")
+                else:
+                    # Recompute score with custom weights (normalize each component to 0–1 then apply weight)
+                    _c_occ_n  = min(1.0, max(0.0, _occ_score / 70))
+                    _c_rvp_n  = min(1.0, max(0.0, (15 + _rvp_d_s * 1.5) / 30))
+                    _c_cmp_n  = min(1.0, max(0.0, _cq_s * 2.0 / 20))
+                    _c_adr_n  = min(1.0, max(0.0, (15 + _rvp_d_s * 1.0) / 30))   # proxy for ADR using RevPAR delta
+                    _custom_score = int(round(
+                        _c_occ_n * _w_occ + _c_rvp_n * _w_rvp + _c_adr_n * _w_adr + _c_cmp_n * _w_cmp
+                    ))
+                    _custom_score = max(0, min(100, _custom_score))
                     st.markdown(
-                        f'<div class="pcc-card-link" data-tab-idx="{_tab_idx}" '
-                        f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;border-radius:12px;">'
-                        f'{_card_html}'
-                        f'<div style="font-size:9px;color:#32B8C6;text-align:right;padding:2px 4px 0 0;font-weight:700;letter-spacing:.04em;">→ VIEW DETAIL</div>'
+                        f'<div style="font-size:13px;margin-top:4px;margin-bottom:6px;">'
+                        f'Custom weighted score: <strong style="color:{_p_color};font-size:18px;">{_custom_score}</strong> / 100'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
-                with _chart_col:
-                    _spk = _k.get("sparkline") or []
-                    st.plotly_chart(
-                        _mini_spark_fig(_spk, _k["label"], _k.get("positive", True)),
-                        use_container_width=True,
-                        config={"displayModeBar": False},
-                        key=_chart_key,
-                    )
+                    # Breakdown table
+                    _breakdown = [
+                        ("Occupancy",   f"{_occ_score:.1f}% vs 70% baseline", f"{_c_occ_n*_w_occ:.1f}",  f"{_w_occ}%"),
+                        ("ADR / Rate",  f"proxy via RevPAR delta",            f"{_c_adr_n*_w_adr:.1f}",  f"{_w_adr}%"),
+                        ("RevPAR YOY",  f"{_rvp_d_s:+.1f}%",                 f"{_c_rvp_n*_w_rvp:.1f}",  f"{_w_rvp}%"),
+                        ("Compression", f"{_cq_s} nights this quarter",       f"{_c_cmp_n*_w_cmp:.1f}",  f"{_w_cmp}%"),
+                    ]
+                    import pandas as _pd_bd
+                    _bd_df = _pd_bd.DataFrame(_breakdown, columns=["Component","Signal","Points","Weight"])
+                    st.dataframe(_bd_df, use_container_width=True, hide_index=True)
+                    st.download_button("⬇️ Download PULSE Score Breakdown CSV", _bd_df.to_csv(index=False).encode(), "pulse_score_breakdown.csv", "text/csv", key="dl_pulse_bd")
 
-        # ── Monthly Performance Strip ──────────────────────────────────────────
-        if m.get("monthly_data_available") and not df_monthly.empty:
-            _m12 = df_monthly.tail(12)
-            _m_pri = df_monthly.iloc[-24:-12] if len(df_monthly) >= 24 else pd.DataFrame()
-            _occ_col = "occupancy" if "occupancy" in df_monthly.columns else None
+            # ── Gauge bar chart ─────────────────────────────────────────────────
+            _gauge_fig = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=_pulse_score,
+                title={"text": "PULSE Score", "font": {"size": 12}},
+                gauge={
+                    "axis": {
+                        "range": [0, 100], "tickwidth": 1,
+                        "tickcolor": "rgba(15,28,46,0.3)",
+                        "tickfont": {"size": 11, "color": "#64748B"},
+                        "nticks": 6,
+                    },
+                    "bar": {"color": _p_color, "thickness": 0.28},
+                    "bgcolor": "rgba(0,0,0,0)",
+                    "borderwidth": 0,
+                    "steps": [
+                        {"range": [0, 40],  "color": "rgba(192,21,47,0.12)"},
+                        {"range": [40, 60], "color": "rgba(245,158,11,0.12)"},
+                        {"range": [60, 80], "color": "rgba(33,128,141,0.12)"},
+                        {"range": [80, 100],"color": "rgba(33,197,93,0.12)"},
+                    ],
+                    "threshold": {
+                        "line": {"color": _p_color, "width": 3},
+                        "thickness": 0.8,
+                        "value": _pulse_score,
+                    },
+                },
+                number={"font": {"size": 32, "color": _p_color}, "suffix": ""},
+            ))
+            _gauge_fig.update_layout(
+                height=200,
+                margin=dict(l=20, r=20, t=10, b=0),
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Outfit, Inter, system-ui, sans-serif", color="#334155"),
+            )
 
-            _m12_rvp = float(_m12["revpar"].mean())
-            _m12_adr = float(_m12["adr"].mean())
-            _m12_occ = float(_m12[_occ_col].mean()) if _occ_col else 0.0
-            _m12_rev = float(_m12["revenue"].sum())
-            _m12_dem = float(_m12["demand"].sum())
-            _m12_tbd = _m12_rev * 0.0125
-
-            _mp_rvp = float(_m_pri["revpar"].mean()) if not _m_pri.empty else _m12_rvp
-            _mp_adr = float(_m_pri["adr"].mean())    if not _m_pri.empty else _m12_adr
-            _mp_occ = float(_m_pri[_occ_col].mean()) if (not _m_pri.empty and _occ_col) else _m12_occ
-            _mp_rev = float(_m_pri["revenue"].sum())  if not _m_pri.empty else _m12_rev
-            _mp_dem = float(_m_pri["demand"].sum())   if not _m_pri.empty else _m12_dem
-
-            _min_mo = _m12["as_of_date"].min().strftime("%b %Y")
-            _max_mo = _m12["as_of_date"].max().strftime("%b %Y")
-            _mo_lbl = f"{_min_mo} – {_max_mo}"
-
+            _pulse_col1, _pulse_col2 = st.columns([3, 2])
+            with _pulse_col1:
+                st.markdown(
+                    f'<div class="pulse-wrapper" style="background:#FFFFFF;border:1px solid rgba(15,28,46,0.08);border-left:4px solid {_p_color};box-shadow:0 2px 10px rgba(15,28,46,0.07);">'
+                    f'  <div class="pulse-circle" style="color:{_p_color};">'
+                    f'    <div class="pulse-ring"></div>'
+                    f'    <div class="pulse-ring-2"></div>'
+                    f'    <div class="pulse-core">'
+                    f'      <span class="pulse-score" style="color:{_p_color};">{_pulse_score}</span>'
+                    f'      <span class="pulse-label" style="color:#64748B;">PULSE</span>'
+                    f'    </div>'
+                    f'  </div>'
+                    f'  <div class="pulse-info">'
+                    f'    <div class="pulse-info-title" style="color:#0D1B2E;">Dana Point Market PULSE Score</div>'
+                    f'    <div class="pulse-info-detail" style="color:#334155;">'
+                    f'      Occ {_occ_score:.1f}% &nbsp;·&nbsp; RevPAR YOY {_rvp_d_s:+.1f}% '
+                    f'      &nbsp;·&nbsp; Compression {_cq_s} nights this quarter<br>'
+                    f'      {_p_detail}'
+                    f'    </div>'
+                    f'    <span class="pulse-info-status" style="background:{_p_color};color:#ffffff;margin-top:8px;display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">{_p_status}</span>'
+                    f'  </div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            with _pulse_col2:
+                st.plotly_chart(_gauge_fig, use_container_width=True, config={"displayModeBar": False})
+            # Tier legend — light mode
             st.markdown(
-                '<div style="font-family:\'Syne\',sans-serif;font-size:14px;'
-                'font-weight:700;letter-spacing:-0.01em;margin-bottom:2px;margin-top:4px;">'
-                '12-Month Performance — Monthly STR</div>'
-                f'<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:8px;">'
-                f'Layer 1 verified data &nbsp;·&nbsp; {_mo_lbl} &nbsp;·&nbsp; vs. prior 12 months</div>',
+                '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;margin-bottom:12px;">'
+                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#FEE2E2;color:#991B1B;font-weight:700;border:1px solid #FCA5A5;">0–39 Caution</span>'
+                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#FEF3C7;color:#92400E;font-weight:700;border:1px solid #FCD34D;">40–59 Stable</span>'
+                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#DBEAFE;color:#1E40AF;font-weight:700;border:1px solid #93C5FD;">60–74 Strong</span>'
+                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#D1FAE5;color:#065F46;font-weight:700;border:1px solid #6EE7B7;">75–89 Exceptional</span>'
+                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#EDE9FE;color:#4C1D95;font-weight:700;border:1px solid #C4B5FD;">90–100 Historic</span>'
+                '</div>',
                 unsafe_allow_html=True,
             )
-            def _m12_spark(col):
-                return [v for v in _m12[col].tolist() if pd.notna(v)] if col in _m12.columns else []
-            _m_kpis = [
-                {"label": "RevPAR",       "value": f"${_m12_rvp:.2f}",
-                 "delta": f"{pct_delta(_m12_rvp,_mp_rvp):+.1f}% YOY",
-                 "positive": _m12_rvp >= _mp_rvp, "neutral": False,
-                 "date_label": _mo_lbl, "raw_value": _m12_rvp, "sparkline": _m12_spark("revpar")},
-                {"label": "ADR",          "value": f"${_m12_adr:.2f}",
-                 "delta": f"{pct_delta(_m12_adr,_mp_adr):+.1f}% YOY",
-                 "positive": _m12_adr >= _mp_adr, "neutral": False,
-                 "date_label": _mo_lbl, "raw_value": _m12_adr, "sparkline": _m12_spark("adr")},
-                {"label": "Occupancy",    "value": f"{_m12_occ:.1f}%",
-                 "delta": f"{pct_delta(_m12_occ,_mp_occ):+.1f}pp YOY",
-                 "positive": _m12_occ >= _mp_occ, "neutral": False,
-                 "date_label": _mo_lbl, "raw_value": _m12_occ, "sparkline": _m12_spark("occupancy") if _occ_col else []},
-                {"label": "Room Revenue", "value": f"${_m12_rev/1e6:.2f}M",
-                 "delta": f"{pct_delta(_m12_rev,_mp_rev):+.1f}% YOY",
-                 "positive": _m12_rev >= _mp_rev, "neutral": False,
-                 "date_label": _mo_lbl, "raw_value": _m12_rev, "sparkline": _m12_spark("revenue")},
-                {"label": "Rooms Sold",   "value": f"{_m12_dem:,.0f}",
-                 "delta": f"{pct_delta(_m12_dem,_mp_dem):+.1f}% YOY",
-                 "positive": _m12_dem >= _mp_dem, "neutral": False,
-                 "date_label": _mo_lbl, "raw_value": _m12_dem, "sparkline": _m12_spark("demand")},
-                {"label": "Est. TBID Rev","value": f"${_m12_tbd/1e3:.0f}K",
-                 "delta": "blended 1.25%", "positive": True, "neutral": True,
-                 "date_label": _mo_lbl, "raw_value": _m12_tbd, "sparkline": _m12_spark("revenue")},
+
+        # ── Overview Section Intelligence ─────────────────────────────────────────
+        if m:
+            _ov_rvp_yoy   = m.get("revpar_delta", 0)
+            _ov_occ       = m.get("occ_30", 0)
+            _ov_rvp       = m.get("revpar_30", 0)
+            _ov_cq        = m.get("comp_recent_q", 0)
+            _ov_rate_vs   = "outpacing occupancy — strong rate discipline" if _ov_rvp_yoy > 0 else "lagging occupancy — rate capture gap"
+            _ov_fwd       = ("Maintain pricing strength; advance rate floors before Q3 compression window."
+                             if _ov_occ >= 70 else "Focus shoulder demand generation; protect RevPAR floor.")
+            st.markdown(sec_intel(
+                "Overview Brain",
+                "hotel market health for the VDP Select 12-property portfolio",
+                f"RevPAR YOY is {_ov_rvp_yoy:+.1f}%, {_ov_rate_vs}. "
+                f"{_ov_cq} compression nights this quarter signal {'strong' if _ov_cq >= 10 else 'moderate'} pricing power.",
+                _ov_fwd,
+                f"RevPAR YOY: {_ov_rvp_yoy:+.1f}%",
+            ), unsafe_allow_html=True)
+
+        # ── Executive Intelligence Panel ───────────────────────────────────────────
+        try:
+            _ov_rvp_d2   = m.get("revpar_delta", 0) if m else 0
+            _ov_occ_d2   = m.get("occ_delta", 0) if m else 0
+            _ov_adr_d2   = m.get("adr_delta", 0) if m else 0
+            _ov_cq2      = m.get("comp_recent_q", 0) if m else 0
+            _ov_trips2   = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
+            _ov_oos2     = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
+            _ov_rev12_2  = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
+
+            _ov_next_steps = [
+                f"<strong>Rate Optimization:</strong> ADR is {'+' if _ov_adr_d2 >= 0 else ''}{_ov_adr_d2:.1f}% YOY — "
+                + ("momentum is strong; consider pushing rates further on compression nights." if _ov_adr_d2 > 3 else
+                   "growth is modest; review comp-set pricing vs CoStar benchmarks in Competitive Intel tab."),
+                f"<strong>Compression Night Strategy:</strong> {_ov_cq2} compression days this quarter — "
+                + ("activate TBID tiered rate (≥$400) on high-demand nights to maximize TBID revenue." if _ov_cq2 >= 8 else
+                   "low compression count signals opportunity to build mid-week demand with targeted packages."),
+                f"<strong>Out-of-State Visitor Capture:</strong> {_ov_oos2:.0f}% OOS visitors drive premium ADR — "
+                "target SLC, Dallas, and Phoenix feeder markets with fly-drive packages. See Origin Markets tab.",
+                f"<strong>TBID Revenue:</strong> Estimated 12-month TBID ~${_ov_rev12_2 * 0.0125 / 1_000_000:.2f}M — "
+                "present at next board meeting alongside TOT figures to demonstrate total economic contribution.",
             ]
-            _m_kpi_rows = [_m_kpis[i:i+2] for i in range(0, len(_m_kpis), 2)]
-            for _mri, _m_row in enumerate(_m_kpi_rows):
-                _mrc = st.columns([1.1, 1.0, 1.1, 1.0])
-                for _mi, _mk in enumerate(_m_row):
-                    _mc  = _mrc[0 if _mi == 0 else 2]
-                    _mcc = _mrc[1 if _mi == 0 else 3]
-                    _mk_key = f"m12_spark_{_mri}_{_mi}_{_mk['label'].replace(' ','_').replace('.','')}"
-                    with _mc:
-                        _mk_card_html = kpi_card(_mk["label"], _mk["value"], _mk["delta"],
-                                     _mk.get("positive", True), _mk.get("neutral", False),
-                                     "", _mk.get("date_label", ""), _mk.get("raw_value", 0.0),
-                                     [])
-                        _mk_tab_map = {"RevPAR": 1, "ADR": 1, "Occupancy": 1, "Room Revenue": 1,
-                                       "Rooms Sold": 1, "Est. TBID Rev": 1, "TBID": 1,
-                                       "Demand": 1, "Supply": 1, "Revenue": 1}
-                        _mk_tab_idx = next((v for k,v in _mk_tab_map.items() if k.lower() in _mk["label"].lower()), 1)
+            _ov_questions = [
+                "What's driving the RevPAR change vs last year?",
+                "Which months have the most compression opportunity?",
+                "How do our TBID and TOT estimates compare to prior year?",
+                "What's the highest-value visitor segment right now?",
+                "Where should we focus marketing spend next quarter?",
+            ]
+            _ov_context = (
+                f"Dana Point VDP portfolio. RevPAR ${m.get('revpar_30',0):.0f} ({m.get('revpar_delta',0):+.1f}% YOY), "
+                f"ADR ${m.get('adr_30',0):.0f}, Occ {m.get('occ_30',0):.1f}%, "
+                f"12-mo revenue ~${_ov_rev12_2/1_000_000:.1f}M, "
+                f"{_ov_cq2} compression days, {_ov_trips2:,} annual visitor trips, {_ov_oos2:.0f}% OOS."
+                if m else "Dana Point VDP portfolio executive overview."
+            )
+            render_intel_panel("ov_exec", _ov_next_steps, _ov_questions, _ov_context)
+        except Exception:
+            pass
+
+    # ── VDP Analyst Panel ──────────────────────────────────────────────────────
+    # ── AI Analysis → sub-tab 3 ─────────────────────────────────────────────────
+    with _ov_t3:
+        st.markdown(sec_div("🧠 VDP Analyst"), unsafe_allow_html=True)
+        with st.expander("🧠 PULSE VDP Analyst — Interrogate your data", expanded=False):
+            st.markdown('<span class="ai-chip">AI ANALYST</span>', unsafe_allow_html=True)
+
+            PROMPTS_META = [
+                ("💹 RevPAR Drivers",       "revpar"),
+                ("📅 Opportunity Nights",   "opportunity"),
+                ("🗺️ Visitor Economy",      "visitor_econ"),
+                ("📋 Board Talking Points", "board"),
+                ("🌙 Weekend vs Midweek",   "midweek"),
+                ("🏨 TBID Revenue Est.",    "tbid"),
+                ("🔍 Detect Anomalies",     "anomaly"),
+                ("📈 30-Day Forecast",      "forecast"),
+            ]
+
+            btn_cols = st.columns(4)
+            for i, (label, key) in enumerate(PROMPTS_META):
+                with btn_cols[i % 4]:
+                    if st.button(label, key=f"ai_btn_{key}", use_container_width=True):
+                        st.session_state.ai_current_prompt = build_prompt(key, m)
+                        st.session_state.ai_prompt_label   = label
+                        st.session_state.ai_result         = ""
+                        st.session_state.ai_needs_call     = True
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            inp_col, btn_col = st.columns([5, 1])
+            with inp_col:
+                custom_q = st.text_input(
+                    "custom_q", label_visibility="collapsed",
+                    placeholder="Ask anything about your VDP portfolio data…",
+                    key="ai_custom_input",
+                )
+            with btn_col:
+                if st.button("⚡ Brief Me", type="primary", use_container_width=True):
+                    if custom_q.strip():
+                        st.session_state.ai_current_prompt = build_custom_prompt(custom_q, m)
+                        st.session_state.ai_prompt_label   = f"💬 {custom_q.strip()[:60]}"
+                        st.session_state.ai_result         = ""
+                        st.session_state.ai_needs_call     = True
+
+            # ── Response area ──────────────────────────────────────────────────────
+            if st.session_state.ai_needs_call or st.session_state.ai_result:
+                st.markdown("---")
+                if st.session_state.ai_prompt_label:
+                    st.caption(f"**Query:** {st.session_state.ai_prompt_label}")
+
+                if st.session_state.ai_needs_call:
+                    prompt_to_run = st.session_state.ai_current_prompt
+                    # Detect which preset key matches the label
+                    matched_key = next(
+                        (k for lbl, k in PROMPTS_META
+                         if lbl == st.session_state.ai_prompt_label), "default"
+                    )
+                    _active_mdl = st.session_state.get("selected_model", CLAUDE_MODEL)
+                    _active_info = AI_MODELS.get(_active_mdl, {})
+                    _active_label = f"{_active_info.get('badge','🟦')} {_active_info.get('label', _active_mdl)}"
+                    _any_ai_active = (
+                        (api_key_valid and ANTHROPIC_AVAILABLE) or
+                        (bool(_OPENAI_KEY) and OPENAI_AVAILABLE) or
+                        (bool(_GOOGLE_AI_KEY) and GEMINI_AVAILABLE) or
+                        (bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE)
+                    )
+                    if _any_ai_active:
+                        st.caption(f"Running {_active_label}…")
+                        with st.chat_message("assistant", avatar="🌊"):
+                            response = st.write_stream(
+                                stream_ai_response(prompt_to_run, _active_mdl, _ai_keys)
+                            )
+                        st.session_state.ai_result = response
+                        st.session_state.ai_result_model = _active_label
+                    else:
+                        response = local_fallback(matched_key, m)
+                        with st.chat_message("assistant", avatar="🌊"):
+                            st.markdown(response)
+                        st.session_state.ai_result = response
+                        if not api_key_valid:
+                            st.caption(
+                                "💡 Add API keys in the sidebar (VDP Analyst) to activate AI streaming."
+                            )
+                    st.session_state.ai_needs_call = False
+
+                elif st.session_state.ai_result:
+                    with st.chat_message("assistant", avatar="🌊"):
+                        st.markdown(st.session_state.ai_result)
+
+        # ── AI Insight Cards ───────────────────────────────────────────────────────
+        if m:
+            st.markdown(
+                '<div style="font-family:\'Syne\',sans-serif;font-size:14px;'
+                'font-weight:700;letter-spacing:-0.01em;margin-bottom:2px;">🔥 Market Intelligence Signals</div>'
+                '<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:8px;">'
+                'Pattern analysis from the selected date range</div>',
+                unsafe_allow_html=True,
+            )
+            insights = generate_ai_insights(df_sel, df_comp, m)
+            if insights:
+                ic = st.columns(len(insights))
+                for i, ins in enumerate(insights):
+                    with ic[i]:
                         st.markdown(
-                            f'<div class="pcc-card-link" data-tab-idx="{_mk_tab_idx}" '
+                            insight_card(ins["title"], ins["body"], ins["kind"],
+                                         ins.get("icon", ""), ins.get("date_label", "")),
+                            unsafe_allow_html=True,
+                        )
+            st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Remaining content → sub-tab 1 ────────────────────────────────────────────
+    with _ov_t1:
+        st.markdown("---")
+
+        # ── Board Report Card (Traffic Light) ─────────────────────────────────────
+        try:
+            st.markdown(_sh("📋", "Board Report Card", "gold", "TRAFFIC LIGHT"), unsafe_allow_html=True)
+            st.caption("Traffic-light assessment for board presentation · Updates with every pipeline run")
+
+            def _report_card_row(metric, value, status, note, source):
+                _dot_map = {
+                    "green":  ("🟢", "#059669", "On Track"),
+                    "yellow": ("🟡", "#D97706", "Watch"),
+                    "red":    ("🔴", "#DC2626", "Action Required"),
+                }
+                _dot, _col, _lbl = _dot_map.get(status, ("⚫", "#8FA3B8", "Unknown"))
+                return (
+                    f'<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;'
+                    f'border-bottom:1px solid rgba(0,0,0,0.08);font-family:\'Syne\',sans-serif;'
+                    f'background:#FFFFFF;">'
+                    f'<div style="font-size:16px;flex-shrink:0;">{_dot}</div>'
+                    f'<div style="flex:1.4;font-size:13px;font-weight:700;color:#0F1C2E;">{metric}</div>'
+                    f'<div style="flex:0.8;font-size:14px;font-weight:900;color:{_col};">{value}</div>'
+                    f'<div style="flex:1;font-size:11px;font-weight:800;color:{_col};text-transform:uppercase;'
+                    f'letter-spacing:.06em;">{_lbl}</div>'
+                    f'<div style="flex:2;font-size:12px;color:#4A5568;line-height:1.4;">{note}</div>'
+                    f'<div style="flex:0.8;font-size:10px;font-weight:700;letter-spacing:.05em;'
+                    f'color:#A0AEC0;text-transform:uppercase;">{source}</div>'
+                    f'</div>'
+                )
+
+            _rc_occ_status    = "green" if _exec_occ >= 75 else ("yellow" if _exec_occ >= 60 else "red")
+            _rc_revpar_status = "green" if _exec_rvp_d >= 2 else ("yellow" if _exec_rvp_d >= -2 else "red")
+            _rc_adr_status    = "green" if _exec_adr_d >= 3 else ("yellow" if _exec_adr_d >= 0 else "red")
+            _rc_roas_status   = ("green" if (_exec_roas_infinite or _exec_roas >= 5) else ("yellow" if _exec_roas >= 2 else "red")) if (_exec_roas > 0 or _exec_roas_infinite) else "yellow"
+            _rc_social_status = ("green" if _exec_ig_fol >= 20000 else ("yellow" if _exec_ig_fol >= 10000 else "red")) if _exec_ig_fol > 0 else "yellow"
+            _rc_trips_status  = ("green" if _exec_trips >= 1000000 else ("yellow" if _exec_trips >= 500000 else "red")) if _exec_trips > 0 else "yellow"
+
+            _rc_occ_note    = f"{_exec_occ:.1f}% occ · {_arr(_exec_occ_d)}{abs(_exec_occ_d):.1f}pp vs prior · {'Maintain pricing discipline.' if _exec_occ >= 75 else 'Demand generation programs needed.'}"
+            _rc_revpar_note = f"${_exec_rvp:.0f} RevPAR · {_arr(_exec_rvp_d)}{abs(_exec_rvp_d):.1f}% YOY · {'Rate strategy working.' if _exec_rvp_d >= 2 else 'Review rate strategy and comp set positioning.'}"
+            _rc_adr_note    = f"${_exec_adr:.0f} ADR · {'Premium rate capture on track.' if _exec_adr_d >= 3 else 'Rate pressure — audit discount patterns and channel mix.'}"
+            _rc_roas_note   = (
+                f"∞ ROAS (no media cost recorded) · ${_exec_media_impact:,.0f} est. campaign impact · {_exec_attr_trips:,} attributable trips · Organic performance — strong case for paid investment."
+                if _exec_roas_infinite else
+                (f"{_roas_fmt} return · {_exec_attr_trips:,} attributable trips · {'Strong ROI — recommend budget increase.' if _exec_roas >= 5 else 'Acceptable ROI.' if _exec_roas >= 2 else 'Investigate attribution model and campaign targeting.'}") if _exec_roas > 0
+                else "Run Datafy media attribution pipeline to populate."
+            )
+            _rc_social_note = (f"IG {_exec_ig_fol:,} · FB {_exec_fb_fol:,} · TK {_exec_tk_fol:,} · {'Healthy audience scale for a DMO.' if _exec_ig_fol >= 20000 else 'Growth campaigns recommended.'}") if _exec_social_total > 0 else "Load Later.com exports."
+            _rc_trips_note  = (f"{_trips_fmt} annual trips · {_exec_overnight:.0f}% overnight · {'Strong visitation base.' if _exec_trips >= 1e6 else 'Opportunity to grow overnight conversion.'}") if _exec_trips > 0 else "Run Datafy pipeline."
+
+            _rc_html = (
+                '<div style="background:#FFFFFF;border-radius:14px;'
+                'border:1px solid rgba(0,0,0,0.08);border-left:5px solid #D97706;'
+                'overflow:hidden;font-family:\'Syne\',sans-serif;margin-bottom:16px;'
+                'box-shadow:0 2px 8px rgba(0,0,0,0.08);">'
+                '<div style="padding:11px 16px;background:#F7F9FC;'
+                'border-bottom:1px solid rgba(0,0,0,0.08);font-size:10px;font-weight:800;'
+                'letter-spacing:.07em;text-transform:uppercase;color:#718096;display:flex;gap:40px;">'
+                '<span style="flex:0.15"></span>'
+                '<span style="flex:1.4">Metric</span>'
+                '<span style="flex:0.8">Current</span>'
+                '<span style="flex:1">Status</span>'
+                '<span style="flex:2">Board Note</span>'
+                '<span style="flex:0.8">Source</span>'
+                '</div>'
+                + _report_card_row("Occupancy Rate",       f"{_exec_occ:.1f}%",     _rc_occ_status,    _rc_occ_note,    "STR")
+                + _report_card_row("RevPAR Growth",        f"{_exec_rvp_d:+.1f}%",  _rc_revpar_status, _rc_revpar_note, "STR")
+                + _report_card_row("ADR Growth",           f"{_exec_adr_d:+.1f}%",  _rc_adr_status,    _rc_adr_note,    "STR")
+                + _report_card_row("Campaign ROAS",        _roas_fmt,               _rc_roas_status,   _rc_roas_note,   "Datafy")
+                + _report_card_row("Social Audience",      _social_fmt,             _rc_social_status, _rc_social_note, "Later.com")
+                + _report_card_row("Annual Visitor Trips", _trips_fmt,              _rc_trips_status,  _rc_trips_note,  "Datafy")
+                + '</div>'
+            )
+            st.markdown(_rc_html, unsafe_allow_html=True)
+        except Exception:
+            pass
+
+        # ── Cross-Dataset Intelligence Matrix ─────────────────────────────────────
+        try:
+            if m and (not df_dfy_ov.empty or not df_dfy_dma.empty or not df_dfy_media.empty):
+                st.markdown(sec_div("🔗 Cross-Dataset Intelligence"), unsafe_allow_html=True)
+                st.markdown(
+                    '<div style="font-family:\'Inter\',sans-serif;font-size:12px;color:#64748B;margin-bottom:14px;">'
+                    'Hidden signals that only appear when STR hotel data is read alongside visitor economy and campaign data.</div>',
+                    unsafe_allow_html=True,
+                )
+
+                # ── Compute cross-dataset signals ─────────────────────────────────
+                _cx_rvp      = m.get("revpar_30", 0)
+                _cx_adr      = m.get("adr_30", 0)
+                _cx_occ      = m.get("occ_30", 0)
+                _cx_rev12    = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
+                _cx_oos_pct  = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0.0
+                _cx_trips    = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
+                _cx_daytrip  = float(df_dfy_ov.iloc[0].get("day_trip_pct", 0) or 0) if not df_dfy_ov.empty else 0.0
+                _cx_los      = float(df_dfy_ov.iloc[0].get("avg_los", 0) or 0) if not df_dfy_ov.empty else 0.0
+                _cx_overnight_pct = float(df_dfy_ov.iloc[0].get("overnight_pct", 0) or 0) if not df_dfy_ov.empty else 0.0
+                _cx_roas     = _exec_roas if not _exec_roas_infinite else 99.0
+                _cx_impact   = float(df_dfy_media.iloc[0].get("total_impact_usd", 0) or 0) if not df_dfy_media.empty else 0.0
+                _cx_invest   = float(df_dfy_media.iloc[0].get("total_investment_usd", 0) or 0) if not df_dfy_media.empty else 0.0
+                _cx_attr_trips = int(df_dfy_media.iloc[0].get("attributable_trips", 0) or 0) if not df_dfy_media.empty else 0
+
+                # Signal 1: OOS premium capture gap
+                _oos_rate_gap = _cx_oos_pct * 0.01 * _cx_adr * 0.067  # 6.7% ADR YOY vs 1.0× spend ratio
+                _oos_signal  = (f"{_cx_oos_pct:.0f}% OOS visitors generate near 1:1 spend-per-visit but ADR growth is only "
+                                f"+{m.get('adr_delta',0):.1f}% YOY — rate capture gap of ~${_cx_adr * 0.05:,.0f}/night vs. OOS demand.")
+                # Signal 2: Day-trip conversion value
+                _daytrip_ct    = int(_cx_trips * _cx_daytrip * 0.01) if _cx_daytrip > 0 else 0
+                _daytrip_conv3 = _daytrip_ct * 0.03 * _cx_adr  # 3% conversion × ADR
+                _daytrip_signal = (f"{_daytrip_ct:,} estimated day trips — converting just 3% to overnight stays = "
+                                   f"~${_daytrip_conv3/1e6:.1f}M incremental room revenue annually." if _daytrip_ct > 0
+                                   else f"Day-trip data pending — load Datafy visitor report to compute conversion opportunity.")
+                # Signal 3: Campaign efficiency vs organic
+                _cost_per_trip = _cx_invest / _cx_attr_trips if _cx_attr_trips > 0 and _cx_invest > 0 else 0
+                _rev_per_trip  = _cx_impact / _cx_attr_trips if _cx_attr_trips > 0 and _cx_impact > 0 else 0
+                if _cx_roas >= 5 or _exec_roas_infinite:
+                    _camp_signal = (f"{'∞' if _exec_roas_infinite else f'{_cx_roas:.1f}×'} ROAS — ${_cx_impact/1e3:,.0f}K destination impact "
+                                    f"from {_cx_attr_trips:,} attributable trips. "
+                                    f"{'No media cost recorded — all organic; strong case for paid media investment.' if _exec_roas_infinite else 'Strong ROI — scale budget to capture next tier of feeder markets.'}")
+                elif _cx_roas > 0:
+                    _camp_signal = (f"{_cx_roas:.1f}× ROAS · ${_cost_per_trip:,.0f} cost/trip · ${_rev_per_trip:,.0f} revenue/trip — "
+                                    "acceptable efficiency; refine audience targeting to improve trip quality vs. volume.")
+                else:
+                    _camp_signal = "Load Datafy media attribution report to compute campaign-to-room-revenue signal."
+                # Signal 4: Compression × visitor overlap
+                _comp_q = m.get("comp_recent_q", 0)
+                _comp_day_signal = (
+                    f"{_comp_q} compression nights this quarter — on 80%+ occ nights, day-trip visitors add estimated "
+                    f"0.7× room count equivalent in off-property spend, invisible to STR. "
+                    f"Total visitor economic footprint exceeds hotel data by ~{0.7 * _comp_q * _cx_adr * 50:,.0f}$ on compression days."
+                    if _comp_q > 0 else
+                    "Compression data loading — run pipeline to populate kpi_compression_quarterly."
+                )
+                # Signal 5: LOS extension value
+                _los_val = (_cx_los if _cx_los > 0 else 2.0)
+                _los_ext_val = _cx_rev12 * 0.05  # 5% uplift from 0.5-day extension
+                _los_signal  = (f"Avg stay: {_cx_los:.1f} nights (Datafy) — extending avg LOS by 0.5 nights via minimum-stay "
+                                f"packages = estimated +${_los_ext_val/1e3:,.0f}K annual room revenue.")
+
+                def _cx_signal_card(icon, title, signal_text, source_tags, signal_type="insight"):
+                    _type_colors = {"insight": "#0567C8", "opportunity": "#059669", "risk": "#DC2626", "gap": "#D97706"}
+                    _tc = _type_colors.get(signal_type, "#0567C8")
+                    return (
+                        f'<div style="background:#FFFFFF;border-radius:12px;padding:16px 18px;'
+                        f'border:1px solid rgba(15,28,46,0.07);border-left:3px solid {_tc};'
+                        f'box-shadow:0 1px 4px rgba(15,28,46,0.06);margin-bottom:10px;">'
+                        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+                        f'<span style="font-size:16px;">{icon}</span>'
+                        f'<span style="font-family:\'Outfit\',sans-serif;font-size:12px;font-weight:700;color:#0D1B2E;">{title}</span>'
+                        f'<span style="margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.08em;'
+                        f'text-transform:uppercase;color:{_tc};background:rgba(5,103,200,0.08);'
+                        f'padding:2px 8px;border-radius:99px;">{signal_type.upper()}</span>'
+                        f'</div>'
+                        f'<div style="font-family:\'Inter\',sans-serif;font-size:12px;color:#334155;line-height:1.6;">{signal_text}</div>'
+                        f'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">{source_tags}</div>'
+                        f'</div>'
+                    )
+
+                def _src(label, color_hex, bg_hex):
+                    return (f'<span style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;'
+                            f'color:{color_hex};background:{bg_hex};padding:2px 8px;border-radius:99px;">{label}</span>')
+
+                _cx_c1, _cx_c2 = st.columns(2)
+                with _cx_c1:
+                    st.markdown(_cx_signal_card("💎", "OOS Visitor Rate Capture Gap",  _oos_signal,
+                        _src("STR","#0567C8","rgba(5,103,200,0.10)") + _src("Datafy","#059669","rgba(5,150,105,0.10)"), "gap"), unsafe_allow_html=True)
+                    st.markdown(_cx_signal_card("🔁", "Day-Trip → Overnight Conversion", _daytrip_signal,
+                        _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "opportunity"), unsafe_allow_html=True)
+                    st.markdown(_cx_signal_card("📏", "Length-of-Stay Extension Value", _los_signal,
+                        _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "opportunity"), unsafe_allow_html=True)
+                with _cx_c2:
+                    st.markdown(_cx_signal_card("📡", "Campaign → Room Revenue Signal", _camp_signal,
+                        _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "insight"), unsafe_allow_html=True)
+                    st.markdown(_cx_signal_card("🏨", "Compression × Day-Trip Overlap", _comp_day_signal,
+                        _src("STR","#0567C8","rgba(5,103,200,0.10)") + _src("Datafy","#059669","rgba(5,150,105,0.10)"), "insight"), unsafe_allow_html=True)
+                    # Feeder market ADR premium signal
+                    _top_dma = str(df_dfy_dma.iloc[0].get("dma","—")) if not df_dfy_dma.empty else "—"
+                    _top_dma_share = float(df_dfy_dma.iloc[0].get("visitor_days_share_pct", 0) or 0) if not df_dfy_dma.empty else 0
+                    _fly_markets = [r for _, r in df_dfy_dma.iterrows()
+                                    if str(r.get("dma","")).upper() not in ("LOS ANGELES","LA","RIVERSIDE","SAN DIEGO","ORANGE COUNTY")
+                                    ] if not df_dfy_dma.empty else []
+                    _fly_spend = float(_fly_markets[0].get("avg_spend_usd", 0) or 0) if _fly_markets else 0
+                    _feeder_signal = (
+                        f"Top feeder: {_top_dma} ({_top_dma_share:.0f}% of visitor days) — drive market dominant on volume. "
+                        + (f"Fly markets (SLC, Dallas, NYC) avg ${_fly_spend:,.0f}/trip vs. LA drive market — "
+                           "1.3–1.4× revenue per visitor trip. Shift 10% of campaign budget to fly markets = outsized ADR gain."
+                           if _fly_spend > 0 else
+                           "Load full Datafy DMA table to compute fly-market ADR premium signal.")
+                    ) if _top_dma != "—" else "Load Datafy feeder market data to compute cross-dataset signal."
+                    st.markdown(_cx_signal_card("✈️", "Feeder Market ADR Premium",  _feeder_signal,
+                        _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "opportunity"), unsafe_allow_html=True)
+        except Exception:
+            pass
+
+        # ── KPI Cards ──────────────────────────────────────────────────────────────
+        kpis = compute_overview_kpis(df_sel, grain)
+        if not kpis:
+            st.markdown(empty_state(
+                "📊",
+                f"No {grain.lower()} data in the selected range.",
+                "Adjust the date range or run the pipeline to load data.",
+            ), unsafe_allow_html=True)
+        else:
+            st.markdown(sec_div("📊 Key Performance Indicators"), unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-family:\'Syne\',sans-serif;font-size:14px;'
+                'font-weight:700;letter-spacing:-0.01em;margin-bottom:8px;">Performance Command Center</div>',
+                unsafe_allow_html=True,
+            )
+            # ── Per-metric color palette (cutting-edge, distinct) ─────────────────
+            _METRIC_COLORS = {
+                "RevPAR":        ("#00C4CC", "rgba(0,196,204,0.18)"),
+                "ADR":           ("#8B5CF6", "rgba(139,92,246,0.18)"),
+                "Occupancy":     ("#0EA5E9", "rgba(14,165,233,0.18)"),
+                "Room Revenue":  ("#10B981", "rgba(16,185,129,0.18)"),
+                "Rooms Sold":    ("#F97316", "rgba(249,115,22,0.18)"),
+                "Est. TBID Rev": ("#F59E0B", "rgba(245,158,11,0.18)"),
+                "TBID":          ("#F59E0B", "rgba(245,158,11,0.18)"),
+                "Demand":        ("#F97316", "rgba(249,115,22,0.18)"),
+                "Supply":        ("#6366F1", "rgba(99,102,241,0.18)"),
+                "Revenue":       ("#10B981", "rgba(16,185,129,0.18)"),
+            }
+            def _metric_color(label, positive=True):
+                for k, v in _METRIC_COLORS.items():
+                    if k.lower() in label.lower():
+                        return v
+                return ("#00C4CC", "rgba(0,196,204,0.18)") if positive else ("#F97316", "rgba(249,115,22,0.18)")
+
+            # Render each KPI as [card | mini sparkline chart] pairs, 2 per row
+            def _mini_spark_fig(values, label="", positive=True, chart_key=""):
+                # Always render — if no data, show placeholder flat line
+                if not values or len(values) < 2:
+                    values = [0, 0]
+                _line_color, _fill_color = _metric_color(label, positive)
+                _fig = go.Figure()
+                _fig.add_trace(go.Scatter(
+                    y=values,
+                    mode="lines",
+                    line=dict(color=_line_color, width=2.5, shape="spline", smoothing=0.8),
+                    fill="tozeroy",
+                    fillcolor=_fill_color,
+                    hoverinfo="skip",
+                ))
+                # Accent dot at latest value
+                _fig.add_trace(go.Scatter(
+                    x=[len(values) - 1], y=[values[-1]],
+                    mode="markers",
+                    marker=dict(color=_line_color, size=6, line=dict(color="white", width=1.5)),
+                    hoverinfo="skip",
+                ))
+                _fig.update_layout(
+                    height=88, margin=dict(l=2, r=2, t=2, b=2),
+                    xaxis=dict(visible=False, fixedrange=True),
+                    yaxis=dict(visible=False, fixedrange=True),
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    showlegend=False,
+                    transition={"duration": 500, "easing": "cubic-in-out"},
+                )
+                return _fig
+
+            _kpi_rows = [kpis[i:i+2] for i in range(0, len(kpis), 2)]
+            for _ri, _row_kpis in enumerate(_kpi_rows):
+                _rcols = st.columns([1.1, 1.0, 1.1, 1.0])
+                for _idx, _k in enumerate(_row_kpis):
+                    # Use columns at indices 0,1 for first KPI and 2,3 for second
+                    _card_col  = _rcols[0 if _idx == 0 else 2]
+                    _chart_col = _rcols[1 if _idx == 0 else 3]
+                    _chart_key = f"kpi30_spark_{_ri}_{_idx}_{_k['label'].replace(' ','_').replace('.','')}"
+                    with _card_col:
+                        _card_html = kpi_card(_k["label"], _k["value"], _k["delta"],
+                                     _k.get("positive", True), _k.get("neutral", False),
+                                     "", _k.get("date_label", ""), _k.get("raw_value", 0.0),
+                                     [])
+                        # Map metric label to tab index for navigation
+                        _tab_map = {"RevPAR": 1, "ADR": 1, "Occupancy": 1, "Room Revenue": 1,
+                                    "Rooms Sold": 1, "Est. TBID Rev": 1, "TBID": 1,
+                                    "Demand": 1, "Supply": 1, "Revenue": 1}
+                        _tab_idx = next((v for k,v in _tab_map.items() if k.lower() in _k["label"].lower()), 1)
+                        st.markdown(
+                            f'<div class="pcc-card-link" data-tab-idx="{_tab_idx}" '
                             f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;border-radius:12px;">'
-                            f'{_mk_card_html}'
+                            f'{_card_html}'
                             f'<div style="font-size:9px;color:#32B8C6;text-align:right;padding:2px 4px 0 0;font-weight:700;letter-spacing:.04em;">→ VIEW DETAIL</div>'
                             f'</div>',
                             unsafe_allow_html=True,
                         )
-                    with _mcc:
-                        _mspk = _mk.get("sparkline") or []
+                    with _chart_col:
+                        _spk = _k.get("sparkline") or []
                         st.plotly_chart(
-                            _mini_spark_fig(_mspk, _mk["label"], _mk.get("positive", True)),
+                            _mini_spark_fig(_spk, _k["label"], _k.get("positive", True)),
                             use_container_width=True,
                             config={"displayModeBar": False},
-                            key=_mk_key,
+                            key=_chart_key,
                         )
 
-        # ── PCC card navigation script (injected once after all cards) ──────────
-        st.markdown("""
-<script>
-(function(){
-  function findTabs(){
-    // Try multiple selectors for different Streamlit versions
-    var t = document.querySelectorAll('[data-testid="stTab"] button');
-    if(!t.length) t = document.querySelectorAll('button[data-baseweb="tab"]');
-    if(!t.length) t = document.querySelectorAll('[role="tab"]');
-    return t;
-  }
-  function attachPCC(){
-    document.querySelectorAll('.pcc-card-link').forEach(function(card){
-      if(card._pccBound) return;
-      card._pccBound = true;
-      card.addEventListener('mouseenter', function(){ this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 16px rgba(8,145,178,0.18)'; });
-      card.addEventListener('mouseleave', function(){ this.style.transform=''; this.style.boxShadow=''; });
-      card.addEventListener('click', function(){
-        var idx = parseInt(this.getAttribute('data-tab-idx') || '1');
-        var tabs = findTabs();
-        if(tabs[idx]){ tabs[idx].click(); }
-        setTimeout(function(){ window.scrollTo({top:0,behavior:'smooth'}); }, 150);
-      });
-    });
-  }
-  attachPCC();
-  setTimeout(attachPCC, 600);
-  setTimeout(attachPCC, 1800);
-  if(window.MutationObserver){
-    var obs = new MutationObserver(function(){ attachPCC(); });
-    obs.observe(document.body, {childList:true, subtree:true});
-  }
-})();
-</script>
-""", unsafe_allow_html=True)
+            # ── Monthly Performance Strip ──────────────────────────────────────────
+            if m.get("monthly_data_available") and not df_monthly.empty:
+                _m12 = df_monthly.tail(12)
+                _m_pri = df_monthly.iloc[-24:-12] if len(df_monthly) >= 24 else pd.DataFrame()
+                _occ_col = "occupancy" if "occupancy" in df_monthly.columns else None
 
-        # ── Bullet Chart: KPI vs Benchmark ────────────────────────────────────
-        if kpis and not df_cs_snap.empty:
-            st.markdown('<div class="chart-header">Performance vs. Market Benchmark — Bullet Chart</div>', unsafe_allow_html=True)
-            st.markdown(
-                '<div class="chart-caption">Black bar = VDP portfolio actual · '
-                'Gray range = South OC market benchmark (CoStar) · '
-                'Teal = target (5% above market)</div>',
-                unsafe_allow_html=True,
-            )
-            _snap = df_cs_snap.iloc[0]
-            _mkt_occ  = float(_snap.get("occupancy_pct", 76.4) or 76.4)
-            _mkt_adr  = float(_snap.get("adr_usd", 288.50) or 288.50)
-            _mkt_rvp  = float(_snap.get("revpar_usd", 220.42) or 220.42)
-            # VDP actuals from kpis
-            _vdp_occ  = next((k["raw_value"] for k in kpis if "Occ" in k.get("label","")), _mkt_occ)
-            _vdp_adr  = next((k["raw_value"] for k in kpis if "ADR" in k.get("label","")), _mkt_adr)
-            _vdp_rvp  = next((k["raw_value"] for k in kpis if "RevPAR" in k.get("label","")), _mkt_rvp)
-            # Extract numeric from raw_value (already float)
-            def _num(v):
-                if isinstance(v, (int, float)):
-                    return float(v)
-                s = str(v).replace("$","").replace("%","").replace(",","").strip()
-                try: return float(s)
-                except: return 0.0
-            _vdp_occ_n = _num(_vdp_occ)
-            _vdp_adr_n = _num(_vdp_adr)
-            _vdp_rvp_n = _num(_vdp_rvp)
+                _m12_rvp = float(_m12["revpar"].mean())
+                _m12_adr = float(_m12["adr"].mean())
+                _m12_occ = float(_m12[_occ_col].mean()) if _occ_col else 0.0
+                _m12_rev = float(_m12["revenue"].sum())
+                _m12_dem = float(_m12["demand"].sum())
+                _m12_tbd = _m12_rev * 0.0125
 
-            _bul_metrics = [
-                ("Occupancy %", _vdp_occ_n, _mkt_occ, _mkt_occ * 1.05),
-                ("ADR ($)",     _vdp_adr_n, _mkt_adr, _mkt_adr * 1.05),
-                ("RevPAR ($)",  _vdp_rvp_n, _mkt_rvp, _mkt_rvp * 1.05),
-            ]
-            fig = go.Figure()
-            for idx, (lbl, actual, benchmark, target) in enumerate(_bul_metrics):
-                y_pos = idx * 1.5
-                # Background range (market benchmark ± 15%)
-                fig.add_shape(type="rect",
-                    x0=benchmark * 0.85, x1=benchmark * 1.15,
-                    y0=y_pos - 0.4, y1=y_pos + 0.4,
-                    fillcolor="rgba(167,169,169,0.20)",
-                    line=dict(width=0),
-                )
-                # Target line
-                fig.add_shape(type="line",
-                    x0=target, x1=target, y0=y_pos - 0.45, y1=y_pos + 0.45,
-                    line=dict(color=TEAL, width=2, dash="dash"),
-                )
-                # Actual bar
-                color = TEAL if actual >= benchmark else ORANGE
-                fig.add_shape(type="rect",
-                    x0=0, x1=actual,
-                    y0=y_pos - 0.18, y1=y_pos + 0.18,
-                    fillcolor=color,
-                    line=dict(width=0),
-                )
-                # Labels
-                suffix = "%" if "%" in lbl else ""
-                prefix = "$" if "$" in lbl else ""
-                fig.add_annotation(
-                    x=0, y=y_pos + 0.55,
-                    text=f"<b>{lbl}</b>", showarrow=False,
-                    xanchor="left", font=dict(size=11, family="Syne, DM Sans, sans-serif"),
-                )
-                fig.add_annotation(
-                    x=actual, y=y_pos,
-                    text=f" {prefix}{actual:.1f}{suffix}", showarrow=False,
-                    xanchor="left", font=dict(size=10, color=color, family="Syne, DM Sans, sans-serif"),
-                )
-            max_val = max(_vdp_adr_n, _mkt_adr) * 1.25
-            fig.update_layout(
-                xaxis=dict(range=[0, max_val], showgrid=True, gridcolor="rgba(167,169,169,0.15)"),
-                yaxis=dict(visible=False, range=[-0.8, 3.8]),
-                showlegend=False,
-                height=200,
-                margin=dict(l=10, r=10, t=10, b=10),
-            )
-            st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
-            st.caption("Gray band = market ±15%. Dashed teal line = 5% above market target. Colored bar = VDP actual. Source: STR (portfolio) + CoStar (market).")
-            st.markdown("<br>", unsafe_allow_html=True)
+                _mp_rvp = float(_m_pri["revpar"].mean()) if not _m_pri.empty else _m12_rvp
+                _mp_adr = float(_m_pri["adr"].mean())    if not _m_pri.empty else _m12_adr
+                _mp_occ = float(_m_pri[_occ_col].mean()) if (not _m_pri.empty and _occ_col) else _m12_occ
+                _mp_rev = float(_m_pri["revenue"].sum())  if not _m_pri.empty else _m12_rev
+                _mp_dem = float(_m_pri["demand"].sum())   if not _m_pri.empty else _m12_dem
 
-        st.markdown("---")
+                _min_mo = _m12["as_of_date"].min().strftime("%b %Y")
+                _max_mo = _m12["as_of_date"].max().strftime("%b %Y")
+                _mo_lbl = f"{_min_mo} – {_max_mo}"
 
-        # ── Row 1: RevPAR with anomaly detection  |  Occ vs ADR ───────────────
-        c1, c2 = st.columns(2)
-
-        with c1:
-            st.markdown('<div class="chart-header">RevPAR Trend — Anomaly Detection</div>', unsafe_allow_html=True)
-            st.markdown('<div class="chart-caption">Teal markers = spikes >2σ &nbsp;·&nbsp; Red = drops <1.5σ &nbsp;·&nbsp; Hover for context</div>', unsafe_allow_html=True)
-
-            rvp_mean = df_sel["revpar"].mean()
-            rvp_std  = df_sel["revpar"].std()
-            spikes   = df_sel[df_sel["revpar"] > rvp_mean + 2 * rvp_std]
-            drops    = df_sel[df_sel["revpar"] < rvp_mean - 1.5 * rvp_std]
-
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=df_sel["as_of_date"], y=df_sel["revpar"],
-                fill="tozeroy",
-                line=dict(color=TEAL, width=2.2),
-                fillcolor="rgba(33,128,141,0.12)",
-                mode="lines", name="RevPAR",
-                hovertemplate="<b>%{x|%b %d, %Y}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
-            ))
-            fig.add_hline(
-                y=rvp_mean, line_dash="dash", line_color="rgba(167,169,169,0.45)",
-                annotation_text=f"Avg ${rvp_mean:.0f}",
-                annotation_position="top right",
-                annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"),
-            )
-            if not spikes.empty:
-                fig.add_trace(go.Scatter(
-                    x=spikes["as_of_date"], y=spikes["revpar"],
-                    mode="markers",
-                    marker=dict(color=TEAL, size=11, symbol="circle",
-                                opacity=0.85, line=dict(width=0)),
-                    name="⚡ Spike",
-                    hovertemplate=(
-                        "<b>⚡ Revenue Spike</b><br>"
-                        "%{x|%b %d}: $%{y:.0f}<br>"
-                        "<i>Likely event or weekend surge</i><extra></extra>"
-                    ),
-                ))
-            if not drops.empty:
-                fig.add_trace(go.Scatter(
-                    x=drops["as_of_date"], y=drops["revpar"],
-                    mode="markers",
-                    marker=dict(color=RED, size=11, symbol="circle",
-                                opacity=0.85, line=dict(width=0)),
-                    name="⚠️ Drop",
-                    hovertemplate=(
-                        "<b>⚠️ Below Average</b><br>"
-                        "%{x|%b %d}: $%{y:.0f}<br>"
-                        "<i>Investigate demand drivers</i><extra></extra>"
-                    ),
-                ))
-            fig.update_layout(yaxis_tickprefix="$")
-            st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
-
-        with c2:
-            st.markdown('<div class="chart-header">Occupancy vs. ADR</div>', unsafe_allow_html=True)
-            st.markdown('<div class="chart-caption">Dual-axis &nbsp;·&nbsp; fill rate & pricing power</div>', unsafe_allow_html=True)
-            fig = make_subplots(specs=[[{"secondary_y": True}]])
-            fig.add_trace(go.Scatter(
-                x=df_sel["as_of_date"], y=df_sel["occupancy"],
-                name="Occupancy %", line=dict(color=TEAL, width=2), mode="lines",
-                hovertemplate="%{x|%b %d}: %{y:.1f}%<extra>Occ</extra>",
-            ), secondary_y=False)
-            fig.add_trace(go.Scatter(
-                x=df_sel["as_of_date"], y=df_sel["adr"],
-                name="ADR $", line=dict(color=ORANGE, width=2), mode="lines",
-                hovertemplate="%{x|%b %d}: $%{y:.0f}<extra>ADR</extra>",
-            ), secondary_y=True)
-            fig.update_yaxes(title_text="Occ %", ticksuffix="%", secondary_y=False)
-            fig.update_yaxes(title_text="ADR $", tickprefix="$",
-                             secondary_y=True, showgrid=False)
-            st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
-
-        # ── Row 2: Day-of-Week  |  Supply vs Demand ───────────────────────────
-        c3, c4 = st.columns(2)
-
-        with c3:
-            if grain == "Daily":
-                st.markdown('<div class="chart-header">Day-of-Week Performance</div>', unsafe_allow_html=True)
-                st.markdown('<div class="chart-caption">Avg RevPAR &nbsp;·&nbsp; Orange = opportunity nights below average</div>', unsafe_allow_html=True)
-                dow_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-                tmp = df_sel.copy()
-                tmp["dow"] = tmp["as_of_date"].dt.strftime("%a")
-                dow_avg = tmp.groupby("dow")["revpar"].mean().reindex(dow_order)
-                ov_avg  = dow_avg.mean()
-                colors  = [TEAL if v >= ov_avg else ORANGE for v in dow_avg.fillna(0)]
-                fig = go.Figure(go.Bar(
-                    x=dow_avg.index, y=dow_avg.values,
-                    marker=dict(color=colors, line_width=0, cornerradius=6),
-                    hovertemplate=(
-                        "<b>%{x}</b><br>Avg RevPAR: $%{y:.0f}<br>"
-                        "<i>Click 'Opportunity Nights' for AI analysis</i><extra></extra>"
-                    ),
-                ))
-                fig.add_hline(y=ov_avg, line_dash="dash", line_color="rgba(167,169,169,0.45)",
-                              annotation_text=f"Avg ${ov_avg:.0f}", annotation_position="top right",
-                              annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
-                fig.update_layout(yaxis_tickprefix="$", showlegend=False)
-                st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
-            else:
-                # Monthly grain → show calendar-month seasonality using all monthly history
-                st.markdown('<div class="chart-header">Month-of-Year Seasonality</div>', unsafe_allow_html=True)
-                st.markdown('<div class="chart-caption">Avg RevPAR by calendar month &nbsp;·&nbsp; all available monthly history</div>', unsafe_allow_html=True)
-                month_order = ["Jan","Feb","Mar","Apr","May","Jun",
-                               "Jul","Aug","Sep","Oct","Nov","Dec"]
-                tmp = df_monthly.copy()
-                tmp["mon"] = tmp["as_of_date"].dt.strftime("%b")
-                mon_avg = tmp.groupby("mon")["revpar"].mean().reindex(month_order)
-                ov_avg  = mon_avg.mean()
-                colors  = [
-                    TEAL if (pd.notna(v) and v >= ov_avg) else ORANGE
-                    for v in mon_avg
-                ]
-                fig = go.Figure(go.Bar(
-                    x=mon_avg.index, y=mon_avg.values,
-                    marker=dict(color=colors, line_width=0, cornerradius=6),
-                    hovertemplate="<b>%{x}</b><br>Avg RevPAR: $%{y:.0f}<extra></extra>",
-                ))
-                fig.add_hline(y=ov_avg, line_dash="dash", line_color="rgba(167,169,169,0.45)",
-                              annotation_text=f"Avg ${ov_avg:.0f}", annotation_position="top right",
-                              annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
-                fig.update_layout(yaxis_tickprefix="$", showlegend=False)
-                st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
-
-        with c4:
-            st.markdown('<div class="chart-header">Supply vs. Demand</div>', unsafe_allow_html=True)
-            st.markdown('<div class="chart-caption">Room inventory vs. rooms sold &nbsp;·&nbsp; gap = unrealized revenue</div>', unsafe_allow_html=True)
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=df_sel["as_of_date"], y=df_sel["supply"],
-                name="Supply",
-                line=dict(color="rgba(167,169,169,0.7)", width=1.5, dash="dot"),
-                mode="lines",
-            ))
-            fig.add_trace(go.Scatter(
-                x=df_sel["as_of_date"], y=df_sel["demand"],
-                fill="tozeroy",
-                line=dict(color=TEAL, width=2),
-                fillcolor="rgba(33,128,141,0.10)",
-                name="Demand", mode="lines",
-            ))
-            st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
-
-        # ── Row 3: Monthly RevPAR & ADR trend (always-on from monthly STR) ────
-        if not df_monthly.empty and len(df_monthly) >= 6:
-            st.markdown("---")
-            _mo24 = df_monthly.tail(24).copy()
-            _mo24["month_label"] = _mo24["as_of_date"].dt.strftime("%b %Y")
-            _occ_col = "occupancy" if "occupancy" in _mo24.columns else None
-
-            ca, cb = st.columns(2)
-            with ca:
-                st.markdown('<div class="chart-header">Monthly RevPAR — Last 24 Months</div>', unsafe_allow_html=True)
-                st.markdown('<div class="chart-caption">Layer 1 verified · monthly STR exports &nbsp;·&nbsp; color = above/below 24-month avg</div>', unsafe_allow_html=True)
-                _avg24 = _mo24["revpar"].mean()
-                _colors24 = [TEAL if v >= _avg24 else ORANGE for v in _mo24["revpar"]]
-                fig = go.Figure(go.Bar(
-                    x=_mo24["month_label"], y=_mo24["revpar"],
-                    marker=dict(color=_colors24, line_width=0, cornerradius=5),
-                    hovertemplate="<b>%{x}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
-                ))
-                fig.add_hline(y=_avg24, line_dash="dash", line_color="rgba(167,169,169,0.45)",
-                              annotation_text=f"24-mo avg ${_avg24:.0f}",
-                              annotation_position="top right",
-                              annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
-                fig.update_layout(yaxis_tickprefix="$", showlegend=False)
-                st.plotly_chart(style_fig(fig, height=260), use_container_width=True, config=PLOTLY_CONFIG)
-
-            with cb:
-                st.markdown('<div class="chart-header">Monthly ADR vs. Occupancy — Last 24 Months</div>', unsafe_allow_html=True)
-                st.markdown('<div class="chart-caption">Dual-axis &nbsp;·&nbsp; pricing power vs. fill rate trend</div>', unsafe_allow_html=True)
-                fig2 = make_subplots(specs=[[{"secondary_y": True}]])
-                fig2.add_trace(go.Scatter(
-                    x=_mo24["month_label"], y=_mo24["adr"],
-                    name="ADR $", line=dict(color=ORANGE, width=2.2),
-                    mode="lines+markers", marker=dict(size=4, color=ORANGE),
-                    hovertemplate="<b>%{x}</b><br>ADR: $%{y:.0f}<extra></extra>",
-                ), secondary_y=False)
-                if _occ_col:
-                    fig2.add_trace(go.Scatter(
-                        x=_mo24["month_label"], y=_mo24[_occ_col],
-                        name="Occ %", line=dict(color=TEAL, width=2.2),
-                        mode="lines+markers", marker=dict(size=4, color=TEAL),
-                        hovertemplate="<b>%{x}</b><br>Occ: %{y:.1f}%<extra></extra>",
-                    ), secondary_y=True)
-                fig2.update_yaxes(title_text="ADR ($)", tickprefix="$", secondary_y=False)
-                if _occ_col:
-                    fig2.update_yaxes(title_text="Occ %", ticksuffix="%",
-                                      secondary_y=True, showgrid=False)
-                st.plotly_chart(style_fig(fig2, height=260), use_container_width=True, config=PLOTLY_CONFIG)
-
-        # ── Row 4: Datafy Visitor Economy Summary ─────────────────────────────
-        if not df_dfy_ov.empty:
-            st.markdown("---")
-            st.markdown(
-                '<div style="font-family:\'Syne\',sans-serif;font-size:14px;'
-                'font-weight:700;letter-spacing:-0.01em;margin-bottom:2px;">Visitor Economy Intelligence</div>'
-                '<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:10px;">'
-                'Datafy geolocation data · Layer 1 verified · See Visitor Economy tab for full detail</div>',
-                unsafe_allow_html=True,
-            )
-            _dov = df_dfy_ov.iloc[0]
-            _dov_cols = st.columns(4)
-            _dov_kpis = [
-                (f"{int(_dov.get('total_trips',0) or 0)/1e6:.2f}M", "Total Annual Trips",
-                 f"{_dov.get('total_trips_vs_compare_pct',0):+.1f}pp YOY"),
-                (f"{float(_dov.get('out_of_state_vd_pct',0) or 0):.1f}%", "Out-of-State Visitor Days",
-                 f"{_dov.get('out_of_state_vd_vs_compare_pct',0):+.2f}pp YOY"),
-                (f"{float(_dov.get('overnight_trips_pct',0) or 0):.1f}%", "Overnight Trips",
-                 f"{_dov.get('overnight_vs_compare_pct',0):+.1f}pp YOY"),
-                (f"{float(_dov.get('avg_length_of_stay_days',0) or 0):.1f} days", "Avg Length of Stay",
-                 f"{_dov.get('avg_los_vs_compare_days',0):+.1f}d vs. prior yr"),
-            ]
-            for i, (val, lbl, delta) in enumerate(_dov_kpis):
-                with _dov_cols[i]:
-                    st.markdown(
-                        f'<div style="background:rgba(33,128,141,0.05);border:1px solid rgba(33,128,141,0.12);'
-                        f'border-radius:8px;padding:12px 14px;">'
-                        f'<div style="font-size:1.25rem;font-weight:800;color:#21808D;">{val}</div>'
-                        f'<div style="font-size:10px;font-weight:600;opacity:0.65;margin-top:2px;">{lbl}</div>'
-                        f'<div style="font-size:10px;color:#21808D;font-weight:600;margin-top:3px;">{delta}</div>'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-
-    # ── Economic Impact Statement ──────────────────────────────────────────────
-    try:
-        st.markdown(_sh("💰", "Economic Impact Statement", "green", "CITY FINANCE"), unsafe_allow_html=True)
-        st.caption("Estimated economic contribution of Dana Point hotel sector · Based on STR + Datafy + TBID formula")
-
-        _ei_c1, _ei_c2, _ei_c3, _ei_c4 = st.columns(4)
-        with _ei_c1:
-            _rev12_disp = f"${_exec_rev12/1e6:.1f}M" if _exec_rev12 > 0 else "—"
-            st.metric("Hotel Room Revenue", _rev12_disp, help="12-month STR total room revenue")
-        with _ei_c2:
-            _tbid12_disp = f"${_exec_tbid12/1e3:.0f}K" if _exec_tbid12 > 0 else "—"
-            st.metric("Est. TBID Assessment", _tbid12_disp, help="Room revenue × 1.25% blended rate")
-        with _ei_c3:
-            _tot12_disp = f"${_exec_tot12/1e6:.1f}M" if _exec_tot12 > 0 else "—"
-            st.metric("Est. TOT Revenue", _tot12_disp, help="Room revenue × 10%")
-        with _ei_c4:
-            _dest_spend = float(df_dfy_ov.iloc[0].get("total_destination_spend_usd", 0) or 0) if not df_dfy_ov.empty else 0.0
-            _dest_disp  = f"${_dest_spend/1e6:.1f}M" if _dest_spend > 0 else "—"
-            st.metric("Total Destination Spend", _dest_disp, help="Datafy total visitor destination spend")
-
-        if _exec_media_impact > 0:
-            _mei_c1, _mei_c2, _mei_c3 = st.columns(3)
-            with _mei_c1:
-                st.metric("Campaign Media Spend Impact", f"${_exec_media_impact/1e6:.2f}M", help="Datafy media attribution total economic impact")
-            with _mei_c2:
-                st.metric("Campaign ROAS", f"{_exec_roas:.1f}×", help="Return on ad spend from Datafy media attribution")
-            with _mei_c3:
-                st.metric("Attributable Trips", f"{_exec_attr_trips:,}", help="Trips directly attributable to VDP digital campaigns")
-    except Exception:
-        pass
-
-    # ── Strategic Asks ─────────────────────────────────────────────────────────
-    try:
-        _ask_color  = "rgba(0,196,204,0.08)"
-        _ask_border = "#00C4CC"
-        _asks = []
-        if _exec_rvp_d < 0:
-            _asks.append(("Rate Strategy Review", "RevPAR declining — request approval for comp set re-pricing analysis and channel mix audit.", "Revenue"))
-        if _exec_roas_infinite or _exec_roas > 5:
-            _asks.append(("Invest in Paid Media", f"Campaign currently running with {'∞ ROAS (no cost recorded)' if _exec_roas_infinite else f'{_exec_roas:.1f}× ROAS'}. ${_exec_media_impact:,.0f} in estimated impact from {_exec_attr_trips:,} attributable trips. Request board approval for paid media budget to scale this performance.", "Budget"))
-        if _exec_occ >= 80:
-            _asks.append(("Compression Rate Authorization", f"Occupancy above 80% — request board authorization for dynamic rate increases during compression periods.", "Pricing"))
-        if _exec_trips > 0 and _exec_overnight < 50:
-            _asks.append(("Overnight Conversion Program", f"Only {_exec_overnight:.0f}% of visitors stay overnight. Request funding for packages targeting day-tripper conversion.", "Strategy"))
-        _asks.append(("Annual Report Narrative", "Data supports a strong YOY growth narrative. Request approval to publish annual economic impact report to city council and stakeholders.", "Communications"))
-
-        if _asks:
-            st.markdown("#### 🎯 Recommended Board Actions")
-            for _ask_title, _ask_body, _ask_tag in _asks:
                 st.markdown(
-                    f'<div style="padding:12px 16px;margin-bottom:8px;background:{_ask_color};'
-                    f'border-left:3px solid {_ask_border};border-radius:0 8px 8px 0;'
-                    f'font-family:\'Syne\',sans-serif;">'
-                    f'<span style="font-size:11px;font-weight:700;letter-spacing:.05em;'
-                    f'text-transform:uppercase;opacity:.5;">{_ask_tag}</span><br>'
-                    f'<span style="font-size:13px;font-weight:700;">{_ask_title}</span><br>'
-                    f'<span style="font-size:12px;opacity:.75;">{_ask_body}</span></div>',
+                    '<div style="font-family:\'Syne\',sans-serif;font-size:14px;'
+                    'font-weight:700;letter-spacing:-0.01em;margin-bottom:2px;margin-top:4px;">'
+                    '12-Month Performance — Monthly STR</div>'
+                    f'<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:8px;">'
+                    f'Layer 1 verified data &nbsp;·&nbsp; {_mo_lbl} &nbsp;·&nbsp; vs. prior 12 months</div>',
                     unsafe_allow_html=True,
                 )
-    except Exception:
-        pass
+                def _m12_spark(col):
+                    return [v for v in _m12[col].tolist() if pd.notna(v)] if col in _m12.columns else []
+                _m_kpis = [
+                    {"label": "RevPAR",       "value": f"${_m12_rvp:.2f}",
+                     "delta": f"{pct_delta(_m12_rvp,_mp_rvp):+.1f}% YOY",
+                     "positive": _m12_rvp >= _mp_rvp, "neutral": False,
+                     "date_label": _mo_lbl, "raw_value": _m12_rvp, "sparkline": _m12_spark("revpar")},
+                    {"label": "ADR",          "value": f"${_m12_adr:.2f}",
+                     "delta": f"{pct_delta(_m12_adr,_mp_adr):+.1f}% YOY",
+                     "positive": _m12_adr >= _mp_adr, "neutral": False,
+                     "date_label": _mo_lbl, "raw_value": _m12_adr, "sparkline": _m12_spark("adr")},
+                    {"label": "Occupancy",    "value": f"{_m12_occ:.1f}%",
+                     "delta": f"{pct_delta(_m12_occ,_mp_occ):+.1f}pp YOY",
+                     "positive": _m12_occ >= _mp_occ, "neutral": False,
+                     "date_label": _mo_lbl, "raw_value": _m12_occ, "sparkline": _m12_spark("occupancy") if _occ_col else []},
+                    {"label": "Room Revenue", "value": f"${_m12_rev/1e6:.2f}M",
+                     "delta": f"{pct_delta(_m12_rev,_mp_rev):+.1f}% YOY",
+                     "positive": _m12_rev >= _mp_rev, "neutral": False,
+                     "date_label": _mo_lbl, "raw_value": _m12_rev, "sparkline": _m12_spark("revenue")},
+                    {"label": "Rooms Sold",   "value": f"{_m12_dem:,.0f}",
+                     "delta": f"{pct_delta(_m12_dem,_mp_dem):+.1f}% YOY",
+                     "positive": _m12_dem >= _mp_dem, "neutral": False,
+                     "date_label": _mo_lbl, "raw_value": _m12_dem, "sparkline": _m12_spark("demand")},
+                    {"label": "Est. TBID Rev","value": f"${_m12_tbd/1e3:.0f}K",
+                     "delta": "blended 1.25%", "positive": True, "neutral": True,
+                     "date_label": _mo_lbl, "raw_value": _m12_tbd, "sparkline": _m12_spark("revenue")},
+                ]
+                _m_kpi_rows = [_m_kpis[i:i+2] for i in range(0, len(_m_kpis), 2)]
+                for _mri, _m_row in enumerate(_m_kpi_rows):
+                    _mrc = st.columns([1.1, 1.0, 1.1, 1.0])
+                    for _mi, _mk in enumerate(_m_row):
+                        _mc  = _mrc[0 if _mi == 0 else 2]
+                        _mcc = _mrc[1 if _mi == 0 else 3]
+                        _mk_key = f"m12_spark_{_mri}_{_mi}_{_mk['label'].replace(' ','_').replace('.','')}"
+                        with _mc:
+                            _mk_card_html = kpi_card(_mk["label"], _mk["value"], _mk["delta"],
+                                         _mk.get("positive", True), _mk.get("neutral", False),
+                                         "", _mk.get("date_label", ""), _mk.get("raw_value", 0.0),
+                                         [])
+                            _mk_tab_map = {"RevPAR": 1, "ADR": 1, "Occupancy": 1, "Room Revenue": 1,
+                                           "Rooms Sold": 1, "Est. TBID Rev": 1, "TBID": 1,
+                                           "Demand": 1, "Supply": 1, "Revenue": 1}
+                            _mk_tab_idx = next((v for k,v in _mk_tab_map.items() if k.lower() in _mk["label"].lower()), 1)
+                            st.markdown(
+                                f'<div class="pcc-card-link" data-tab-idx="{_mk_tab_idx}" '
+                                f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;border-radius:12px;">'
+                                f'{_mk_card_html}'
+                                f'<div style="font-size:9px;color:#32B8C6;text-align:right;padding:2px 4px 0 0;font-weight:700;letter-spacing:.04em;">→ VIEW DETAIL</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                        with _mcc:
+                            _mspk = _mk.get("sparkline") or []
+                            st.plotly_chart(
+                                _mini_spark_fig(_mspk, _mk["label"], _mk.get("positive", True)),
+                                use_container_width=True,
+                                config={"displayModeBar": False},
+                                key=_mk_key,
+                            )
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — TRENDS
-# ══════════════════════════════════════════════════════════════════════════════
+            # ── PCC card navigation script (injected once after all cards) ──────────
+            st.markdown("""
+    <script>
+    (function(){
+      function findTabs(){
+        // Try multiple selectors for different Streamlit versions
+        var t = document.querySelectorAll('[data-testid="stTab"] button');
+        if(!t.length) t = document.querySelectorAll('button[data-baseweb="tab"]');
+        if(!t.length) t = document.querySelectorAll('[role="tab"]');
+        return t;
+      }
+      function attachPCC(){
+        document.querySelectorAll('.pcc-card-link').forEach(function(card){
+          if(card._pccBound) return;
+          card._pccBound = true;
+          card.addEventListener('mouseenter', function(){ this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 16px rgba(8,145,178,0.18)'; });
+          card.addEventListener('mouseleave', function(){ this.style.transform=''; this.style.boxShadow=''; });
+          card.addEventListener('click', function(){
+            var idx = parseInt(this.getAttribute('data-tab-idx') || '1');
+            var tabs = findTabs();
+            if(tabs[idx]){ tabs[idx].click(); }
+            setTimeout(function(){ window.scrollTo({top:0,behavior:'smooth'}); }, 150);
+          });
+        });
+      }
+      attachPCC();
+      setTimeout(attachPCC, 600);
+      setTimeout(attachPCC, 1800);
+      if(window.MutationObserver){
+        var obs = new MutationObserver(function(){ attachPCC(); });
+        obs.observe(document.body, {childList:true, subtree:true});
+      }
+    })();
+    </script>
+    """, unsafe_allow_html=True)
+
+            # ── Bullet Chart: KPI vs Benchmark ────────────────────────────────────
+            if kpis and not df_cs_snap.empty:
+                st.markdown('<div class="chart-header">Performance vs. Market Benchmark — Bullet Chart</div>', unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="chart-caption">Black bar = VDP portfolio actual · '
+                    'Gray range = South OC market benchmark (CoStar) · '
+                    'Teal = target (5% above market)</div>',
+                    unsafe_allow_html=True,
+                )
+                _snap = df_cs_snap.iloc[0]
+                _mkt_occ  = float(_snap.get("occupancy_pct", 76.4) or 76.4)
+                _mkt_adr  = float(_snap.get("adr_usd", 288.50) or 288.50)
+                _mkt_rvp  = float(_snap.get("revpar_usd", 220.42) or 220.42)
+                # VDP actuals from kpis
+                _vdp_occ  = next((k["raw_value"] for k in kpis if "Occ" in k.get("label","")), _mkt_occ)
+                _vdp_adr  = next((k["raw_value"] for k in kpis if "ADR" in k.get("label","")), _mkt_adr)
+                _vdp_rvp  = next((k["raw_value"] for k in kpis if "RevPAR" in k.get("label","")), _mkt_rvp)
+                # Extract numeric from raw_value (already float)
+                def _num(v):
+                    if isinstance(v, (int, float)):
+                        return float(v)
+                    s = str(v).replace("$","").replace("%","").replace(",","").strip()
+                    try: return float(s)
+                    except: return 0.0
+                _vdp_occ_n = _num(_vdp_occ)
+                _vdp_adr_n = _num(_vdp_adr)
+                _vdp_rvp_n = _num(_vdp_rvp)
+
+                _bul_metrics = [
+                    ("Occupancy %", _vdp_occ_n, _mkt_occ, _mkt_occ * 1.05),
+                    ("ADR ($)",     _vdp_adr_n, _mkt_adr, _mkt_adr * 1.05),
+                    ("RevPAR ($)",  _vdp_rvp_n, _mkt_rvp, _mkt_rvp * 1.05),
+                ]
+                fig = go.Figure()
+                for idx, (lbl, actual, benchmark, target) in enumerate(_bul_metrics):
+                    y_pos = idx * 1.5
+                    # Background range (market benchmark ± 15%)
+                    fig.add_shape(type="rect",
+                        x0=benchmark * 0.85, x1=benchmark * 1.15,
+                        y0=y_pos - 0.4, y1=y_pos + 0.4,
+                        fillcolor="rgba(167,169,169,0.20)",
+                        line=dict(width=0),
+                    )
+                    # Target line
+                    fig.add_shape(type="line",
+                        x0=target, x1=target, y0=y_pos - 0.45, y1=y_pos + 0.45,
+                        line=dict(color=TEAL, width=2, dash="dash"),
+                    )
+                    # Actual bar
+                    color = TEAL if actual >= benchmark else ORANGE
+                    fig.add_shape(type="rect",
+                        x0=0, x1=actual,
+                        y0=y_pos - 0.18, y1=y_pos + 0.18,
+                        fillcolor=color,
+                        line=dict(width=0),
+                    )
+                    # Labels
+                    suffix = "%" if "%" in lbl else ""
+                    prefix = "$" if "$" in lbl else ""
+                    fig.add_annotation(
+                        x=0, y=y_pos + 0.55,
+                        text=f"<b>{lbl}</b>", showarrow=False,
+                        xanchor="left", font=dict(size=11, family="Syne, DM Sans, sans-serif"),
+                    )
+                    fig.add_annotation(
+                        x=actual, y=y_pos,
+                        text=f" {prefix}{actual:.1f}{suffix}", showarrow=False,
+                        xanchor="left", font=dict(size=10, color=color, family="Syne, DM Sans, sans-serif"),
+                    )
+                max_val = max(_vdp_adr_n, _mkt_adr) * 1.25
+                fig.update_layout(
+                    xaxis=dict(range=[0, max_val], showgrid=True, gridcolor="rgba(167,169,169,0.15)"),
+                    yaxis=dict(visible=False, range=[-0.8, 3.8]),
+                    showlegend=False,
+                    height=200,
+                    margin=dict(l=10, r=10, t=10, b=10),
+                )
+                st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+                st.caption("Gray band = market ±15%. Dashed teal line = 5% above market target. Colored bar = VDP actual. Source: STR (portfolio) + CoStar (market).")
+                st.markdown("<br>", unsafe_allow_html=True)
+
+            st.markdown("---")
+
+            # ── Row 1: RevPAR with anomaly detection  |  Occ vs ADR ───────────────
+            c1, c2 = st.columns(2)
+
+            with c1:
+                st.markdown('<div class="chart-header">RevPAR Trend — Anomaly Detection</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">Teal markers = spikes >2σ &nbsp;·&nbsp; Red = drops <1.5σ &nbsp;·&nbsp; Hover for context</div>', unsafe_allow_html=True)
+
+                rvp_mean = df_sel["revpar"].mean()
+                rvp_std  = df_sel["revpar"].std()
+                spikes   = df_sel[df_sel["revpar"] > rvp_mean + 2 * rvp_std]
+                drops    = df_sel[df_sel["revpar"] < rvp_mean - 1.5 * rvp_std]
+
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=df_sel["as_of_date"], y=df_sel["revpar"],
+                    fill="tozeroy",
+                    line=dict(color=TEAL, width=2.2),
+                    fillcolor="rgba(33,128,141,0.12)",
+                    mode="lines", name="RevPAR",
+                    hovertemplate="<b>%{x|%b %d, %Y}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
+                ))
+                fig.add_hline(
+                    y=rvp_mean, line_dash="dash", line_color="rgba(167,169,169,0.45)",
+                    annotation_text=f"Avg ${rvp_mean:.0f}",
+                    annotation_position="top right",
+                    annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"),
+                )
+                if not spikes.empty:
+                    fig.add_trace(go.Scatter(
+                        x=spikes["as_of_date"], y=spikes["revpar"],
+                        mode="markers",
+                        marker=dict(color=TEAL, size=11, symbol="circle",
+                                    opacity=0.85, line=dict(width=0)),
+                        name="⚡ Spike",
+                        hovertemplate=(
+                            "<b>⚡ Revenue Spike</b><br>"
+                            "%{x|%b %d}: $%{y:.0f}<br>"
+                            "<i>Likely event or weekend surge</i><extra></extra>"
+                        ),
+                    ))
+                if not drops.empty:
+                    fig.add_trace(go.Scatter(
+                        x=drops["as_of_date"], y=drops["revpar"],
+                        mode="markers",
+                        marker=dict(color=RED, size=11, symbol="circle",
+                                    opacity=0.85, line=dict(width=0)),
+                        name="⚠️ Drop",
+                        hovertemplate=(
+                            "<b>⚠️ Below Average</b><br>"
+                            "%{x|%b %d}: $%{y:.0f}<br>"
+                            "<i>Investigate demand drivers</i><extra></extra>"
+                        ),
+                    ))
+                fig.update_layout(yaxis_tickprefix="$")
+                st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
+
+            with c2:
+                st.markdown('<div class="chart-header">Occupancy vs. ADR</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">Dual-axis &nbsp;·&nbsp; fill rate & pricing power</div>', unsafe_allow_html=True)
+                fig = make_subplots(specs=[[{"secondary_y": True}]])
+                fig.add_trace(go.Scatter(
+                    x=df_sel["as_of_date"], y=df_sel["occupancy"],
+                    name="Occupancy %", line=dict(color=TEAL, width=2), mode="lines",
+                    hovertemplate="%{x|%b %d}: %{y:.1f}%<extra>Occ</extra>",
+                ), secondary_y=False)
+                fig.add_trace(go.Scatter(
+                    x=df_sel["as_of_date"], y=df_sel["adr"],
+                    name="ADR $", line=dict(color=ORANGE, width=2), mode="lines",
+                    hovertemplate="%{x|%b %d}: $%{y:.0f}<extra>ADR</extra>",
+                ), secondary_y=True)
+                fig.update_yaxes(title_text="Occ %", ticksuffix="%", secondary_y=False)
+                fig.update_yaxes(title_text="ADR $", tickprefix="$",
+                                 secondary_y=True, showgrid=False)
+                st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
+
+            # ── Row 2: Day-of-Week  |  Supply vs Demand ───────────────────────────
+            c3, c4 = st.columns(2)
+
+            with c3:
+                if grain == "Daily":
+                    st.markdown('<div class="chart-header">Day-of-Week Performance</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="chart-caption">Avg RevPAR &nbsp;·&nbsp; Orange = opportunity nights below average</div>', unsafe_allow_html=True)
+                    dow_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                    tmp = df_sel.copy()
+                    tmp["dow"] = tmp["as_of_date"].dt.strftime("%a")
+                    dow_avg = tmp.groupby("dow")["revpar"].mean().reindex(dow_order)
+                    ov_avg  = dow_avg.mean()
+                    colors  = [TEAL if v >= ov_avg else ORANGE for v in dow_avg.fillna(0)]
+                    fig = go.Figure(go.Bar(
+                        x=dow_avg.index, y=dow_avg.values,
+                        marker=dict(color=colors, line_width=0, cornerradius=6),
+                        hovertemplate=(
+                            "<b>%{x}</b><br>Avg RevPAR: $%{y:.0f}<br>"
+                            "<i>Click 'Opportunity Nights' for AI analysis</i><extra></extra>"
+                        ),
+                    ))
+                    fig.add_hline(y=ov_avg, line_dash="dash", line_color="rgba(167,169,169,0.45)",
+                                  annotation_text=f"Avg ${ov_avg:.0f}", annotation_position="top right",
+                                  annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
+                    fig.update_layout(yaxis_tickprefix="$", showlegend=False)
+                    st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
+                else:
+                    # Monthly grain → show calendar-month seasonality using all monthly history
+                    st.markdown('<div class="chart-header">Month-of-Year Seasonality</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="chart-caption">Avg RevPAR by calendar month &nbsp;·&nbsp; all available monthly history</div>', unsafe_allow_html=True)
+                    month_order = ["Jan","Feb","Mar","Apr","May","Jun",
+                                   "Jul","Aug","Sep","Oct","Nov","Dec"]
+                    tmp = df_monthly.copy()
+                    tmp["mon"] = tmp["as_of_date"].dt.strftime("%b")
+                    mon_avg = tmp.groupby("mon")["revpar"].mean().reindex(month_order)
+                    ov_avg  = mon_avg.mean()
+                    colors  = [
+                        TEAL if (pd.notna(v) and v >= ov_avg) else ORANGE
+                        for v in mon_avg
+                    ]
+                    fig = go.Figure(go.Bar(
+                        x=mon_avg.index, y=mon_avg.values,
+                        marker=dict(color=colors, line_width=0, cornerradius=6),
+                        hovertemplate="<b>%{x}</b><br>Avg RevPAR: $%{y:.0f}<extra></extra>",
+                    ))
+                    fig.add_hline(y=ov_avg, line_dash="dash", line_color="rgba(167,169,169,0.45)",
+                                  annotation_text=f"Avg ${ov_avg:.0f}", annotation_position="top right",
+                                  annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
+                    fig.update_layout(yaxis_tickprefix="$", showlegend=False)
+                    st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
+
+            with c4:
+                st.markdown('<div class="chart-header">Supply vs. Demand</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">Room inventory vs. rooms sold &nbsp;·&nbsp; gap = unrealized revenue</div>', unsafe_allow_html=True)
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=df_sel["as_of_date"], y=df_sel["supply"],
+                    name="Supply",
+                    line=dict(color="rgba(167,169,169,0.7)", width=1.5, dash="dot"),
+                    mode="lines",
+                ))
+                fig.add_trace(go.Scatter(
+                    x=df_sel["as_of_date"], y=df_sel["demand"],
+                    fill="tozeroy",
+                    line=dict(color=TEAL, width=2),
+                    fillcolor="rgba(33,128,141,0.10)",
+                    name="Demand", mode="lines",
+                ))
+                st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
+
+            # ── Row 3: Monthly RevPAR & ADR trend (always-on from monthly STR) ────
+            if not df_monthly.empty and len(df_monthly) >= 6:
+                st.markdown("---")
+                _mo24 = df_monthly.tail(24).copy()
+                _mo24["month_label"] = _mo24["as_of_date"].dt.strftime("%b %Y")
+                _occ_col = "occupancy" if "occupancy" in _mo24.columns else None
+
+                ca, cb = st.columns(2)
+                with ca:
+                    st.markdown('<div class="chart-header">Monthly RevPAR — Last 24 Months</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="chart-caption">Layer 1 verified · monthly STR exports &nbsp;·&nbsp; color = above/below 24-month avg</div>', unsafe_allow_html=True)
+                    _avg24 = _mo24["revpar"].mean()
+                    _colors24 = [TEAL if v >= _avg24 else ORANGE for v in _mo24["revpar"]]
+                    fig = go.Figure(go.Bar(
+                        x=_mo24["month_label"], y=_mo24["revpar"],
+                        marker=dict(color=_colors24, line_width=0, cornerradius=5),
+                        hovertemplate="<b>%{x}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
+                    ))
+                    fig.add_hline(y=_avg24, line_dash="dash", line_color="rgba(167,169,169,0.45)",
+                                  annotation_text=f"24-mo avg ${_avg24:.0f}",
+                                  annotation_position="top right",
+                                  annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
+                    fig.update_layout(yaxis_tickprefix="$", showlegend=False)
+                    st.plotly_chart(style_fig(fig, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+
+                with cb:
+                    st.markdown('<div class="chart-header">Monthly ADR vs. Occupancy — Last 24 Months</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="chart-caption">Dual-axis &nbsp;·&nbsp; pricing power vs. fill rate trend</div>', unsafe_allow_html=True)
+                    fig2 = make_subplots(specs=[[{"secondary_y": True}]])
+                    fig2.add_trace(go.Scatter(
+                        x=_mo24["month_label"], y=_mo24["adr"],
+                        name="ADR $", line=dict(color=ORANGE, width=2.2),
+                        mode="lines+markers", marker=dict(size=4, color=ORANGE),
+                        hovertemplate="<b>%{x}</b><br>ADR: $%{y:.0f}<extra></extra>",
+                    ), secondary_y=False)
+                    if _occ_col:
+                        fig2.add_trace(go.Scatter(
+                            x=_mo24["month_label"], y=_mo24[_occ_col],
+                            name="Occ %", line=dict(color=TEAL, width=2.2),
+                            mode="lines+markers", marker=dict(size=4, color=TEAL),
+                            hovertemplate="<b>%{x}</b><br>Occ: %{y:.1f}%<extra></extra>",
+                        ), secondary_y=True)
+                    fig2.update_yaxes(title_text="ADR ($)", tickprefix="$", secondary_y=False)
+                    if _occ_col:
+                        fig2.update_yaxes(title_text="Occ %", ticksuffix="%",
+                                          secondary_y=True, showgrid=False)
+                    st.plotly_chart(style_fig(fig2, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+
+            # ── Row 4: Datafy Visitor Economy Summary ─────────────────────────────
+            if not df_dfy_ov.empty:
+                st.markdown("---")
+                st.markdown(
+                    '<div style="font-family:\'Syne\',sans-serif;font-size:14px;'
+                    'font-weight:700;letter-spacing:-0.01em;margin-bottom:2px;">Visitor Economy Intelligence</div>'
+                    '<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:10px;">'
+                    'Datafy geolocation data · Layer 1 verified · See Visitor Economy tab for full detail</div>',
+                    unsafe_allow_html=True,
+                )
+                _dov = df_dfy_ov.iloc[0]
+                _dov_cols = st.columns(4)
+                _dov_kpis = [
+                    (f"{int(_dov.get('total_trips',0) or 0)/1e6:.2f}M", "Total Annual Trips",
+                     f"{_dov.get('total_trips_vs_compare_pct',0):+.1f}pp YOY"),
+                    (f"{float(_dov.get('out_of_state_vd_pct',0) or 0):.1f}%", "Out-of-State Visitor Days",
+                     f"{_dov.get('out_of_state_vd_vs_compare_pct',0):+.2f}pp YOY"),
+                    (f"{float(_dov.get('overnight_trips_pct',0) or 0):.1f}%", "Overnight Trips",
+                     f"{_dov.get('overnight_vs_compare_pct',0):+.1f}pp YOY"),
+                    (f"{float(_dov.get('avg_length_of_stay_days',0) or 0):.1f} days", "Avg Length of Stay",
+                     f"{_dov.get('avg_los_vs_compare_days',0):+.1f}d vs. prior yr"),
+                ]
+                for i, (val, lbl, delta) in enumerate(_dov_kpis):
+                    with _dov_cols[i]:
+                        st.markdown(
+                            f'<div style="background:rgba(33,128,141,0.05);border:1px solid rgba(33,128,141,0.12);'
+                            f'border-radius:8px;padding:12px 14px;">'
+                            f'<div style="font-size:1.25rem;font-weight:800;color:#21808D;">{val}</div>'
+                            f'<div style="font-size:10px;font-weight:600;opacity:0.65;margin-top:2px;">{lbl}</div>'
+                            f'<div style="font-size:10px;color:#21808D;font-weight:600;margin-top:3px;">{delta}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
+        # ── Economic Impact Statement ──────────────────────────────────────────────
+        try:
+            st.markdown(_sh("💰", "Economic Impact Statement", "green", "CITY FINANCE"), unsafe_allow_html=True)
+            st.caption("Estimated economic contribution of Dana Point hotel sector · Based on STR + Datafy + TBID formula")
+
+            _ei_c1, _ei_c2, _ei_c3, _ei_c4 = st.columns(4)
+            with _ei_c1:
+                _rev12_disp = f"${_exec_rev12/1e6:.1f}M" if _exec_rev12 > 0 else "—"
+                st.metric("Hotel Room Revenue", _rev12_disp, help="12-month STR total room revenue")
+            with _ei_c2:
+                _tbid12_disp = f"${_exec_tbid12/1e3:.0f}K" if _exec_tbid12 > 0 else "—"
+                st.metric("Est. TBID Assessment", _tbid12_disp, help="Room revenue × 1.25% blended rate")
+            with _ei_c3:
+                _tot12_disp = f"${_exec_tot12/1e6:.1f}M" if _exec_tot12 > 0 else "—"
+                st.metric("Est. TOT Revenue", _tot12_disp, help="Room revenue × 10%")
+            with _ei_c4:
+                _dest_spend = float(df_dfy_ov.iloc[0].get("total_destination_spend_usd", 0) or 0) if not df_dfy_ov.empty else 0.0
+                _dest_disp  = f"${_dest_spend/1e6:.1f}M" if _dest_spend > 0 else "—"
+                st.metric("Total Destination Spend", _dest_disp, help="Datafy total visitor destination spend")
+
+            if _exec_media_impact > 0:
+                _mei_c1, _mei_c2, _mei_c3 = st.columns(3)
+                with _mei_c1:
+                    st.metric("Campaign Media Spend Impact", f"${_exec_media_impact/1e6:.2f}M", help="Datafy media attribution total economic impact")
+                with _mei_c2:
+                    st.metric("Campaign ROAS", f"{_exec_roas:.1f}×", help="Return on ad spend from Datafy media attribution")
+                with _mei_c3:
+                    st.metric("Attributable Trips", f"{_exec_attr_trips:,}", help="Trips directly attributable to VDP digital campaigns")
+        except Exception:
+            pass
+
+        # ── Strategic Asks ─────────────────────────────────────────────────────────
+        try:
+            _ask_color  = "rgba(0,196,204,0.08)"
+            _ask_border = "#00C4CC"
+            _asks = []
+            if _exec_rvp_d < 0:
+                _asks.append(("Rate Strategy Review", "RevPAR declining — request approval for comp set re-pricing analysis and channel mix audit.", "Revenue"))
+            if _exec_roas_infinite or _exec_roas > 5:
+                _asks.append(("Invest in Paid Media", f"Campaign currently running with {'∞ ROAS (no cost recorded)' if _exec_roas_infinite else f'{_exec_roas:.1f}× ROAS'}. ${_exec_media_impact:,.0f} in estimated impact from {_exec_attr_trips:,} attributable trips. Request board approval for paid media budget to scale this performance.", "Budget"))
+            if _exec_occ >= 80:
+                _asks.append(("Compression Rate Authorization", f"Occupancy above 80% — request board authorization for dynamic rate increases during compression periods.", "Pricing"))
+            if _exec_trips > 0 and _exec_overnight < 50:
+                _asks.append(("Overnight Conversion Program", f"Only {_exec_overnight:.0f}% of visitors stay overnight. Request funding for packages targeting day-tripper conversion.", "Strategy"))
+            _asks.append(("Annual Report Narrative", "Data supports a strong YOY growth narrative. Request approval to publish annual economic impact report to city council and stakeholders.", "Communications"))
+
+            if _asks:
+                st.markdown("#### 🎯 Recommended Board Actions")
+                for _ask_title, _ask_body, _ask_tag in _asks:
+                    st.markdown(
+                        f'<div style="padding:12px 16px;margin-bottom:8px;background:{_ask_color};'
+                        f'border-left:3px solid {_ask_border};border-radius:0 8px 8px 0;'
+                        f'font-family:\'Syne\',sans-serif;">'
+                        f'<span style="font-size:11px;font-weight:700;letter-spacing:.05em;'
+                        f'text-transform:uppercase;opacity:.5;">{_ask_tag}</span><br>'
+                        f'<span style="font-size:13px;font-weight:700;">{_ask_title}</span><br>'
+                        f'<span style="font-size:12px;opacity:.75;">{_ask_body}</span></div>',
+                        unsafe_allow_html=True,
+                    )
+        except Exception:
+            pass
+
+    # ══════════════════════════════════════════════════════════════════════════════
+    # TAB 2 — TRENDS
+    # ══════════════════════════════════════════════════════════════════════════════
 with tab_tr:
     _tab_controls("tr")
     # Full filters: Time Period + Daily/Monthly grain (metric controlled by "View Metric" below)
@@ -9172,995 +9269,1005 @@ with tab_ev:
                 unsafe_allow_html=True,
             )
 
-    # ── Visitor Economy Section Intelligence ────────────────────────────────
-    try:
-        if not df_dfy_ov.empty:
-            _ve_ov = df_dfy_ov.iloc[0]
-            _ve_trips   = int(_ve_ov.get("total_trips", 0) or 0)
-            _ve_onight  = float(_ve_ov.get("overnight_trips_pct", 0) or 0)
-            _ve_oos     = float(_ve_ov.get("out_of_state_vd_pct", 0) or 0)
-            _ve_daytrip = float(_ve_ov.get("day_trips_pct", 0) or 0)
-            _ve_conv_trips = int(_ve_trips * (_ve_daytrip / 100) * 0.03)
-            _ve_trips_fmt = f"{_ve_trips/1e6:.2f}M" if _ve_trips >= 1e6 else f"{_ve_trips/1e3:.0f}K"
-            _ve_insight = (
-                f'<span class="data-hl-amber">{_ve_daytrip:.1f}%</span> of '
-                f'<span class="data-hl">{_ve_trips_fmt}</span> trips are same-day visits. '
-                f'A 3% day-trip conversion adds ~<span class="data-hl-pos">{_ve_conv_trips:,}</span> overnight stays '
-                f'— roughly <span class="data-hl-pos">$15M</span> incremental room revenue.'
+
+    # ── Visitor Intelligence Sub-Tabs ──────────────────────────────────────────
+    _ev_t1, _ev_t2, _ev_t3 = st.tabs(["👥 Visitor Overview", "💰 Spending & DMA", "📱 Digital & Social"])
+
+    # ── Visitor Overview → sub-tab 1 ────────────────────────────────────────────
+    with _ev_t1:
+        # ── Visitor Economy Section Intelligence ────────────────────────────────
+        try:
+            if not df_dfy_ov.empty:
+                _ve_ov = df_dfy_ov.iloc[0]
+                _ve_trips   = int(_ve_ov.get("total_trips", 0) or 0)
+                _ve_onight  = float(_ve_ov.get("overnight_trips_pct", 0) or 0)
+                _ve_oos     = float(_ve_ov.get("out_of_state_vd_pct", 0) or 0)
+                _ve_daytrip = float(_ve_ov.get("day_trips_pct", 0) or 0)
+                _ve_conv_trips = int(_ve_trips * (_ve_daytrip / 100) * 0.03)
+                _ve_trips_fmt = f"{_ve_trips/1e6:.2f}M" if _ve_trips >= 1e6 else f"{_ve_trips/1e3:.0f}K"
+                _ve_insight = (
+                    f'<span class="data-hl-amber">{_ve_daytrip:.1f}%</span> of '
+                    f'<span class="data-hl">{_ve_trips_fmt}</span> trips are same-day visits. '
+                    f'A 3% day-trip conversion adds ~<span class="data-hl-pos">{_ve_conv_trips:,}</span> overnight stays '
+                    f'— roughly <span class="data-hl-pos">$15M</span> incremental room revenue.'
+                )
+                _ve_fwd = "Target day-tripper conversion campaigns in LA and OC DMAs — highest ROI channel for incremental room revenue."
+                st.markdown(sec_intel(
+                    "Visitor Economy",
+                    "Datafy-sourced visitor behavior: trips, spending, demographics, and feeder markets",
+                    _ve_insight,
+                    _ve_fwd,
+                    f"Out-of-State Visitors: {_ve_oos:.1f}% · Overnight Rate: {_ve_onight:.1f}%",
+                ), unsafe_allow_html=True)
+        except Exception:
+            pass
+
+        # ── Visitor Intelligence Panel ────────────────────────────────────────────
+        try:
+            _ev_tt   = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
+            _ev_oos  = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
+            _ev_on   = float(df_dfy_ov.iloc[0].get("overnight_trips_pct", 0) or 0) if not df_dfy_ov.empty else 0
+            _ev_dt   = float(df_dfy_ov.iloc[0].get("day_trips_pct", 0) or 0) if not df_dfy_ov.empty else 0
+            _ev_los  = float(df_dfy_ov.iloc[0].get("avg_length_of_stay_days", 0) or 0) if not df_dfy_ov.empty else 0
+            _ev_adr  = m.get("adr_30", 350) if m else 350
+            _ev_dt_conv_rev = int(_ev_tt * (_ev_dt / 100) * 0.02 * _ev_adr * _ev_los)
+
+            _ev_next_steps = [
+                f"<strong>Day-Trip Conversion:</strong> {_ev_dt:.1f}% of {_ev_tt/1e6:.2f}M trips are day trips — "
+                f"converting just 2% to overnight at ${_ev_adr:.0f} ADR × {_ev_los:.1f} nights = ~${_ev_dt_conv_rev:,} incremental revenue.",
+                f"<strong>OOS Visitor Focus:</strong> {_ev_oos:.1f}% out-of-state visitor days command premium rates — "
+                "build targeted fly-drive packages for SLC, Dallas, NYC feeder markets (Origin Markets tab).",
+                f"<strong>Length of Stay Extension:</strong> At {_ev_los:.1f} avg days, adding 0.5 days to OOS visitor stays "
+                f"= ~${int(_ev_tt * (_ev_oos/100) * 0.5 * _ev_adr / 365):,}/year in additional room revenue.",
+                "<strong>Spending Category Insight:</strong> Cross-reference accommodation spend share with total category spending — "
+                "hotel stays consistently capture 40-50% of destination spend; boost ancillary F&B and retail packages.",
+            ]
+            _ev_questions = [
+                "What's the visitor day-trip to overnight conversion opportunity?",
+                "Which feeder market visitors spend the most per trip?",
+                "How has our visitor profile changed vs prior year?",
+                "What spending categories are growing fastest?",
+                "How do OOS visitors compare to in-state in ADR and length of stay?",
+            ]
+            _ev_context = (
+                f"Visitor Intelligence (Datafy): {_ev_tt:,} annual trips, "
+                f"{_ev_on:.1f}% overnight, {_ev_dt:.1f}% day trips, {_ev_oos:.1f}% OOS, {_ev_los:.1f}d avg LOS."
             )
-            _ve_fwd = "Target day-tripper conversion campaigns in LA and OC DMAs — highest ROI channel for incremental room revenue."
-            st.markdown(sec_intel(
-                "Visitor Economy",
-                "Datafy-sourced visitor behavior: trips, spending, demographics, and feeder markets",
-                _ve_insight,
-                _ve_fwd,
-                f"Out-of-State Visitors: {_ve_oos:.1f}% · Overnight Rate: {_ve_onight:.1f}%",
+            render_intel_panel("ev_visitor", _ev_next_steps, _ev_questions, _ev_context)
+        except Exception:
+            pass
+
+        st.markdown(sec_div("🔢 Visitor Economy KPIs"), unsafe_allow_html=True)
+        if df_dfy_ov.empty:
+            st.markdown(empty_state(
+                "📊", "No Datafy visitor economy data loaded.",
+                "Run the pipeline: `python scripts/run_pipeline.py`",
             ), unsafe_allow_html=True)
-    except Exception:
-        pass
+        else:
+            ov = df_dfy_ov.iloc[0]
+            period_label = f"{ov.get('report_period_start','')[:4]} Annual"
+            total_trips = int(ov.get("total_trips", 0) or 0)
+            overnight_pct = float(ov.get("overnight_trips_pct", 0) or 0)
+            oos_pct = float(ov.get("out_of_state_vd_pct", 0) or 0)
+            avg_los = float(ov.get("avg_length_of_stay_days", 0) or 0)
+            daytrip_pct = float(ov.get("day_trips_pct", 0) or 0)
+            repeat_pct = float(ov.get("repeat_visitors_pct", 0) or 0)
+            trips_vs_prior = float(ov.get("total_trips_vs_compare_pct", 0) or 0)
+            oos_vs_prior = float(ov.get("out_of_state_vd_vs_compare_pct", 0) or 0)
 
-    # ── Visitor Intelligence Panel ────────────────────────────────────────────
-    try:
-        _ev_tt   = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
-        _ev_oos  = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
-        _ev_on   = float(df_dfy_ov.iloc[0].get("overnight_trips_pct", 0) or 0) if not df_dfy_ov.empty else 0
-        _ev_dt   = float(df_dfy_ov.iloc[0].get("day_trips_pct", 0) or 0) if not df_dfy_ov.empty else 0
-        _ev_los  = float(df_dfy_ov.iloc[0].get("avg_length_of_stay_days", 0) or 0) if not df_dfy_ov.empty else 0
-        _ev_adr  = m.get("adr_30", 350) if m else 350
-        _ev_dt_conv_rev = int(_ev_tt * (_ev_dt / 100) * 0.02 * _ev_adr * _ev_los)
+            # ── Hero KPI cards ─────────────────────────────────────────────────────
+            ev_cols = st.columns(3)
+            _ev_kpis = [
+                (f"{total_trips/1e6:.2f}M", "Total Trips", f"{trips_vs_prior:+.2f}pp vs. prior yr", trips_vs_prior >= 0),
+                (f"{overnight_pct:.1f}%", "Overnight Trips", f"{ov.get('overnight_vs_compare_pct',0):+.1f}pp YOY", float(ov.get("overnight_vs_compare_pct",0) or 0) >= 0),
+                (f"{oos_pct:.1f}%", "Out-of-State Visitor Days", f"{oos_vs_prior:+.2f}pp YOY", oos_vs_prior >= 0),
+                (f"{avg_los:.1f}", "Avg Length of Stay (days)", f"{ov.get('avg_los_vs_compare_days',0):+.1f}d vs. prior yr", float(ov.get("avg_los_vs_compare_days",0) or 0) >= 0),
+                (f"{daytrip_pct:.1f}%", "Day Trips", f"{ov.get('day_trips_vs_compare_pct',0):+.1f}pp YOY", False),
+                (f"{repeat_pct:.1f}%", "Repeat Visitors", "of total visits", True),
+            ]
+            for i, (val, lbl, delta, pos) in enumerate(_ev_kpis):
+                with ev_cols[i % 3]:
+                    delta_cls = "kpi-delta-pos" if pos else "kpi-delta-neg"
+                    arrow = "↑" if pos else "↓"
+                    st.markdown(
+                        f'<div class="kpi-card reveal-card">'
+                        f'<div class="kpi-header">'
+                        f'<span class="kpi-label">{lbl}</span>'
+                        f'</div>'
+                        f'<div class="kpi-value">{val}</div>'
+                        f'<div class="{delta_cls}">{arrow} {delta}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
 
-        _ev_next_steps = [
-            f"<strong>Day-Trip Conversion:</strong> {_ev_dt:.1f}% of {_ev_tt/1e6:.2f}M trips are day trips — "
-            f"converting just 2% to overnight at ${_ev_adr:.0f} ADR × {_ev_los:.1f} nights = ~${_ev_dt_conv_rev:,} incremental revenue.",
-            f"<strong>OOS Visitor Focus:</strong> {_ev_oos:.1f}% out-of-state visitor days command premium rates — "
-            "build targeted fly-drive packages for SLC, Dallas, NYC feeder markets (Origin Markets tab).",
-            f"<strong>Length of Stay Extension:</strong> At {_ev_los:.1f} avg days, adding 0.5 days to OOS visitor stays "
-            f"= ~${int(_ev_tt * (_ev_oos/100) * 0.5 * _ev_adr / 365):,}/year in additional room revenue.",
-            "<strong>Spending Category Insight:</strong> Cross-reference accommodation spend share with total category spending — "
-            "hotel stays consistently capture 40-50% of destination spend; boost ancillary F&B and retail packages.",
-        ]
-        _ev_questions = [
-            "What's the visitor day-trip to overnight conversion opportunity?",
-            "Which feeder market visitors spend the most per trip?",
-            "How has our visitor profile changed vs prior year?",
-            "What spending categories are growing fastest?",
-            "How do OOS visitors compare to in-state in ADR and length of stay?",
-        ]
-        _ev_context = (
-            f"Visitor Intelligence (Datafy): {_ev_tt:,} annual trips, "
-            f"{_ev_on:.1f}% overnight, {_ev_dt:.1f}% day trips, {_ev_oos:.1f}% OOS, {_ev_los:.1f}d avg LOS."
-        )
-        render_intel_panel("ev_visitor", _ev_next_steps, _ev_questions, _ev_context)
-    except Exception:
-        pass
+            st.markdown("---")
 
-    st.markdown(sec_div("🔢 Visitor Economy KPIs"), unsafe_allow_html=True)
-    if df_dfy_ov.empty:
-        st.markdown(empty_state(
-            "📊", "No Datafy visitor economy data loaded.",
-            "Run the pipeline: `python scripts/run_pipeline.py`",
-        ), unsafe_allow_html=True)
-    else:
-        ov = df_dfy_ov.iloc[0]
-        period_label = f"{ov.get('report_period_start','')[:4]} Annual"
-        total_trips = int(ov.get("total_trips", 0) or 0)
-        overnight_pct = float(ov.get("overnight_trips_pct", 0) or 0)
-        oos_pct = float(ov.get("out_of_state_vd_pct", 0) or 0)
-        avg_los = float(ov.get("avg_length_of_stay_days", 0) or 0)
-        daytrip_pct = float(ov.get("day_trips_pct", 0) or 0)
-        repeat_pct = float(ov.get("repeat_visitors_pct", 0) or 0)
-        trips_vs_prior = float(ov.get("total_trips_vs_compare_pct", 0) or 0)
-        oos_vs_prior = float(ov.get("out_of_state_vd_vs_compare_pct", 0) or 0)
+            # ── Feeder Markets + Spending side-by-side ─────────────────────────────
+            c1, c2 = st.columns(2)
 
-        # ── Hero KPI cards ─────────────────────────────────────────────────────
-        ev_cols = st.columns(3)
-        _ev_kpis = [
-            (f"{total_trips/1e6:.2f}M", "Total Trips", f"{trips_vs_prior:+.2f}pp vs. prior yr", trips_vs_prior >= 0),
-            (f"{overnight_pct:.1f}%", "Overnight Trips", f"{ov.get('overnight_vs_compare_pct',0):+.1f}pp YOY", float(ov.get("overnight_vs_compare_pct",0) or 0) >= 0),
-            (f"{oos_pct:.1f}%", "Out-of-State Visitor Days", f"{oos_vs_prior:+.2f}pp YOY", oos_vs_prior >= 0),
-            (f"{avg_los:.1f}", "Avg Length of Stay (days)", f"{ov.get('avg_los_vs_compare_days',0):+.1f}d vs. prior yr", float(ov.get("avg_los_vs_compare_days",0) or 0) >= 0),
-            (f"{daytrip_pct:.1f}%", "Day Trips", f"{ov.get('day_trips_vs_compare_pct',0):+.1f}pp YOY", False),
-            (f"{repeat_pct:.1f}%", "Repeat Visitors", "of total visits", True),
-        ]
-        for i, (val, lbl, delta, pos) in enumerate(_ev_kpis):
-            with ev_cols[i % 3]:
-                delta_cls = "kpi-delta-pos" if pos else "kpi-delta-neg"
-                arrow = "↑" if pos else "↓"
+            with c1:
+                st.markdown('<div class="chart-header">Top Feeder Markets (DMA)</div>', unsafe_allow_html=True)
                 st.markdown(
-                    f'<div class="kpi-card reveal-card">'
-                    f'<div class="kpi-header">'
-                    f'<span class="kpi-label">{lbl}</span>'
-                    f'</div>'
-                    f'<div class="kpi-value">{val}</div>'
-                    f'<div class="{delta_cls}">{arrow} {delta}</div>'
-                    f'</div>',
+                    f'<div class="chart-caption">Share of visitor days by origin market · '
+                    f'Datafy {period_label} · Layer 1 verified</div>',
                     unsafe_allow_html=True,
                 )
-
-        st.markdown("---")
-
-        # ── Feeder Markets + Spending side-by-side ─────────────────────────────
-        c1, c2 = st.columns(2)
-
-        with c1:
-            st.markdown('<div class="chart-header">Top Feeder Markets (DMA)</div>', unsafe_allow_html=True)
-            st.markdown(
-                f'<div class="chart-caption">Share of visitor days by origin market · '
-                f'Datafy {period_label} · Layer 1 verified</div>',
-                unsafe_allow_html=True,
-            )
-            if not df_dfy_dma.empty:
-                _dma = df_dfy_dma[df_dfy_dma["visitor_days_share_pct"].notna()].head(10)
-                _dma_sorted = _dma.sort_values("visitor_days_share_pct", ascending=True)
-                _max_s = _dma_sorted["visitor_days_share_pct"].max()
-                _bar_colors = [
-                    f"rgba(33,{int(128 + 56*(v/_max_s))},{int(141 + 57*(v/_max_s))},0.90)"
-                    for v in _dma_sorted["visitor_days_share_pct"]
-                ]
-                _hover = []
-                for _, row in _dma_sorted.iterrows():
-                    avg_s = f"${row['avg_spend_usd']:.0f}" if pd.notna(row.get("avg_spend_usd")) else "N/A"
-                    chg = f"{row['visitor_days_vs_compare_pct']:+.1f}pp YOY" if pd.notna(row.get("visitor_days_vs_compare_pct")) else ""
-                    _hover.append(f"<b>{row['dma']}</b><br>Visitor days: {row['visitor_days_share_pct']:.1f}%<br>Avg spend: {avg_s}<br>{chg}<extra></extra>")
-                fig = go.Figure(go.Bar(
-                    x=_dma_sorted["visitor_days_share_pct"].values,
-                    y=_dma_sorted["dma"].values,
-                    orientation="h",
-                    marker=dict(color=_bar_colors, line_width=0, cornerradius=5),
-                    text=[f"{v:.1f}%" for v in _dma_sorted["visitor_days_share_pct"]],
-                    textposition="outside",
-                    textfont=dict(size=11, family="Syne, DM Sans, sans-serif"),
-                    customdata=_hover,
-                    hovertemplate="%{customdata}",
-                ))
-                fig.update_layout(xaxis_ticksuffix="%", showlegend=False)
-                st.plotly_chart(style_fig(fig, height=360), use_container_width=True, config=PLOTLY_CONFIG)
-            else:
-                st.info("DMA data not available. Run the pipeline.")
-
-        with c2:
-            st.markdown('<div class="chart-header">Visitor Spending by Category</div>', unsafe_allow_html=True)
-            st.markdown(
-                f'<div class="chart-caption">Share of total destination spend · '
-                f'Datafy {period_label} · Layer 1 verified</div>',
-                unsafe_allow_html=True,
-            )
-            if not df_dfy_spend.empty:
-                _sp = df_dfy_spend.head(10)
-                _palette = [TEAL,"#2DA6B2",TEAL_LIGHT,ORANGE,"#A84B2F",
-                            "#5E5240","#626C71","#A7A9A9",RED,"#4A6741"]
-                fig = go.Figure(go.Pie(
-                    labels=_sp["category"].values,
-                    values=_sp["spend_share_pct"].values,
-                    hole=0.48,
-                    marker=dict(colors=_palette[:len(_sp)],
-                                line=dict(color="rgba(0,0,0,0)", width=0)),
-                    textfont=dict(size=11, family="Syne, DM Sans, sans-serif"),
-                    hovertemplate="<b>%{label}</b><br>%{value:.1f}% of spend<extra></extra>",
-                ))
-                fig.update_layout(
-                    legend=dict(
-                        font_size=10, orientation="h",
-                        font=dict(family="Syne, DM Sans, sans-serif"),
-                        yanchor="top", y=-0.08, xanchor="center", x=0.5,
-                    ),
-                    margin=dict(l=10, r=10, t=20, b=80),
-                    annotations=[dict(text="Spend<br>Mix", x=0.5, y=0.5, font_size=13,
-                                      font_family="Syne, sans-serif",
-                                      font_color="#21808D", showarrow=False)],
-                )
-                st.plotly_chart(style_fig(fig, height=400), use_container_width=True, config=PLOTLY_CONFIG)
-            else:
-                st.info("Spending data not available. Run the pipeline.")
-
-        st.markdown("---")
-
-        # ── Demographics + Airports ────────────────────────────────────────────
-        c3, c4 = st.columns(2)
-
-        with c3:
-            st.markdown('<div class="chart-header">Visitor Demographics — Age Profile</div>', unsafe_allow_html=True)
-            st.markdown(
-                f'<div class="chart-caption">Age distribution of visitors to Dana Point · Datafy {period_label}</div>',
-                unsafe_allow_html=True,
-            )
-            if not df_dfy_demo.empty:
-                _age = df_dfy_demo[df_dfy_demo["dimension"] == "age"].copy()
-                if not _age.empty:
-                    age_order = ["16-24","25-44","45-64","65+"]
-                    _age["segment"] = pd.Categorical(_age["segment"], categories=age_order, ordered=True)
-                    _age = _age.sort_values("segment")
-                    _colors_age = [TEAL_LIGHT, TEAL, "#1A6470", "#0D4A52"]
+                if not df_dfy_dma.empty:
+                    _dma = df_dfy_dma[df_dfy_dma["visitor_days_share_pct"].notna()].head(10)
+                    _dma_sorted = _dma.sort_values("visitor_days_share_pct", ascending=True)
+                    _max_s = _dma_sorted["visitor_days_share_pct"].max()
+                    _bar_colors = [
+                        f"rgba(33,{int(128 + 56*(v/_max_s))},{int(141 + 57*(v/_max_s))},0.90)"
+                        for v in _dma_sorted["visitor_days_share_pct"]
+                    ]
+                    _hover = []
+                    for _, row in _dma_sorted.iterrows():
+                        avg_s = f"${row['avg_spend_usd']:.0f}" if pd.notna(row.get("avg_spend_usd")) else "N/A"
+                        chg = f"{row['visitor_days_vs_compare_pct']:+.1f}pp YOY" if pd.notna(row.get("visitor_days_vs_compare_pct")) else ""
+                        _hover.append(f"<b>{row['dma']}</b><br>Visitor days: {row['visitor_days_share_pct']:.1f}%<br>Avg spend: {avg_s}<br>{chg}<extra></extra>")
                     fig = go.Figure(go.Bar(
-                        x=_age["segment"].values,
-                        y=_age["share_pct"].values,
-                        marker=dict(color=_colors_age[:len(_age)], line_width=0, cornerradius=6),
-                        text=[f"{v:.1f}%" for v in _age["share_pct"]],
+                        x=_dma_sorted["visitor_days_share_pct"].values,
+                        y=_dma_sorted["dma"].values,
+                        orientation="h",
+                        marker=dict(color=_bar_colors, line_width=0, cornerradius=5),
+                        text=[f"{v:.1f}%" for v in _dma_sorted["visitor_days_share_pct"]],
                         textposition="outside",
-                        textfont=dict(size=12, family="Syne, DM Sans, sans-serif"),
-                        hovertemplate="<b>Age %{x}</b><br>Share: %{y:.1f}%<extra></extra>",
+                        textfont=dict(size=11, family="Syne, DM Sans, sans-serif"),
+                        customdata=_hover,
+                        hovertemplate="%{customdata}",
                     ))
-                    fig.update_layout(yaxis_ticksuffix="%", showlegend=False,
-                                      xaxis_title="Age Group", yaxis_title="Share (%)")
+                    fig.update_layout(xaxis_ticksuffix="%", showlegend=False)
+                    st.plotly_chart(style_fig(fig, height=360), use_container_width=True, config=PLOTLY_CONFIG)
+                else:
+                    st.info("DMA data not available. Run the pipeline.")
+
+            with c2:
+                st.markdown('<div class="chart-header">Visitor Spending by Category</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="chart-caption">Share of total destination spend · '
+                    f'Datafy {period_label} · Layer 1 verified</div>',
+                    unsafe_allow_html=True,
+                )
+                if not df_dfy_spend.empty:
+                    _sp = df_dfy_spend.head(10)
+                    _palette = [TEAL,"#2DA6B2",TEAL_LIGHT,ORANGE,"#A84B2F",
+                                "#5E5240","#626C71","#A7A9A9",RED,"#4A6741"]
+                    fig = go.Figure(go.Pie(
+                        labels=_sp["category"].values,
+                        values=_sp["spend_share_pct"].values,
+                        hole=0.48,
+                        marker=dict(colors=_palette[:len(_sp)],
+                                    line=dict(color="rgba(0,0,0,0)", width=0)),
+                        textfont=dict(size=11, family="Syne, DM Sans, sans-serif"),
+                        hovertemplate="<b>%{label}</b><br>%{value:.1f}% of spend<extra></extra>",
+                    ))
+                    fig.update_layout(
+                        legend=dict(
+                            font_size=10, orientation="h",
+                            font=dict(family="Syne, DM Sans, sans-serif"),
+                            yanchor="top", y=-0.08, xanchor="center", x=0.5,
+                        ),
+                        margin=dict(l=10, r=10, t=20, b=80),
+                        annotations=[dict(text="Spend<br>Mix", x=0.5, y=0.5, font_size=13,
+                                          font_family="Syne, sans-serif",
+                                          font_color="#21808D", showarrow=False)],
+                    )
+                    st.plotly_chart(style_fig(fig, height=400), use_container_width=True, config=PLOTLY_CONFIG)
+                else:
+                    st.info("Spending data not available. Run the pipeline.")
+
+            st.markdown("---")
+
+            # ── Demographics + Airports ────────────────────────────────────────────
+            c3, c4 = st.columns(2)
+
+            with c3:
+                st.markdown('<div class="chart-header">Visitor Demographics — Age Profile</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="chart-caption">Age distribution of visitors to Dana Point · Datafy {period_label}</div>',
+                    unsafe_allow_html=True,
+                )
+                if not df_dfy_demo.empty:
+                    _age = df_dfy_demo[df_dfy_demo["dimension"] == "age"].copy()
+                    if not _age.empty:
+                        age_order = ["16-24","25-44","45-64","65+"]
+                        _age["segment"] = pd.Categorical(_age["segment"], categories=age_order, ordered=True)
+                        _age = _age.sort_values("segment")
+                        _colors_age = [TEAL_LIGHT, TEAL, "#1A6470", "#0D4A52"]
+                        fig = go.Figure(go.Bar(
+                            x=_age["segment"].values,
+                            y=_age["share_pct"].values,
+                            marker=dict(color=_colors_age[:len(_age)], line_width=0, cornerradius=6),
+                            text=[f"{v:.1f}%" for v in _age["share_pct"]],
+                            textposition="outside",
+                            textfont=dict(size=12, family="Syne, DM Sans, sans-serif"),
+                            hovertemplate="<b>Age %{x}</b><br>Share: %{y:.1f}%<extra></extra>",
+                        ))
+                        fig.update_layout(yaxis_ticksuffix="%", showlegend=False,
+                                          xaxis_title="Age Group", yaxis_title="Share (%)")
+                        st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+                    else:
+                        st.info("Age data not available.")
+                else:
+                    st.info("Demographics data not available.")
+
+            with c4:
+                st.markdown('<div class="chart-header">Origin Airports — Passenger Share</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="chart-caption">Fly-market arrivals by origin airport · Datafy {period_label}</div>',
+                    unsafe_allow_html=True,
+                )
+                if not df_dfy_air.empty:
+                    _air = df_dfy_air.head(8)
+                    _air_sorted = _air.sort_values("passengers_share_pct", ascending=True)
+                    fig = go.Figure(go.Bar(
+                        x=_air_sorted["passengers_share_pct"].values,
+                        y=_air_sorted["airport_code"].values,
+                        orientation="h",
+                        marker=dict(color=ORANGE, opacity=0.80, line_width=0, cornerradius=5),
+                        text=[f"{v:.1f}%" for v in _air_sorted["passengers_share_pct"]],
+                        textposition="outside",
+                        textfont=dict(size=11, family="Syne, DM Sans, sans-serif"),
+                        hovertemplate="<b>%{y}</b><br>%{x:.1f}% of fly-market passengers<extra></extra>",
+                    ))
+                    fig.update_layout(xaxis_ticksuffix="%", showlegend=False)
                     st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
                 else:
-                    st.info("Age data not available.")
-            else:
-                st.info("Demographics data not available.")
+                    st.info("Airport data not available.")
 
-        with c4:
-            st.markdown('<div class="chart-header">Origin Airports — Passenger Share</div>', unsafe_allow_html=True)
+            st.markdown("---")
+
+            # ── Campaign Attribution ────────────────────────────────────────────────
             st.markdown(
-                f'<div class="chart-caption">Fly-market arrivals by origin airport · Datafy {period_label}</div>',
+                '<div style="font-family:\'Syne\',sans-serif;font-size:1.1rem;'
+                'font-weight:800;letter-spacing:-0.02em;margin-bottom:4px;">'
+                'Campaign Attribution Performance</div>'
+                '<div style="font-size:12px;opacity:0.55;font-weight:500;margin-bottom:16px;">'
+                'Datafy media & website attribution · verified visitor impact</div>',
                 unsafe_allow_html=True,
             )
-            if not df_dfy_air.empty:
-                _air = df_dfy_air.head(8)
-                _air_sorted = _air.sort_values("passengers_share_pct", ascending=True)
-                fig = go.Figure(go.Bar(
-                    x=_air_sorted["passengers_share_pct"].values,
-                    y=_air_sorted["airport_code"].values,
-                    orientation="h",
-                    marker=dict(color=ORANGE, opacity=0.80, line_width=0, cornerradius=5),
-                    text=[f"{v:.1f}%" for v in _air_sorted["passengers_share_pct"]],
-                    textposition="outside",
-                    textfont=dict(size=11, family="Syne, DM Sans, sans-serif"),
-                    hovertemplate="<b>%{y}</b><br>%{x:.1f}% of fly-market passengers<extra></extra>",
+
+            ca1, ca2 = st.columns(2)
+
+            with ca1:
+                st.markdown('<div class="chart-header">Media Campaign Attribution</div>', unsafe_allow_html=True)
+                if not df_dfy_media.empty:
+                    med = df_dfy_media.iloc[0]
+                    _attr_trips = int(med.get("attributable_trips", 0) or 0)
+                    _total_imp   = int(med.get("total_impressions", 0) or 0)
+                    _unique_reach = int(med.get("unique_reach", 0) or 0)
+                    _impact_usd  = float(med.get("total_impact_usd", 0) or 0)
+                    _investment  = float(med.get("total_investment_usd", 0) or 0)
+                    _roas_desc   = str(med.get("roas_description", "N/A") or "N/A")
+                    _campaign    = str(med.get("campaign_name", "Annual Campaign") or "Annual Campaign")
+                    _per_start   = str(med.get("report_period_start", ""))[:10]
+                    _per_end     = str(med.get("report_period_end", ""))[:10]
+
+                    st.markdown(
+                        f'<div style="background:rgba(33,128,141,0.06);border:1px solid rgba(33,128,141,0.15);'
+                        f'border-radius:10px;padding:16px 18px;">'
+                        f'<div style="font-size:11px;opacity:0.55;font-weight:600;margin-bottom:10px;">'
+                        f'{_campaign} · {_per_start} → {_per_end}</div>'
+                        f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+                        f'<div><div style="font-size:1.4rem;font-weight:800;color:#21808D;">{_attr_trips:,}</div>'
+                        f'<div style="font-size:10px;opacity:0.60;">Attributable Trips</div></div>'
+                        f'<div><div style="font-size:1.4rem;font-weight:800;color:#21808D;">${_impact_usd:,.0f}</div>'
+                        f'<div style="font-size:10px;opacity:0.60;">Est. Total Impact</div></div>'
+                        f'<div><div style="font-size:1.1rem;font-weight:700;color:#21808D;">{_total_imp/1e6:.1f}M</div>'
+                        f'<div style="font-size:10px;opacity:0.60;">Total Impressions</div></div>'
+                        f'<div><div style="font-size:1.1rem;font-weight:700;color:#21808D;">{_unique_reach/1e6:.1f}M</div>'
+                        f'<div style="font-size:10px;opacity:0.60;">Unique Reach</div></div>'
+                        f'</div>'
+                        f'<div style="margin-top:10px;font-size:11px;color:#21808D;font-weight:600;">ROAS: {_roas_desc}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.info("Media attribution data not available.")
+
+            with ca2:
+                st.markdown('<div class="chart-header">Website Attribution</div>', unsafe_allow_html=True)
+                if not df_dfy_web.empty:
+                    web = df_dfy_web.iloc[0]
+                    _w_trips  = int(web.get("attributable_trips", 0) or 0)
+                    _w_reach  = int(web.get("unique_reach", 0) or 0)
+                    _w_impact = float(web.get("est_impact_usd", 0) or 0)
+                    _w_sess   = int(web.get("total_website_sessions", 0) or 0)
+                    _w_views  = int(web.get("website_pageviews", 0) or 0)
+                    _w_eng    = float(web.get("avg_engagement_rate_pct", 0) or 0)
+                    _w_url    = str(web.get("website_url", "visitdanapoint.com") or "")
+                    _w_start  = str(web.get("report_period_start", ""))[:10]
+                    _w_end    = str(web.get("report_period_end", ""))[:10]
+
+                    st.markdown(
+                        f'<div style="background:rgba(230,129,97,0.06);border:1px solid rgba(230,129,97,0.20);'
+                        f'border-radius:10px;padding:16px 18px;">'
+                        f'<div style="font-size:11px;opacity:0.55;font-weight:600;margin-bottom:10px;">'
+                        f'{_w_url} · {_w_start} → {_w_end}</div>'
+                        f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+                        f'<div><div style="font-size:1.4rem;font-weight:800;color:#E68161;">{_w_trips:,}</div>'
+                        f'<div style="font-size:10px;opacity:0.60;">Attributable Trips</div></div>'
+                        f'<div><div style="font-size:1.4rem;font-weight:800;color:#E68161;">${_w_impact:,.0f}</div>'
+                        f'<div style="font-size:10px;opacity:0.60;">Est. Destination Impact</div></div>'
+                        f'<div><div style="font-size:1.1rem;font-weight:700;color:#E68161;">{_w_sess:,}</div>'
+                        f'<div style="font-size:10px;opacity:0.60;">Website Sessions</div></div>'
+                        f'<div><div style="font-size:1.1rem;font-weight:700;color:#E68161;">{_w_eng:.1f}%</div>'
+                        f'<div style="font-size:10px;opacity:0.60;">Engagement Rate</div></div>'
+                        f'</div></div>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.info("Website attribution data not available.")
+
+            # ── DMA vs Spend Value bubble chart ───────────────────────────────────
+            if not df_dfy_dma.empty:
+                st.markdown("---")
+                st.markdown('<div class="chart-header">Feeder Market Value Matrix — Visitor Days vs. Avg Spend</div>', unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="chart-caption">Who: DMA feeder markets · What: volume vs. value tradeoff · '
+                    'Why: identifies high-value fly markets underweighted in campaigns · '
+                    'How to act: shift budget toward markets with high spend &amp; growth</div>',
+                    unsafe_allow_html=True,
+                )
+                _bub = df_dfy_dma[
+                    df_dfy_dma["visitor_days_share_pct"].notna() &
+                    df_dfy_dma["avg_spend_usd"].notna()
+                ].copy()
+                if not _bub.empty:
+                    _bub_yoy = _bub["visitor_days_vs_compare_pct"].fillna(0)
+                    _bubble_colors = [TEAL if v >= 0 else ORANGE for v in _bub_yoy]
+                    fig = go.Figure(go.Scatter(
+                        x=_bub["visitor_days_share_pct"].values,
+                        y=_bub["avg_spend_usd"].values,
+                        mode="markers+text",
+                        text=_bub["dma"].values,
+                        textposition="top center",
+                        textfont=dict(size=10, family="Syne, DM Sans, sans-serif"),
+                        marker=dict(
+                            size=[max(12, v * 3) for v in _bub["visitor_days_share_pct"]],
+                            color=_bubble_colors,
+                            opacity=0.75,
+                            line=dict(width=1, color="white"),
+                        ),
+                        hovertemplate=(
+                            "<b>%{text}</b><br>"
+                            "Visitor day share: %{x:.1f}%<br>"
+                            "Avg spend: $%{y:.0f}<extra></extra>"
+                        ),
+                    ))
+                    fig.update_layout(
+                        xaxis=dict(title="Share of Visitor Days (%)", ticksuffix="%"),
+                        yaxis=dict(title="Avg Spend per Visitor ($)", tickprefix="$"),
+                        showlegend=False,
+                    )
+                    st.plotly_chart(style_fig(fig, height=380), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.caption(
+                        "🟢 Teal = YOY growth · 🟠 Orange = YOY decline. "
+                        "Bubble size = share of visitor days. "
+                        "Upper-right = high value, high volume (premium targets). "
+                        "Upper-left = high spend but low volume (fly-market opportunity)."
+                    )
+
+            # ── Sankey: Visitor Flow Origin → Type → Spend ─────────────────────────
+            if not df_dfy_dma.empty and not df_dfy_spend.empty:
+                st.markdown("---")
+                st.markdown('<div class="chart-header">Visitor Flow — Origin to Spend Category (Sankey)</div>', unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="chart-caption">WHO visits × WHERE they come from × WHAT they spend on · '
+                    'width of flow = relative share · surface hidden revenue concentration</div>',
+                    unsafe_allow_html=True,
+                )
+                # Build Sankey nodes and links from real data
+                # Nodes: [Top 5 DMAs] → [Overnight, Day Trip] → [Top 3 Spend Categories]
+                _top_dma_sk = df_dfy_dma[df_dfy_dma["visitor_days_share_pct"].notna()].head(5)
+                _top_spend_sk = df_dfy_spend.head(3)
+
+                # Pull overview KPIs for overnight/daytrip split
+                _ov_sk = df_dfy_ov.iloc[0] if not df_dfy_ov.empty else {}
+                _on_pct = float(_ov_sk.get("overnight_trips_pct", 60) or 60)
+                _dt_pct = float(_ov_sk.get("day_trips_pct", 40) or 40)
+
+                # Node labels
+                _dma_labels = list(_top_dma_sk["dma"].values)
+                _type_labels = ["Overnight Stays", "Day Trips"]
+                _spend_labels = list(_top_spend_sk["category"].values)
+                node_labels = _dma_labels + _type_labels + _spend_labels
+
+                n_dma = len(_dma_labels)
+                idx_on = n_dma      # Overnight
+                idx_dt = n_dma + 1  # Day Trip
+                idx_sp_start = n_dma + 2
+
+                sources, targets, values_sk = [], [], []
+
+                # DMA → trip type
+                total_dma_share = _top_dma_sk["visitor_days_share_pct"].sum()
+                for i, (_, row) in enumerate(_top_dma_sk.iterrows()):
+                    share = row["visitor_days_share_pct"] / total_dma_share * 100
+                    sources.append(i); targets.append(idx_on); values_sk.append(share * _on_pct / 100)
+                    sources.append(i); targets.append(idx_dt); values_sk.append(share * _dt_pct / 100)
+
+                # Trip type → spend category (proportional)
+                total_spend_share = _top_spend_sk["spend_share_pct"].sum()
+                for j, (_, row) in enumerate(_top_spend_sk.iterrows()):
+                    sp_share = row["spend_share_pct"] / total_spend_share * 100
+                    sources.append(idx_on); targets.append(idx_sp_start + j); values_sk.append(100 * _on_pct / 100 * sp_share / 100)
+                    sources.append(idx_dt); targets.append(idx_sp_start + j); values_sk.append(100 * _dt_pct / 100 * sp_share / 100)
+
+                _node_colors = (
+                    [TEAL_LIGHT] * n_dma +
+                    [TEAL, "#A8D4D9"] +
+                    [ORANGE, "#E68161", "#A84B2F"][:len(_spend_labels)]
+                )
+                fig = go.Figure(go.Sankey(
+                    node=dict(
+                        pad=18, thickness=22,
+                        line=dict(color="rgba(0,0,0,0)", width=0),
+                        label=node_labels,
+                        color=_node_colors,
+                        hovertemplate="%{label}<extra></extra>",
+                    ),
+                    link=dict(
+                        source=sources,
+                        target=targets,
+                        value=values_sk,
+                        color="rgba(33,128,141,0.18)",
+                    ),
                 ))
-                fig.update_layout(xaxis_ticksuffix="%", showlegend=False)
-                st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+                fig.update_layout(font=dict(family="Syne, DM Sans, sans-serif", size=12))
+                st.plotly_chart(style_fig(fig, height=400), use_container_width=True, config=PLOTLY_CONFIG)
+                st.caption(
+                    "Flow width = proportional visitor share. Overnight stays dominate accommodation spend. "
+                    "Day trippers concentrate in dining — capturing even 5% as overnight stays = significant room revenue."
+                )
+
+    # ── Website Attribution Deep-Dive ─────────────────────────────────────────
+    # ── Spending & DMA → sub-tab 2 ────────────────────────────────────────────
+    with _ev_t2:
+        st.markdown(_sh("🌐", "Website Attribution — Acquisition Channels & Top Markets", "teal", "DATAFY"), unsafe_allow_html=True)
+        st.caption("Source: Datafy Attribution Website · Q3 2025 · visitdanapoint.com")
+
+        _web_c1, _web_c2 = st.columns(2)
+
+        with _web_c1:
+            st.markdown('<div class="chart-header">Acquisition Channels</div>', unsafe_allow_html=True)
+            if not df_dfy_web_ch.empty:
+                _ch = df_dfy_web_ch.copy()
+                _ch_cols = [c for c in ["channel","sessions","attributable_trips","trip_share_pct"] if c in _ch.columns]
+                if "channel" in _ch.columns and "sessions" in _ch.columns:
+                    _ch_s = _ch.sort_values("sessions", ascending=True)
+                    fig_ch = go.Figure(go.Bar(
+                        x=_ch_s["sessions"].values,
+                        y=_ch_s["channel"].values,
+                        orientation="h",
+                        marker_color=TEAL,
+                        hovertemplate="<b>%{y}</b><br>Sessions: %{x:,}<extra></extra>",
+                    ))
+                    fig_ch.update_layout(xaxis_title="Sessions", yaxis_title=None, margin=dict(l=0,r=0,t=20,b=20), height=220)
+                    st.plotly_chart(style_fig(fig_ch, height=220), use_container_width=True, config=PLOTLY_CONFIG)
+                    with st.expander("📊 View raw channel data"):
+                        st.dataframe(_ch[_ch_cols].reset_index(drop=True), use_container_width=True)
+                        st.download_button("⬇️ Download", _ch[_ch_cols].to_csv(index=False), "website_channels.csv", "text/csv", key="dl_web_ch")
+                else:
+                    st.dataframe(_ch.reset_index(drop=True), use_container_width=True)
             else:
-                st.info("Airport data not available.")
+                st.info("Website channel data not available.")
+
+        with _web_c2:
+            st.markdown('<div class="chart-header">Top Markets — Website Attribution</div>', unsafe_allow_html=True)
+            if not df_dfy_web_mkts.empty:
+                _wm = df_dfy_web_mkts.copy()
+                _wm_cols = [c for c in ["market","sessions","attributable_trips","trip_share_pct"] if c in _wm.columns]
+                if "market" in _wm.columns and len(_wm) > 0:
+                    _wm_s = _wm.head(10).sort_values(_wm.columns[1] if len(_wm.columns) > 1 else _wm.columns[0], ascending=True)
+                    _x_col = "sessions" if "sessions" in _wm.columns else _wm.columns[1]
+                    _y_col = "market" if "market" in _wm.columns else _wm.columns[0]
+                    fig_wm = go.Figure(go.Bar(
+                        x=_wm_s[_x_col].values,
+                        y=_wm_s[_y_col].values,
+                        orientation="h",
+                        marker_color=ORANGE,
+                        hovertemplate=f"<b>%{{y}}</b><br>{_x_col}: %{{x:,}}<extra></extra>",
+                    ))
+                    fig_wm.update_layout(xaxis_title=_x_col.replace("_"," ").title(), yaxis_title=None, margin=dict(l=0,r=0,t=20,b=20), height=220)
+                    st.plotly_chart(style_fig(fig_wm, height=220), use_container_width=True, config=PLOTLY_CONFIG)
+                    with st.expander("📊 View raw top markets data"):
+                        st.dataframe(_wm[_wm_cols].reset_index(drop=True), use_container_width=True)
+                        st.download_button("⬇️ Download", _wm[_wm_cols].to_csv(index=False), "website_top_markets.csv", "text/csv", key="dl_web_mkts")
+                else:
+                    st.dataframe(_wm.reset_index(drop=True), use_container_width=True)
+            else:
+                st.info("Website top markets data not available.")
+
+        # Website DMA comparison
+        if not df_dfy_web_dma.empty and not df_dfy_dma.empty:
+            st.markdown('<div class="chart-header" style="margin-top:12px;">Website DMA Attribution vs. Overall Visitor Days (Q3 2025 vs Annual)</div>', unsafe_allow_html=True)
+            st.caption("Compares website-attributed trip share by DMA (Q3 2025) against overall visitor day share (annual) — reveals which markets convert better via digital.")
+            _wd = df_dfy_web_dma.copy()
+            _od = df_dfy_dma.copy()
+            if "dma" in _wd.columns and "dma" in _od.columns:
+                _merge_col = "attributable_trips_pct" if "attributable_trips_pct" in _wd.columns else (_wd.columns[1] if len(_wd.columns) > 1 else None)
+                _od_col = "visitor_days_share_pct" if "visitor_days_share_pct" in _od.columns else None
+                if _merge_col and _od_col:
+                    _comp = _wd[["dma", _merge_col]].merge(_od[["dma", _od_col]], on="dma", how="inner").head(8)
+                    if not _comp.empty:
+                        _dmas = _comp["dma"].values
+                        fig_cmp = go.Figure()
+                        fig_cmp.add_trace(go.Bar(name="Website Trip Share (Q3)", x=_dmas, y=_comp[_merge_col].values, marker_color=TEAL))
+                        fig_cmp.add_trace(go.Bar(name="Overall Visitor Days (Annual)", x=_dmas, y=_comp[_od_col].values, marker_color=ORANGE, opacity=0.7))
+                        fig_cmp.update_layout(
+                            barmode="group",
+                            xaxis=dict(
+                                tickangle=-45,
+                                tickfont=dict(size=10),
+                                automargin=True,
+                            ),
+                            yaxis=dict(
+                                title="Share (%)",
+                                ticksuffix="%",
+                                gridcolor="rgba(0,0,0,0.07)",
+                            ),
+                            height=340,
+                            margin=dict(l=40, r=10, t=30, b=120),
+                            legend=dict(orientation="h", y=1.05, x=0, font=dict(size=11)),
+                            paper_bgcolor="rgba(0,0,0,0)",
+                            plot_bgcolor="rgba(0,0,0,0)",
+                        )
+                        st.plotly_chart(style_fig(fig_cmp, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+
+        # ── Visitor Segment Images ─────────────────────────────────────────────────
+        VISITOR_SEGMENT_IMAGES = {
+            "beach":     "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80",
+            "surf":      "https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=400&q=80",
+            "harbor":    "https://images.unsplash.com/photo-1564424224827-cd24b8915874?w=400&q=80",
+            "festival":  "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&q=80",
+            "family":    "https://images.unsplash.com/photo-1511895426328-dc8714191011?w=400&q=80",
+            "luxury":    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=80",
+            "overnight": "https://images.unsplash.com/photo-1455587734955-081b22074882?w=400&q=80",
+            "daytrip":   "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&q=80",
+            "corporate": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80",
+        }
+
+        def segment_image_card(label: str, value: str, img_url: str, delta: str = "") -> str:
+            _delta_html = (f'<div style="font-size:11px;color:#10B981;margin-top:2px;">{delta}</div>'
+                           if delta else "")
+            return (
+                f'<div style="background:rgba(0,0,0,0.03);border-radius:12px;overflow:hidden;'
+                f'border:1px solid rgba(0,200,224,0.14);'
+                f'box-shadow:0 4px 20px rgba(0,0,0,0.40);margin-bottom:12px;backdrop-filter:blur(8px);">'
+                f'<div style="height:100px;overflow:hidden;">'
+                f'<img src="{img_url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" />'
+                f'</div>'
+                f'<div style="padding:10px 14px 12px;">'
+                f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#718096;">{label}</div>'
+                f'<div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,#FFFFFF,#A8D8F0);'
+                f'-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'
+                f'font-family:\'Syne\',sans-serif;">{value}</div>'
+                f'{_delta_html}'
+                f'</div>'
+                f'</div>'
+            )
+
+        # ── Visitor Cluster Visitation ─────────────────────────────────────────────
+        if not df_dfy_clusters.empty:
+            st.markdown(_sh("🗺️", "Visitor Cluster Visitation", "green", "DATAFY"), unsafe_allow_html=True)
+            st.caption("Which Dana Point area clusters attract the most visitor activity · Datafy Annual 2025")
+            _cl = df_dfy_clusters.copy()
+            _cl_share_col = [c for c in _cl.columns if "share" in c.lower() or "pct" in c.lower() or "visits" in c.lower()]
+            _cl_name_col  = [c for c in _cl.columns if "cluster" in c.lower() or "area" in c.lower() or "zone" in c.lower() or "name" in c.lower()]
+            if _cl_share_col and _cl_name_col:
+                _cl_x = _cl_share_col[0]; _cl_y = _cl_name_col[0]
+                _cl_s = _cl.sort_values(_cl_x, ascending=False).head(10)
+
+                # Image-backed cluster cards for top segments
+                _seg_img_map = {
+                    "harbor": VISITOR_SEGMENT_IMAGES["harbor"],
+                    "beach":  VISITOR_SEGMENT_IMAGES["beach"],
+                    "surf":   VISITOR_SEGMENT_IMAGES["surf"],
+                    "festival": VISITOR_SEGMENT_IMAGES["festival"],
+                    "overnight": VISITOR_SEGMENT_IMAGES["overnight"],
+                }
+                _top_clusters = _cl_s.head(4)
+                _cl_img_cols = st.columns(min(4, len(_top_clusters)))
+                for _cic, (_, _crow) in zip(_cl_img_cols, _top_clusters.iterrows()):
+                    _cname = str(_crow[_cl_y])
+                    _cval  = f"{float(_crow[_cl_x]):.1f}%" if pd.notna(_crow[_cl_x]) else "—"
+                    # Pick image by keyword match
+                    _img   = next(
+                        (v for k, v in _seg_img_map.items() if k in _cname.lower()),
+                        VISITOR_SEGMENT_IMAGES["beach"]
+                    )
+                    with _cic:
+                        st.markdown(segment_image_card(_cname, _cval, _img), unsafe_allow_html=True)
+
+                # Full bar chart below
+                _cl_s_bar = _cl.sort_values(_cl_x, ascending=True).head(10)
+                fig_cl = go.Figure(go.Bar(
+                    x=_cl_s_bar[_cl_x].values, y=_cl_s_bar[_cl_y].values,
+                    orientation="h", marker_color=TEAL_LIGHT,
+                    hovertemplate="<b>%{y}</b><br>Share: %{x:.1f}%<extra></extra>",
+                ))
+                fig_cl.update_layout(xaxis_title="Visitation Share (%)", xaxis_ticksuffix="%", height=280, margin=dict(l=0,r=0,t=20,b=20))
+                st.plotly_chart(style_fig(fig_cl, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+                with st.expander("View raw cluster data"):
+                    st.dataframe(_cl.reset_index(drop=True), use_container_width=True)
+                    st.download_button("⬇️ Download Cluster Data CSV", _cl.to_csv(index=False).encode(), "cluster_visitation.csv", "text/csv", key="dl_cluster")
+
+    # ── Social & Web Analytics ────────────────────────────────────────────────
+    # ── Digital & Social → sub-tab 3 ──────────────────────────────────────────
+    with _ev_t3:
+        st.markdown(_sh("📱", "Social & Web Analytics — visitdanapoint.com", "teal", "GA4 · DATAFY"), unsafe_allow_html=True)
+        st.caption("Source: Datafy GA4 Social / Web Analytics · Annual 2025")
+
+        _soc_c1, _soc_c2 = st.columns(2)
+
+        with _soc_c1:
+            st.markdown('<div class="chart-header">Traffic Sources</div>', unsafe_allow_html=True)
+            if not df_dfy_social_traf.empty:
+                _st = df_dfy_social_traf.copy()
+                _src_col  = next((c for c in _st.columns if "source" in c.lower() or "channel" in c.lower() or "medium" in c.lower()), None)
+                _sess_col = next((c for c in _st.columns if "session" in c.lower() or "visits" in c.lower()), None)
+                if _src_col and _sess_col:
+                    _st_s = _st.sort_values(_sess_col, ascending=False).head(12)
+                    fig_st = go.Figure(go.Bar(
+                        x=_st_s[_src_col].values,
+                        y=_st_s[_sess_col].values,
+                        marker_color=TEAL,
+                        hovertemplate="<b>%{x}</b><br>Sessions: %{y:,}<extra></extra>",
+                    ))
+                    fig_st.update_layout(xaxis_tickangle=-35, yaxis_title="Sessions", height=260, margin=dict(l=0,r=0,t=20,b=60))
+                    st.plotly_chart(style_fig(fig_st, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+                else:
+                    st.dataframe(_st.reset_index(drop=True), use_container_width=True)
+                with st.expander("📊 View raw traffic source data"):
+                    st.dataframe(_st.reset_index(drop=True), use_container_width=True)
+                    st.download_button("⬇️ Download", _st.to_csv(index=False), "traffic_sources.csv", "text/csv", key="dl_traf")
+            else:
+                st.info("Social traffic source data not available.")
+
+        with _soc_c2:
+            st.markdown('<div class="chart-header">Top Pages by Views</div>', unsafe_allow_html=True)
+            if not df_dfy_social_pages.empty:
+                _pg = df_dfy_social_pages.copy()
+                _pg_name = next((c for c in _pg.columns if "page" in c.lower() or "url" in c.lower() or "title" in c.lower()), None)
+                _pg_views = next((c for c in _pg.columns if "view" in c.lower() or "visit" in c.lower() or "session" in c.lower()), None)
+                if _pg_name and _pg_views:
+                    _pg_s = _pg.sort_values(_pg_views, ascending=False).head(10)
+                    _pg_labels = [str(v)[:35] + "…" if len(str(v)) > 35 else str(v) for v in _pg_s[_pg_name].values]
+                    fig_pg = go.Figure(go.Bar(
+                        x=_pg_s[_pg_views].values,
+                        y=_pg_labels,
+                        orientation="h",
+                        marker_color=ORANGE,
+                        hovertemplate="<b>%{y}</b><br>Views: %{x:,}<extra></extra>",
+                    ))
+                    fig_pg.update_layout(xaxis_title="Page Views", height=310, margin=dict(l=0,r=0,t=20,b=20), yaxis=dict(autorange="reversed"))
+                    st.plotly_chart(style_fig(fig_pg, height=310), use_container_width=True, config=PLOTLY_CONFIG)
+                else:
+                    st.dataframe(_pg.reset_index(drop=True), use_container_width=True)
+                with st.expander("📊 View raw top pages data"):
+                    st.dataframe(_pg.reset_index(drop=True), use_container_width=True)
+                    st.download_button("⬇️ Download", _pg.to_csv(index=False), "top_pages.csv", "text/csv", key="dl_pages")
+            else:
+                st.info("Top pages data not available.")
+
+        # Audience Overview KPIs
+        if not df_dfy_social_aud.empty:
+            _aud = df_dfy_social_aud.iloc[0]
+            _aud_metrics = {k: v for k, v in _aud.items() if k not in ("id","loaded_at","report_period_start","report_period_end","website_url") and pd.notna(v)}
+            if _aud_metrics:
+                st.markdown("#### Website Audience KPIs")
+                _aud_cols = st.columns(min(4, len(_aud_metrics)))
+                for _ai, (_ak, _av) in enumerate(_aud_metrics.items()):
+                    with _aud_cols[_ai % len(_aud_cols)]:
+                        _disp = f"{float(_av):,.0f}" if isinstance(_av, (int,float)) else str(_av)
+                        st.metric(_ak.replace("_"," ").title(), _disp)
+
+        # ── Social Media Command Center (Later.com) ───────────────────────────────
+        st.markdown(_sh("📲", "Social Media Command Center", "purple", "LATER.COM"), unsafe_allow_html=True)
+        st.caption("Source: Later.com Analytics Export · Instagram · Facebook · TikTok · Layer 2.5 Social Performance")
+
+        _smc_c1, _smc_c2, _smc_c3 = st.columns(3)
+
+        # IG follower trend
+        with _smc_c1:
+            st.markdown('<div class="chart-header">Instagram — Follower Growth</div>', unsafe_allow_html=True)
+            if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns:
+                _ig_p = df_later_ig_profile.sort_values("data_date").tail(30).copy()
+                _ig_cur = int(_ig_p["followers"].iloc[-1]) if len(_ig_p) else 0
+                _ig_prev = int(_ig_p["followers"].iloc[0]) if len(_ig_p) else _ig_cur
+                _ig_delta = _ig_cur - _ig_prev
+                st.metric("Followers", f"{_ig_cur:,}", delta=f"{_ig_delta:+,} (30d)")
+                fig_ig = go.Figure(go.Scatter(
+                    x=_ig_p["data_date"], y=_ig_p["followers"],
+                    mode="lines", fill="tozeroy",
+                    line=dict(color="#E1306C", width=2.5, shape="spline", smoothing=0.8),
+                    fillcolor="rgba(225,48,108,0.12)",
+                    hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
+                ))
+                fig_ig.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
+                    xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)),
+                    yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    showlegend=False)
+                st.plotly_chart(fig_ig, use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_followers")
+            else:
+                st.info("No Instagram profile data.")
+
+        # FB follower trend
+        with _smc_c2:
+            st.markdown('<div class="chart-header">Facebook — Follower Growth</div>', unsafe_allow_html=True)
+            if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns:
+                _fb_p = df_later_fb_profile.sort_values("data_date").tail(30).copy()
+                _fb_cur = int(_fb_p["page_followers"].iloc[-1]) if len(_fb_p) else 0
+                _fb_prev = int(_fb_p["page_followers"].iloc[0]) if len(_fb_p) else _fb_cur
+                _fb_delta = _fb_cur - _fb_prev
+                st.metric("Followers", f"{_fb_cur:,}", delta=f"{_fb_delta:+,} (30d)")
+                fig_fb = go.Figure(go.Scatter(
+                    x=_fb_p["data_date"], y=_fb_p["page_followers"],
+                    mode="lines", fill="tozeroy",
+                    line=dict(color="#1877F2", width=2.5, shape="spline", smoothing=0.8),
+                    fillcolor="rgba(24,119,242,0.12)",
+                    hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
+                ))
+                fig_fb.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
+                    xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)),
+                    yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    showlegend=False)
+                st.plotly_chart(fig_fb, use_container_width=True, config=PLOTLY_CONFIG, key="social_fb_followers")
+            else:
+                st.info("No Facebook profile data.")
+
+        # TikTok follower trend
+        with _smc_c3:
+            st.markdown('<div class="chart-header">TikTok — Follower Growth</div>', unsafe_allow_html=True)
+            if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns:
+                _tk_p = df_later_tk_profile.sort_values("data_date").tail(30).copy()
+                _tk_cur = int(_tk_p["followers"].iloc[-1]) if len(_tk_p) else 0
+                _tk_prev = int(_tk_p["followers"].iloc[0]) if len(_tk_p) else _tk_cur
+                _tk_delta = _tk_cur - _tk_prev
+                st.metric("Followers", f"{_tk_cur:,}", delta=f"{_tk_delta:+,} (30d)")
+                fig_tk = go.Figure(go.Scatter(
+                    x=_tk_p["data_date"], y=_tk_p["followers"],
+                    mode="lines", fill="tozeroy",
+                    line=dict(color="#010101", width=2.5, shape="spline", smoothing=0.8),
+                    fillcolor="rgba(1,1,1,0.10)",
+                    hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
+                ))
+                fig_tk.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
+                    xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)),
+                    yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    showlegend=False)
+                st.plotly_chart(fig_tk, use_container_width=True, config=PLOTLY_CONFIG, key="social_tk_followers")
+            else:
+                st.info("No TikTok profile data.")
+
+        # IG Post Engagement chart
+        if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns:
+            st.markdown('<div class="chart-header">Instagram — Post Engagement Rate (Last 30 Posts)</div>', unsafe_allow_html=True)
+            _igp = df_later_ig_posts.head(30).copy()
+            _igp["label"] = pd.to_datetime(_igp["posted_at"], errors="coerce").dt.strftime("%b %d")
+            _igp["eng_num"] = pd.to_numeric(_igp["engagement_rate"], errors="coerce")
+            _igp = _igp.dropna(subset=["eng_num"]).sort_values("posted_at")
+            if not _igp.empty:
+                _avg_eng = _igp["eng_num"].mean()
+                _eng_colors = ["#E1306C" if v >= _avg_eng else "rgba(225,48,108,0.4)" for v in _igp["eng_num"]]
+                fig_eng = go.Figure(go.Bar(
+                    x=_igp["label"], y=_igp["eng_num"],
+                    marker=dict(color=_eng_colors, cornerradius=5),
+                    hovertemplate="<b>%{x}</b><br>Engagement Rate: %{y:.1f}%<extra></extra>",
+                ))
+                fig_eng.add_hline(y=_avg_eng, line_dash="dot", line_color="rgba(0,0,0,0.3)",
+                                  annotation_text=f"Avg {_avg_eng:.1f}%", annotation_position="top right")
+                fig_eng.update_layout(height=240, margin=dict(l=0,r=0,t=20,b=40),
+                    yaxis_title="Engagement Rate %",
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)))
+                st.plotly_chart(style_fig(fig_eng, height=240), use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_eng_rate")
+
+        # FB Reach vs IG Reach comparison
+        _smc2_c1, _smc2_c2 = st.columns(2)
+        with _smc2_c1:
+            st.markdown('<div class="chart-header">Facebook — Reach Trend (90d)</div>', unsafe_allow_html=True)
+            if not df_later_fb_profile.empty and "reach" in df_later_fb_profile.columns:
+                _fbr = df_later_fb_profile.sort_values("data_date").tail(90).copy()
+                fig_fbr = go.Figure(go.Scatter(
+                    x=_fbr["data_date"], y=_fbr["reach"],
+                    mode="lines", fill="tozeroy",
+                    line=dict(color="#1877F2", width=1.8),
+                    fillcolor="rgba(24,119,242,0.10)",
+                    hovertemplate="<b>%{x}</b><br>Reach: %{y:,}<extra></extra>",
+                ))
+                fig_fbr.update_layout(height=200, margin=dict(l=0,r=0,t=4,b=20),
+                    yaxis_title="Reach",
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    xaxis=dict(tickangle=-30, tickfont=dict(size=9)))
+                st.plotly_chart(style_fig(fig_fbr, height=200), use_container_width=True, config=PLOTLY_CONFIG, key="social_fb_reach")
+            else:
+                st.info("No Facebook reach data.")
+
+        with _smc2_c2:
+            st.markdown('<div class="chart-header">TikTok — Video Views Trend</div>', unsafe_allow_html=True)
+            if not df_later_tk_profile.empty and "video_views" in df_later_tk_profile.columns:
+                _tkv = df_later_tk_profile.sort_values("data_date").tail(90).copy()
+                _tkv_clean = _tkv.dropna(subset=["video_views"])
+                if not _tkv_clean.empty:
+                    fig_tkv = go.Figure(go.Bar(
+                        x=_tkv_clean["data_date"], y=_tkv_clean["video_views"],
+                        marker=dict(color="#010101", opacity=0.75, cornerradius=3),
+                        hovertemplate="<b>%{x}</b><br>Video Views: %{y:,}<extra></extra>",
+                    ))
+                    fig_tkv.update_layout(height=200, margin=dict(l=0,r=0,t=4,b=20),
+                        yaxis_title="Video Views",
+                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                        xaxis=dict(tickangle=-30, tickfont=dict(size=9)))
+                    st.plotly_chart(style_fig(fig_tkv, height=200), use_container_width=True, config=PLOTLY_CONFIG, key="social_tk_views")
+                else:
+                    st.info("No TikTok video view data available.")
+            else:
+                st.info("No TikTok profile data.")
+
+        # IG Demographics
+        if not df_later_ig_demo.empty:
+            st.markdown('<div class="chart-header">Instagram — Audience Demographics</div>', unsafe_allow_html=True)
+            _dem_c1, _dem_c2 = st.columns(2)
+            with _dem_c1:
+                # Gender pie
+                _gd = df_later_ig_demo[["gender","total_pct"]].dropna()
+                if not _gd.empty:
+                    fig_gd = go.Figure(go.Pie(
+                        labels=_gd["gender"], values=_gd["total_pct"],
+                        hole=0.45,
+                        marker=dict(colors=["#E1306C","#833AB4","#FD1D1D"]),
+                        textinfo="label+percent",
+                        hovertemplate="<b>%{label}</b><br>%{percent}<extra></extra>",
+                    ))
+                    fig_gd.update_layout(height=220, margin=dict(l=0,r=0,t=20,b=0),
+                        paper_bgcolor="rgba(0,0,0,0)", showlegend=True)
+                    st.plotly_chart(fig_gd, use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_gender")
+            with _dem_c2:
+                # Age breakdown stacked bar
+                _age_cols = [c for c in df_later_ig_demo.columns if c.startswith("age_")]
+                if _age_cols:
+                    _age_labels = [c.replace("age_","").replace("_"," ").replace("plus","65+") for c in _age_cols]
+                    _female = df_later_ig_demo[df_later_ig_demo["gender"].str.lower()=="female"]
+                    _male   = df_later_ig_demo[df_later_ig_demo["gender"].str.lower()=="male"]
+                    fig_age = go.Figure()
+                    if not _female.empty:
+                        fig_age.add_trace(go.Bar(name="Female", x=_age_labels,
+                            y=[float(_female.iloc[0].get(c, 0) or 0) for c in _age_cols],
+                            marker_color="#E1306C"))
+                    if not _male.empty:
+                        fig_age.add_trace(go.Bar(name="Male", x=_age_labels,
+                            y=[float(_male.iloc[0].get(c, 0) or 0) for c in _age_cols],
+                            marker_color="#833AB4"))
+                    fig_age.update_layout(barmode="group", height=220, margin=dict(l=0,r=0,t=20,b=0),
+                        yaxis_title="% of Audience",
+                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                    st.plotly_chart(fig_age, use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_age")
 
         st.markdown("---")
 
-        # ── Campaign Attribution ────────────────────────────────────────────────
-        st.markdown(
-            '<div style="font-family:\'Syne\',sans-serif;font-size:1.1rem;'
-            'font-weight:800;letter-spacing:-0.02em;margin-bottom:4px;">'
-            'Campaign Attribution Performance</div>'
-            '<div style="font-size:12px;opacity:0.55;font-weight:500;margin-bottom:16px;">'
-            'Datafy media & website attribution · verified visitor impact</div>',
-            unsafe_allow_html=True,
-        )
+        # ── Zartico Historical Reference ─────────────────────────────────────────
+        st.markdown("""<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px 14px;
+    margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+    <span style="font-size:16px;">📦</span>
+    <div>
+      <span style="font-weight:700;color:#92400E;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
+      <span style="font-size:11px;color:#78350F;">Current data: Datafy &amp; CoStar. Zartico provides baseline &amp; trend context only.</span>
+    </div></div>""", unsafe_allow_html=True)
+        st.markdown(_sh("📚", "Zartico Historical Reference", "gray", "JUN 2025 SNAPSHOT"), unsafe_allow_html=True)
 
-        ca1, ca2 = st.columns(2)
+        if not df_zrt_kpis.empty or not df_zrt_spend.empty:
+            zrt_col1, zrt_col2, zrt_col3 = st.columns(3)
 
-        with ca1:
-            st.markdown('<div class="chart-header">Media Campaign Attribution</div>', unsafe_allow_html=True)
-            if not df_dfy_media.empty:
-                med = df_dfy_media.iloc[0]
-                _attr_trips = int(med.get("attributable_trips", 0) or 0)
-                _total_imp   = int(med.get("total_impressions", 0) or 0)
-                _unique_reach = int(med.get("unique_reach", 0) or 0)
-                _impact_usd  = float(med.get("total_impact_usd", 0) or 0)
-                _investment  = float(med.get("total_investment_usd", 0) or 0)
-                _roas_desc   = str(med.get("roas_description", "N/A") or "N/A")
-                _campaign    = str(med.get("campaign_name", "Annual Campaign") or "Annual Campaign")
-                _per_start   = str(med.get("report_period_start", ""))[:10]
-                _per_end     = str(med.get("report_period_end", ""))[:10]
+            if not df_zrt_kpis.empty:
+                zk = df_zrt_kpis.iloc[0]
+                with zrt_col1:
+                    st.markdown(kpi_card(
+                        "Visitor Device Share",
+                        f"{zk.get('pct_devices_visitors', 0):.1f}%",
+                        "% of all local devices that are visitors",
+                        positive=True,
+                    ), unsafe_allow_html=True)
+                with zrt_col2:
+                    st.markdown(kpi_card(
+                        "Visitor Spend Share",
+                        f"{zk.get('pct_spend_visitors', 0):.1f}%",
+                        "% of total spend from visitors",
+                        positive=True,
+                    ), unsafe_allow_html=True)
+                with zrt_col3:
+                    st.markdown(kpi_card(
+                        "Accommodation Spend %",
+                        f"{zk.get('pct_accommodation_spend_visitors', 0):.0f}%",
+                        "% of accommodation spend from visitors",
+                        positive=True,
+                    ), unsafe_allow_html=True)
 
-                st.markdown(
-                    f'<div style="background:rgba(33,128,141,0.06);border:1px solid rgba(33,128,141,0.15);'
-                    f'border-radius:10px;padding:16px 18px;">'
-                    f'<div style="font-size:11px;opacity:0.55;font-weight:600;margin-bottom:10px;">'
-                    f'{_campaign} · {_per_start} → {_per_end}</div>'
-                    f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
-                    f'<div><div style="font-size:1.4rem;font-weight:800;color:#21808D;">{_attr_trips:,}</div>'
-                    f'<div style="font-size:10px;opacity:0.60;">Attributable Trips</div></div>'
-                    f'<div><div style="font-size:1.4rem;font-weight:800;color:#21808D;">${_impact_usd:,.0f}</div>'
-                    f'<div style="font-size:10px;opacity:0.60;">Est. Total Impact</div></div>'
-                    f'<div><div style="font-size:1.1rem;font-weight:700;color:#21808D;">{_total_imp/1e6:.1f}M</div>'
-                    f'<div style="font-size:10px;opacity:0.60;">Total Impressions</div></div>'
-                    f'<div><div style="font-size:1.1rem;font-weight:700;color:#21808D;">{_unique_reach/1e6:.1f}M</div>'
-                    f'<div style="font-size:10px;opacity:0.60;">Unique Reach</div></div>'
-                    f'</div>'
-                    f'<div style="margin-top:10px;font-size:11px;color:#21808D;font-weight:600;">ROAS: {_roas_desc}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.info("Media attribution data not available.")
-
-        with ca2:
-            st.markdown('<div class="chart-header">Website Attribution</div>', unsafe_allow_html=True)
-            if not df_dfy_web.empty:
-                web = df_dfy_web.iloc[0]
-                _w_trips  = int(web.get("attributable_trips", 0) or 0)
-                _w_reach  = int(web.get("unique_reach", 0) or 0)
-                _w_impact = float(web.get("est_impact_usd", 0) or 0)
-                _w_sess   = int(web.get("total_website_sessions", 0) or 0)
-                _w_views  = int(web.get("website_pageviews", 0) or 0)
-                _w_eng    = float(web.get("avg_engagement_rate_pct", 0) or 0)
-                _w_url    = str(web.get("website_url", "visitdanapoint.com") or "")
-                _w_start  = str(web.get("report_period_start", ""))[:10]
-                _w_end    = str(web.get("report_period_end", ""))[:10]
-
-                st.markdown(
-                    f'<div style="background:rgba(230,129,97,0.06);border:1px solid rgba(230,129,97,0.20);'
-                    f'border-radius:10px;padding:16px 18px;">'
-                    f'<div style="font-size:11px;opacity:0.55;font-weight:600;margin-bottom:10px;">'
-                    f'{_w_url} · {_w_start} → {_w_end}</div>'
-                    f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
-                    f'<div><div style="font-size:1.4rem;font-weight:800;color:#E68161;">{_w_trips:,}</div>'
-                    f'<div style="font-size:10px;opacity:0.60;">Attributable Trips</div></div>'
-                    f'<div><div style="font-size:1.4rem;font-weight:800;color:#E68161;">${_w_impact:,.0f}</div>'
-                    f'<div style="font-size:10px;opacity:0.60;">Est. Destination Impact</div></div>'
-                    f'<div><div style="font-size:1.1rem;font-weight:700;color:#E68161;">{_w_sess:,}</div>'
-                    f'<div style="font-size:10px;opacity:0.60;">Website Sessions</div></div>'
-                    f'<div><div style="font-size:1.1rem;font-weight:700;color:#E68161;">{_w_eng:.1f}%</div>'
-                    f'<div style="font-size:10px;opacity:0.60;">Engagement Rate</div></div>'
-                    f'</div></div>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.info("Website attribution data not available.")
-
-        # ── DMA vs Spend Value bubble chart ───────────────────────────────────
-        if not df_dfy_dma.empty:
-            st.markdown("---")
-            st.markdown('<div class="chart-header">Feeder Market Value Matrix — Visitor Days vs. Avg Spend</div>', unsafe_allow_html=True)
-            st.markdown(
-                '<div class="chart-caption">Who: DMA feeder markets · What: volume vs. value tradeoff · '
-                'Why: identifies high-value fly markets underweighted in campaigns · '
-                'How to act: shift budget toward markets with high spend &amp; growth</div>',
-                unsafe_allow_html=True,
-            )
-            _bub = df_dfy_dma[
-                df_dfy_dma["visitor_days_share_pct"].notna() &
-                df_dfy_dma["avg_spend_usd"].notna()
-            ].copy()
-            if not _bub.empty:
-                _bub_yoy = _bub["visitor_days_vs_compare_pct"].fillna(0)
-                _bubble_colors = [TEAL if v >= 0 else ORANGE for v in _bub_yoy]
-                fig = go.Figure(go.Scatter(
-                    x=_bub["visitor_days_share_pct"].values,
-                    y=_bub["avg_spend_usd"].values,
-                    mode="markers+text",
-                    text=_bub["dma"].values,
-                    textposition="top center",
-                    textfont=dict(size=10, family="Syne, DM Sans, sans-serif"),
-                    marker=dict(
-                        size=[max(12, v * 3) for v in _bub["visitor_days_share_pct"]],
-                        color=_bubble_colors,
-                        opacity=0.75,
-                        line=dict(width=1, color="white"),
-                    ),
-                    hovertemplate=(
-                        "<b>%{text}</b><br>"
-                        "Visitor day share: %{x:.1f}%<br>"
-                        "Avg spend: $%{y:.0f}<extra></extra>"
-                    ),
-                ))
-                fig.update_layout(
-                    xaxis=dict(title="Share of Visitor Days (%)", ticksuffix="%"),
-                    yaxis=dict(title="Avg Spend per Visitor ($)", tickprefix="$"),
-                    showlegend=False,
-                )
-                st.plotly_chart(style_fig(fig, height=380), use_container_width=True, config=PLOTLY_CONFIG)
-                st.caption(
-                    "🟢 Teal = YOY growth · 🟠 Orange = YOY decline. "
-                    "Bubble size = share of visitor days. "
-                    "Upper-right = high value, high volume (premium targets). "
-                    "Upper-left = high spend but low volume (fly-market opportunity)."
-                )
-
-        # ── Sankey: Visitor Flow Origin → Type → Spend ─────────────────────────
-        if not df_dfy_dma.empty and not df_dfy_spend.empty:
-            st.markdown("---")
-            st.markdown('<div class="chart-header">Visitor Flow — Origin to Spend Category (Sankey)</div>', unsafe_allow_html=True)
-            st.markdown(
-                '<div class="chart-caption">WHO visits × WHERE they come from × WHAT they spend on · '
-                'width of flow = relative share · surface hidden revenue concentration</div>',
-                unsafe_allow_html=True,
-            )
-            # Build Sankey nodes and links from real data
-            # Nodes: [Top 5 DMAs] → [Overnight, Day Trip] → [Top 3 Spend Categories]
-            _top_dma_sk = df_dfy_dma[df_dfy_dma["visitor_days_share_pct"].notna()].head(5)
-            _top_spend_sk = df_dfy_spend.head(3)
-
-            # Pull overview KPIs for overnight/daytrip split
-            _ov_sk = df_dfy_ov.iloc[0] if not df_dfy_ov.empty else {}
-            _on_pct = float(_ov_sk.get("overnight_trips_pct", 60) or 60)
-            _dt_pct = float(_ov_sk.get("day_trips_pct", 40) or 40)
-
-            # Node labels
-            _dma_labels = list(_top_dma_sk["dma"].values)
-            _type_labels = ["Overnight Stays", "Day Trips"]
-            _spend_labels = list(_top_spend_sk["category"].values)
-            node_labels = _dma_labels + _type_labels + _spend_labels
-
-            n_dma = len(_dma_labels)
-            idx_on = n_dma      # Overnight
-            idx_dt = n_dma + 1  # Day Trip
-            idx_sp_start = n_dma + 2
-
-            sources, targets, values_sk = [], [], []
-
-            # DMA → trip type
-            total_dma_share = _top_dma_sk["visitor_days_share_pct"].sum()
-            for i, (_, row) in enumerate(_top_dma_sk.iterrows()):
-                share = row["visitor_days_share_pct"] / total_dma_share * 100
-                sources.append(i); targets.append(idx_on); values_sk.append(share * _on_pct / 100)
-                sources.append(i); targets.append(idx_dt); values_sk.append(share * _dt_pct / 100)
-
-            # Trip type → spend category (proportional)
-            total_spend_share = _top_spend_sk["spend_share_pct"].sum()
-            for j, (_, row) in enumerate(_top_spend_sk.iterrows()):
-                sp_share = row["spend_share_pct"] / total_spend_share * 100
-                sources.append(idx_on); targets.append(idx_sp_start + j); values_sk.append(100 * _on_pct / 100 * sp_share / 100)
-                sources.append(idx_dt); targets.append(idx_sp_start + j); values_sk.append(100 * _dt_pct / 100 * sp_share / 100)
-
-            _node_colors = (
-                [TEAL_LIGHT] * n_dma +
-                [TEAL, "#A8D4D9"] +
-                [ORANGE, "#E68161", "#A84B2F"][:len(_spend_labels)]
-            )
-            fig = go.Figure(go.Sankey(
-                node=dict(
-                    pad=18, thickness=22,
-                    line=dict(color="rgba(0,0,0,0)", width=0),
-                    label=node_labels,
-                    color=_node_colors,
-                    hovertemplate="%{label}<extra></extra>",
-                ),
-                link=dict(
-                    source=sources,
-                    target=targets,
-                    value=values_sk,
-                    color="rgba(33,128,141,0.18)",
-                ),
-            ))
-            fig.update_layout(font=dict(family="Syne, DM Sans, sans-serif", size=12))
-            st.plotly_chart(style_fig(fig, height=400), use_container_width=True, config=PLOTLY_CONFIG)
-            st.caption(
-                "Flow width = proportional visitor share. Overnight stays dominate accommodation spend. "
-                "Day trippers concentrate in dining — capturing even 5% as overnight stays = significant room revenue."
-            )
-
-    # ── Website Attribution Deep-Dive ─────────────────────────────────────────
-    st.markdown(_sh("🌐", "Website Attribution — Acquisition Channels & Top Markets", "teal", "DATAFY"), unsafe_allow_html=True)
-    st.caption("Source: Datafy Attribution Website · Q3 2025 · visitdanapoint.com")
-
-    _web_c1, _web_c2 = st.columns(2)
-
-    with _web_c1:
-        st.markdown('<div class="chart-header">Acquisition Channels</div>', unsafe_allow_html=True)
-        if not df_dfy_web_ch.empty:
-            _ch = df_dfy_web_ch.copy()
-            _ch_cols = [c for c in ["channel","sessions","attributable_trips","trip_share_pct"] if c in _ch.columns]
-            if "channel" in _ch.columns and "sessions" in _ch.columns:
-                _ch_s = _ch.sort_values("sessions", ascending=True)
-                fig_ch = go.Figure(go.Bar(
-                    x=_ch_s["sessions"].values,
-                    y=_ch_s["channel"].values,
-                    orientation="h",
-                    marker_color=TEAL,
-                    hovertemplate="<b>%{y}</b><br>Sessions: %{x:,}<extra></extra>",
-                ))
-                fig_ch.update_layout(xaxis_title="Sessions", yaxis_title=None, margin=dict(l=0,r=0,t=20,b=20), height=220)
-                st.plotly_chart(style_fig(fig_ch, height=220), use_container_width=True, config=PLOTLY_CONFIG)
-                with st.expander("📊 View raw channel data"):
-                    st.dataframe(_ch[_ch_cols].reset_index(drop=True), use_container_width=True)
-                    st.download_button("⬇️ Download", _ch[_ch_cols].to_csv(index=False), "website_channels.csv", "text/csv", key="dl_web_ch")
-            else:
-                st.dataframe(_ch.reset_index(drop=True), use_container_width=True)
-        else:
-            st.info("Website channel data not available.")
-
-    with _web_c2:
-        st.markdown('<div class="chart-header">Top Markets — Website Attribution</div>', unsafe_allow_html=True)
-        if not df_dfy_web_mkts.empty:
-            _wm = df_dfy_web_mkts.copy()
-            _wm_cols = [c for c in ["market","sessions","attributable_trips","trip_share_pct"] if c in _wm.columns]
-            if "market" in _wm.columns and len(_wm) > 0:
-                _wm_s = _wm.head(10).sort_values(_wm.columns[1] if len(_wm.columns) > 1 else _wm.columns[0], ascending=True)
-                _x_col = "sessions" if "sessions" in _wm.columns else _wm.columns[1]
-                _y_col = "market" if "market" in _wm.columns else _wm.columns[0]
-                fig_wm = go.Figure(go.Bar(
-                    x=_wm_s[_x_col].values,
-                    y=_wm_s[_y_col].values,
-                    orientation="h",
-                    marker_color=ORANGE,
-                    hovertemplate=f"<b>%{{y}}</b><br>{_x_col}: %{{x:,}}<extra></extra>",
-                ))
-                fig_wm.update_layout(xaxis_title=_x_col.replace("_"," ").title(), yaxis_title=None, margin=dict(l=0,r=0,t=20,b=20), height=220)
-                st.plotly_chart(style_fig(fig_wm, height=220), use_container_width=True, config=PLOTLY_CONFIG)
-                with st.expander("📊 View raw top markets data"):
-                    st.dataframe(_wm[_wm_cols].reset_index(drop=True), use_container_width=True)
-                    st.download_button("⬇️ Download", _wm[_wm_cols].to_csv(index=False), "website_top_markets.csv", "text/csv", key="dl_web_mkts")
-            else:
-                st.dataframe(_wm.reset_index(drop=True), use_container_width=True)
-        else:
-            st.info("Website top markets data not available.")
-
-    # Website DMA comparison
-    if not df_dfy_web_dma.empty and not df_dfy_dma.empty:
-        st.markdown('<div class="chart-header" style="margin-top:12px;">Website DMA Attribution vs. Overall Visitor Days (Q3 2025 vs Annual)</div>', unsafe_allow_html=True)
-        st.caption("Compares website-attributed trip share by DMA (Q3 2025) against overall visitor day share (annual) — reveals which markets convert better via digital.")
-        _wd = df_dfy_web_dma.copy()
-        _od = df_dfy_dma.copy()
-        if "dma" in _wd.columns and "dma" in _od.columns:
-            _merge_col = "attributable_trips_pct" if "attributable_trips_pct" in _wd.columns else (_wd.columns[1] if len(_wd.columns) > 1 else None)
-            _od_col = "visitor_days_share_pct" if "visitor_days_share_pct" in _od.columns else None
-            if _merge_col and _od_col:
-                _comp = _wd[["dma", _merge_col]].merge(_od[["dma", _od_col]], on="dma", how="inner").head(8)
-                if not _comp.empty:
-                    _dmas = _comp["dma"].values
-                    fig_cmp = go.Figure()
-                    fig_cmp.add_trace(go.Bar(name="Website Trip Share (Q3)", x=_dmas, y=_comp[_merge_col].values, marker_color=TEAL))
-                    fig_cmp.add_trace(go.Bar(name="Overall Visitor Days (Annual)", x=_dmas, y=_comp[_od_col].values, marker_color=ORANGE, opacity=0.7))
-                    fig_cmp.update_layout(
-                        barmode="group",
-                        xaxis=dict(
-                            tickangle=-45,
-                            tickfont=dict(size=10),
-                            automargin=True,
-                        ),
-                        yaxis=dict(
-                            title="Share (%)",
-                            ticksuffix="%",
-                            gridcolor="rgba(0,0,0,0.07)",
-                        ),
-                        height=340,
-                        margin=dict(l=40, r=10, t=30, b=120),
-                        legend=dict(orientation="h", y=1.05, x=0, font=dict(size=11)),
-                        paper_bgcolor="rgba(0,0,0,0)",
-                        plot_bgcolor="rgba(0,0,0,0)",
-                    )
-                    st.plotly_chart(style_fig(fig_cmp, height=300), use_container_width=True, config=PLOTLY_CONFIG)
-
-    # ── Visitor Segment Images ─────────────────────────────────────────────────
-    VISITOR_SEGMENT_IMAGES = {
-        "beach":     "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80",
-        "surf":      "https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=400&q=80",
-        "harbor":    "https://images.unsplash.com/photo-1564424224827-cd24b8915874?w=400&q=80",
-        "festival":  "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&q=80",
-        "family":    "https://images.unsplash.com/photo-1511895426328-dc8714191011?w=400&q=80",
-        "luxury":    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=80",
-        "overnight": "https://images.unsplash.com/photo-1455587734955-081b22074882?w=400&q=80",
-        "daytrip":   "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&q=80",
-        "corporate": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80",
-    }
-
-    def segment_image_card(label: str, value: str, img_url: str, delta: str = "") -> str:
-        _delta_html = (f'<div style="font-size:11px;color:#10B981;margin-top:2px;">{delta}</div>'
-                       if delta else "")
-        return (
-            f'<div style="background:rgba(0,0,0,0.03);border-radius:12px;overflow:hidden;'
-            f'border:1px solid rgba(0,200,224,0.14);'
-            f'box-shadow:0 4px 20px rgba(0,0,0,0.40);margin-bottom:12px;backdrop-filter:blur(8px);">'
-            f'<div style="height:100px;overflow:hidden;">'
-            f'<img src="{img_url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" />'
-            f'</div>'
-            f'<div style="padding:10px 14px 12px;">'
-            f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#718096;">{label}</div>'
-            f'<div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,#FFFFFF,#A8D8F0);'
-            f'-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'
-            f'font-family:\'Syne\',sans-serif;">{value}</div>'
-            f'{_delta_html}'
-            f'</div>'
-            f'</div>'
-        )
-
-    # ── Visitor Cluster Visitation ─────────────────────────────────────────────
-    if not df_dfy_clusters.empty:
-        st.markdown(_sh("🗺️", "Visitor Cluster Visitation", "green", "DATAFY"), unsafe_allow_html=True)
-        st.caption("Which Dana Point area clusters attract the most visitor activity · Datafy Annual 2025")
-        _cl = df_dfy_clusters.copy()
-        _cl_share_col = [c for c in _cl.columns if "share" in c.lower() or "pct" in c.lower() or "visits" in c.lower()]
-        _cl_name_col  = [c for c in _cl.columns if "cluster" in c.lower() or "area" in c.lower() or "zone" in c.lower() or "name" in c.lower()]
-        if _cl_share_col and _cl_name_col:
-            _cl_x = _cl_share_col[0]; _cl_y = _cl_name_col[0]
-            _cl_s = _cl.sort_values(_cl_x, ascending=False).head(10)
-
-            # Image-backed cluster cards for top segments
-            _seg_img_map = {
-                "harbor": VISITOR_SEGMENT_IMAGES["harbor"],
-                "beach":  VISITOR_SEGMENT_IMAGES["beach"],
-                "surf":   VISITOR_SEGMENT_IMAGES["surf"],
-                "festival": VISITOR_SEGMENT_IMAGES["festival"],
-                "overnight": VISITOR_SEGMENT_IMAGES["overnight"],
-            }
-            _top_clusters = _cl_s.head(4)
-            _cl_img_cols = st.columns(min(4, len(_top_clusters)))
-            for _cic, (_, _crow) in zip(_cl_img_cols, _top_clusters.iterrows()):
-                _cname = str(_crow[_cl_y])
-                _cval  = f"{float(_crow[_cl_x]):.1f}%" if pd.notna(_crow[_cl_x]) else "—"
-                # Pick image by keyword match
-                _img   = next(
-                    (v for k, v in _seg_img_map.items() if k in _cname.lower()),
-                    VISITOR_SEGMENT_IMAGES["beach"]
-                )
-                with _cic:
-                    st.markdown(segment_image_card(_cname, _cval, _img), unsafe_allow_html=True)
-
-            # Full bar chart below
-            _cl_s_bar = _cl.sort_values(_cl_x, ascending=True).head(10)
-            fig_cl = go.Figure(go.Bar(
-                x=_cl_s_bar[_cl_x].values, y=_cl_s_bar[_cl_y].values,
-                orientation="h", marker_color=TEAL_LIGHT,
-                hovertemplate="<b>%{y}</b><br>Share: %{x:.1f}%<extra></extra>",
-            ))
-            fig_cl.update_layout(xaxis_title="Visitation Share (%)", xaxis_ticksuffix="%", height=280, margin=dict(l=0,r=0,t=20,b=20))
-            st.plotly_chart(style_fig(fig_cl, height=280), use_container_width=True, config=PLOTLY_CONFIG)
-            with st.expander("View raw cluster data"):
-                st.dataframe(_cl.reset_index(drop=True), use_container_width=True)
-                st.download_button("⬇️ Download Cluster Data CSV", _cl.to_csv(index=False).encode(), "cluster_visitation.csv", "text/csv", key="dl_cluster")
-
-    # ── Social & Web Analytics ────────────────────────────────────────────────
-    st.markdown(_sh("📱", "Social & Web Analytics — visitdanapoint.com", "teal", "GA4 · DATAFY"), unsafe_allow_html=True)
-    st.caption("Source: Datafy GA4 Social / Web Analytics · Annual 2025")
-
-    _soc_c1, _soc_c2 = st.columns(2)
-
-    with _soc_c1:
-        st.markdown('<div class="chart-header">Traffic Sources</div>', unsafe_allow_html=True)
-        if not df_dfy_social_traf.empty:
-            _st = df_dfy_social_traf.copy()
-            _src_col  = next((c for c in _st.columns if "source" in c.lower() or "channel" in c.lower() or "medium" in c.lower()), None)
-            _sess_col = next((c for c in _st.columns if "session" in c.lower() or "visits" in c.lower()), None)
-            if _src_col and _sess_col:
-                _st_s = _st.sort_values(_sess_col, ascending=False).head(12)
-                fig_st = go.Figure(go.Bar(
-                    x=_st_s[_src_col].values,
-                    y=_st_s[_sess_col].values,
-                    marker_color=TEAL,
-                    hovertemplate="<b>%{x}</b><br>Sessions: %{y:,}<extra></extra>",
-                ))
-                fig_st.update_layout(xaxis_tickangle=-35, yaxis_title="Sessions", height=260, margin=dict(l=0,r=0,t=20,b=60))
-                st.plotly_chart(style_fig(fig_st, height=260), use_container_width=True, config=PLOTLY_CONFIG)
-            else:
-                st.dataframe(_st.reset_index(drop=True), use_container_width=True)
-            with st.expander("📊 View raw traffic source data"):
-                st.dataframe(_st.reset_index(drop=True), use_container_width=True)
-                st.download_button("⬇️ Download", _st.to_csv(index=False), "traffic_sources.csv", "text/csv", key="dl_traf")
-        else:
-            st.info("Social traffic source data not available.")
-
-    with _soc_c2:
-        st.markdown('<div class="chart-header">Top Pages by Views</div>', unsafe_allow_html=True)
-        if not df_dfy_social_pages.empty:
-            _pg = df_dfy_social_pages.copy()
-            _pg_name = next((c for c in _pg.columns if "page" in c.lower() or "url" in c.lower() or "title" in c.lower()), None)
-            _pg_views = next((c for c in _pg.columns if "view" in c.lower() or "visit" in c.lower() or "session" in c.lower()), None)
-            if _pg_name and _pg_views:
-                _pg_s = _pg.sort_values(_pg_views, ascending=False).head(10)
-                _pg_labels = [str(v)[:35] + "…" if len(str(v)) > 35 else str(v) for v in _pg_s[_pg_name].values]
-                fig_pg = go.Figure(go.Bar(
-                    x=_pg_s[_pg_views].values,
-                    y=_pg_labels,
-                    orientation="h",
-                    marker_color=ORANGE,
-                    hovertemplate="<b>%{y}</b><br>Views: %{x:,}<extra></extra>",
-                ))
-                fig_pg.update_layout(xaxis_title="Page Views", height=310, margin=dict(l=0,r=0,t=20,b=20), yaxis=dict(autorange="reversed"))
-                st.plotly_chart(style_fig(fig_pg, height=310), use_container_width=True, config=PLOTLY_CONFIG)
-            else:
-                st.dataframe(_pg.reset_index(drop=True), use_container_width=True)
-            with st.expander("📊 View raw top pages data"):
-                st.dataframe(_pg.reset_index(drop=True), use_container_width=True)
-                st.download_button("⬇️ Download", _pg.to_csv(index=False), "top_pages.csv", "text/csv", key="dl_pages")
-        else:
-            st.info("Top pages data not available.")
-
-    # Audience Overview KPIs
-    if not df_dfy_social_aud.empty:
-        _aud = df_dfy_social_aud.iloc[0]
-        _aud_metrics = {k: v for k, v in _aud.items() if k not in ("id","loaded_at","report_period_start","report_period_end","website_url") and pd.notna(v)}
-        if _aud_metrics:
-            st.markdown("#### Website Audience KPIs")
-            _aud_cols = st.columns(min(4, len(_aud_metrics)))
-            for _ai, (_ak, _av) in enumerate(_aud_metrics.items()):
-                with _aud_cols[_ai % len(_aud_cols)]:
-                    _disp = f"{float(_av):,.0f}" if isinstance(_av, (int,float)) else str(_av)
-                    st.metric(_ak.replace("_"," ").title(), _disp)
-
-    # ── Social Media Command Center (Later.com) ───────────────────────────────
-    st.markdown(_sh("📲", "Social Media Command Center", "purple", "LATER.COM"), unsafe_allow_html=True)
-    st.caption("Source: Later.com Analytics Export · Instagram · Facebook · TikTok · Layer 2.5 Social Performance")
-
-    _smc_c1, _smc_c2, _smc_c3 = st.columns(3)
-
-    # IG follower trend
-    with _smc_c1:
-        st.markdown('<div class="chart-header">Instagram — Follower Growth</div>', unsafe_allow_html=True)
-        if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns:
-            _ig_p = df_later_ig_profile.sort_values("data_date").tail(30).copy()
-            _ig_cur = int(_ig_p["followers"].iloc[-1]) if len(_ig_p) else 0
-            _ig_prev = int(_ig_p["followers"].iloc[0]) if len(_ig_p) else _ig_cur
-            _ig_delta = _ig_cur - _ig_prev
-            st.metric("Followers", f"{_ig_cur:,}", delta=f"{_ig_delta:+,} (30d)")
-            fig_ig = go.Figure(go.Scatter(
-                x=_ig_p["data_date"], y=_ig_p["followers"],
-                mode="lines", fill="tozeroy",
-                line=dict(color="#E1306C", width=2.5, shape="spline", smoothing=0.8),
-                fillcolor="rgba(225,48,108,0.12)",
-                hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
-            ))
-            fig_ig.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
-                xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)),
-                yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                showlegend=False)
-            st.plotly_chart(fig_ig, use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_followers")
-        else:
-            st.info("No Instagram profile data.")
-
-    # FB follower trend
-    with _smc_c2:
-        st.markdown('<div class="chart-header">Facebook — Follower Growth</div>', unsafe_allow_html=True)
-        if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns:
-            _fb_p = df_later_fb_profile.sort_values("data_date").tail(30).copy()
-            _fb_cur = int(_fb_p["page_followers"].iloc[-1]) if len(_fb_p) else 0
-            _fb_prev = int(_fb_p["page_followers"].iloc[0]) if len(_fb_p) else _fb_cur
-            _fb_delta = _fb_cur - _fb_prev
-            st.metric("Followers", f"{_fb_cur:,}", delta=f"{_fb_delta:+,} (30d)")
-            fig_fb = go.Figure(go.Scatter(
-                x=_fb_p["data_date"], y=_fb_p["page_followers"],
-                mode="lines", fill="tozeroy",
-                line=dict(color="#1877F2", width=2.5, shape="spline", smoothing=0.8),
-                fillcolor="rgba(24,119,242,0.12)",
-                hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
-            ))
-            fig_fb.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
-                xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)),
-                yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                showlegend=False)
-            st.plotly_chart(fig_fb, use_container_width=True, config=PLOTLY_CONFIG, key="social_fb_followers")
-        else:
-            st.info("No Facebook profile data.")
-
-    # TikTok follower trend
-    with _smc_c3:
-        st.markdown('<div class="chart-header">TikTok — Follower Growth</div>', unsafe_allow_html=True)
-        if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns:
-            _tk_p = df_later_tk_profile.sort_values("data_date").tail(30).copy()
-            _tk_cur = int(_tk_p["followers"].iloc[-1]) if len(_tk_p) else 0
-            _tk_prev = int(_tk_p["followers"].iloc[0]) if len(_tk_p) else _tk_cur
-            _tk_delta = _tk_cur - _tk_prev
-            st.metric("Followers", f"{_tk_cur:,}", delta=f"{_tk_delta:+,} (30d)")
-            fig_tk = go.Figure(go.Scatter(
-                x=_tk_p["data_date"], y=_tk_p["followers"],
-                mode="lines", fill="tozeroy",
-                line=dict(color="#010101", width=2.5, shape="spline", smoothing=0.8),
-                fillcolor="rgba(1,1,1,0.10)",
-                hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
-            ))
-            fig_tk.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
-                xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)),
-                yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                showlegend=False)
-            st.plotly_chart(fig_tk, use_container_width=True, config=PLOTLY_CONFIG, key="social_tk_followers")
-        else:
-            st.info("No TikTok profile data.")
-
-    # IG Post Engagement chart
-    if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns:
-        st.markdown('<div class="chart-header">Instagram — Post Engagement Rate (Last 30 Posts)</div>', unsafe_allow_html=True)
-        _igp = df_later_ig_posts.head(30).copy()
-        _igp["label"] = pd.to_datetime(_igp["posted_at"], errors="coerce").dt.strftime("%b %d")
-        _igp["eng_num"] = pd.to_numeric(_igp["engagement_rate"], errors="coerce")
-        _igp = _igp.dropna(subset=["eng_num"]).sort_values("posted_at")
-        if not _igp.empty:
-            _avg_eng = _igp["eng_num"].mean()
-            _eng_colors = ["#E1306C" if v >= _avg_eng else "rgba(225,48,108,0.4)" for v in _igp["eng_num"]]
-            fig_eng = go.Figure(go.Bar(
-                x=_igp["label"], y=_igp["eng_num"],
-                marker=dict(color=_eng_colors, cornerradius=5),
-                hovertemplate="<b>%{x}</b><br>Engagement Rate: %{y:.1f}%<extra></extra>",
-            ))
-            fig_eng.add_hline(y=_avg_eng, line_dash="dot", line_color="rgba(0,0,0,0.3)",
-                              annotation_text=f"Avg {_avg_eng:.1f}%", annotation_position="top right")
-            fig_eng.update_layout(height=240, margin=dict(l=0,r=0,t=20,b=40),
-                yaxis_title="Engagement Rate %",
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)))
-            st.plotly_chart(style_fig(fig_eng, height=240), use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_eng_rate")
-
-    # FB Reach vs IG Reach comparison
-    _smc2_c1, _smc2_c2 = st.columns(2)
-    with _smc2_c1:
-        st.markdown('<div class="chart-header">Facebook — Reach Trend (90d)</div>', unsafe_allow_html=True)
-        if not df_later_fb_profile.empty and "reach" in df_later_fb_profile.columns:
-            _fbr = df_later_fb_profile.sort_values("data_date").tail(90).copy()
-            fig_fbr = go.Figure(go.Scatter(
-                x=_fbr["data_date"], y=_fbr["reach"],
-                mode="lines", fill="tozeroy",
-                line=dict(color="#1877F2", width=1.8),
-                fillcolor="rgba(24,119,242,0.10)",
-                hovertemplate="<b>%{x}</b><br>Reach: %{y:,}<extra></extra>",
-            ))
-            fig_fbr.update_layout(height=200, margin=dict(l=0,r=0,t=4,b=20),
-                yaxis_title="Reach",
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                xaxis=dict(tickangle=-30, tickfont=dict(size=9)))
-            st.plotly_chart(style_fig(fig_fbr, height=200), use_container_width=True, config=PLOTLY_CONFIG, key="social_fb_reach")
-        else:
-            st.info("No Facebook reach data.")
-
-    with _smc2_c2:
-        st.markdown('<div class="chart-header">TikTok — Video Views Trend</div>', unsafe_allow_html=True)
-        if not df_later_tk_profile.empty and "video_views" in df_later_tk_profile.columns:
-            _tkv = df_later_tk_profile.sort_values("data_date").tail(90).copy()
-            _tkv_clean = _tkv.dropna(subset=["video_views"])
-            if not _tkv_clean.empty:
-                fig_tkv = go.Figure(go.Bar(
-                    x=_tkv_clean["data_date"], y=_tkv_clean["video_views"],
-                    marker=dict(color="#010101", opacity=0.75, cornerradius=3),
-                    hovertemplate="<b>%{x}</b><br>Video Views: %{y:,}<extra></extra>",
-                ))
-                fig_tkv.update_layout(height=200, margin=dict(l=0,r=0,t=4,b=20),
-                    yaxis_title="Video Views",
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    xaxis=dict(tickangle=-30, tickfont=dict(size=9)))
-                st.plotly_chart(style_fig(fig_tkv, height=200), use_container_width=True, config=PLOTLY_CONFIG, key="social_tk_views")
-            else:
-                st.info("No TikTok video view data available.")
-        else:
-            st.info("No TikTok profile data.")
-
-    # IG Demographics
-    if not df_later_ig_demo.empty:
-        st.markdown('<div class="chart-header">Instagram — Audience Demographics</div>', unsafe_allow_html=True)
-        _dem_c1, _dem_c2 = st.columns(2)
-        with _dem_c1:
-            # Gender pie
-            _gd = df_later_ig_demo[["gender","total_pct"]].dropna()
-            if not _gd.empty:
-                fig_gd = go.Figure(go.Pie(
-                    labels=_gd["gender"], values=_gd["total_pct"],
-                    hole=0.45,
-                    marker=dict(colors=["#E1306C","#833AB4","#FD1D1D"]),
-                    textinfo="label+percent",
-                    hovertemplate="<b>%{label}</b><br>%{percent}<extra></extra>",
-                ))
-                fig_gd.update_layout(height=220, margin=dict(l=0,r=0,t=20,b=0),
-                    paper_bgcolor="rgba(0,0,0,0)", showlegend=True)
-                st.plotly_chart(fig_gd, use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_gender")
-        with _dem_c2:
-            # Age breakdown stacked bar
-            _age_cols = [c for c in df_later_ig_demo.columns if c.startswith("age_")]
-            if _age_cols:
-                _age_labels = [c.replace("age_","").replace("_"," ").replace("plus","65+") for c in _age_cols]
-                _female = df_later_ig_demo[df_later_ig_demo["gender"].str.lower()=="female"]
-                _male   = df_later_ig_demo[df_later_ig_demo["gender"].str.lower()=="male"]
-                fig_age = go.Figure()
-                if not _female.empty:
-                    fig_age.add_trace(go.Bar(name="Female", x=_age_labels,
-                        y=[float(_female.iloc[0].get(c, 0) or 0) for c in _age_cols],
-                        marker_color="#E1306C"))
-                if not _male.empty:
-                    fig_age.add_trace(go.Bar(name="Male", x=_age_labels,
-                        y=[float(_male.iloc[0].get(c, 0) or 0) for c in _age_cols],
-                        marker_color="#833AB4"))
-                fig_age.update_layout(barmode="group", height=220, margin=dict(l=0,r=0,t=20,b=0),
-                    yaxis_title="% of Audience",
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                st.plotly_chart(fig_age, use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_age")
-
-    st.markdown("---")
-
-    # ── Zartico Historical Reference ─────────────────────────────────────────
-    st.markdown("""<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px 14px;
-margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-<span style="font-size:16px;">📦</span>
-<div>
-  <span style="font-weight:700;color:#92400E;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
-  <span style="font-size:11px;color:#78350F;">Current data: Datafy &amp; CoStar. Zartico provides baseline &amp; trend context only.</span>
-</div></div>""", unsafe_allow_html=True)
-    st.markdown(_sh("📚", "Zartico Historical Reference", "gray", "JUN 2025 SNAPSHOT"), unsafe_allow_html=True)
-
-    if not df_zrt_kpis.empty or not df_zrt_spend.empty:
-        zrt_col1, zrt_col2, zrt_col3 = st.columns(3)
-
-        if not df_zrt_kpis.empty:
-            zk = df_zrt_kpis.iloc[0]
-            with zrt_col1:
-                st.markdown(kpi_card(
-                    "Visitor Device Share",
-                    f"{zk.get('pct_devices_visitors', 0):.1f}%",
-                    "% of all local devices that are visitors",
-                    positive=True,
-                ), unsafe_allow_html=True)
-            with zrt_col2:
-                st.markdown(kpi_card(
-                    "Visitor Spend Share",
-                    f"{zk.get('pct_spend_visitors', 0):.1f}%",
-                    "% of total spend from visitors",
-                    positive=True,
-                ), unsafe_allow_html=True)
-            with zrt_col3:
-                st.markdown(kpi_card(
-                    "Accommodation Spend %",
-                    f"{zk.get('pct_accommodation_spend_visitors', 0):.0f}%",
-                    "% of accommodation spend from visitors",
-                    positive=True,
-                ), unsafe_allow_html=True)
-
-        if not df_zrt_spend.empty:
-            st.markdown("#### Monthly Avg. Visitor Spend vs. Benchmark (Jul 2024–May 2025)")
-            import plotly.graph_objects as go
-            fig_zrt = go.Figure()
-            fig_zrt.add_trace(go.Scatter(
-                x=df_zrt_spend["month_str"], y=df_zrt_spend["avg_visitor_spend"],
-                name="Dana Point Avg. Spend", line=dict(color="#21808D", width=2.5),
-                mode="lines+markers",
-                hovertemplate="<b>%{x}</b><br>Dana Point: $%{y:.0f}<extra></extra>",
-            ))
-            if "benchmark_avg_spend" in df_zrt_spend.columns and df_zrt_spend["benchmark_avg_spend"].notna().any():
+            if not df_zrt_spend.empty:
+                st.markdown("#### Monthly Avg. Visitor Spend vs. Benchmark (Jul 2024–May 2025)")
+                import plotly.graph_objects as go
+                fig_zrt = go.Figure()
                 fig_zrt.add_trace(go.Scatter(
-                    x=df_zrt_spend["month_str"], y=df_zrt_spend["benchmark_avg_spend"],
-                    name="Zartico Benchmark", line=dict(color="#E68161", width=1.5, dash="dot"),
+                    x=df_zrt_spend["month_str"], y=df_zrt_spend["avg_visitor_spend"],
+                    name="Dana Point Avg. Spend", line=dict(color="#21808D", width=2.5),
                     mode="lines+markers",
-                    hovertemplate="<b>%{x}</b><br>Benchmark: $%{y:.0f}<extra></extra>",
+                    hovertemplate="<b>%{x}</b><br>Dana Point: $%{y:.0f}<extra></extra>",
                 ))
-            fig_zrt.update_layout(
-                height=280, margin=dict(l=0, r=0, t=20, b=20),
-                yaxis_title="Avg. Visitor Spend ($)", xaxis_title=None,
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            )
-            st.plotly_chart(fig_zrt, use_container_width=True, config=PLOTLY_CONFIG)
+                if "benchmark_avg_spend" in df_zrt_spend.columns and df_zrt_spend["benchmark_avg_spend"].notna().any():
+                    fig_zrt.add_trace(go.Scatter(
+                        x=df_zrt_spend["month_str"], y=df_zrt_spend["benchmark_avg_spend"],
+                        name="Zartico Benchmark", line=dict(color="#E68161", width=1.5, dash="dot"),
+                        mode="lines+markers",
+                        hovertemplate="<b>%{x}</b><br>Benchmark: $%{y:.0f}<extra></extra>",
+                    ))
+                fig_zrt.update_layout(
+                    height=280, margin=dict(l=0, r=0, t=20, b=20),
+                    yaxis_title="Avg. Visitor Spend ($)", xaxis_title=None,
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                )
+                st.plotly_chart(fig_zrt, use_container_width=True, config=PLOTLY_CONFIG)
 
-        if not df_zrt_overnight.empty:
-            st.markdown("#### Monthly Overnight Visitor % Trend (Zartico Historical)")
-            fig_ov = go.Figure()
-            fig_ov.add_trace(go.Bar(
-                x=df_zrt_overnight["month_str"], y=df_zrt_overnight["pct_overnight"],
-                marker_color="#21808D", name="Overnight %",
-                hovertemplate="<b>%{x}</b><br>Overnight: %{y:.1f}%<extra></extra>",
-            ))
-            fig_ov.update_layout(
-                height=240, margin=dict(l=0, r=0, t=20, b=20),
-                yaxis_title="Overnight %", yaxis_ticksuffix="%",
-            )
-            st.plotly_chart(fig_ov, use_container_width=True, config=PLOTLY_CONFIG)
+            if not df_zrt_overnight.empty:
+                st.markdown("#### Monthly Overnight Visitor % Trend (Zartico Historical)")
+                fig_ov = go.Figure()
+                fig_ov.add_trace(go.Bar(
+                    x=df_zrt_overnight["month_str"], y=df_zrt_overnight["pct_overnight"],
+                    marker_color="#21808D", name="Overnight %",
+                    hovertemplate="<b>%{x}</b><br>Overnight: %{y:.1f}%<extra></extra>",
+                ))
+                fig_ov.update_layout(
+                    height=240, margin=dict(l=0, r=0, t=20, b=20),
+                    yaxis_title="Overnight %", yaxis_ticksuffix="%",
+                )
+                st.plotly_chart(fig_ov, use_container_width=True, config=PLOTLY_CONFIG)
 
-        if not df_zrt_markets.empty:
-            st.markdown("#### Top Visitor Origin Markets (Zartico Q1 2025)")
-            _zrt_top = df_zrt_markets.sort_values("rank").head(10)
-            fig_mkt = go.Figure(go.Bar(
-                x=_zrt_top["pct_visitors"],
-                y=_zrt_top["market"],
-                orientation="h",
-                marker_color="#21808D",
-                hovertemplate="<b>%{y}</b><br>%{x:.1f}% of visitors<extra></extra>",
-            ))
-            fig_mkt.update_layout(
-                height=320, margin=dict(l=0, r=0, t=20, b=20),
-                xaxis_title="% of Visitors", yaxis=dict(autorange="reversed"),
-            )
-            st.plotly_chart(fig_mkt, use_container_width=True, config=PLOTLY_CONFIG)
+            if not df_zrt_markets.empty:
+                st.markdown("#### Top Visitor Origin Markets (Zartico Q1 2025)")
+                _zrt_top = df_zrt_markets.sort_values("rank").head(10)
+                fig_mkt = go.Figure(go.Bar(
+                    x=_zrt_top["pct_visitors"],
+                    y=_zrt_top["market"],
+                    orientation="h",
+                    marker_color="#21808D",
+                    hovertemplate="<b>%{y}</b><br>%{x:.1f}% of visitors<extra></extra>",
+                ))
+                fig_mkt.update_layout(
+                    height=320, margin=dict(l=0, r=0, t=20, b=20),
+                    xaxis_title="% of Visitors", yaxis=dict(autorange="reversed"),
+                )
+                st.plotly_chart(fig_mkt, use_container_width=True, config=PLOTLY_CONFIG)
 
-        if not df_zrt_events.empty:
-            st.markdown("#### Event Impact Analysis (Zartico Historical)")
-            ze = df_zrt_events.iloc[0]
-            ev_c1, ev_c2, ev_c3 = st.columns(3)
-            with ev_c1:
-                st.markdown(kpi_card(
-                    "Total Spend Lift", f"+{ze.get('change_total_spend_pct',0):.1f}%",
-                    "vs. 4-week baseline", positive=True,
-                ), unsafe_allow_html=True)
-            with ev_c2:
-                st.markdown(kpi_card(
-                    "Visitor Spend Lift", f"+{ze.get('change_visitor_spend_pct',0):.1f}%",
-                    "visitor spend increase during event", positive=True,
-                ), unsafe_allow_html=True)
-            with ev_c3:
-                st.markdown(kpi_card(
-                    "Accommodation Share", f"{ze.get('pct_accommodation_spend',0):.0f}%",
-                    "of visitor spend during event", positive=True,
-                ), unsafe_allow_html=True)
-    else:
-        st.info("Run `python scripts/load_zartico_reports.py` to load Zartico historical data.")
+            if not df_zrt_events.empty:
+                st.markdown("#### Event Impact Analysis (Zartico Historical)")
+                ze = df_zrt_events.iloc[0]
+                ev_c1, ev_c2, ev_c3 = st.columns(3)
+                with ev_c1:
+                    st.markdown(kpi_card(
+                        "Total Spend Lift", f"+{ze.get('change_total_spend_pct',0):.1f}%",
+                        "vs. 4-week baseline", positive=True,
+                    ), unsafe_allow_html=True)
+                with ev_c2:
+                    st.markdown(kpi_card(
+                        "Visitor Spend Lift", f"+{ze.get('change_visitor_spend_pct',0):.1f}%",
+                        "visitor spend increase during event", positive=True,
+                    ), unsafe_allow_html=True)
+                with ev_c3:
+                    st.markdown(kpi_card(
+                        "Accommodation Share", f"{ze.get('pct_accommodation_spend',0):.0f}%",
+                        "of visitor spend during event", positive=True,
+                    ), unsafe_allow_html=True)
+        else:
+            st.info("Run `python scripts/load_zartico_reports.py` to load Zartico historical data.")
 
-    st.markdown("---")
+        st.markdown("---")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 5 — FEEDER MARKETS
-# ══════════════════════════════════════════════════════════════════════════════
+    # ══════════════════════════════════════════════════════════════════════════════
+    # TAB 5 — FEEDER MARKETS
+    # ══════════════════════════════════════════════════════════════════════════════
 with tab_fm:
     _tab_controls("fm")
     st.markdown("""
@@ -12216,1625 +12323,1633 @@ with tab_cs:
     except Exception:
         pass
 
-    # ── AI CoStar Analysis Panel ───────────────────────────────────────────────
-    with st.expander("🧠 CoStar VDP Analyst — Deep Market Insights", expanded=True):
-        st.markdown('<span class="ai-chip">MARKET INTELLIGENCE</span>', unsafe_allow_html=True)
 
-        COSTAR_PROMPTS = [
-            ("🏨 Market vs. Portfolio",  "cs_mkt_vs_portfolio"),
-            ("📈 Rate Positioning",      "cs_rate_position"),
-            ("🏗️ Supply Impact",         "cs_supply_impact"),
-            ("🎯 Segment Strategy",      "cs_segment"),
-            ("💰 Revenue Opportunity",   "cs_revenue_opp"),
-            ("📊 Competitive Ranking",   "cs_comp_rank"),
+    # ── Competitive Intel Sub-Tabs ──────────────────────────────────────────────
+    _cs_t1, _cs_t2 = st.tabs(["📊 Market Performance", "📡 External Signals"])
+
+    # ── Market Performance → sub-tab 1 ─────────────────────────────────────────
+    with _cs_t1:
+        # ── AI CoStar Analysis Panel ───────────────────────────────────────────────
+        with st.expander("🧠 CoStar VDP Analyst — Deep Market Insights", expanded=True):
+            st.markdown('<span class="ai-chip">MARKET INTELLIGENCE</span>', unsafe_allow_html=True)
+
+            COSTAR_PROMPTS = [
+                ("🏨 Market vs. Portfolio",  "cs_mkt_vs_portfolio"),
+                ("📈 Rate Positioning",      "cs_rate_position"),
+                ("🏗️ Supply Impact",         "cs_supply_impact"),
+                ("🎯 Segment Strategy",      "cs_segment"),
+                ("💰 Revenue Opportunity",   "cs_revenue_opp"),
+                ("📊 Competitive Ranking",   "cs_comp_rank"),
+            ]
+
+            def build_costar_prompt(key: str, m: dict) -> str:
+                """Build AI prompts enriched with CoStar market context."""
+                cs_ctx = ""
+                if not df_cs_snap.empty:
+                    snap = df_cs_snap.iloc[0]
+                    cs_ctx = (
+                        f"\nCoStar South Orange County Market (2024 Full Year):\n"
+                        f"• Market occupancy: {snap.get('occupancy_pct', 0):.1f}% "
+                        f"({snap.get('occ_yoy_pp', 0):+.1f}pp YOY)\n"
+                        f"• Market ADR: ${snap.get('adr_usd', 0):.2f} "
+                        f"({snap.get('adr_yoy_pct', 0):+.1f}% YOY)\n"
+                        f"• Market RevPAR: ${snap.get('revpar_usd', 0):.2f} "
+                        f"({snap.get('revpar_yoy_pct', 0):+.1f}% YOY)\n"
+                        f"• Total market supply: {snap.get('total_supply_rooms', 0):,} rooms\n"
+                        f"• Annual room revenue: ${snap.get('room_revenue_usd', 0)/1e6:.1f}M\n"
+                    )
+                if not df_cs_chain.empty:
+                    chain_2024 = df_cs_chain[df_cs_chain["year"] == "2024"]
+                    if not chain_2024.empty:
+                        luxury = chain_2024[chain_2024["chain_scale"] == "Luxury"]
+                        upupscale = chain_2024[chain_2024["chain_scale"] == "Upper Upscale"]
+                        if not luxury.empty:
+                            cs_ctx += f"• Luxury segment ADR: ${luxury.iloc[0]['adr_usd']:.0f} · Occ: {luxury.iloc[0]['occupancy_pct']:.1f}%\n"
+                        if not upupscale.empty:
+                            cs_ctx += f"• Upper Upscale ADR: ${upupscale.iloc[0]['adr_usd']:.0f} · Occ: {upupscale.iloc[0]['occupancy_pct']:.1f}%\n"
+                pipeline_rooms = df_cs_pipe["rooms"].sum() if not df_cs_pipe.empty else 0
+                cs_ctx += f"• Active pipeline: {pipeline_rooms:,} rooms across {len(df_cs_pipe)} projects\n"
+
+                base = _base(m) if m else "No STR portfolio data loaded."
+                prompts = {
+                    "cs_mkt_vs_portfolio": (
+                        f"{base}\n{cs_ctx}\n"
+                        "Compare the VDP Select Portfolio performance (76.4% occ, $288.50 ADR, "
+                        "$220.42 RevPAR) to the broader South OC market. Identify where the portfolio "
+                        "is outperforming or underperforming the market, and provide 3 specific "
+                        "recommendations to improve market share index (MPI/ARI/RGI)."
+                    ),
+                    "cs_rate_position": (
+                        f"{base}\n{cs_ctx}\n"
+                        "The Waldorf Astoria Monarch Beach commands $850 ADR at 71% occupancy. "
+                        "The VDP portfolio blended ADR is $288.50. Analyze the rate positioning "
+                        "gap across chain scales (Luxury at $782, Upper Upscale at $298, Upscale "
+                        "at $199) and recommend a rate ladder strategy for the VDP portfolio to "
+                        "maximize its ARI (Average Rate Index) relative to the market."
+                    ),
+                    "cs_supply_impact": (
+                        f"{base}\n{cs_ctx}\n"
+                        f"There are {pipeline_rooms:,} new hotel rooms in the active supply pipeline "
+                        "for South OC (Dana Cove Hotel 136 rooms Q3 2025, Strands Beach Hotel 88 "
+                        "rooms Q1 2026, Monarch Beach Residences 48 rooms Q2 2026, plus 3 others). "
+                        "Analyze the competitive impact of this new supply on VDP portfolio occupancy "
+                        "and ADR. Which segments face the most pressure? What pre-emptive strategy "
+                        "should VDP recommend to member hotels?"
+                    ),
+                    "cs_segment": (
+                        f"{base}\n{cs_ctx}\n"
+                        "The chain scale analysis shows Luxury at $782 ADR (71% occ), Upper Upscale "
+                        "at $298 (77.4% occ), and Upscale at $199 (79.1% occ). Independent hotels "
+                        "achieve $296 ADR at 73.6% occ — nearly matching Upper Upscale rates with "
+                        "smaller inventory. Identify the most underserved segment in Dana Point's "
+                        "market and the highest-margin positioning opportunity for VDP member hotels."
+                    ),
+                    "cs_revenue_opp": (
+                        f"{base}\n{cs_ctx}\n"
+                        "South OC generated $1.15B in room revenue in 2024. VDP portfolio "
+                        "contributes approximately $220M of that at current pace. Quantify the "
+                        "revenue gap between VDP portfolio performance and market-leading properties. "
+                        "Model the incremental room revenue if VDP portfolio achieved market-average "
+                        "ADR and occupancy. Express in annual and TBID-revenue terms."
+                    ),
+                    "cs_comp_rank": (
+                        f"{base}\n{cs_ctx}\n"
+                        "The competitive set ranking shows: Waldorf Astoria (RGI 273.9), "
+                        "Ritz-Carlton (RGI 231.2), Pacific Edge Boutique (RGI 131.4), "
+                        "Laguna Cliffs Marriott (RGI 105.1), VDP Portfolio baseline (RGI 100.0). "
+                        "Analyze the MPI, ARI, and RGI spread across the comp set. Which "
+                        "properties represent the strongest competitive threat to the VDP portfolio? "
+                        "Which represent a model VDP members should benchmark against?"
+                    ),
+                }
+                return prompts.get(key, f"{base}\n{cs_ctx}\nProvide market intelligence insights.")
+
+            btn_cols_cs = st.columns(3)
+            for i, (label, key) in enumerate(COSTAR_PROMPTS):
+                with btn_cols_cs[i % 3]:
+                    if st.button(label, key=f"cs_btn_{key}", use_container_width=True):
+                        st.session_state.ai_current_prompt = build_costar_prompt(key, m)
+                        st.session_state.ai_prompt_label   = label
+                        st.session_state.ai_needs_call     = True
+
+            if st.session_state.get("ai_needs_call") and st.session_state.get("ai_current_prompt"):
+                st.session_state.ai_needs_call = False
+                label_disp = st.session_state.get("ai_prompt_label", "Analysis")
+                st.markdown(f"**{label_disp}**")
+                _cs_mdl = st.session_state.get("selected_model", CLAUDE_MODEL)
+                _cs_info = AI_MODELS.get(_cs_mdl, {})
+                _cs_label = f"{_cs_info.get('badge','🟦')} {_cs_info.get('label', _cs_mdl)}"
+                _cs_any_ai = (
+                    (api_key_valid and ANTHROPIC_AVAILABLE) or
+                    (bool(_OPENAI_KEY) and OPENAI_AVAILABLE) or
+                    (bool(_GOOGLE_AI_KEY) and GEMINI_AVAILABLE) or
+                    (bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE)
+                )
+                if _cs_any_ai:
+                    st.caption(f"Analyzing with {_cs_label}")
+                    with st.spinner("Running deep market analysis…"):
+                        st.write_stream(stream_ai_response(st.session_state.ai_current_prompt, _cs_mdl, _ai_keys))
+                else:
+                    st.info(local_fallback("board", m) if m else "No data. Run the pipeline first.")
+
+        st.markdown(sec_div("🏨 South OC Market Overview"), unsafe_allow_html=True)
+
+        # ── Market Overview KPI Cards ──────────────────────────────────────────────
+        st.markdown(_sh("🏨", "South OC Market Overview · Full Year 2024 (Latest Available)", "indigo", "COSTAR"), unsafe_allow_html=True)
+        st.caption("Source: CoStar Hospitality Analytics · Full Year 2024 Annual Data · Extracted from March 2026 CoStar Report · Current STR data (through Feb 2026) is in the Hotel Performance tab")
+
+        if not df_cs_snap.empty:
+            # Prefer South OC or Newport Beach/Dana Point 2024 annual data
+            snap_df = df_cs_snap[
+                (df_cs_snap["report_period"] == "2024-12-31") &
+                (df_cs_snap["market"].isin(["South Orange County CA", "Newport Beach/Dana Point"]))
+            ]
+            if snap_df.empty:
+                snap_df = df_cs_snap[df_cs_snap["report_period"] == "2024-12-31"]
+            if snap_df.empty:
+                snap_df = df_cs_snap[
+                    df_cs_snap["market"].isin(["South Orange County CA", "Newport Beach/Dana Point"])
+                ]
+            if snap_df.empty:
+                snap_df = df_cs_snap.iloc[0:1]
+            snap_df = snap_df.fillna(0)
+            snap = snap_df.iloc[0]
+
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                st.markdown(kpi_card(
+                    "Market Occupancy", f"{snap['occupancy_pct']:.1f}%",
+                    f"{snap['occ_yoy_pp']:+.1f}pp YOY",
+                    positive=(snap['occ_yoy_pp'] >= 0),
+                    tooltip="Rooms Sold ÷ Rooms Available. Above 80% signals compression opportunity.",
+                ), unsafe_allow_html=True)
+            with c2:
+                st.markdown(kpi_card(
+                    "Market ADR", f"${snap['adr_usd']:.2f}",
+                    f"{snap['adr_yoy_pct']:+.1f}% YOY",
+                    positive=(snap['adr_yoy_pct'] >= 0),
+                    tooltip="Average Daily Rate = Room Revenue ÷ Rooms Sold. Measures pricing power.",
+                ), unsafe_allow_html=True)
+            with c3:
+                st.markdown(kpi_card(
+                    "Market RevPAR", f"${snap['revpar_usd']:.2f}",
+                    f"{snap['revpar_yoy_pct']:+.1f}% YOY",
+                    positive=(snap['revpar_yoy_pct'] >= 0),
+                    tooltip="Revenue Per Available Room = ADR × Occupancy. Primary hotel health index.",
+                ), unsafe_allow_html=True)
+            with c4:
+                rev_b = snap['room_revenue_usd'] / 1e9
+                st.markdown(kpi_card(
+                    "Annual Room Revenue", f"${rev_b:.2f}B",
+                    f"{snap['demand_yoy_pct']:+.1f}% demand YOY",
+                    positive=(snap['demand_yoy_pct'] >= 0),
+                    tooltip="Total room revenue for the South OC submarket. Demand YOY = rooms sold growth rate.",
+                ), unsafe_allow_html=True)
+
+            # VDP vs Market comparison row
+            st.markdown("#### VDP Portfolio vs. South OC Market · Full Year 2024 Baseline")
+            col_a, col_b, col_c = st.columns(3)
+            # Use live DB annual averages for 2024; fall back to 30-day if no annual data
+            _2024_kpi = df_kpi[df_kpi["as_of_date"].astype(str).str.startswith("2024")] if not df_kpi.empty else pd.DataFrame()
+            vdp_occ = float(_2024_kpi["occ_pct"].mean()) if not _2024_kpi.empty else m.get("occ_30", 76.4)
+            vdp_adr = float(_2024_kpi["adr"].mean())     if not _2024_kpi.empty else m.get("adr_30", 288.50)
+            vdp_rvp = float(_2024_kpi["revpar"].mean())  if not _2024_kpi.empty else m.get("revpar_30", 220.42)
+            mkt_occ = float(snap["occupancy_pct"])
+            mkt_adr = float(snap["adr_usd"])
+            mkt_rvp = float(snap["revpar_usd"])
+
+            with col_a:
+                diff = vdp_occ - mkt_occ
+                st.markdown(kpi_card(
+                    "Occ: Portfolio vs. Market",
+                    f"{vdp_occ:.1f}% / {mkt_occ:.1f}%",
+                    f"MPI: {(vdp_occ/mkt_occ*100):.1f} · {diff:+.1f}pp gap",
+                    positive=(diff >= 0),
+                ), unsafe_allow_html=True)
+            with col_b:
+                diff = ((vdp_adr - mkt_adr) / mkt_adr * 100)
+                st.markdown(kpi_card(
+                    "ADR: Portfolio vs. Market",
+                    f"${vdp_adr:.0f} / ${mkt_adr:.0f}",
+                    f"ARI: {(vdp_adr/mkt_adr*100):.1f} · {diff:+.1f}%",
+                    positive=(diff >= 0),
+                ), unsafe_allow_html=True)
+            with col_c:
+                diff = ((vdp_rvp - mkt_rvp) / mkt_rvp * 100)
+                st.markdown(kpi_card(
+                    "RevPAR: Portfolio vs. Market",
+                    f"${vdp_rvp:.0f} / ${mkt_rvp:.0f}",
+                    f"RGI: {(vdp_rvp/mkt_rvp*100):.1f} · {diff:+.1f}%",
+                    positive=(diff >= 0),
+                ), unsafe_allow_html=True)
+        else:
+            st.markdown(empty_state("📊", "No CoStar snapshot data.",
+                "Run scripts/load_costar_reports.py to populate market data."),
+                unsafe_allow_html=True)
+
+        st.markdown(sec_div("📈 Market Monthly Performance — 24-Month Trend"), unsafe_allow_html=True)
+
+        # ── Monthly Performance Trend ──────────────────────────────────────────────
+        st.markdown("### Market Monthly Performance — 24-Month Trend")
+
+        if not df_cs_mon.empty:
+            # Filter last 24 months
+            cs_plot = df_cs_mon.tail(24).copy()
+
+            col_left, col_right = st.columns(2)
+            with col_left:
+                st.markdown('<div class="chart-header">Market Occupancy & ADR Trend</div>',
+                            unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">South OC market — monthly CoStar data</div>',
+                            unsafe_allow_html=True)
+                fig_cs1 = make_subplots(specs=[[{"secondary_y": True}]])
+                fig_cs1.add_trace(go.Scatter(
+                    x=cs_plot["as_of_date"], y=cs_plot["occupancy_pct"],
+                    name="Market Occ %", line=dict(color=TEAL, width=2.5),
+                    hovertemplate="<b>%{x|%b %Y}</b><br>Occ: %{y:.1f}%<extra></extra>",
+                ), secondary_y=False)
+                fig_cs1.add_trace(go.Bar(
+                    x=cs_plot["as_of_date"], y=cs_plot["adr_usd"],
+                    name="Market ADR $", marker_color=f"rgba(230,129,97,0.45)",
+                    hovertemplate="<b>%{x|%b %Y}</b><br>ADR: $%{y:.0f}<extra></extra>",
+                ), secondary_y=True)
+                fig_cs1.update_yaxes(title_text="Occupancy %", secondary_y=False,
+                                      tickformat=".0f", ticksuffix="%")
+                fig_cs1.update_yaxes(title_text="ADR $", secondary_y=True,
+                                      tickformat="$,.0f")
+                st.plotly_chart(style_fig(fig_cs1, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+
+            with col_right:
+                st.markdown('<div class="chart-header">Market RevPAR Trend</div>',
+                            unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">South OC monthly RevPAR with YOY change overlay</div>',
+                            unsafe_allow_html=True)
+                cs_yoy = cs_plot.dropna(subset=["revpar_yoy_pct"])
+                fig_cs2 = make_subplots(specs=[[{"secondary_y": True}]])
+                fig_cs2.add_trace(go.Scatter(
+                    x=cs_plot["as_of_date"], y=cs_plot["revpar_usd"],
+                    name="RevPAR $", fill="tozeroy",
+                    fillcolor=f"rgba(33,128,141,0.12)",
+                    line=dict(color=TEAL, width=2.5),
+                    hovertemplate="<b>%{x|%b %Y}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
+                ), secondary_y=False)
+                if not cs_yoy.empty:
+                    pos_mask = cs_yoy["revpar_yoy_pct"] >= 0
+                    fig_cs2.add_trace(go.Bar(
+                        x=cs_yoy.loc[pos_mask, "as_of_date"],
+                        y=cs_yoy.loc[pos_mask, "revpar_yoy_pct"],
+                        name="YOY % (pos)", marker_color="rgba(33,128,141,0.55)",
+                        hovertemplate="<b>%{x|%b %Y}</b><br>YOY: %{y:+.1f}%<extra></extra>",
+                    ), secondary_y=True)
+                    fig_cs2.add_trace(go.Bar(
+                        x=cs_yoy.loc[~pos_mask, "as_of_date"],
+                        y=cs_yoy.loc[~pos_mask, "revpar_yoy_pct"],
+                        name="YOY % (neg)", marker_color="rgba(192,21,47,0.55)",
+                        hovertemplate="<b>%{x|%b %Y}</b><br>YOY: %{y:+.1f}%<extra></extra>",
+                    ), secondary_y=True)
+                fig_cs2.update_yaxes(title_text="RevPAR $", secondary_y=False, tickformat="$,.0f")
+                fig_cs2.update_yaxes(title_text="YOY %", secondary_y=True, ticksuffix="%")
+                st.plotly_chart(style_fig(fig_cs2, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+
+            # Seasonality insight
+            if len(cs_plot) >= 12:
+                peak_row = cs_plot.loc[cs_plot["revpar_usd"].idxmax()]
+                trough_row = cs_plot.loc[cs_plot["revpar_usd"].idxmin()]
+                peak_mo = peak_row["as_of_date"].strftime("%b %Y")
+                trough_mo = trough_row["as_of_date"].strftime("%b %Y")
+                seasonal_range = peak_row["revpar_usd"] - trough_row["revpar_usd"]
+                st.markdown(
+                    insight_card(
+                        f"Market Seasonality: {seasonal_range:.0f} RevPAR swing",
+                        f"Peak: **{peak_mo}** at ${peak_row['revpar_usd']:.0f} RevPAR · "
+                        f"Trough: **{trough_mo}** at ${trough_row['revpar_usd']:.0f} RevPAR. "
+                        f"The {seasonal_range:.0f} RevPAR spread between peak and trough months "
+                        f"underscores the critical importance of aggressive summer rate positioning "
+                        f"and shoulder-season demand generation to smooth revenue over the full year.",
+                        kind="positive",
+                    ),
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown(empty_state("📈", "No monthly CoStar data.",
+                "Run scripts/load_costar_reports.py to populate trend data."),
+                unsafe_allow_html=True)
+
+        st.markdown(sec_div("🔗 Chain Scale Performance Breakdown"), unsafe_allow_html=True)
+
+        # ── Chain Scale Breakdown ──────────────────────────────────────────────────
+        st.markdown("### Chain Scale Performance Breakdown · Full Year 2024")
+
+        if not df_cs_chain.empty:
+            chain_2024 = df_cs_chain[df_cs_chain["year"] == "2024"].sort_values(
+                "revpar_usd", ascending=False
+            )
+
+            col_ch1, col_ch2 = st.columns(2)
+            with col_ch1:
+                st.markdown('<div class="chart-header">RevPAR by Chain Scale</div>',
+                            unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">South OC market 2024 · Full-year average</div>',
+                            unsafe_allow_html=True)
+                colors_chain = [TEAL if cs == "Upper Upscale" else
+                               ("#21808D" if cs == "Luxury" else TEAL_LIGHT)
+                               for cs in chain_2024["chain_scale"]]
+                fig_ch1 = go.Figure(go.Bar(
+                    x=chain_2024["chain_scale"],
+                    y=chain_2024["revpar_usd"],
+                    marker_color=[TEAL, TEAL_LIGHT, "#4EC6D3", ORANGE, "#E68161", "#A84B2F"],
+                    text=[f"${v:.0f}" for v in chain_2024["revpar_usd"]],
+                    textposition="outside",
+                    hovertemplate="<b>%{x}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
+                ))
+                st.plotly_chart(style_fig(fig_ch1, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+
+            with col_ch2:
+                st.markdown('<div class="chart-header">Market Share by Chain Scale (RevPAR)</div>',
+                            unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">% of total market RevPAR contribution</div>',
+                            unsafe_allow_html=True)
+                fig_ch2 = go.Figure(go.Pie(
+                    labels=chain_2024["chain_scale"],
+                    values=chain_2024["market_share_revpar_pct"],
+                    hole=0.46,
+                    marker_colors=[TEAL, TEAL_LIGHT, "#4EC6D3", ORANGE, "#E68161", "#c0152f"],
+                    hovertemplate="<b>%{label}</b><br>Share: %{percent}<extra></extra>",
+                ))
+                fig_ch2.update_layout(
+                    showlegend=True, margin=dict(t=10, b=10, l=10, r=10),
+                    legend=dict(font=dict(size=11)),
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                )
+                st.plotly_chart(fig_ch2, use_container_width=True, config=PLOTLY_CONFIG)
+
+            # Chain scale data table
+            _chain_display = chain_2024[["chain_scale","num_properties","supply_rooms",
+                                          "occupancy_pct","adr_usd","revpar_usd",
+                                          "market_share_revpar_pct"]].copy()
+            _chain_display.columns = ["Segment","Properties","Rooms",
+                                       "Occ %","ADR $","RevPAR $","Mkt Share %"]
+            _chain_display["Occ %"]       = _chain_display["Occ %"].map("{:.1f}%".format)
+            _chain_display["ADR $"]       = _chain_display["ADR $"].map("${:,.2f}".format)
+            _chain_display["RevPAR $"]    = _chain_display["RevPAR $"].map("${:,.2f}".format)
+            _chain_display["Mkt Share %"] = _chain_display["Mkt Share %"].map("{:.1f}%".format)
+            st.dataframe(_chain_display, use_container_width=True, hide_index=True)
+            st.download_button("⬇️ Download Chain Scale CSV", _chain_display.to_csv(index=False).encode(), "chain_scale_performance.csv", "text/csv", key="dl_chain")
+
+            # Key insight
+            luxury_row = chain_2024[chain_2024["chain_scale"] == "Luxury"].iloc[0]
+            upup_row   = chain_2024[chain_2024["chain_scale"] == "Upper Upscale"].iloc[0]
+            st.markdown(
+                insight_card(
+                    "Luxury Dominance: 36.2% of Market RevPAR Revenue",
+                    f"Luxury segment (Ritz-Carlton + Waldorf Astoria) generates **36.2%** of total "
+                    f"market RevPAR revenue from just **3 properties** and **{luxury_row['supply_rooms']:,} rooms** — "
+                    f"with ${luxury_row['revpar_usd']:.0f} RevPAR vs. ${upup_row['revpar_usd']:.0f} "
+                    f"for Upper Upscale. The luxury ADR premium ({luxury_row['adr_usd']/upup_row['adr_usd']:.1f}x "
+                    f"above Upper Upscale) defines the Dana Point rate ceiling and sets aspirational "
+                    f"benchmarks for upper-tier VDP member hotels.",
+                    kind="positive",
+                ),
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(empty_state("📊", "No chain scale data.",
+                "Run scripts/load_costar_reports.py to populate segment data."),
+                unsafe_allow_html=True)
+
+        st.markdown(sec_div("🏗️ Active Supply Pipeline"), unsafe_allow_html=True)
+
+        # ── Supply Pipeline ────────────────────────────────────────────────────────
+        st.markdown("### Active Supply Pipeline")
+
+        if not df_cs_pipe.empty:
+            pipe_total = df_cs_pipe["rooms"].sum()
+            under_const = df_cs_pipe[df_cs_pipe["status"] == "Under Construction"]
+            planned     = df_cs_pipe[df_cs_pipe["status"].isin(["Planned", "Final Planning / Permitting"])]
+            uc_rooms    = under_const["rooms"].sum() if not under_const.empty else 0
+            pl_rooms    = planned["rooms"].sum() if not planned.empty else 0
+
+            c_p1, c_p2, c_p3 = st.columns(3)
+            with c_p1:
+                st.markdown(kpi_card(
+                    "Total Pipeline Rooms", f"{pipe_total:,}",
+                    f"{len(df_cs_pipe)} active projects",
+                    positive=True, neutral=True,
+                    tooltip="Compression Days: Nights when occupancy exceeds 80% or 90% — rate-increase signal.",
+                ), unsafe_allow_html=True)
+            with c_p2:
+                st.markdown(kpi_card(
+                    "Under Construction", f"{uc_rooms:,} rooms",
+                    f"{len(under_const)} project(s) · opening 2025",
+                    positive=True, neutral=True,
+                    tooltip="New hotel rooms currently under active construction in the South OC submarket.",
+                ), unsafe_allow_html=True)
+            with c_p3:
+                st.markdown(kpi_card(
+                    "Planned / Permitting", f"{pl_rooms:,} rooms",
+                    f"{len(planned)} project(s) · opening 2026–2027",
+                    positive=False, neutral=True,
+                    tooltip="Rooms in planning or permitting phase — potential future supply impact.",
+                ), unsafe_allow_html=True)
+
+            # Pipeline bar chart
+            st.markdown('<div class="chart-header">Pipeline Projects by Rooms & Status</div>',
+                        unsafe_allow_html=True)
+            status_colors = {
+                "Under Construction":             TEAL,
+                "Final Planning / Permitting":    ORANGE,
+                "Planned":                        TEAL_LIGHT,
+            }
+            pipe_colors = [status_colors.get(s, "#626C71") for s in df_cs_pipe["status"]]
+            fig_pipe = go.Figure(go.Bar(
+                x=df_cs_pipe["property_name"],
+                y=df_cs_pipe["rooms"],
+                marker_color=pipe_colors,
+                text=[f"{r} rooms<br>{s}" for r, s in
+                      zip(df_cs_pipe["rooms"], df_cs_pipe["status"])],
+                textposition="outside",
+                hovertemplate="<b>%{x}</b><br>Rooms: %{y}<br>Open: %{customdata}<extra></extra>",
+                customdata=df_cs_pipe["projected_open_date"],
+            ))
+            fig_pipe.update_layout(
+                xaxis_tickangle=-20, margin=dict(t=30, b=80),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            )
+            st.plotly_chart(style_fig(fig_pipe, height=320), use_container_width=True, config=PLOTLY_CONFIG)
+
+            # Pipeline table
+            _pipe_display = df_cs_pipe[["property_name","city","chain_scale","rooms",
+                                         "status","projected_open_date","brand","developer"]].copy()
+            _pipe_display.columns = ["Property","City","Segment","Rooms",
+                                      "Status","Opens","Brand","Developer"]
+            st.dataframe(_pipe_display, use_container_width=True, hide_index=True)
+            st.download_button("⬇️ Download Pipeline CSV", _pipe_display.to_csv(index=False).encode(), "hotel_pipeline.csv", "text/csv", key="dl_cs_pipe")
+
+            # Supply impact insight
+            market_supply_pct = (pipe_total / 5120 * 100)
+            st.markdown(
+                insight_card(
+                    f"Supply Warning: {pipe_total:,} Rooms ({market_supply_pct:.1f}% of Market) in Pipeline",
+                    f"**{uc_rooms:,} rooms** under active construction (opening 2025) will increase "
+                    f"South OC hotel supply by **{uc_rooms/5120*100:.1f}%** before year-end. "
+                    f"The full pipeline adds **{market_supply_pct:.1f}%** supply growth. "
+                    f"VDP member hotels should expect modest occupancy pressure in 2025–2026 as new "
+                    f"supply absorbs demand — making ADR discipline and loyalty programs critical "
+                    f"to defending RevPAR during the absorption period.",
+                    kind="warning",
+                ),
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(empty_state("🏗️", "No pipeline data.",
+                "Run scripts/load_costar_reports.py to populate supply pipeline."),
+                unsafe_allow_html=True)
+
+        st.markdown(sec_div("🏆 Competitive Set — Property Rankings"), unsafe_allow_html=True)
+
+        # ── Competitive Set Rankings ───────────────────────────────────────────────
+        st.markdown("### Competitive Set — Property Rankings · Full Year 2024")
+
+        if not df_cs_comp.empty:
+            comp_sorted = df_cs_comp.sort_values("rgi", ascending=False)
+
+            # RGI ranking chart
+            col_rk1, col_rk2 = st.columns([3, 2])
+            with col_rk1:
+                st.markdown('<div class="chart-header">Revenue Generation Index (RGI) by Property</div>',
+                            unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">RGI > 100 = outperforming market · VDP baseline = 100.0</div>',
+                            unsafe_allow_html=True)
+                rgi_colors = [
+                    TEAL if v > 105 else (ORANGE if v < 95 else "#626C71")
+                    for v in comp_sorted["rgi"]
+                ]
+                fig_rgi = go.Figure(go.Bar(
+                    x=comp_sorted["rgi"],
+                    y=comp_sorted["property_name"],
+                    orientation="h",
+                    marker_color=rgi_colors,
+                    text=[f"{v:.1f}" for v in comp_sorted["rgi"]],
+                    textposition="outside",
+                    hovertemplate="<b>%{y}</b><br>RGI: %{x:.1f}<extra></extra>",
+                ))
+                fig_rgi.add_vline(x=100, line_dash="dash", line_color=ORANGE,
+                                  annotation_text="Market Baseline", annotation_position="top")
+                fig_rgi.update_layout(
+                    margin=dict(l=10, r=60, t=10, b=10),
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    xaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.07)"),
+                    yaxis=dict(autorange="reversed"),
+                )
+                st.plotly_chart(style_fig(fig_rgi, height=360), use_container_width=True, config=PLOTLY_CONFIG)
+
+            with col_rk2:
+                st.markdown('<div class="chart-header">ADR vs. Occupancy Scatter</div>',
+                            unsafe_allow_html=True)
+                st.markdown('<div class="chart-caption">Size = rooms · color = chain scale</div>',
+                            unsafe_allow_html=True)
+                scale_color = {
+                    "Luxury": TEAL, "Upper Upscale": TEAL_LIGHT, "Upscale": ORANGE,
+                    "Upper Midscale": "#E68161", "Mixed": "#626C71",
+                }
+                fig_scat = go.Figure()
+                for _, row_cs in df_cs_comp.iterrows():
+                    fig_scat.add_trace(go.Scatter(
+                        x=[row_cs["occupancy_pct"]],
+                        y=[row_cs["adr_usd"]],
+                        mode="markers+text",
+                        text=[row_cs["property_name"].split(" ")[0]],
+                        textposition="top center",
+                        marker=dict(
+                            size=max(10, min(40, row_cs["rooms"] / 15)),
+                            color=scale_color.get(row_cs["chain_scale"], "#626C71"),
+                            opacity=0.82,
+                        ),
+                        name=row_cs["chain_scale"],
+                        hovertemplate=(
+                            f"<b>{row_cs['property_name']}</b><br>"
+                            f"Occ: {row_cs['occupancy_pct']:.1f}%<br>"
+                            f"ADR: ${row_cs['adr_usd']:.0f}<br>"
+                            f"RevPAR: ${row_cs['revpar_usd']:.0f}<extra></extra>"
+                        ),
+                        showlegend=False,
+                    ))
+                fig_scat.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    xaxis=dict(title="Occupancy %", ticksuffix="%",
+                               gridcolor="rgba(0,0,0,0.07)"),
+                    yaxis=dict(title="ADR $", tickprefix="$",
+                               gridcolor="rgba(0,0,0,0.07)"),
+                    margin=dict(t=10, b=30, l=10, r=10),
+                )
+                st.plotly_chart(style_fig(fig_scat, height=360), use_container_width=True, config=PLOTLY_CONFIG)
+
+            # Comp set table
+            _comp_display = comp_sorted[["property_name","chain_scale","rooms",
+                                          "occupancy_pct","adr_usd","revpar_usd",
+                                          "mpi","ari","rgi"]].copy()
+            _comp_display.columns = ["Property","Segment","Rooms","Occ %","ADR $","RevPAR $",
+                                      "MPI","ARI","RGI"]
+            _comp_display["Occ %"]   = _comp_display["Occ %"].map("{:.1f}%".format)
+            _comp_display["ADR $"]   = _comp_display["ADR $"].map("${:,.0f}".format)
+            _comp_display["RevPAR $"] = _comp_display["RevPAR $"].map("${:,.0f}".format)
+            _comp_display["MPI"]     = _comp_display["MPI"].map("{:.1f}".format)
+            _comp_display["ARI"]     = _comp_display["ARI"].map("{:.1f}".format)
+            _comp_display["RGI"]     = _comp_display["RGI"].map("{:.1f}".format)
+            st.dataframe(_comp_display, use_container_width=True, hide_index=True)
+            st.download_button("⬇️ Download Comp Set CSV", _comp_display.to_csv(index=False).encode(), "competitive_set.csv", "text/csv", key="dl_compset")
+        else:
+            st.markdown(empty_state("🏆", "No competitive set data.",
+                "Run scripts/load_costar_reports.py to populate competitive benchmarks."),
+                unsafe_allow_html=True)
+
+        st.markdown(sec_div("📊 Portfolio × Market Correlation Analysis"), unsafe_allow_html=True)
+
+        # ── STR × CoStar Correlation Insights ─────────────────────────────────────
+        st.markdown(_sh("📈", "Portfolio × Market Correlation Analysis", "teal", "STR + COSTAR"), unsafe_allow_html=True)
+        st.markdown(
+            '<div style="font-size:12px;color:#8B949E;margin:-8px 0 12px 0;">'
+            'VDP 12-property portfolio (kpi_daily_summary, resampled monthly) vs. South OC market (CoStar monthly) · '
+            'Feb 2024 – Dec 2024 overlap window · 11 months of aligned data</div>',
+            unsafe_allow_html=True,
+        )
+
+        if not df_cs_mon.empty:
+            # ── Build portfolio-side monthly series from kpi_daily_summary ─────────
+            # Fall back: resample daily KPIs to monthly (avoids dependency on STR monthly NULLs)
+            _kpi_src = df_kpi.copy() if not df_kpi.empty else pd.DataFrame()
+            if not _kpi_src.empty:
+                _kpi_src["as_of_date"] = pd.to_datetime(_kpi_src["as_of_date"])
+                # kpi_daily_summary has occ_pct (%), adr, revpar
+                _kpi_mon = (
+                    _kpi_src.set_index("as_of_date")[["occ_pct","adr","revpar"]]
+                    .resample("MS").mean()
+                    .reset_index()
+                )
+                _kpi_mon.columns = ["as_of_date","portfolio_occ","portfolio_adr","portfolio_revpar"]
+                _kpi_mon["_ym"] = _kpi_mon["as_of_date"].dt.to_period("M").astype(str)
+            else:
+                _kpi_mon = pd.DataFrame()
+
+            cs_merged = df_cs_mon[["as_of_date","occupancy_pct","adr_usd","revpar_usd"]].copy()
+            cs_merged.columns = ["as_of_date","mkt_occ","mkt_adr","mkt_revpar"]
+            cs_merged["_ym"] = pd.to_datetime(cs_merged["as_of_date"]).dt.to_period("M").astype(str)
+
+            merged = pd.DataFrame()
+            if not _kpi_mon.empty:
+                merged = pd.merge(_kpi_mon, cs_merged, on="_ym", how="inner", suffixes=("","_cs"))
+                if "as_of_date_cs" in merged.columns:
+                    merged = merged.drop(columns=["as_of_date_cs"])
+                merged = merged.dropna(subset=["portfolio_revpar","mkt_revpar"])
+                merged = merged.sort_values("as_of_date")
+
+            if len(merged) >= 3:
+                # ── Correlation stat callout ──────────────────────────────────────
+                _corr_rvp = merged["portfolio_revpar"].corr(merged["mkt_revpar"])
+                _corr_adr = merged["portfolio_adr"].corr(merged["mkt_adr"])
+                _avg_rvp_premium = (merged["portfolio_revpar"] - merged["mkt_revpar"]).mean()
+                _avg_adr_premium = (merged["portfolio_adr"] - merged["mkt_adr"]).mean()
+                st.markdown(f"""
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div style="flex:1;min-width:140px;background:rgba(33,128,141,0.12);border:1px solid rgba(33,128,141,0.3);
+           border-radius:10px;padding:10px 14px;">
+        <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">RevPAR Correlation</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#67E8F9;">{_corr_rvp:.2f}</div>
+        <div style="font-size:10px;color:#8B949E;">R — portfolio tracks market</div>
+      </div>
+      <div style="flex:1;min-width:140px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);
+           border-radius:10px;padding:10px 14px;">
+        <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">ADR Correlation</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#C4B5FD;">{_corr_adr:.2f}</div>
+        <div style="font-size:10px;color:#8B949E;">R — rate pricing alignment</div>
+      </div>
+      <div style="flex:1;min-width:140px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);
+           border-radius:10px;padding:10px 14px;">
+        <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Avg RevPAR Premium</div>
+        <div style="font-size:1.6rem;font-weight:800;color:{'#34D399' if _avg_rvp_premium>=0 else '#F87171'};">${_avg_rvp_premium:+.0f}</div>
+        <div style="font-size:10px;color:#8B949E;">portfolio above market avg</div>
+      </div>
+      <div style="flex:1;min-width:140px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);
+           border-radius:10px;padding:10px 14px;">
+        <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Avg ADR Premium</div>
+        <div style="font-size:1.6rem;font-weight:800;color:{'#FDE68A' if _avg_adr_premium>=0 else '#F87171'};">${_avg_adr_premium:+.0f}</div>
+        <div style="font-size:10px;color:#8B949E;">portfolio above market ADR</div>
+      </div>
+      <div style="flex:1;min-width:140px;background:rgba(22,27,34,0.8);border:1px solid rgba(0,0,0,0.08);
+           border-radius:10px;padding:10px 14px;">
+        <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Data Points</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#E6EDF3;">{len(merged)}</div>
+        <div style="font-size:10px;color:#8B949E;">months of aligned data</div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+                col_corr1, col_corr2 = st.columns(2)
+                with col_corr1:
+                    st.markdown('<div class="chart-header">Portfolio RevPAR vs. Market RevPAR</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="chart-caption">R={_corr_rvp:.2f} — VDP portfolio commands ${_avg_rvp_premium:+.0f} RevPAR premium over South OC market · '
+                        f'Peak spread indicates strong leisure compression pricing</div>',
+                        unsafe_allow_html=True,
+                    )
+                    fig_corr = go.Figure()
+                    fig_corr.add_trace(go.Scatter(
+                        x=merged["as_of_date"], y=merged["portfolio_revpar"],
+                        name="VDP Portfolio",
+                        line=dict(color=TEAL, width=2.5),
+                        fill="tonexty", fillcolor="rgba(33,128,141,0.08)",
+                        hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio RevPAR: $%{y:.0f}<extra></extra>",
+                    ))
+                    fig_corr.add_trace(go.Scatter(
+                        x=merged["as_of_date"], y=merged["mkt_revpar"],
+                        name="S. OC Market",
+                        line=dict(color=ORANGE, width=2, dash="dot"),
+                        hovertemplate="<b>%{x|%b %Y}</b><br>Market RevPAR: $%{y:.0f}<extra></extra>",
+                    ))
+                    # Annotate peak portfolio RevPAR
+                    _peak_idx = merged["portfolio_revpar"].idxmax()
+                    _peak_row = merged.loc[_peak_idx]
+                    fig_corr.add_annotation(
+                        x=_peak_row["as_of_date"], y=_peak_row["portfolio_revpar"],
+                        text=f"Peak ${_peak_row['portfolio_revpar']:.0f}",
+                        showarrow=True, arrowhead=2, arrowcolor=TEAL,
+                        font=dict(size=10, color=TEAL), bgcolor="rgba(13,17,23,0.8)",
+                        bordercolor=TEAL, borderwidth=1, ax=0, ay=-30,
+                    )
+                    fig_corr.update_layout(
+                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                        legend=dict(font=dict(size=11), bgcolor="rgba(13,17,23,0.6)",
+                                    bordercolor="rgba(0,0,0,0.08)", borderwidth=1),
+                        margin=dict(t=10, b=10),
+                        yaxis=dict(tickprefix="$", gridcolor="rgba(0,0,0,0.07)", color="#718096"),
+                        xaxis=dict(gridcolor="rgba(0,0,0,0.07)", color="#718096",
+                                   tickformat="%b %Y"),
+                        hoverlabel=dict(bgcolor="rgba(13,17,23,0.95)", font_size=13,
+                                       font_color="#E6EDF3", bordercolor="rgba(33,128,141,0.5)"),
+                    )
+                    st.plotly_chart(style_fig(fig_corr, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+
+                with col_corr2:
+                    st.markdown('<div class="chart-header">Portfolio ADR vs. Market ADR</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="chart-caption">R={_corr_adr:.2f} — VDP ADR premium ${_avg_adr_premium:+.0f} vs. market · '
+                        f'Strong summer seasonality with consistent rate discipline above market floor</div>',
+                        unsafe_allow_html=True,
+                    )
+                    fig_adr = go.Figure()
+                    fig_adr.add_trace(go.Scatter(
+                        x=merged["as_of_date"], y=merged["portfolio_adr"],
+                        name="VDP Portfolio",
+                        line=dict(color=TEAL, width=2.5),
+                        hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio ADR: $%{y:.0f}<extra></extra>",
+                    ))
+                    fig_adr.add_trace(go.Scatter(
+                        x=merged["as_of_date"], y=merged["mkt_adr"],
+                        name="S. OC Market",
+                        line=dict(color=ORANGE, width=2, dash="dot"),
+                        hovertemplate="<b>%{x|%b %Y}</b><br>Market ADR: $%{y:.0f}<extra></extra>",
+                    ))
+                    _peak_adr_idx = merged["portfolio_adr"].idxmax()
+                    _peak_adr_row = merged.loc[_peak_adr_idx]
+                    fig_adr.add_annotation(
+                        x=_peak_adr_row["as_of_date"], y=_peak_adr_row["portfolio_adr"],
+                        text=f"Peak ${_peak_adr_row['portfolio_adr']:.0f}",
+                        showarrow=True, arrowhead=2, arrowcolor="#8B5CF6",
+                        font=dict(size=10, color="#8B5CF6"), bgcolor="rgba(13,17,23,0.8)",
+                        bordercolor="#8B5CF6", borderwidth=1, ax=0, ay=-30,
+                    )
+                    fig_adr.update_layout(
+                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                        legend=dict(font=dict(size=11), bgcolor="rgba(13,17,23,0.6)",
+                                    bordercolor="rgba(0,0,0,0.08)", borderwidth=1),
+                        margin=dict(t=10, b=10),
+                        yaxis=dict(tickprefix="$", gridcolor="rgba(0,0,0,0.07)", color="#718096"),
+                        xaxis=dict(gridcolor="rgba(0,0,0,0.07)", color="#718096",
+                                   tickformat="%b %Y"),
+                        hoverlabel=dict(bgcolor="rgba(13,17,23,0.95)", font_size=13,
+                                       font_color="#E6EDF3", bordercolor="rgba(33,128,141,0.5)"),
+                    )
+                    st.plotly_chart(style_fig(fig_adr, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+
+                # ── Occupancy comparison ──────────────────────────────────────────
+                _corr_occ = merged["portfolio_occ"].corr(merged["mkt_occ"])
+                st.markdown('<div class="chart-header">Portfolio Occupancy vs. Market Occupancy</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="chart-caption">R={_corr_occ:.2f} — Occupancy parity signal · '
+                    f'Portfolio occ (from kpi_daily_summary) vs. South OC market (CoStar) · '
+                    f'Gap = VDP mix-shift toward higher-rated stays (fewer budget rooms)</div>',
+                    unsafe_allow_html=True,
+                )
+                fig_occ = go.Figure()
+                fig_occ.add_trace(go.Scatter(
+                    x=merged["as_of_date"], y=merged["portfolio_occ"],
+                    name="VDP Portfolio Occ %",
+                    line=dict(color=TEAL, width=2.5),
+                    hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio Occ: %{y:.1f}%<extra></extra>",
+                ))
+                fig_occ.add_trace(go.Scatter(
+                    x=merged["as_of_date"], y=merged["mkt_occ"],
+                    name="S. OC Market Occ %",
+                    line=dict(color=ORANGE, width=2, dash="dot"),
+                    hovertemplate="<b>%{x|%b %Y}</b><br>Market Occ: %{y:.1f}%<extra></extra>",
+                ))
+                fig_occ.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    legend=dict(font=dict(size=11), bgcolor="rgba(13,17,23,0.6)",
+                                bordercolor="rgba(0,0,0,0.08)", borderwidth=1),
+                    margin=dict(t=10, b=10),
+                    yaxis=dict(ticksuffix="%", gridcolor="rgba(0,0,0,0.07)", color="#718096"),
+                    xaxis=dict(gridcolor="rgba(0,0,0,0.07)", color="#718096", tickformat="%b %Y"),
+                    hoverlabel=dict(bgcolor="rgba(13,17,23,0.95)", font_size=13,
+                                   font_color="#E6EDF3", bordercolor="rgba(33,128,141,0.5)"),
+                )
+                st.plotly_chart(style_fig(fig_occ, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+
+            else:
+                st.warning(
+                    f"⚠️ Correlation analysis requires overlapping date ranges. "
+                    f"Portfolio data: Feb 2024–present. CoStar monthly: "
+                    f"{df_cs_mon['as_of_date'].min()} – {df_cs_mon['as_of_date'].max()}. "
+                    f"Overlap found: {len(merged)} months (minimum 3 required).",
+                )
+        else:
+            st.markdown(empty_state(
+                "📉", "CoStar data not loaded.",
+                "Run `python scripts/fetch_costar_data.py` to load South OC market benchmarks.",
+            ), unsafe_allow_html=True)
+
+        # CoStar data download
+        st.markdown("---")
+        if not df_cs_mon.empty:
+            _cs_csv = df_cs_mon.to_csv(index=False).encode()
+            st.download_button(
+                "⬇️ Download CoStar Monthly Performance CSV",
+                _cs_csv, file_name="costar_monthly_performance.csv",
+                mime="text/csv", use_container_width=True,
+            )
+
+        # ── Visit California State Context ────────────────────────────────────────
+        st.markdown(sec_div("🌴 Visit California — State Context"), unsafe_allow_html=True)
+        st.markdown(
+            '<div style="font-family:\'Syne\',sans-serif;font-size:1.35rem;'
+            'font-weight:800;letter-spacing:-0.03em;margin-bottom:2px;">'
+            'Visit California — State Context</div>'
+            '<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:14px;">'
+            'Statewide travel forecasts &amp; lodging benchmarks · Visit California (Feb 2026)</div>',
+            unsafe_allow_html=True,
+        )
+
+        _has_vca = not df_vca_forecast.empty or not df_vca_lodging.empty
+
+        if _has_vca:
+            # ── Row 1: CA statewide KPIs vs OC vs Dana Point ──────────────────────
+            st.markdown("#### California vs OC vs Dana Point Benchmark")
+            _vc1, _vc2, _vc3, _vc4 = st.columns(4)
+
+            # OC lodging row from visit_ca_lodging_forecast (most recent year)
+            _oc_row = pd.DataFrame()
+            _ca_row = pd.DataFrame()
+            if not df_vca_lodging.empty:
+                _latest_yr = df_vca_lodging["year"].max()
+                _oc_row = df_vca_lodging[
+                    (df_vca_lodging["year"] == _latest_yr) &
+                    (df_vca_lodging["region"].str.contains("Orange County", case=False, na=False))
+                ]
+                _ca_row = df_vca_lodging[
+                    (df_vca_lodging["year"] == _latest_yr) &
+                    (df_vca_lodging["region"].str.contains("California", case=False, na=False))
+                ]
+
+            _oc_occ  = float(_oc_row["occupancy_pct"].iloc[0]) if not _oc_row.empty and "occupancy_pct" in _oc_row.columns else 73.0
+            _oc_adr  = float(_oc_row["adr_usd"].iloc[0])       if not _oc_row.empty and "adr_usd" in _oc_row.columns else 209.53
+            _oc_revp = float(_oc_row["revpar_usd"].iloc[0])     if not _oc_row.empty and "revpar_usd" in _oc_row.columns else 153.01
+            _ca_occ  = float(_ca_row["occupancy_pct"].iloc[0])  if not _ca_row.empty and "occupancy_pct" in _ca_row.columns else 67.3
+            _ca_adr  = float(_ca_row["adr_usd"].iloc[0])        if not _ca_row.empty and "adr_usd" in _ca_row.columns else 189.85
+            _ca_revp = float(_ca_row["revpar_usd"].iloc[0])     if not _ca_row.empty and "revpar_usd" in _ca_row.columns else 127.80
+
+            # Dana Point reference from CoStar/STR
+            _dp_adr  = float(df_cs_snap["adr_usd"].mean())   if not df_cs_snap.empty and "adr_usd" in df_cs_snap.columns else 295.0
+            _dp_revp = float(df_cs_snap["revpar_usd"].mean()) if not df_cs_snap.empty and "revpar_usd" in df_cs_snap.columns else 220.0
+            _dp_occ  = float(df_cs_snap["occ_pct"].mean())   if not df_cs_snap.empty and "occ_pct" in df_cs_snap.columns else 76.0
+
+            _adr_premium_oc = (_dp_adr / _oc_adr - 1) * 100 if _oc_adr > 0 else 0
+            _adr_premium_ca = (_dp_adr / _ca_adr - 1) * 100 if _ca_adr > 0 else 0
+            _revp_premium   = (_dp_revp / _oc_revp - 1) * 100 if _oc_revp > 0 else 0
+
+            with _vc1:
+                st.metric("Dana Point ADR", f"${_dp_adr:,.0f}",
+                          delta=f"+{_adr_premium_oc:.0f}% vs OC",
+                          help="Dana Point portfolio ADR vs Orange County market average")
+            with _vc2:
+                st.metric("OC Market ADR", f"${_oc_adr:,.0f}",
+                          delta=f"CA avg: ${_ca_adr:,.0f}",
+                          help="Orange County 2025 lodging forecast ADR")
+            with _vc3:
+                st.metric("Dana Point RevPAR", f"${_dp_revp:,.0f}",
+                          delta=f"+{_revp_premium:.0f}% vs OC",
+                          help="Dana Point portfolio RevPAR vs Orange County")
+            with _vc4:
+                st.metric("OC Occupancy", f"{_oc_occ:.1f}%",
+                          delta=f"CA avg: {_ca_occ:.1f}%",
+                          help="Orange County 2025 lodging forecast occupancy")
+
+            st.caption(
+                f"Dana Point commands a **{_adr_premium_oc:.0f}% ADR premium** over Orange County "
+                f"and a **{_adr_premium_ca:.0f}% premium** over the California statewide average — "
+                f"confirming Dana Point's positioning as a premium coastal destination."
+            )
+
+            # ── Row 2: Lodging ladder chart ────────────────────────────────────────
+            if not df_vca_lodging.empty and "region" in df_vca_lodging.columns:
+                _latest_yr = df_vca_lodging["year"].max()
+                _lodge_slice = df_vca_lodging[
+                    (df_vca_lodging["year"] == _latest_yr) &
+                    (df_vca_lodging["region"].notna())
+                ].copy()
+                if not _lodge_slice.empty and "adr_usd" in _lodge_slice.columns:
+                    _lodge_slice = _lodge_slice.sort_values("adr_usd", ascending=True)
+                    # Inject Dana Point as a benchmark row
+                    _dp_bench = pd.DataFrame([{
+                        "region": "Dana Point (Portfolio)", "adr_usd": _dp_adr,
+                        "revpar_usd": _dp_revp, "occupancy_pct": _dp_occ
+                    }])
+                    _lodge_plot = pd.concat([_lodge_slice, _dp_bench], ignore_index=True)
+                    _lodge_plot = _lodge_plot.sort_values("adr_usd", ascending=True)
+
+                    _colors = [
+                        TEAL if "Dana Point" in str(r) else ORANGE
+                        for r in _lodge_plot["region"]
+                    ]
+                    fig_lodge = go.Figure(go.Bar(
+                        x=_lodge_plot["adr_usd"],
+                        y=_lodge_plot["region"],
+                        orientation="h",
+                        marker_color=_colors,
+                        text=[f"${v:,.0f}" for v in _lodge_plot["adr_usd"]],
+                        textposition="outside",
+                        hovertemplate="<b>%{y}</b><br>ADR: $%{x:,.0f}<extra></extra>",
+                    ))
+                    fig_lodge.update_layout(
+                        title=f"ADR by CA Region ({_latest_yr}) — Dana Point vs Market",
+                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                        xaxis=dict(title="ADR (USD)", gridcolor="rgba(0,0,0,0.06)"),
+                        yaxis=dict(gridcolor="rgba(0,0,0,0.06)"),
+                        height=420, margin=dict(l=10, r=10, t=40, b=10),
+                        font=dict(family="Syne, sans-serif", size=11),
+                    )
+                    st.plotly_chart(fig_lodge, use_container_width=True, config=PLOTLY_CONFIG)
+
+            # ── Row 3: CA travel volume forecast trend ─────────────────────────────
+            if not df_vca_forecast.empty and "year" in df_vca_forecast.columns:
+                _col_vca1, _col_vca2 = st.columns(2)
+                with _col_vca1:
+                    st.markdown("#### CA Visitor Volume Forecast")
+                    _fcast_plot = df_vca_forecast[df_vca_forecast["total_visits_m"].notna()].copy()
+                    if not _fcast_plot.empty:
+                        fig_fcast = go.Figure()
+                        _actual = _fcast_plot[_fcast_plot["is_forecast"] == 0]
+                        _fcast  = _fcast_plot[_fcast_plot["is_forecast"] == 1]
+                        if not _actual.empty:
+                            fig_fcast.add_trace(go.Scatter(
+                                x=_actual["year"], y=_actual["total_visits_m"],
+                                name="Actual", mode="lines+markers",
+                                line=dict(color=TEAL, width=2.5),
+                                hovertemplate="<b>%{x}</b><br>Visits: %{y:.1f}M<extra></extra>",
+                            ))
+                        if not _fcast.empty:
+                            fig_fcast.add_trace(go.Scatter(
+                                x=_fcast["year"], y=_fcast["total_visits_m"],
+                                name="Forecast", mode="lines+markers",
+                                line=dict(color=ORANGE, width=2, dash="dot"),
+                                hovertemplate="<b>%{x}</b><br>Forecast: %{y:.1f}M<extra></extra>",
+                            ))
+                        fig_fcast.update_layout(
+                            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                            xaxis=dict(title="Year", gridcolor="rgba(0,0,0,0.06)"),
+                            yaxis=dict(title="Total Visits (M)", gridcolor="rgba(0,0,0,0.06)"),
+                            legend=dict(font=dict(size=11)),
+                            height=300, margin=dict(l=10, r=10, t=20, b=10),
+                            font=dict(family="Syne, sans-serif", size=11),
+                        )
+                        st.plotly_chart(fig_fcast, use_container_width=True, config=PLOTLY_CONFIG)
+
+                with _col_vca2:
+                    st.markdown("#### JWA / SNA Airport Traffic (2025)")
+                    if not df_vca_airport.empty and "airport" in df_vca_airport.columns:
+                        _jwa = df_vca_airport[df_vca_airport["airport"].isin(["SNA", "JWA"])].copy()
+                        if _jwa.empty:
+                            _jwa = df_vca_airport[
+                                df_vca_airport["airport"].str.contains("John Wayne|SNA|Orange County", case=False, na=False)
+                            ].copy()
+                        if _jwa.empty:
+                            _jwa = df_vca_airport.copy()
+
+                        # Support both column naming conventions
+                        _month_col = "month" if "month" in _jwa.columns else ("month_num" if "month_num" in _jwa.columns else None)
+                        _pax_col = "total_pax" if "total_pax" in _jwa.columns else ("total_passengers" if "total_passengers" in _jwa.columns else None)
+                        if not _jwa.empty and _month_col and _pax_col:
+                            fig_air = go.Figure()
+                            for _apt in _jwa["airport"].unique():
+                                _apt_df = _jwa[_jwa["airport"] == _apt].sort_values(_month_col)
+                                fig_air.add_trace(go.Scatter(
+                                    x=_apt_df[_month_col],
+                                    y=_apt_df[_pax_col],
+                                    name=_apt, mode="lines+markers",
+                                    hovertemplate=f"<b>{_apt}</b><br>Month: %{{x}}<br>Passengers: %{{y:,.0f}}<extra></extra>",
+                                ))
+                            fig_air.update_layout(
+                                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                                xaxis=dict(title="Month", gridcolor="rgba(0,0,0,0.06)",
+                                           tickvals=list(range(1, 13)),
+                                           ticktext=["Jan","Feb","Mar","Apr","May","Jun",
+                                                     "Jul","Aug","Sep","Oct","Nov","Dec"]),
+                                yaxis=dict(title="Passengers", gridcolor="rgba(0,0,0,0.06)"),
+                                legend=dict(font=dict(size=11)),
+                                height=300, margin=dict(l=10, r=10, t=20, b=10),
+                                font=dict(family="Syne, sans-serif", size=11),
+                            )
+                            st.plotly_chart(fig_air, use_container_width=True, config=PLOTLY_CONFIG)
+                        else:
+                            st.info("Airport traffic data loaded — no monthly breakdown available.")
+                    else:
+                        st.info("No airport traffic data loaded. Run the pipeline to populate visit_ca_airport_traffic.")
+
+            # Download
+            if not df_vca_lodging.empty:
+                _vca_dl = df_vca_lodging.to_csv(index=False).encode()
+                st.download_button(
+                    "⬇️ Download Visit CA Lodging Forecast CSV",
+                    _vca_dl, file_name="visit_ca_lodging_forecast.csv",
+                    mime="text/csv", use_container_width=True,
+                )
+        else:
+            st.markdown(empty_state(
+                "🏔️", "Visit California data not yet loaded.",
+                "Run the pipeline to populate visit_ca_* tables from data/Visit_California/.",
+            ), unsafe_allow_html=True)
+
+        # ── GloCon Solutions LLC — VDP vs Market Leadership Scorecard ─────────────
+        st.markdown(sec_div("🏆 VDP vs. South OC Market — Leadership Scorecard"), unsafe_allow_html=True)
+        st.markdown("### 🏆 VDP vs. South OC Market — Leadership Scorecard")
+        st.caption("How Dana Point properties perform vs. the South Orange County submarket · Source: STR 30-day actuals vs. CoStar snapshot · Built by GloCon Solutions LLC")
+
+        try:
+            if not df_cs_snap.empty and kpis:
+                _snap = df_cs_snap.iloc[0]
+                _mkt_occ_b = float(_snap.get("occupancy_pct", 76.4) or 76.4)
+                _mkt_adr_b = float(_snap.get("adr_usd", 288.50) or 288.50)
+                _mkt_rvp_b = float(_snap.get("revpar_usd", 220.42) or 220.42)
+                def _ns(v):
+                    try: return float(str(v).replace("$","").replace("%","").replace(",",""))
+                    except: return 0.0
+                _vdp_occ_n = _ns(next((k["raw_value"] for k in kpis if "Occ" in k.get("label","")), _mkt_occ_b))
+                _vdp_adr_n = _ns(next((k["raw_value"] for k in kpis if "ADR" in k.get("label","")), _mkt_adr_b))
+                _vdp_rvp_n = _ns(next((k["raw_value"] for k in kpis if "RevPAR" in k.get("label","")), _mkt_rvp_b))
+                _sc_rows = [
+                    ("Occupancy",  f"{_vdp_occ_n:.1f}%", f"{_mkt_occ_b:.1f}%", _vdp_occ_n - _mkt_occ_b, "pp"),
+                    ("ADR",        f"${_vdp_adr_n:.2f}",  f"${_mkt_adr_b:.2f}",  _vdp_adr_n - _mkt_adr_b, "$"),
+                    ("RevPAR",     f"${_vdp_rvp_n:.2f}",  f"${_mkt_rvp_b:.2f}",  _vdp_rvp_n - _mkt_rvp_b, "$"),
+                ]
+                _sc_df = pd.DataFrame(_sc_rows, columns=["Metric","VDP Portfolio","S. OC Market","Gap","Unit"])
+                _sc_df["Signal"]      = _sc_df["Gap"].apply(lambda g: "✅ Premium" if g > 0 else ("⚠️ Parity" if abs(g) < 0.5 else "🔴 Below Market"))
+                _sc_df["Gap vs Mkt"]  = _sc_df.apply(lambda r: f"{'+' if r['Gap']>0 else ''}{r['Gap']:.1f}{r['Unit']}", axis=1)
+                _sc_df["Board Note"]  = _sc_df.apply(lambda r: (
+                    "Maintain pricing discipline — demand supports premium." if r["Gap"] > 0
+                    else "Investigate comp set — close rate gap strategy needed."), axis=1)
+                _sc_dl = _sc_df[["Metric","VDP Portfolio","S. OC Market","Gap vs Mkt","Signal","Board Note"]]
+                st.dataframe(_sc_dl, use_container_width=True, hide_index=True)
+                st.download_button("⬇️ Download Scorecard CSV", _sc_dl.to_csv(index=False).encode(), "vdp_vs_market_scorecard.csv", "text/csv", key="dl_scorecard")
+                # Visual comparison bar chart
+                _sc_fig = go.Figure()
+                for _sci, (_scm, _scvdp, _scmkt, _scgap, _scu) in enumerate(_sc_rows):
+                    _scv_num = _ns(_scvdp); _scm_num = _ns(_scmkt)
+                    _sc_fig.add_trace(go.Bar(
+                        name="VDP Portfolio", x=[_scm], y=[_scv_num],
+                        marker_color="#00C4CC", text=[_scvdp], textposition="outside",
+                        showlegend=(_sci == 0),
+                    ))
+                    _sc_fig.add_trace(go.Bar(
+                        name="S. OC Market", x=[_scm], y=[_scm_num],
+                        marker_color="#94A3B8", text=[_scmkt], textposition="outside",
+                        showlegend=(_sci == 0),
+                    ))
+                _sc_fig.update_layout(
+                    barmode="group", height=280, margin=dict(l=0,r=0,t=20,b=0),
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                    yaxis=dict(showticklabels=False),
+                )
+                st.plotly_chart(_sc_fig, use_container_width=True,
+                                config=PLOTLY_CONFIG, key="cs_leadership_scorecard")
+            else:
+                st.info("Load STR and CoStar data to populate the Leadership Scorecard.")
+        except Exception as _sc_err:
+            st.warning(f"Leadership Scorecard unavailable: {_sc_err}")
+
+    # ── External Signals → sub-tab 2 ──────────────────────────────────────────
+    with _cs_t2:
+        # ── FRED Economic Climate ─────────────────────────────────────────────────
+        st.markdown(sec_div("📉 Economic Climate Indicators"), unsafe_allow_html=True)
+        st.markdown(_sh("📉", "Economic Climate Indicators", "indigo", "FRED · Federal Reserve"), unsafe_allow_html=True)
+        st.markdown(
+            sec_intel(
+                "Economic Climate",
+                "macro-level demand environment signals that drive travel propensity and ADR sustainability",
+                "The FRED Lodging CPI benchmarks national hotel price inflation — when Dana Point ADR grows "
+                "faster than CUUR0000SEHB, the market is capturing real premium. When it lags, pricing is losing ground.",
+                "Rising disposable income + falling unemployment historically precede 6–12 month "
+                "occupancy recovery cycles — the earliest institutional-grade demand forecast signal.",
+                "Set FRED_API_KEY in .env to activate (free key at fred.stlouisfed.org)",
+            ),
+            unsafe_allow_html=True,
+        )
+        if not df_fred.empty:
+            _fred_series = df_fred["series_id"].unique().tolist()
+            _fred_sel    = st.selectbox(
+                "Select FRED Series",
+                options=_fred_series,
+                format_func=lambda s: df_fred[df_fred["series_id"] == s]["series_name"].iloc[0]
+                    if len(df_fred[df_fred["series_id"] == s]) else s,
+                key="fred_series_sel",
+            )
+            _fred_data = df_fred[df_fred["series_id"] == _fred_sel].copy()
+            _fred_data["data_date"] = pd.to_datetime(_fred_data["data_date"])
+            _fred_data = _fred_data.dropna(subset=["value"]).sort_values("data_date")
+
+            if not _fred_data.empty:
+                _fc1, _fc2 = st.columns([3, 1])
+                with _fc1:
+                    fig_fred = go.Figure()
+                    fig_fred.add_trace(go.Scatter(
+                        x=_fred_data["data_date"], y=_fred_data["value"],
+                        mode="lines", name=_fred_data["series_name"].iloc[0],
+                        line=dict(color="#8B5CF6", width=2.5),
+                        fill="tozeroy", fillcolor="rgba(139,92,246,0.08)",
+                        hovertemplate="<b>%{x|%b %Y}</b><br>Value: %{y:,.2f}<extra></extra>",
+                    ))
+                    fig_fred.update_layout(
+                        title=_fred_data["series_name"].iloc[0],
+                        yaxis_title=_fred_data["unit"].iloc[0] if "unit" in _fred_data.columns else "",
+                    )
+                    st.plotly_chart(style_fig(fig_fred, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.caption(f"Source: Federal Reserve Bank of St. Louis (FRED). Series: {_fred_sel}. "
+                               f"Category: {_fred_data['category'].iloc[0] if 'category' in _fred_data.columns else '—'}")
+                with _fc2:
+                    _recent = _fred_data.tail(1).iloc[0]
+                    _prior  = _fred_data.tail(13).iloc[0] if len(_fred_data) >= 13 else None
+                    st.metric(
+                        label=_fred_data["series_name"].iloc[0],
+                        value=f"{_recent['value']:,.2f}",
+                        delta=f"{((_recent['value'] - _prior['value']) / _prior['value'] * 100):+.1f}% YoY"
+                              if _prior is not None and _prior["value"] else None,
+                    )
+                    st.markdown(
+                        f'<div class="dp-callout" style="margin-top:10px;">'
+                        f'<strong>How to read this:</strong><br>'
+                        f'{_fred_data["category"].iloc[0] if "category" in _fred_data.columns else "Economic indicator"}'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+        else:
+            st.markdown(
+                '<div class="empty-card">'
+                '<div class="empty-icon">📉</div>'
+                '<div class="empty-title">FRED Economic Data Not Loaded</div>'
+                '<div class="empty-body">Add <code>FRED_API_KEY=your_key</code> to your .env file, '
+                'then run the pipeline.<br>'
+                'Free key at <strong>fred.stlouisfed.org</strong> — 30-second registration.</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ── BLS Hospitality Employment ────────────────────────────────────────────
+        st.markdown(sec_div("👥 Hospitality Employment Trends"), unsafe_allow_html=True)
+        st.markdown(_sh("👥", "Hospitality Employment Trends", "green", "BLS · Bureau of Labor Statistics"), unsafe_allow_html=True)
+        st.markdown(
+            sec_intel(
+                "Hospitality Employment",
+                "monthly employment in Leisure & Hospitality and Accommodation sectors — national and California",
+                "Employment tracks hotel occupancy with a 2–3 month lag — rising hotel employment = "
+                "supply expansion and labor cost pressure, while falling employment signals demand risk.",
+                "California Accommodation employment serves as the regional demand barometer. "
+                "Watch for YoY acceleration as an early signal of market tightening ahead of peak season.",
+                "Run pipeline step 15 (fetch_bls_data.py) to populate — no API key required",
+            ),
+            unsafe_allow_html=True,
+        )
+        if not df_bls.empty:
+            _bls_series = df_bls["series_name"].unique().tolist()
+            _bls_sel    = st.multiselect(
+                "Select Employment Series",
+                options=_bls_series,
+                default=_bls_series[:2] if len(_bls_series) >= 2 else _bls_series,
+                key="bls_series_sel",
+            )
+            _bls_data = df_bls[df_bls["series_name"].isin(_bls_sel)].copy() if _bls_sel else df_bls.copy()
+
+            if not _bls_data.empty and "date" in _bls_data.columns:
+                _bc1, _bc2 = st.columns([3, 1])
+                with _bc1:
+                    fig_bls = go.Figure()
+                    _bls_colors = [GREEN, TEAL_LIGHT, ORANGE, "#8B5CF6"]
+                    for i, (s_name, s_df) in enumerate(_bls_data.groupby("series_name")):
+                        s_df = s_df.sort_values("date")
+                        fig_bls.add_trace(go.Scatter(
+                            x=s_df["date"], y=s_df["value_thousands"],
+                            mode="lines", name=s_name,
+                            line=dict(color=_bls_colors[i % len(_bls_colors)], width=2),
+                            hovertemplate=f"<b>%{{x|%b %Y}}</b><br>{s_name}: %{{y:,.0f}}K<extra></extra>",
+                        ))
+                    fig_bls.update_layout(
+                        title="Hospitality Employment (thousands)",
+                        yaxis_title="Employees (thousands)",
+                    )
+                    st.plotly_chart(style_fig(fig_bls, height=270), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.caption("Source: U.S. Bureau of Labor Statistics. Seasonally adjusted, all employees. "
+                               "National = US total; CA = California statewide.")
+                with _bc2:
+                    for s_name, s_df in _bls_data.groupby("series_name"):
+                        s_df = s_df.sort_values("date")
+                        if not s_df.empty:
+                            _latest = s_df.iloc[-1]
+                            st.metric(
+                                label=s_name[:35] + "…" if len(s_name) > 35 else s_name,
+                                value=f"{_latest['value_thousands']:,.0f}K",
+                                delta=f"{_latest['yoy_chg_pct']:+.1f}% YoY"
+                                      if pd.notna(_latest.get("yoy_chg_pct")) else None,
+                            )
+        else:
+            st.markdown(
+                '<div class="empty-card">'
+                '<div class="empty-icon">👥</div>'
+                '<div class="empty-title">BLS Employment Data Not Loaded</div>'
+                '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> '
+                'to fetch BLS hospitality employment data.<br>No API key required for basic access.</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ── EIA California Gas Prices ─────────────────────────────────────────────
+        st.markdown(sec_div("⛽ California Gas Prices — Drive-Market Demand Signal"), unsafe_allow_html=True)
+        st.markdown(_sh("⛽", "EIA California Retail Gas Prices", "orange", "DRIVE-MARKET SIGNAL"), unsafe_allow_html=True)
+        st.caption(
+            "Source: U.S. Energy Information Administration (EIA) · Weekly California retail regular-grade gasoline. "
+            "Drive market (LA/OC/SD/IE) within 120 miles of Dana Point — gas price spikes correlate with 2–4% weekend occupancy softening 2–4 weeks out."
+        )
+        if not df_eia_gas.empty and "date" in df_eia_gas.columns:
+            _eia_ca = df_eia_gas[df_eia_gas["state_label"] == "CA"].copy()
+            _eia_us = df_eia_gas[df_eia_gas["state_label"] == "US"].copy()
+            if not _eia_ca.empty:
+                _eia_ca = _eia_ca.sort_values("date")
+                _ec1, _ec2 = st.columns([3, 1])
+                with _ec1:
+                    fig_eia = go.Figure()
+                    fig_eia.add_trace(go.Scatter(
+                        x=_eia_ca["date"], y=_eia_ca["price_per_gallon"],
+                        mode="lines+markers", name="CA Regular",
+                        line=dict(color=ORANGE, width=2.5),
+                        marker=dict(size=4),
+                        hovertemplate="<b>%{x|%b %d, %Y}</b><br>CA Price: $%{y:.3f}/gal<extra></extra>",
+                    ))
+                    if not _eia_us.empty:
+                        _eia_us = _eia_us.sort_values("date")
+                        fig_eia.add_trace(go.Scatter(
+                            x=_eia_us["date"], y=_eia_us["price_per_gallon"],
+                            mode="lines", name="US National Avg",
+                            line=dict(color=TEAL_LIGHT, width=1.8, dash="dot"),
+                            hovertemplate="<b>%{x|%b %d, %Y}</b><br>US Avg: $%{y:.3f}/gal<extra></extra>",
+                        ))
+                    # Add trendline band for high-gas-price alert
+                    _eia_max = _eia_ca["price_per_gallon"].max() if not _eia_ca.empty else 5.0
+                    fig_eia.add_hline(y=4.50, line_dash="dash", line_color="#DC2626", line_width=1,
+                                      annotation_text="$4.50 demand risk threshold", annotation_position="top right")
+                    fig_eia.update_layout(
+                        title="CA Weekly Retail Gas Price ($/gal)",
+                        yaxis_title="Price per Gallon ($)",
+                        yaxis_tickformat="$,.3f",
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                    )
+                    st.plotly_chart(style_fig(fig_eia, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+                with _ec2:
+                    _eia_latest = _eia_ca.iloc[-1]
+                    _eia_prior  = _eia_ca.iloc[-5] if len(_eia_ca) >= 5 else _eia_ca.iloc[0]
+                    _eia_delta  = _eia_latest["price_per_gallon"] - _eia_prior["price_per_gallon"]
+                    st.metric("Latest CA Price",
+                              f"${_eia_latest['price_per_gallon']:.3f}/gal",
+                              f"{_eia_delta:+.3f} vs 4wk prior")
+                    _eia_yr_avg = _eia_ca[_eia_ca["date"].dt.year == _eia_ca["date"].dt.year.max()]["price_per_gallon"].mean()
+                    st.metric("YTD CA Avg", f"${_eia_yr_avg:.3f}/gal")
+                    _demand_risk = "🔴 High" if _eia_latest["price_per_gallon"] >= 4.50 else ("🟡 Moderate" if _eia_latest["price_per_gallon"] >= 4.00 else "🟢 Low")
+                    st.metric("Drive-Market Risk", _demand_risk)
+                    st.caption(
+                        "📌 **Rule of thumb:** Every $0.20/gal increase above $4.00 correlates with ~2–3% softening "
+                        "in LA/OC/SD weekend trip decisions 2–3 weeks out."
+                    )
+            else:
+                st.info("Run `python scripts/fetch_eia_gas.py` to populate CA gas price data.")
+        else:
+            st.markdown(
+                '<div class="empty-card">'
+                '<div class="empty-icon">⛽</div>'
+                '<div class="empty-title">EIA Gas Price Data Not Loaded</div>'
+                '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> '
+                'to fetch EIA gas prices. Add <code>EIA_API_KEY</code> to .env for live data '
+                '(free at eia.gov/opendata). Demo data seeds automatically without a key.</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ── TSA Checkpoint Throughput ─────────────────────────────────────────────
+        st.markdown(sec_div("✈️ TSA Checkpoint Throughput — Air Travel Demand"), unsafe_allow_html=True)
+        st.markdown(_sh("✈️", "TSA Checkpoint Throughput", "indigo", "FLY-MARKET SIGNAL"), unsafe_allow_html=True)
+        st.caption(
+            "Source: U.S. Transportation Security Administration · Daily checkpoint traveler counts. "
+            "Dana Point's fly-market feeders (SLC, DFW, PHX, DEN) generate highest-ADR overnight visitors — TSA surge signals premium demand 3–7 days out."
+        )
+        if not df_tsa.empty and "date" in df_tsa.columns:
+            _tsa_sorted = df_tsa.sort_values("date")
+            _tc1, _tc2 = st.columns([3, 1])
+            with _tc1:
+                fig_tsa = go.Figure()
+                fig_tsa.add_trace(go.Scatter(
+                    x=_tsa_sorted["date"], y=_tsa_sorted["travelers_count"],
+                    mode="lines", name="2025/2026 Travelers",
+                    line=dict(color=BLUE, width=2.5),
+                    fill="tozeroy", fillcolor="rgba(5,103,200,0.07)",
+                    hovertemplate="<b>%{x|%b %d, %Y}</b><br>Travelers: %{y:,.0f}<extra></extra>",
+                ))
+                if "travelers_prior_year" in _tsa_sorted.columns:
+                    fig_tsa.add_trace(go.Scatter(
+                        x=_tsa_sorted["date"], y=_tsa_sorted["travelers_prior_year"],
+                        mode="lines", name="Prior Year",
+                        line=dict(color=TEAL_LIGHT, width=1.5, dash="dot"),
+                        hovertemplate="<b>%{x|%b %Y}</b><br>Prior Year: %{y:,.0f}<extra></extra>",
+                    ))
+                if "rolling_7d_avg" in _tsa_sorted.columns:
+                    fig_tsa.add_trace(go.Scatter(
+                        x=_tsa_sorted["date"], y=_tsa_sorted["rolling_7d_avg"],
+                        mode="lines", name="7-Day Avg",
+                        line=dict(color=ORANGE, width=2, dash="dash"),
+                        hovertemplate="<b>%{x|%b %Y}</b><br>7d Avg: %{y:,.0f}<extra></extra>",
+                    ))
+                fig_tsa.update_layout(
+                    title="Daily TSA Checkpoint Travelers",
+                    yaxis_title="Travelers",
+                    yaxis_tickformat=",",
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                )
+                st.plotly_chart(style_fig(fig_tsa, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+            with _tc2:
+                _tsa_latest = _tsa_sorted.iloc[-1]
+                _tsa_prior  = _tsa_sorted.iloc[-2] if len(_tsa_sorted) >= 2 else _tsa_sorted.iloc[0]
+                _tsa_delta  = int(_tsa_latest["travelers_count"] - _tsa_prior["travelers_count"]) if _tsa_prior["travelers_count"] else 0
+                st.metric("Latest Count",
+                          f"{int(_tsa_latest['travelers_count']):,}",
+                          f"{_tsa_delta:+,} vs prior")
+                if pd.notna(_tsa_latest.get("yoy_pct_change")):
+                    st.metric("YOY Change", f"{_tsa_latest['yoy_pct_change']:+.1f}%")
+                _tsa_yr_avg = int(_tsa_sorted[_tsa_sorted["date"].dt.year == _tsa_sorted["date"].dt.year.max()]["travelers_count"].mean())
+                st.metric("YTD Daily Avg", f"{_tsa_yr_avg:,}")
+                st.caption(
+                    "📌 **Fly-market strategy:** When TSA throughput > 2.8M/day, "
+                    "activate fly-market ADR premiums. SLC, DFW, PHX visitors average 1.3–1.4× ADR vs. drive markets."
+                )
+        else:
+            st.markdown(
+                '<div class="empty-card">'
+                '<div class="empty-icon">✈️</div>'
+                '<div class="empty-title">TSA Checkpoint Data Not Loaded</div>'
+                '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> '
+                'to fetch TSA throughput data. No API key required.</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ── External Correlations ─────────────────────────────────────────────────
+        with st.expander("🔗 External Correlations — Gas Prices vs. Hotel Demand", expanded=False):
+            st.caption(
+                "Correlation analysis: CA gas prices vs. STR occupancy · "
+                "Positive correlation = gas price drop boosts drive-market demand. "
+                "Negative correlation = gas spike suppresses weekend leisure travel."
+            )
+            if not df_eia_gas.empty and not df_kpi.empty and "date" in df_eia_gas.columns:
+                try:
+                    _eia_ca_corr = df_eia_gas[df_eia_gas["state_label"] == "CA"][["date", "price_per_gallon"]].copy()
+                    _eia_ca_corr["year_month"] = _eia_ca_corr["date"].dt.to_period("M")
+                    _eia_monthly_avg = _eia_ca_corr.groupby("year_month")["price_per_gallon"].mean().reset_index()
+                    _eia_monthly_avg["date"] = _eia_monthly_avg["year_month"].dt.to_timestamp()
+
+                    _kpi_corr = df_kpi[["as_of_date", "occ_pct", "adr", "revpar"]].copy()
+                    _kpi_corr["year_month"] = pd.to_datetime(_kpi_corr["as_of_date"]).dt.to_period("M")
+                    _kpi_monthly = _kpi_corr.groupby("year_month").agg(
+                        avg_occ=("occ_pct", "mean"), avg_adr=("adr", "mean"), avg_rvp=("revpar", "mean")
+                    ).reset_index()
+                    _kpi_monthly["date"] = _kpi_monthly["year_month"].dt.to_timestamp()
+
+                    _merged = pd.merge(_eia_monthly_avg, _kpi_monthly, on="date", how="inner")
+                    if len(_merged) >= 6:
+                        _corr_occ = _merged["price_per_gallon"].corr(_merged["avg_occ"])
+                        _corr_adr = _merged["price_per_gallon"].corr(_merged["avg_adr"])
+                        _corr_rvp = _merged["price_per_gallon"].corr(_merged["avg_rvp"])
+                        _cc1, _cc2, _cc3 = st.columns(3)
+                        with _cc1:
+                            _occ_dir = "inverse" if _corr_occ < -0.1 else ("positive" if _corr_occ > 0.1 else "neutral")
+                            st.metric("Gas ↔ Occupancy", f"r = {_corr_occ:.2f}", f"Correlation: {_occ_dir}")
+                        with _cc2:
+                            _adr_dir = "positive" if _corr_adr > 0.1 else ("inverse" if _corr_adr < -0.1 else "neutral")
+                            st.metric("Gas ↔ ADR", f"r = {_corr_adr:.2f}", f"Correlation: {_adr_dir}")
+                        with _cc3:
+                            _rvp_dir = "positive" if _corr_rvp > 0.1 else ("inverse" if _corr_rvp < -0.1 else "neutral")
+                            st.metric("Gas ↔ RevPAR", f"r = {_corr_rvp:.2f}", f"Correlation: {_rvp_dir}")
+
+                        fig_corr = go.Figure()
+                        fig_corr.add_trace(go.Bar(
+                            x=["Gas ↔ Occupancy", "Gas ↔ ADR", "Gas ↔ RevPAR"],
+                            y=[_corr_occ, _corr_adr, _corr_rvp],
+                            marker_color=[ORANGE if v < 0 else GREEN for v in [_corr_occ, _corr_adr, _corr_rvp]],
+                            text=[f"r={v:.2f}" for v in [_corr_occ, _corr_adr, _corr_rvp]],
+                            textposition="outside",
+                        ))
+                        fig_corr.update_layout(
+                            title="Pearson Correlation: CA Gas Price vs. STR Metrics",
+                            yaxis=dict(range=[-1, 1], title="Correlation Coefficient (r)"),
+                            showlegend=False,
+                        )
+                        st.plotly_chart(style_fig(fig_corr, height=240), use_container_width=True, config=PLOTLY_CONFIG)
+                        st.caption(
+                            "Interpretation: r > +0.5 = strong positive correlation · r < −0.5 = strong inverse. "
+                            "Negative gas↔occupancy means higher gas prices suppress drive-market leisure demand. "
+                            f"Based on {len(_merged)} months of overlapping data."
+                        )
+                    else:
+                        st.info("Not enough overlapping data yet to compute correlations. Run the pipeline to build up data.")
+                except Exception as _corr_err:
+                    st.caption(f"Correlation analysis unavailable: {_corr_err}")
+            else:
+                st.info("Load both EIA gas prices and STR KPIs to see correlation analysis.")
+
+        # ── Live Market Intelligence (Perplexity Sonar) ──────────────────────────
+        st.markdown(sec_div("🌐 Live Market Intelligence"), unsafe_allow_html=True)
+        st.markdown(_sh("🌐", "Live Competitive Intelligence — Real-Time Web Search", "indigo", "PERPLEXITY SONAR"), unsafe_allow_html=True)
+        st.caption(
+            "Powered by Perplexity Sonar Pro — searches the live web for competitor news, travel trends, and market events. "
+            "Configure PERPLEXITY_API_KEY in .env to activate. Claude / GPT-4o can be used for offline analysis."
+        )
+
+        _LIVE_INTEL_PROMPTS = [
+            ("🏨 Dana Point Competitor News",
+             "Search for the latest news about Waldorf Astoria Monarch Beach, Ritz-Carlton Laguna Niguel, "
+             "and Laguna Cliffs Marriott. Any new renovations, rate changes, or ownership updates in 2025–2026? "
+             "How does this affect Dana Point's competitive position?"),
+            ("✈️ SoCal Travel Demand Trends",
+             "What are the current travel demand trends for Southern California coastal destinations in 2026? "
+             "Any data on visitor volume, ADR trends, or booking pace for Orange County hotels?"),
+            ("📈 OC Hotel Market News",
+             "What is the latest news about Orange County hotel market performance in 2025–2026? "
+             "Any new hotel openings, closures, renovations, or major group bookings in Dana Point or South OC?"),
+            ("🎪 Dana Point Events 2026",
+             "What major events are coming to Dana Point, California in 2026? "
+             "Include festivals, sporting events, concerts, and community events that drive hotel demand."),
+            ("⛽ Gas Price Impact on SoCal Drive Markets",
+             "What are the current California gas prices and trends as of 2026? "
+             "How is this affecting drive-market leisure travel to Orange County coastal destinations like Dana Point?"),
+            ("💡 DMO Best Practices 2026",
+             "What are the most innovative destination marketing strategies being used by California coastal DMOs in 2026? "
+             "Any case studies of successful TBID campaigns or visitor economy growth initiatives?"),
         ]
 
-        def build_costar_prompt(key: str, m: dict) -> str:
-            """Build AI prompts enriched with CoStar market context."""
-            cs_ctx = ""
-            if not df_cs_snap.empty:
-                snap = df_cs_snap.iloc[0]
-                cs_ctx = (
-                    f"\nCoStar South Orange County Market (2024 Full Year):\n"
-                    f"• Market occupancy: {snap.get('occupancy_pct', 0):.1f}% "
-                    f"({snap.get('occ_yoy_pp', 0):+.1f}pp YOY)\n"
-                    f"• Market ADR: ${snap.get('adr_usd', 0):.2f} "
-                    f"({snap.get('adr_yoy_pct', 0):+.1f}% YOY)\n"
-                    f"• Market RevPAR: ${snap.get('revpar_usd', 0):.2f} "
-                    f"({snap.get('revpar_yoy_pct', 0):+.1f}% YOY)\n"
-                    f"• Total market supply: {snap.get('total_supply_rooms', 0):,} rooms\n"
-                    f"• Annual room revenue: ${snap.get('room_revenue_usd', 0)/1e6:.1f}M\n"
-                )
-            if not df_cs_chain.empty:
-                chain_2024 = df_cs_chain[df_cs_chain["year"] == "2024"]
-                if not chain_2024.empty:
-                    luxury = chain_2024[chain_2024["chain_scale"] == "Luxury"]
-                    upupscale = chain_2024[chain_2024["chain_scale"] == "Upper Upscale"]
-                    if not luxury.empty:
-                        cs_ctx += f"• Luxury segment ADR: ${luxury.iloc[0]['adr_usd']:.0f} · Occ: {luxury.iloc[0]['occupancy_pct']:.1f}%\n"
-                    if not upupscale.empty:
-                        cs_ctx += f"• Upper Upscale ADR: ${upupscale.iloc[0]['adr_usd']:.0f} · Occ: {upupscale.iloc[0]['occupancy_pct']:.1f}%\n"
-            pipeline_rooms = df_cs_pipe["rooms"].sum() if not df_cs_pipe.empty else 0
-            cs_ctx += f"• Active pipeline: {pipeline_rooms:,} rooms across {len(df_cs_pipe)} projects\n"
+        _li_cols = st.columns(3)
+        for _li_i, (_li_lbl, _li_prompt) in enumerate(_LIVE_INTEL_PROMPTS):
+            with _li_cols[_li_i % 3]:
+                if st.button(_li_lbl, key=f"li_btn_{_li_i}", use_container_width=True):
+                    st.session_state["li_pending_prompt"] = _li_prompt
+                    st.session_state["li_pending_label"]  = _li_lbl
 
-            base = _base(m) if m else "No STR portfolio data loaded."
-            prompts = {
-                "cs_mkt_vs_portfolio": (
-                    f"{base}\n{cs_ctx}\n"
-                    "Compare the VDP Select Portfolio performance (76.4% occ, $288.50 ADR, "
-                    "$220.42 RevPAR) to the broader South OC market. Identify where the portfolio "
-                    "is outperforming or underperforming the market, and provide 3 specific "
-                    "recommendations to improve market share index (MPI/ARI/RGI)."
-                ),
-                "cs_rate_position": (
-                    f"{base}\n{cs_ctx}\n"
-                    "The Waldorf Astoria Monarch Beach commands $850 ADR at 71% occupancy. "
-                    "The VDP portfolio blended ADR is $288.50. Analyze the rate positioning "
-                    "gap across chain scales (Luxury at $782, Upper Upscale at $298, Upscale "
-                    "at $199) and recommend a rate ladder strategy for the VDP portfolio to "
-                    "maximize its ARI (Average Rate Index) relative to the market."
-                ),
-                "cs_supply_impact": (
-                    f"{base}\n{cs_ctx}\n"
-                    f"There are {pipeline_rooms:,} new hotel rooms in the active supply pipeline "
-                    "for South OC (Dana Cove Hotel 136 rooms Q3 2025, Strands Beach Hotel 88 "
-                    "rooms Q1 2026, Monarch Beach Residences 48 rooms Q2 2026, plus 3 others). "
-                    "Analyze the competitive impact of this new supply on VDP portfolio occupancy "
-                    "and ADR. Which segments face the most pressure? What pre-emptive strategy "
-                    "should VDP recommend to member hotels?"
-                ),
-                "cs_segment": (
-                    f"{base}\n{cs_ctx}\n"
-                    "The chain scale analysis shows Luxury at $782 ADR (71% occ), Upper Upscale "
-                    "at $298 (77.4% occ), and Upscale at $199 (79.1% occ). Independent hotels "
-                    "achieve $296 ADR at 73.6% occ — nearly matching Upper Upscale rates with "
-                    "smaller inventory. Identify the most underserved segment in Dana Point's "
-                    "market and the highest-margin positioning opportunity for VDP member hotels."
-                ),
-                "cs_revenue_opp": (
-                    f"{base}\n{cs_ctx}\n"
-                    "South OC generated $1.15B in room revenue in 2024. VDP portfolio "
-                    "contributes approximately $220M of that at current pace. Quantify the "
-                    "revenue gap between VDP portfolio performance and market-leading properties. "
-                    "Model the incremental room revenue if VDP portfolio achieved market-average "
-                    "ADR and occupancy. Express in annual and TBID-revenue terms."
-                ),
-                "cs_comp_rank": (
-                    f"{base}\n{cs_ctx}\n"
-                    "The competitive set ranking shows: Waldorf Astoria (RGI 273.9), "
-                    "Ritz-Carlton (RGI 231.2), Pacific Edge Boutique (RGI 131.4), "
-                    "Laguna Cliffs Marriott (RGI 105.1), VDP Portfolio baseline (RGI 100.0). "
-                    "Analyze the MPI, ARI, and RGI spread across the comp set. Which "
-                    "properties represent the strongest competitive threat to the VDP portfolio? "
-                    "Which represent a model VDP members should benchmark against?"
-                ),
-            }
-            return prompts.get(key, f"{base}\n{cs_ctx}\nProvide market intelligence insights.")
+        _li_custom = st.text_input(
+            "Or search any market intelligence question:",
+            key="li_custom_q",
+            placeholder="e.g. What new hotel brands are expanding in Orange County in 2026?",
+        )
+        _li_model_opts = [k for k, v in AI_MODELS.items() if v["provider"] == "perplexity" and bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE]
+        _li_model_opts += [k for k, v in AI_MODELS.items() if v["provider"] in ("anthropic", "openai", "google")]
+        _li_model_sel = AI_MODELS.get(st.session_state.get("selected_model", CLAUDE_MODEL), AI_MODELS[CLAUDE_MODEL])
+        _li_use_model = st.session_state.get("selected_model", CLAUDE_MODEL)
 
-        btn_cols_cs = st.columns(3)
-        for i, (label, key) in enumerate(COSTAR_PROMPTS):
-            with btn_cols_cs[i % 3]:
-                if st.button(label, key=f"cs_btn_{key}", use_container_width=True):
-                    st.session_state.ai_current_prompt = build_costar_prompt(key, m)
-                    st.session_state.ai_prompt_label   = label
-                    st.session_state.ai_needs_call     = True
+        _li_col1, _li_col2 = st.columns([1, 4])
+        with _li_col1:
+            if st.button("🔍 Search", key="li_search_btn", type="primary", use_container_width=True):
+                if _li_custom.strip():
+                    st.session_state["li_pending_prompt"] = _li_custom.strip()
+                    st.session_state["li_pending_label"]  = f"💬 {_li_custom.strip()[:50]}"
 
-        if st.session_state.get("ai_needs_call") and st.session_state.get("ai_current_prompt"):
-            st.session_state.ai_needs_call = False
-            label_disp = st.session_state.get("ai_prompt_label", "Analysis")
-            st.markdown(f"**{label_disp}**")
-            _cs_mdl = st.session_state.get("selected_model", CLAUDE_MODEL)
-            _cs_info = AI_MODELS.get(_cs_mdl, {})
-            _cs_label = f"{_cs_info.get('badge','🟦')} {_cs_info.get('label', _cs_mdl)}"
-            _cs_any_ai = (
+        _li_pend = st.session_state.get("li_pending_prompt", "")
+        if _li_pend:
+            _li_lbl_disp = st.session_state.get("li_pending_label", "Search")
+            _li_mdl      = st.session_state.get("selected_model", CLAUDE_MODEL)
+            _li_mdl_info = AI_MODELS.get(_li_mdl, {})
+            _li_badge    = f"{_li_mdl_info.get('badge','🟦')} {_li_mdl_info.get('label', _li_mdl)}"
+            _li_any_ai   = (
                 (api_key_valid and ANTHROPIC_AVAILABLE) or
                 (bool(_OPENAI_KEY) and OPENAI_AVAILABLE) or
                 (bool(_GOOGLE_AI_KEY) and GEMINI_AVAILABLE) or
                 (bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE)
             )
-            if _cs_any_ai:
-                st.caption(f"Analyzing with {_cs_label}")
-                with st.spinner("Running deep market analysis…"):
-                    st.write_stream(stream_ai_response(st.session_state.ai_current_prompt, _cs_mdl, _ai_keys))
+            if _li_any_ai:
+                st.markdown(f"**{_li_lbl_disp}** — via {_li_badge}")
+                with st.spinner(f"Searching with {_li_badge}…"):
+                    _li_result = st.write_stream(stream_ai_response(_li_pend, _li_mdl, _ai_keys))
+                if _li_result:
+                    _li_dl = f"# {_li_lbl_disp}\n\n{_li_result}"
+                    st.download_button(
+                        "⬇️ Download Intelligence Report",
+                        _li_dl.encode(),
+                        file_name=f"live_intel_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
+                        mime="text/markdown",
+                        key="li_dl_btn",
+                    )
+                del st.session_state["li_pending_prompt"]
             else:
-                st.info(local_fallback("board", m) if m else "No data. Run the pipeline first.")
+                st.info("💡 Add an API key in the sidebar (Anthropic, OpenAI, Google AI, or Perplexity) to activate Live Intelligence.")
+                del st.session_state["li_pending_prompt"]
 
-    st.markdown(sec_div("🏨 South OC Market Overview"), unsafe_allow_html=True)
+    # ══════════════════════════════════════════════════════════════════════════════
 
-    # ── Market Overview KPI Cards ──────────────────────────────────────────────
-    st.markdown(_sh("🏨", "South OC Market Overview · Full Year 2024 (Latest Available)", "indigo", "COSTAR"), unsafe_allow_html=True)
-    st.caption("Source: CoStar Hospitality Analytics · Full Year 2024 Annual Data · Extracted from March 2026 CoStar Report · Current STR data (through Feb 2026) is in the Hotel Performance tab")
 
-    if not df_cs_snap.empty:
-        # Prefer South OC or Newport Beach/Dana Point 2024 annual data
-        snap_df = df_cs_snap[
-            (df_cs_snap["report_period"] == "2024-12-31") &
-            (df_cs_snap["market"].isin(["South Orange County CA", "Newport Beach/Dana Point"]))
-        ]
-        if snap_df.empty:
-            snap_df = df_cs_snap[df_cs_snap["report_period"] == "2024-12-31"]
-        if snap_df.empty:
-            snap_df = df_cs_snap[
-                df_cs_snap["market"].isin(["South Orange County CA", "Newport Beach/Dana Point"])
-            ]
-        if snap_df.empty:
-            snap_df = df_cs_snap.iloc[0:1]
-        snap_df = snap_df.fillna(0)
-        snap = snap_df.iloc[0]
+    def render_audit_report() -> None:
+        """Generate and render a comprehensive data audit for the PULSE app."""
+        import datetime as _dt
 
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            st.markdown(kpi_card(
-                "Market Occupancy", f"{snap['occupancy_pct']:.1f}%",
-                f"{snap['occ_yoy_pp']:+.1f}pp YOY",
-                positive=(snap['occ_yoy_pp'] >= 0),
-                tooltip="Rooms Sold ÷ Rooms Available. Above 80% signals compression opportunity.",
-            ), unsafe_allow_html=True)
-        with c2:
-            st.markdown(kpi_card(
-                "Market ADR", f"${snap['adr_usd']:.2f}",
-                f"{snap['adr_yoy_pct']:+.1f}% YOY",
-                positive=(snap['adr_yoy_pct'] >= 0),
-                tooltip="Average Daily Rate = Room Revenue ÷ Rooms Sold. Measures pricing power.",
-            ), unsafe_allow_html=True)
-        with c3:
-            st.markdown(kpi_card(
-                "Market RevPAR", f"${snap['revpar_usd']:.2f}",
-                f"{snap['revpar_yoy_pct']:+.1f}% YOY",
-                positive=(snap['revpar_yoy_pct'] >= 0),
-                tooltip="Revenue Per Available Room = ADR × Occupancy. Primary hotel health index.",
-            ), unsafe_allow_html=True)
-        with c4:
-            rev_b = snap['room_revenue_usd'] / 1e9
-            st.markdown(kpi_card(
-                "Annual Room Revenue", f"${rev_b:.2f}B",
-                f"{snap['demand_yoy_pct']:+.1f}% demand YOY",
-                positive=(snap['demand_yoy_pct'] >= 0),
-                tooltip="Total room revenue for the South OC submarket. Demand YOY = rooms sold growth rate.",
-            ), unsafe_allow_html=True)
+        st.markdown(_sh("🔍", "App Audit Report", color="indigo", tag="LIVE"), unsafe_allow_html=True)
 
-        # VDP vs Market comparison row
-        st.markdown("#### VDP Portfolio vs. South OC Market · Full Year 2024 Baseline")
-        col_a, col_b, col_c = st.columns(3)
-        # Use live DB annual averages for 2024; fall back to 30-day if no annual data
-        _2024_kpi = df_kpi[df_kpi["as_of_date"].astype(str).str.startswith("2024")] if not df_kpi.empty else pd.DataFrame()
-        vdp_occ = float(_2024_kpi["occ_pct"].mean()) if not _2024_kpi.empty else m.get("occ_30", 76.4)
-        vdp_adr = float(_2024_kpi["adr"].mean())     if not _2024_kpi.empty else m.get("adr_30", 288.50)
-        vdp_rvp = float(_2024_kpi["revpar"].mean())  if not _2024_kpi.empty else m.get("revpar_30", 220.42)
-        mkt_occ = float(snap["occupancy_pct"])
-        mkt_adr = float(snap["adr_usd"])
-        mkt_rvp = float(snap["revpar_usd"])
+        _now = _dt.datetime.now()
+        _checks = []
 
-        with col_a:
-            diff = vdp_occ - mkt_occ
-            st.markdown(kpi_card(
-                "Occ: Portfolio vs. Market",
-                f"{vdp_occ:.1f}% / {mkt_occ:.1f}%",
-                f"MPI: {(vdp_occ/mkt_occ*100):.1f} · {diff:+.1f}pp gap",
-                positive=(diff >= 0),
-            ), unsafe_allow_html=True)
-        with col_b:
-            diff = ((vdp_adr - mkt_adr) / mkt_adr * 100)
-            st.markdown(kpi_card(
-                "ADR: Portfolio vs. Market",
-                f"${vdp_adr:.0f} / ${mkt_adr:.0f}",
-                f"ARI: {(vdp_adr/mkt_adr*100):.1f} · {diff:+.1f}%",
-                positive=(diff >= 0),
-            ), unsafe_allow_html=True)
-        with col_c:
-            diff = ((vdp_rvp - mkt_rvp) / mkt_rvp * 100)
-            st.markdown(kpi_card(
-                "RevPAR: Portfolio vs. Market",
-                f"${vdp_rvp:.0f} / ${mkt_rvp:.0f}",
-                f"RGI: {(vdp_rvp/mkt_rvp*100):.1f} · {diff:+.1f}%",
-                positive=(diff >= 0),
-            ), unsafe_allow_html=True)
-    else:
-        st.markdown(empty_state("📊", "No CoStar snapshot data.",
-            "Run scripts/load_costar_reports.py to populate market data."),
-            unsafe_allow_html=True)
-
-    st.markdown(sec_div("📈 Market Monthly Performance — 24-Month Trend"), unsafe_allow_html=True)
-
-    # ── Monthly Performance Trend ──────────────────────────────────────────────
-    st.markdown("### Market Monthly Performance — 24-Month Trend")
-
-    if not df_cs_mon.empty:
-        # Filter last 24 months
-        cs_plot = df_cs_mon.tail(24).copy()
-
-        col_left, col_right = st.columns(2)
-        with col_left:
-            st.markdown('<div class="chart-header">Market Occupancy & ADR Trend</div>',
-                        unsafe_allow_html=True)
-            st.markdown('<div class="chart-caption">South OC market — monthly CoStar data</div>',
-                        unsafe_allow_html=True)
-            fig_cs1 = make_subplots(specs=[[{"secondary_y": True}]])
-            fig_cs1.add_trace(go.Scatter(
-                x=cs_plot["as_of_date"], y=cs_plot["occupancy_pct"],
-                name="Market Occ %", line=dict(color=TEAL, width=2.5),
-                hovertemplate="<b>%{x|%b %Y}</b><br>Occ: %{y:.1f}%<extra></extra>",
-            ), secondary_y=False)
-            fig_cs1.add_trace(go.Bar(
-                x=cs_plot["as_of_date"], y=cs_plot["adr_usd"],
-                name="Market ADR $", marker_color=f"rgba(230,129,97,0.45)",
-                hovertemplate="<b>%{x|%b %Y}</b><br>ADR: $%{y:.0f}<extra></extra>",
-            ), secondary_y=True)
-            fig_cs1.update_yaxes(title_text="Occupancy %", secondary_y=False,
-                                  tickformat=".0f", ticksuffix="%")
-            fig_cs1.update_yaxes(title_text="ADR $", secondary_y=True,
-                                  tickformat="$,.0f")
-            st.plotly_chart(style_fig(fig_cs1, height=300), use_container_width=True, config=PLOTLY_CONFIG)
-
-        with col_right:
-            st.markdown('<div class="chart-header">Market RevPAR Trend</div>',
-                        unsafe_allow_html=True)
-            st.markdown('<div class="chart-caption">South OC monthly RevPAR with YOY change overlay</div>',
-                        unsafe_allow_html=True)
-            cs_yoy = cs_plot.dropna(subset=["revpar_yoy_pct"])
-            fig_cs2 = make_subplots(specs=[[{"secondary_y": True}]])
-            fig_cs2.add_trace(go.Scatter(
-                x=cs_plot["as_of_date"], y=cs_plot["revpar_usd"],
-                name="RevPAR $", fill="tozeroy",
-                fillcolor=f"rgba(33,128,141,0.12)",
-                line=dict(color=TEAL, width=2.5),
-                hovertemplate="<b>%{x|%b %Y}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
-            ), secondary_y=False)
-            if not cs_yoy.empty:
-                pos_mask = cs_yoy["revpar_yoy_pct"] >= 0
-                fig_cs2.add_trace(go.Bar(
-                    x=cs_yoy.loc[pos_mask, "as_of_date"],
-                    y=cs_yoy.loc[pos_mask, "revpar_yoy_pct"],
-                    name="YOY % (pos)", marker_color="rgba(33,128,141,0.55)",
-                    hovertemplate="<b>%{x|%b %Y}</b><br>YOY: %{y:+.1f}%<extra></extra>",
-                ), secondary_y=True)
-                fig_cs2.add_trace(go.Bar(
-                    x=cs_yoy.loc[~pos_mask, "as_of_date"],
-                    y=cs_yoy.loc[~pos_mask, "revpar_yoy_pct"],
-                    name="YOY % (neg)", marker_color="rgba(192,21,47,0.55)",
-                    hovertemplate="<b>%{x|%b %Y}</b><br>YOY: %{y:+.1f}%<extra></extra>",
-                ), secondary_y=True)
-            fig_cs2.update_yaxes(title_text="RevPAR $", secondary_y=False, tickformat="$,.0f")
-            fig_cs2.update_yaxes(title_text="YOY %", secondary_y=True, ticksuffix="%")
-            st.plotly_chart(style_fig(fig_cs2, height=300), use_container_width=True, config=PLOTLY_CONFIG)
-
-        # Seasonality insight
-        if len(cs_plot) >= 12:
-            peak_row = cs_plot.loc[cs_plot["revpar_usd"].idxmax()]
-            trough_row = cs_plot.loc[cs_plot["revpar_usd"].idxmin()]
-            peak_mo = peak_row["as_of_date"].strftime("%b %Y")
-            trough_mo = trough_row["as_of_date"].strftime("%b %Y")
-            seasonal_range = peak_row["revpar_usd"] - trough_row["revpar_usd"]
-            st.markdown(
-                insight_card(
-                    f"Market Seasonality: {seasonal_range:.0f} RevPAR swing",
-                    f"Peak: **{peak_mo}** at ${peak_row['revpar_usd']:.0f} RevPAR · "
-                    f"Trough: **{trough_mo}** at ${trough_row['revpar_usd']:.0f} RevPAR. "
-                    f"The {seasonal_range:.0f} RevPAR spread between peak and trough months "
-                    f"underscores the critical importance of aggressive summer rate positioning "
-                    f"and shoulder-season demand generation to smooth revenue over the full year.",
-                    kind="positive",
-                ),
-                unsafe_allow_html=True,
-            )
-    else:
-        st.markdown(empty_state("📈", "No monthly CoStar data.",
-            "Run scripts/load_costar_reports.py to populate trend data."),
-            unsafe_allow_html=True)
-
-    st.markdown(sec_div("🔗 Chain Scale Performance Breakdown"), unsafe_allow_html=True)
-
-    # ── Chain Scale Breakdown ──────────────────────────────────────────────────
-    st.markdown("### Chain Scale Performance Breakdown · Full Year 2024")
-
-    if not df_cs_chain.empty:
-        chain_2024 = df_cs_chain[df_cs_chain["year"] == "2024"].sort_values(
-            "revpar_usd", ascending=False
-        )
-
-        col_ch1, col_ch2 = st.columns(2)
-        with col_ch1:
-            st.markdown('<div class="chart-header">RevPAR by Chain Scale</div>',
-                        unsafe_allow_html=True)
-            st.markdown('<div class="chart-caption">South OC market 2024 · Full-year average</div>',
-                        unsafe_allow_html=True)
-            colors_chain = [TEAL if cs == "Upper Upscale" else
-                           ("#21808D" if cs == "Luxury" else TEAL_LIGHT)
-                           for cs in chain_2024["chain_scale"]]
-            fig_ch1 = go.Figure(go.Bar(
-                x=chain_2024["chain_scale"],
-                y=chain_2024["revpar_usd"],
-                marker_color=[TEAL, TEAL_LIGHT, "#4EC6D3", ORANGE, "#E68161", "#A84B2F"],
-                text=[f"${v:.0f}" for v in chain_2024["revpar_usd"]],
-                textposition="outside",
-                hovertemplate="<b>%{x}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
-            ))
-            st.plotly_chart(style_fig(fig_ch1, height=280), use_container_width=True, config=PLOTLY_CONFIG)
-
-        with col_ch2:
-            st.markdown('<div class="chart-header">Market Share by Chain Scale (RevPAR)</div>',
-                        unsafe_allow_html=True)
-            st.markdown('<div class="chart-caption">% of total market RevPAR contribution</div>',
-                        unsafe_allow_html=True)
-            fig_ch2 = go.Figure(go.Pie(
-                labels=chain_2024["chain_scale"],
-                values=chain_2024["market_share_revpar_pct"],
-                hole=0.46,
-                marker_colors=[TEAL, TEAL_LIGHT, "#4EC6D3", ORANGE, "#E68161", "#c0152f"],
-                hovertemplate="<b>%{label}</b><br>Share: %{percent}<extra></extra>",
-            ))
-            fig_ch2.update_layout(
-                showlegend=True, margin=dict(t=10, b=10, l=10, r=10),
-                legend=dict(font=dict(size=11)),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            )
-            st.plotly_chart(fig_ch2, use_container_width=True, config=PLOTLY_CONFIG)
-
-        # Chain scale data table
-        _chain_display = chain_2024[["chain_scale","num_properties","supply_rooms",
-                                      "occupancy_pct","adr_usd","revpar_usd",
-                                      "market_share_revpar_pct"]].copy()
-        _chain_display.columns = ["Segment","Properties","Rooms",
-                                   "Occ %","ADR $","RevPAR $","Mkt Share %"]
-        _chain_display["Occ %"]       = _chain_display["Occ %"].map("{:.1f}%".format)
-        _chain_display["ADR $"]       = _chain_display["ADR $"].map("${:,.2f}".format)
-        _chain_display["RevPAR $"]    = _chain_display["RevPAR $"].map("${:,.2f}".format)
-        _chain_display["Mkt Share %"] = _chain_display["Mkt Share %"].map("{:.1f}%".format)
-        st.dataframe(_chain_display, use_container_width=True, hide_index=True)
-        st.download_button("⬇️ Download Chain Scale CSV", _chain_display.to_csv(index=False).encode(), "chain_scale_performance.csv", "text/csv", key="dl_chain")
-
-        # Key insight
-        luxury_row = chain_2024[chain_2024["chain_scale"] == "Luxury"].iloc[0]
-        upup_row   = chain_2024[chain_2024["chain_scale"] == "Upper Upscale"].iloc[0]
-        st.markdown(
-            insight_card(
-                "Luxury Dominance: 36.2% of Market RevPAR Revenue",
-                f"Luxury segment (Ritz-Carlton + Waldorf Astoria) generates **36.2%** of total "
-                f"market RevPAR revenue from just **3 properties** and **{luxury_row['supply_rooms']:,} rooms** — "
-                f"with ${luxury_row['revpar_usd']:.0f} RevPAR vs. ${upup_row['revpar_usd']:.0f} "
-                f"for Upper Upscale. The luxury ADR premium ({luxury_row['adr_usd']/upup_row['adr_usd']:.1f}x "
-                f"above Upper Upscale) defines the Dana Point rate ceiling and sets aspirational "
-                f"benchmarks for upper-tier VDP member hotels.",
-                kind="positive",
-            ),
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(empty_state("📊", "No chain scale data.",
-            "Run scripts/load_costar_reports.py to populate segment data."),
-            unsafe_allow_html=True)
-
-    st.markdown(sec_div("🏗️ Active Supply Pipeline"), unsafe_allow_html=True)
-
-    # ── Supply Pipeline ────────────────────────────────────────────────────────
-    st.markdown("### Active Supply Pipeline")
-
-    if not df_cs_pipe.empty:
-        pipe_total = df_cs_pipe["rooms"].sum()
-        under_const = df_cs_pipe[df_cs_pipe["status"] == "Under Construction"]
-        planned     = df_cs_pipe[df_cs_pipe["status"].isin(["Planned", "Final Planning / Permitting"])]
-        uc_rooms    = under_const["rooms"].sum() if not under_const.empty else 0
-        pl_rooms    = planned["rooms"].sum() if not planned.empty else 0
-
-        c_p1, c_p2, c_p3 = st.columns(3)
-        with c_p1:
-            st.markdown(kpi_card(
-                "Total Pipeline Rooms", f"{pipe_total:,}",
-                f"{len(df_cs_pipe)} active projects",
-                positive=True, neutral=True,
-                tooltip="Compression Days: Nights when occupancy exceeds 80% or 90% — rate-increase signal.",
-            ), unsafe_allow_html=True)
-        with c_p2:
-            st.markdown(kpi_card(
-                "Under Construction", f"{uc_rooms:,} rooms",
-                f"{len(under_const)} project(s) · opening 2025",
-                positive=True, neutral=True,
-                tooltip="New hotel rooms currently under active construction in the South OC submarket.",
-            ), unsafe_allow_html=True)
-        with c_p3:
-            st.markdown(kpi_card(
-                "Planned / Permitting", f"{pl_rooms:,} rooms",
-                f"{len(planned)} project(s) · opening 2026–2027",
-                positive=False, neutral=True,
-                tooltip="Rooms in planning or permitting phase — potential future supply impact.",
-            ), unsafe_allow_html=True)
-
-        # Pipeline bar chart
-        st.markdown('<div class="chart-header">Pipeline Projects by Rooms & Status</div>',
-                    unsafe_allow_html=True)
-        status_colors = {
-            "Under Construction":             TEAL,
-            "Final Planning / Permitting":    ORANGE,
-            "Planned":                        TEAL_LIGHT,
+        # ── DataFrame emptiness checks ────────────────────────────────────────────
+        _df_registry = {
+            "STR Daily":           df_daily,
+            "STR Monthly":         df_monthly,
+            "KPI Daily Summary":   df_kpi,
+            "Compression Qtrs":    df_comp,
+            "CoStar Monthly":      df_cs_mon,
+            "CoStar Snapshot":     df_cs_snap,
+            "CoStar Pipeline":     df_cs_pipe,
+            "Datafy Overview":     df_dfy_ov,
+            "Datafy DMA":          df_dfy_dma,
+            "Datafy Spending":     df_dfy_spend,
+            "Datafy Media KPIs":   df_dfy_media,
+            "Datafy Website KPIs": df_dfy_web,
+            "Insights Daily":      df_insights,
+            "EIA Gas Prices":      df_eia_gas,
+            "TSA Checkpoint":      df_tsa,
         }
-        pipe_colors = [status_colors.get(s, "#626C71") for s in df_cs_pipe["status"]]
-        fig_pipe = go.Figure(go.Bar(
-            x=df_cs_pipe["property_name"],
-            y=df_cs_pipe["rooms"],
-            marker_color=pipe_colors,
-            text=[f"{r} rooms<br>{s}" for r, s in
-                  zip(df_cs_pipe["rooms"], df_cs_pipe["status"])],
-            textposition="outside",
-            hovertemplate="<b>%{x}</b><br>Rooms: %{y}<br>Open: %{customdata}<extra></extra>",
-            customdata=df_cs_pipe["projected_open_date"],
-        ))
-        fig_pipe.update_layout(
-            xaxis_tickangle=-20, margin=dict(t=30, b=80),
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        )
-        st.plotly_chart(style_fig(fig_pipe, height=320), use_container_width=True, config=PLOTLY_CONFIG)
+        _empty = []
+        _populated = []
+        for _lbl, _df in _df_registry.items():
+            if _df is None or (hasattr(_df, "empty") and _df.empty):
+                _empty.append(_lbl)
+                _checks.append(("🔴", _lbl, "Empty — source not loaded or pipeline step failed"))
+            else:
+                _populated.append(_lbl)
+                _checks.append(("🟢", _lbl, f"{len(_df):,} rows loaded"))
 
-        # Pipeline table
-        _pipe_display = df_cs_pipe[["property_name","city","chain_scale","rooms",
-                                     "status","projected_open_date","brand","developer"]].copy()
-        _pipe_display.columns = ["Property","City","Segment","Rooms",
-                                  "Status","Opens","Brand","Developer"]
-        st.dataframe(_pipe_display, use_container_width=True, hide_index=True)
-        st.download_button("⬇️ Download Pipeline CSV", _pipe_display.to_csv(index=False).encode(), "hotel_pipeline.csv", "text/csv", key="dl_cs_pipe")
-
-        # Supply impact insight
-        market_supply_pct = (pipe_total / 5120 * 100)
-        st.markdown(
-            insight_card(
-                f"Supply Warning: {pipe_total:,} Rooms ({market_supply_pct:.1f}% of Market) in Pipeline",
-                f"**{uc_rooms:,} rooms** under active construction (opening 2025) will increase "
-                f"South OC hotel supply by **{uc_rooms/5120*100:.1f}%** before year-end. "
-                f"The full pipeline adds **{market_supply_pct:.1f}%** supply growth. "
-                f"VDP member hotels should expect modest occupancy pressure in 2025–2026 as new "
-                f"supply absorbs demand — making ADR discipline and loyalty programs critical "
-                f"to defending RevPAR during the absorption period.",
-                kind="warning",
-            ),
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(empty_state("🏗️", "No pipeline data.",
-            "Run scripts/load_costar_reports.py to populate supply pipeline."),
-            unsafe_allow_html=True)
-
-    st.markdown(sec_div("🏆 Competitive Set — Property Rankings"), unsafe_allow_html=True)
-
-    # ── Competitive Set Rankings ───────────────────────────────────────────────
-    st.markdown("### Competitive Set — Property Rankings · Full Year 2024")
-
-    if not df_cs_comp.empty:
-        comp_sorted = df_cs_comp.sort_values("rgi", ascending=False)
-
-        # RGI ranking chart
-        col_rk1, col_rk2 = st.columns([3, 2])
-        with col_rk1:
-            st.markdown('<div class="chart-header">Revenue Generation Index (RGI) by Property</div>',
-                        unsafe_allow_html=True)
-            st.markdown('<div class="chart-caption">RGI > 100 = outperforming market · VDP baseline = 100.0</div>',
-                        unsafe_allow_html=True)
-            rgi_colors = [
-                TEAL if v > 105 else (ORANGE if v < 95 else "#626C71")
-                for v in comp_sorted["rgi"]
-            ]
-            fig_rgi = go.Figure(go.Bar(
-                x=comp_sorted["rgi"],
-                y=comp_sorted["property_name"],
-                orientation="h",
-                marker_color=rgi_colors,
-                text=[f"{v:.1f}" for v in comp_sorted["rgi"]],
-                textposition="outside",
-                hovertemplate="<b>%{y}</b><br>RGI: %{x:.1f}<extra></extra>",
-            ))
-            fig_rgi.add_vline(x=100, line_dash="dash", line_color=ORANGE,
-                              annotation_text="Market Baseline", annotation_position="top")
-            fig_rgi.update_layout(
-                margin=dict(l=10, r=60, t=10, b=10),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                xaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.07)"),
-                yaxis=dict(autorange="reversed"),
-            )
-            st.plotly_chart(style_fig(fig_rgi, height=360), use_container_width=True, config=PLOTLY_CONFIG)
-
-        with col_rk2:
-            st.markdown('<div class="chart-header">ADR vs. Occupancy Scatter</div>',
-                        unsafe_allow_html=True)
-            st.markdown('<div class="chart-caption">Size = rooms · color = chain scale</div>',
-                        unsafe_allow_html=True)
-            scale_color = {
-                "Luxury": TEAL, "Upper Upscale": TEAL_LIGHT, "Upscale": ORANGE,
-                "Upper Midscale": "#E68161", "Mixed": "#626C71",
-            }
-            fig_scat = go.Figure()
-            for _, row_cs in df_cs_comp.iterrows():
-                fig_scat.add_trace(go.Scatter(
-                    x=[row_cs["occupancy_pct"]],
-                    y=[row_cs["adr_usd"]],
-                    mode="markers+text",
-                    text=[row_cs["property_name"].split(" ")[0]],
-                    textposition="top center",
-                    marker=dict(
-                        size=max(10, min(40, row_cs["rooms"] / 15)),
-                        color=scale_color.get(row_cs["chain_scale"], "#626C71"),
-                        opacity=0.82,
-                    ),
-                    name=row_cs["chain_scale"],
-                    hovertemplate=(
-                        f"<b>{row_cs['property_name']}</b><br>"
-                        f"Occ: {row_cs['occupancy_pct']:.1f}%<br>"
-                        f"ADR: ${row_cs['adr_usd']:.0f}<br>"
-                        f"RevPAR: ${row_cs['revpar_usd']:.0f}<extra></extra>"
-                    ),
-                    showlegend=False,
-                ))
-            fig_scat.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                xaxis=dict(title="Occupancy %", ticksuffix="%",
-                           gridcolor="rgba(0,0,0,0.07)"),
-                yaxis=dict(title="ADR $", tickprefix="$",
-                           gridcolor="rgba(0,0,0,0.07)"),
-                margin=dict(t=10, b=30, l=10, r=10),
-            )
-            st.plotly_chart(style_fig(fig_scat, height=360), use_container_width=True, config=PLOTLY_CONFIG)
-
-        # Comp set table
-        _comp_display = comp_sorted[["property_name","chain_scale","rooms",
-                                      "occupancy_pct","adr_usd","revpar_usd",
-                                      "mpi","ari","rgi"]].copy()
-        _comp_display.columns = ["Property","Segment","Rooms","Occ %","ADR $","RevPAR $",
-                                  "MPI","ARI","RGI"]
-        _comp_display["Occ %"]   = _comp_display["Occ %"].map("{:.1f}%".format)
-        _comp_display["ADR $"]   = _comp_display["ADR $"].map("${:,.0f}".format)
-        _comp_display["RevPAR $"] = _comp_display["RevPAR $"].map("${:,.0f}".format)
-        _comp_display["MPI"]     = _comp_display["MPI"].map("{:.1f}".format)
-        _comp_display["ARI"]     = _comp_display["ARI"].map("{:.1f}".format)
-        _comp_display["RGI"]     = _comp_display["RGI"].map("{:.1f}".format)
-        st.dataframe(_comp_display, use_container_width=True, hide_index=True)
-        st.download_button("⬇️ Download Comp Set CSV", _comp_display.to_csv(index=False).encode(), "competitive_set.csv", "text/csv", key="dl_compset")
-    else:
-        st.markdown(empty_state("🏆", "No competitive set data.",
-            "Run scripts/load_costar_reports.py to populate competitive benchmarks."),
-            unsafe_allow_html=True)
-
-    st.markdown(sec_div("📊 Portfolio × Market Correlation Analysis"), unsafe_allow_html=True)
-
-    # ── STR × CoStar Correlation Insights ─────────────────────────────────────
-    st.markdown(_sh("📈", "Portfolio × Market Correlation Analysis", "teal", "STR + COSTAR"), unsafe_allow_html=True)
-    st.markdown(
-        '<div style="font-size:12px;color:#8B949E;margin:-8px 0 12px 0;">'
-        'VDP 12-property portfolio (kpi_daily_summary, resampled monthly) vs. South OC market (CoStar monthly) · '
-        'Feb 2024 – Dec 2024 overlap window · 11 months of aligned data</div>',
-        unsafe_allow_html=True,
-    )
-
-    if not df_cs_mon.empty:
-        # ── Build portfolio-side monthly series from kpi_daily_summary ─────────
-        # Fall back: resample daily KPIs to monthly (avoids dependency on STR monthly NULLs)
-        _kpi_src = df_kpi.copy() if not df_kpi.empty else pd.DataFrame()
-        if not _kpi_src.empty:
-            _kpi_src["as_of_date"] = pd.to_datetime(_kpi_src["as_of_date"])
-            # kpi_daily_summary has occ_pct (%), adr, revpar
-            _kpi_mon = (
-                _kpi_src.set_index("as_of_date")[["occ_pct","adr","revpar"]]
-                .resample("MS").mean()
-                .reset_index()
-            )
-            _kpi_mon.columns = ["as_of_date","portfolio_occ","portfolio_adr","portfolio_revpar"]
-            _kpi_mon["_ym"] = _kpi_mon["as_of_date"].dt.to_period("M").astype(str)
-        else:
-            _kpi_mon = pd.DataFrame()
-
-        cs_merged = df_cs_mon[["as_of_date","occupancy_pct","adr_usd","revpar_usd"]].copy()
-        cs_merged.columns = ["as_of_date","mkt_occ","mkt_adr","mkt_revpar"]
-        cs_merged["_ym"] = pd.to_datetime(cs_merged["as_of_date"]).dt.to_period("M").astype(str)
-
-        merged = pd.DataFrame()
-        if not _kpi_mon.empty:
-            merged = pd.merge(_kpi_mon, cs_merged, on="_ym", how="inner", suffixes=("","_cs"))
-            if "as_of_date_cs" in merged.columns:
-                merged = merged.drop(columns=["as_of_date_cs"])
-            merged = merged.dropna(subset=["portfolio_revpar","mkt_revpar"])
-            merged = merged.sort_values("as_of_date")
-
-        if len(merged) >= 3:
-            # ── Correlation stat callout ──────────────────────────────────────
-            _corr_rvp = merged["portfolio_revpar"].corr(merged["mkt_revpar"])
-            _corr_adr = merged["portfolio_adr"].corr(merged["mkt_adr"])
-            _avg_rvp_premium = (merged["portfolio_revpar"] - merged["mkt_revpar"]).mean()
-            _avg_adr_premium = (merged["portfolio_adr"] - merged["mkt_adr"]).mean()
-            st.markdown(f"""
-<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-  <div style="flex:1;min-width:140px;background:rgba(33,128,141,0.12);border:1px solid rgba(33,128,141,0.3);
-       border-radius:10px;padding:10px 14px;">
-    <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">RevPAR Correlation</div>
-    <div style="font-size:1.6rem;font-weight:800;color:#67E8F9;">{_corr_rvp:.2f}</div>
-    <div style="font-size:10px;color:#8B949E;">R — portfolio tracks market</div>
-  </div>
-  <div style="flex:1;min-width:140px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);
-       border-radius:10px;padding:10px 14px;">
-    <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">ADR Correlation</div>
-    <div style="font-size:1.6rem;font-weight:800;color:#C4B5FD;">{_corr_adr:.2f}</div>
-    <div style="font-size:10px;color:#8B949E;">R — rate pricing alignment</div>
-  </div>
-  <div style="flex:1;min-width:140px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);
-       border-radius:10px;padding:10px 14px;">
-    <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Avg RevPAR Premium</div>
-    <div style="font-size:1.6rem;font-weight:800;color:{'#34D399' if _avg_rvp_premium>=0 else '#F87171'};">${_avg_rvp_premium:+.0f}</div>
-    <div style="font-size:10px;color:#8B949E;">portfolio above market avg</div>
-  </div>
-  <div style="flex:1;min-width:140px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);
-       border-radius:10px;padding:10px 14px;">
-    <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Avg ADR Premium</div>
-    <div style="font-size:1.6rem;font-weight:800;color:{'#FDE68A' if _avg_adr_premium>=0 else '#F87171'};">${_avg_adr_premium:+.0f}</div>
-    <div style="font-size:10px;color:#8B949E;">portfolio above market ADR</div>
-  </div>
-  <div style="flex:1;min-width:140px;background:rgba(22,27,34,0.8);border:1px solid rgba(0,0,0,0.08);
-       border-radius:10px;padding:10px 14px;">
-    <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Data Points</div>
-    <div style="font-size:1.6rem;font-weight:800;color:#E6EDF3;">{len(merged)}</div>
-    <div style="font-size:10px;color:#8B949E;">months of aligned data</div>
-  </div>
-</div>
-""", unsafe_allow_html=True)
-
-            col_corr1, col_corr2 = st.columns(2)
-            with col_corr1:
-                st.markdown('<div class="chart-header">Portfolio RevPAR vs. Market RevPAR</div>', unsafe_allow_html=True)
-                st.markdown(
-                    f'<div class="chart-caption">R={_corr_rvp:.2f} — VDP portfolio commands ${_avg_rvp_premium:+.0f} RevPAR premium over South OC market · '
-                    f'Peak spread indicates strong leisure compression pricing</div>',
-                    unsafe_allow_html=True,
-                )
-                fig_corr = go.Figure()
-                fig_corr.add_trace(go.Scatter(
-                    x=merged["as_of_date"], y=merged["portfolio_revpar"],
-                    name="VDP Portfolio",
-                    line=dict(color=TEAL, width=2.5),
-                    fill="tonexty", fillcolor="rgba(33,128,141,0.08)",
-                    hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio RevPAR: $%{y:.0f}<extra></extra>",
-                ))
-                fig_corr.add_trace(go.Scatter(
-                    x=merged["as_of_date"], y=merged["mkt_revpar"],
-                    name="S. OC Market",
-                    line=dict(color=ORANGE, width=2, dash="dot"),
-                    hovertemplate="<b>%{x|%b %Y}</b><br>Market RevPAR: $%{y:.0f}<extra></extra>",
-                ))
-                # Annotate peak portfolio RevPAR
-                _peak_idx = merged["portfolio_revpar"].idxmax()
-                _peak_row = merged.loc[_peak_idx]
-                fig_corr.add_annotation(
-                    x=_peak_row["as_of_date"], y=_peak_row["portfolio_revpar"],
-                    text=f"Peak ${_peak_row['portfolio_revpar']:.0f}",
-                    showarrow=True, arrowhead=2, arrowcolor=TEAL,
-                    font=dict(size=10, color=TEAL), bgcolor="rgba(13,17,23,0.8)",
-                    bordercolor=TEAL, borderwidth=1, ax=0, ay=-30,
-                )
-                fig_corr.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    legend=dict(font=dict(size=11), bgcolor="rgba(13,17,23,0.6)",
-                                bordercolor="rgba(0,0,0,0.08)", borderwidth=1),
-                    margin=dict(t=10, b=10),
-                    yaxis=dict(tickprefix="$", gridcolor="rgba(0,0,0,0.07)", color="#718096"),
-                    xaxis=dict(gridcolor="rgba(0,0,0,0.07)", color="#718096",
-                               tickformat="%b %Y"),
-                    hoverlabel=dict(bgcolor="rgba(13,17,23,0.95)", font_size=13,
-                                   font_color="#E6EDF3", bordercolor="rgba(33,128,141,0.5)"),
-                )
-                st.plotly_chart(style_fig(fig_corr, height=300), use_container_width=True, config=PLOTLY_CONFIG)
-
-            with col_corr2:
-                st.markdown('<div class="chart-header">Portfolio ADR vs. Market ADR</div>', unsafe_allow_html=True)
-                st.markdown(
-                    f'<div class="chart-caption">R={_corr_adr:.2f} — VDP ADR premium ${_avg_adr_premium:+.0f} vs. market · '
-                    f'Strong summer seasonality with consistent rate discipline above market floor</div>',
-                    unsafe_allow_html=True,
-                )
-                fig_adr = go.Figure()
-                fig_adr.add_trace(go.Scatter(
-                    x=merged["as_of_date"], y=merged["portfolio_adr"],
-                    name="VDP Portfolio",
-                    line=dict(color=TEAL, width=2.5),
-                    hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio ADR: $%{y:.0f}<extra></extra>",
-                ))
-                fig_adr.add_trace(go.Scatter(
-                    x=merged["as_of_date"], y=merged["mkt_adr"],
-                    name="S. OC Market",
-                    line=dict(color=ORANGE, width=2, dash="dot"),
-                    hovertemplate="<b>%{x|%b %Y}</b><br>Market ADR: $%{y:.0f}<extra></extra>",
-                ))
-                _peak_adr_idx = merged["portfolio_adr"].idxmax()
-                _peak_adr_row = merged.loc[_peak_adr_idx]
-                fig_adr.add_annotation(
-                    x=_peak_adr_row["as_of_date"], y=_peak_adr_row["portfolio_adr"],
-                    text=f"Peak ${_peak_adr_row['portfolio_adr']:.0f}",
-                    showarrow=True, arrowhead=2, arrowcolor="#8B5CF6",
-                    font=dict(size=10, color="#8B5CF6"), bgcolor="rgba(13,17,23,0.8)",
-                    bordercolor="#8B5CF6", borderwidth=1, ax=0, ay=-30,
-                )
-                fig_adr.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    legend=dict(font=dict(size=11), bgcolor="rgba(13,17,23,0.6)",
-                                bordercolor="rgba(0,0,0,0.08)", borderwidth=1),
-                    margin=dict(t=10, b=10),
-                    yaxis=dict(tickprefix="$", gridcolor="rgba(0,0,0,0.07)", color="#718096"),
-                    xaxis=dict(gridcolor="rgba(0,0,0,0.07)", color="#718096",
-                               tickformat="%b %Y"),
-                    hoverlabel=dict(bgcolor="rgba(13,17,23,0.95)", font_size=13,
-                                   font_color="#E6EDF3", bordercolor="rgba(33,128,141,0.5)"),
-                )
-                st.plotly_chart(style_fig(fig_adr, height=300), use_container_width=True, config=PLOTLY_CONFIG)
-
-            # ── Occupancy comparison ──────────────────────────────────────────
-            _corr_occ = merged["portfolio_occ"].corr(merged["mkt_occ"])
-            st.markdown('<div class="chart-header">Portfolio Occupancy vs. Market Occupancy</div>', unsafe_allow_html=True)
-            st.markdown(
-                f'<div class="chart-caption">R={_corr_occ:.2f} — Occupancy parity signal · '
-                f'Portfolio occ (from kpi_daily_summary) vs. South OC market (CoStar) · '
-                f'Gap = VDP mix-shift toward higher-rated stays (fewer budget rooms)</div>',
-                unsafe_allow_html=True,
-            )
-            fig_occ = go.Figure()
-            fig_occ.add_trace(go.Scatter(
-                x=merged["as_of_date"], y=merged["portfolio_occ"],
-                name="VDP Portfolio Occ %",
-                line=dict(color=TEAL, width=2.5),
-                hovertemplate="<b>%{x|%b %Y}</b><br>Portfolio Occ: %{y:.1f}%<extra></extra>",
-            ))
-            fig_occ.add_trace(go.Scatter(
-                x=merged["as_of_date"], y=merged["mkt_occ"],
-                name="S. OC Market Occ %",
-                line=dict(color=ORANGE, width=2, dash="dot"),
-                hovertemplate="<b>%{x|%b %Y}</b><br>Market Occ: %{y:.1f}%<extra></extra>",
-            ))
-            fig_occ.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                legend=dict(font=dict(size=11), bgcolor="rgba(13,17,23,0.6)",
-                            bordercolor="rgba(0,0,0,0.08)", borderwidth=1),
-                margin=dict(t=10, b=10),
-                yaxis=dict(ticksuffix="%", gridcolor="rgba(0,0,0,0.07)", color="#718096"),
-                xaxis=dict(gridcolor="rgba(0,0,0,0.07)", color="#718096", tickformat="%b %Y"),
-                hoverlabel=dict(bgcolor="rgba(13,17,23,0.95)", font_size=13,
-                               font_color="#E6EDF3", bordercolor="rgba(33,128,141,0.5)"),
-            )
-            st.plotly_chart(style_fig(fig_occ, height=260), use_container_width=True, config=PLOTLY_CONFIG)
-
-        else:
-            st.warning(
-                f"⚠️ Correlation analysis requires overlapping date ranges. "
-                f"Portfolio data: Feb 2024–present. CoStar monthly: "
-                f"{df_cs_mon['as_of_date'].min()} – {df_cs_mon['as_of_date'].max()}. "
-                f"Overlap found: {len(merged)} months (minimum 3 required).",
-            )
-    else:
-        st.markdown(empty_state(
-            "📉", "CoStar data not loaded.",
-            "Run `python scripts/fetch_costar_data.py` to load South OC market benchmarks.",
-        ), unsafe_allow_html=True)
-
-    # CoStar data download
-    st.markdown("---")
-    if not df_cs_mon.empty:
-        _cs_csv = df_cs_mon.to_csv(index=False).encode()
-        st.download_button(
-            "⬇️ Download CoStar Monthly Performance CSV",
-            _cs_csv, file_name="costar_monthly_performance.csv",
-            mime="text/csv", use_container_width=True,
-        )
-
-    # ── Visit California State Context ────────────────────────────────────────
-    st.markdown(sec_div("🌴 Visit California — State Context"), unsafe_allow_html=True)
-    st.markdown(
-        '<div style="font-family:\'Syne\',sans-serif;font-size:1.35rem;'
-        'font-weight:800;letter-spacing:-0.03em;margin-bottom:2px;">'
-        'Visit California — State Context</div>'
-        '<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:14px;">'
-        'Statewide travel forecasts &amp; lodging benchmarks · Visit California (Feb 2026)</div>',
-        unsafe_allow_html=True,
-    )
-
-    _has_vca = not df_vca_forecast.empty or not df_vca_lodging.empty
-
-    if _has_vca:
-        # ── Row 1: CA statewide KPIs vs OC vs Dana Point ──────────────────────
-        st.markdown("#### California vs OC vs Dana Point Benchmark")
-        _vc1, _vc2, _vc3, _vc4 = st.columns(4)
-
-        # OC lodging row from visit_ca_lodging_forecast (most recent year)
-        _oc_row = pd.DataFrame()
-        _ca_row = pd.DataFrame()
-        if not df_vca_lodging.empty:
-            _latest_yr = df_vca_lodging["year"].max()
-            _oc_row = df_vca_lodging[
-                (df_vca_lodging["year"] == _latest_yr) &
-                (df_vca_lodging["region"].str.contains("Orange County", case=False, na=False))
-            ]
-            _ca_row = df_vca_lodging[
-                (df_vca_lodging["year"] == _latest_yr) &
-                (df_vca_lodging["region"].str.contains("California", case=False, na=False))
-            ]
-
-        _oc_occ  = float(_oc_row["occupancy_pct"].iloc[0]) if not _oc_row.empty and "occupancy_pct" in _oc_row.columns else 73.0
-        _oc_adr  = float(_oc_row["adr_usd"].iloc[0])       if not _oc_row.empty and "adr_usd" in _oc_row.columns else 209.53
-        _oc_revp = float(_oc_row["revpar_usd"].iloc[0])     if not _oc_row.empty and "revpar_usd" in _oc_row.columns else 153.01
-        _ca_occ  = float(_ca_row["occupancy_pct"].iloc[0])  if not _ca_row.empty and "occupancy_pct" in _ca_row.columns else 67.3
-        _ca_adr  = float(_ca_row["adr_usd"].iloc[0])        if not _ca_row.empty and "adr_usd" in _ca_row.columns else 189.85
-        _ca_revp = float(_ca_row["revpar_usd"].iloc[0])     if not _ca_row.empty and "revpar_usd" in _ca_row.columns else 127.80
-
-        # Dana Point reference from CoStar/STR
-        _dp_adr  = float(df_cs_snap["adr_usd"].mean())   if not df_cs_snap.empty and "adr_usd" in df_cs_snap.columns else 295.0
-        _dp_revp = float(df_cs_snap["revpar_usd"].mean()) if not df_cs_snap.empty and "revpar_usd" in df_cs_snap.columns else 220.0
-        _dp_occ  = float(df_cs_snap["occ_pct"].mean())   if not df_cs_snap.empty and "occ_pct" in df_cs_snap.columns else 76.0
-
-        _adr_premium_oc = (_dp_adr / _oc_adr - 1) * 100 if _oc_adr > 0 else 0
-        _adr_premium_ca = (_dp_adr / _ca_adr - 1) * 100 if _ca_adr > 0 else 0
-        _revp_premium   = (_dp_revp / _oc_revp - 1) * 100 if _oc_revp > 0 else 0
-
-        with _vc1:
-            st.metric("Dana Point ADR", f"${_dp_adr:,.0f}",
-                      delta=f"+{_adr_premium_oc:.0f}% vs OC",
-                      help="Dana Point portfolio ADR vs Orange County market average")
-        with _vc2:
-            st.metric("OC Market ADR", f"${_oc_adr:,.0f}",
-                      delta=f"CA avg: ${_ca_adr:,.0f}",
-                      help="Orange County 2025 lodging forecast ADR")
-        with _vc3:
-            st.metric("Dana Point RevPAR", f"${_dp_revp:,.0f}",
-                      delta=f"+{_revp_premium:.0f}% vs OC",
-                      help="Dana Point portfolio RevPAR vs Orange County")
-        with _vc4:
-            st.metric("OC Occupancy", f"{_oc_occ:.1f}%",
-                      delta=f"CA avg: {_ca_occ:.1f}%",
-                      help="Orange County 2025 lodging forecast occupancy")
-
-        st.caption(
-            f"Dana Point commands a **{_adr_premium_oc:.0f}% ADR premium** over Orange County "
-            f"and a **{_adr_premium_ca:.0f}% premium** over the California statewide average — "
-            f"confirming Dana Point's positioning as a premium coastal destination."
-        )
-
-        # ── Row 2: Lodging ladder chart ────────────────────────────────────────
-        if not df_vca_lodging.empty and "region" in df_vca_lodging.columns:
-            _latest_yr = df_vca_lodging["year"].max()
-            _lodge_slice = df_vca_lodging[
-                (df_vca_lodging["year"] == _latest_yr) &
-                (df_vca_lodging["region"].notna())
-            ].copy()
-            if not _lodge_slice.empty and "adr_usd" in _lodge_slice.columns:
-                _lodge_slice = _lodge_slice.sort_values("adr_usd", ascending=True)
-                # Inject Dana Point as a benchmark row
-                _dp_bench = pd.DataFrame([{
-                    "region": "Dana Point (Portfolio)", "adr_usd": _dp_adr,
-                    "revpar_usd": _dp_revp, "occupancy_pct": _dp_occ
-                }])
-                _lodge_plot = pd.concat([_lodge_slice, _dp_bench], ignore_index=True)
-                _lodge_plot = _lodge_plot.sort_values("adr_usd", ascending=True)
-
-                _colors = [
-                    TEAL if "Dana Point" in str(r) else ORANGE
-                    for r in _lodge_plot["region"]
-                ]
-                fig_lodge = go.Figure(go.Bar(
-                    x=_lodge_plot["adr_usd"],
-                    y=_lodge_plot["region"],
-                    orientation="h",
-                    marker_color=_colors,
-                    text=[f"${v:,.0f}" for v in _lodge_plot["adr_usd"]],
-                    textposition="outside",
-                    hovertemplate="<b>%{y}</b><br>ADR: $%{x:,.0f}<extra></extra>",
-                ))
-                fig_lodge.update_layout(
-                    title=f"ADR by CA Region ({_latest_yr}) — Dana Point vs Market",
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    xaxis=dict(title="ADR (USD)", gridcolor="rgba(0,0,0,0.06)"),
-                    yaxis=dict(gridcolor="rgba(0,0,0,0.06)"),
-                    height=420, margin=dict(l=10, r=10, t=40, b=10),
-                    font=dict(family="Syne, sans-serif", size=11),
-                )
-                st.plotly_chart(fig_lodge, use_container_width=True, config=PLOTLY_CONFIG)
-
-        # ── Row 3: CA travel volume forecast trend ─────────────────────────────
-        if not df_vca_forecast.empty and "year" in df_vca_forecast.columns:
-            _col_vca1, _col_vca2 = st.columns(2)
-            with _col_vca1:
-                st.markdown("#### CA Visitor Volume Forecast")
-                _fcast_plot = df_vca_forecast[df_vca_forecast["total_visits_m"].notna()].copy()
-                if not _fcast_plot.empty:
-                    fig_fcast = go.Figure()
-                    _actual = _fcast_plot[_fcast_plot["is_forecast"] == 0]
-                    _fcast  = _fcast_plot[_fcast_plot["is_forecast"] == 1]
-                    if not _actual.empty:
-                        fig_fcast.add_trace(go.Scatter(
-                            x=_actual["year"], y=_actual["total_visits_m"],
-                            name="Actual", mode="lines+markers",
-                            line=dict(color=TEAL, width=2.5),
-                            hovertemplate="<b>%{x}</b><br>Visits: %{y:.1f}M<extra></extra>",
-                        ))
-                    if not _fcast.empty:
-                        fig_fcast.add_trace(go.Scatter(
-                            x=_fcast["year"], y=_fcast["total_visits_m"],
-                            name="Forecast", mode="lines+markers",
-                            line=dict(color=ORANGE, width=2, dash="dot"),
-                            hovertemplate="<b>%{x}</b><br>Forecast: %{y:.1f}M<extra></extra>",
-                        ))
-                    fig_fcast.update_layout(
-                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                        xaxis=dict(title="Year", gridcolor="rgba(0,0,0,0.06)"),
-                        yaxis=dict(title="Total Visits (M)", gridcolor="rgba(0,0,0,0.06)"),
-                        legend=dict(font=dict(size=11)),
-                        height=300, margin=dict(l=10, r=10, t=20, b=10),
-                        font=dict(family="Syne, sans-serif", size=11),
-                    )
-                    st.plotly_chart(fig_fcast, use_container_width=True, config=PLOTLY_CONFIG)
-
-            with _col_vca2:
-                st.markdown("#### JWA / SNA Airport Traffic (2025)")
-                if not df_vca_airport.empty and "airport" in df_vca_airport.columns:
-                    _jwa = df_vca_airport[df_vca_airport["airport"].isin(["SNA", "JWA"])].copy()
-                    if _jwa.empty:
-                        _jwa = df_vca_airport[
-                            df_vca_airport["airport"].str.contains("John Wayne|SNA|Orange County", case=False, na=False)
-                        ].copy()
-                    if _jwa.empty:
-                        _jwa = df_vca_airport.copy()
-
-                    # Support both column naming conventions
-                    _month_col = "month" if "month" in _jwa.columns else ("month_num" if "month_num" in _jwa.columns else None)
-                    _pax_col = "total_pax" if "total_pax" in _jwa.columns else ("total_passengers" if "total_passengers" in _jwa.columns else None)
-                    if not _jwa.empty and _month_col and _pax_col:
-                        fig_air = go.Figure()
-                        for _apt in _jwa["airport"].unique():
-                            _apt_df = _jwa[_jwa["airport"] == _apt].sort_values(_month_col)
-                            fig_air.add_trace(go.Scatter(
-                                x=_apt_df[_month_col],
-                                y=_apt_df[_pax_col],
-                                name=_apt, mode="lines+markers",
-                                hovertemplate=f"<b>{_apt}</b><br>Month: %{{x}}<br>Passengers: %{{y:,.0f}}<extra></extra>",
-                            ))
-                        fig_air.update_layout(
-                            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                            xaxis=dict(title="Month", gridcolor="rgba(0,0,0,0.06)",
-                                       tickvals=list(range(1, 13)),
-                                       ticktext=["Jan","Feb","Mar","Apr","May","Jun",
-                                                 "Jul","Aug","Sep","Oct","Nov","Dec"]),
-                            yaxis=dict(title="Passengers", gridcolor="rgba(0,0,0,0.06)"),
-                            legend=dict(font=dict(size=11)),
-                            height=300, margin=dict(l=10, r=10, t=20, b=10),
-                            font=dict(family="Syne, sans-serif", size=11),
-                        )
-                        st.plotly_chart(fig_air, use_container_width=True, config=PLOTLY_CONFIG)
-                    else:
-                        st.info("Airport traffic data loaded — no monthly breakdown available.")
-                else:
-                    st.info("No airport traffic data loaded. Run the pipeline to populate visit_ca_airport_traffic.")
-
-        # Download
-        if not df_vca_lodging.empty:
-            _vca_dl = df_vca_lodging.to_csv(index=False).encode()
-            st.download_button(
-                "⬇️ Download Visit CA Lodging Forecast CSV",
-                _vca_dl, file_name="visit_ca_lodging_forecast.csv",
-                mime="text/csv", use_container_width=True,
-            )
-    else:
-        st.markdown(empty_state(
-            "🏔️", "Visit California data not yet loaded.",
-            "Run the pipeline to populate visit_ca_* tables from data/Visit_California/.",
-        ), unsafe_allow_html=True)
-
-    # ── GloCon Solutions LLC — VDP vs Market Leadership Scorecard ─────────────
-    st.markdown(sec_div("🏆 VDP vs. South OC Market — Leadership Scorecard"), unsafe_allow_html=True)
-    st.markdown("### 🏆 VDP vs. South OC Market — Leadership Scorecard")
-    st.caption("How Dana Point properties perform vs. the South Orange County submarket · Source: STR 30-day actuals vs. CoStar snapshot · Built by GloCon Solutions LLC")
-
-    try:
-        if not df_cs_snap.empty and kpis:
-            _snap = df_cs_snap.iloc[0]
-            _mkt_occ_b = float(_snap.get("occupancy_pct", 76.4) or 76.4)
-            _mkt_adr_b = float(_snap.get("adr_usd", 288.50) or 288.50)
-            _mkt_rvp_b = float(_snap.get("revpar_usd", 220.42) or 220.42)
-            def _ns(v):
-                try: return float(str(v).replace("$","").replace("%","").replace(",",""))
-                except: return 0.0
-            _vdp_occ_n = _ns(next((k["raw_value"] for k in kpis if "Occ" in k.get("label","")), _mkt_occ_b))
-            _vdp_adr_n = _ns(next((k["raw_value"] for k in kpis if "ADR" in k.get("label","")), _mkt_adr_b))
-            _vdp_rvp_n = _ns(next((k["raw_value"] for k in kpis if "RevPAR" in k.get("label","")), _mkt_rvp_b))
-            _sc_rows = [
-                ("Occupancy",  f"{_vdp_occ_n:.1f}%", f"{_mkt_occ_b:.1f}%", _vdp_occ_n - _mkt_occ_b, "pp"),
-                ("ADR",        f"${_vdp_adr_n:.2f}",  f"${_mkt_adr_b:.2f}",  _vdp_adr_n - _mkt_adr_b, "$"),
-                ("RevPAR",     f"${_vdp_rvp_n:.2f}",  f"${_mkt_rvp_b:.2f}",  _vdp_rvp_n - _mkt_rvp_b, "$"),
-            ]
-            _sc_df = pd.DataFrame(_sc_rows, columns=["Metric","VDP Portfolio","S. OC Market","Gap","Unit"])
-            _sc_df["Signal"]      = _sc_df["Gap"].apply(lambda g: "✅ Premium" if g > 0 else ("⚠️ Parity" if abs(g) < 0.5 else "🔴 Below Market"))
-            _sc_df["Gap vs Mkt"]  = _sc_df.apply(lambda r: f"{'+' if r['Gap']>0 else ''}{r['Gap']:.1f}{r['Unit']}", axis=1)
-            _sc_df["Board Note"]  = _sc_df.apply(lambda r: (
-                "Maintain pricing discipline — demand supports premium." if r["Gap"] > 0
-                else "Investigate comp set — close rate gap strategy needed."), axis=1)
-            _sc_dl = _sc_df[["Metric","VDP Portfolio","S. OC Market","Gap vs Mkt","Signal","Board Note"]]
-            st.dataframe(_sc_dl, use_container_width=True, hide_index=True)
-            st.download_button("⬇️ Download Scorecard CSV", _sc_dl.to_csv(index=False).encode(), "vdp_vs_market_scorecard.csv", "text/csv", key="dl_scorecard")
-            # Visual comparison bar chart
-            _sc_fig = go.Figure()
-            for _sci, (_scm, _scvdp, _scmkt, _scgap, _scu) in enumerate(_sc_rows):
-                _scv_num = _ns(_scvdp); _scm_num = _ns(_scmkt)
-                _sc_fig.add_trace(go.Bar(
-                    name="VDP Portfolio", x=[_scm], y=[_scv_num],
-                    marker_color="#00C4CC", text=[_scvdp], textposition="outside",
-                    showlegend=(_sci == 0),
-                ))
-                _sc_fig.add_trace(go.Bar(
-                    name="S. OC Market", x=[_scm], y=[_scm_num],
-                    marker_color="#94A3B8", text=[_scmkt], textposition="outside",
-                    showlegend=(_sci == 0),
-                ))
-            _sc_fig.update_layout(
-                barmode="group", height=280, margin=dict(l=0,r=0,t=20,b=0),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                legend=dict(orientation="h", yanchor="bottom", y=1.02),
-                yaxis=dict(showticklabels=False),
-            )
-            st.plotly_chart(_sc_fig, use_container_width=True,
-                            config=PLOTLY_CONFIG, key="cs_leadership_scorecard")
-        else:
-            st.info("Load STR and CoStar data to populate the Leadership Scorecard.")
-    except Exception as _sc_err:
-        st.warning(f"Leadership Scorecard unavailable: {_sc_err}")
-
-    # ── FRED Economic Climate ─────────────────────────────────────────────────
-    st.markdown(sec_div("📉 Economic Climate Indicators"), unsafe_allow_html=True)
-    st.markdown(_sh("📉", "Economic Climate Indicators", "indigo", "FRED · Federal Reserve"), unsafe_allow_html=True)
-    st.markdown(
-        sec_intel(
-            "Economic Climate",
-            "macro-level demand environment signals that drive travel propensity and ADR sustainability",
-            "The FRED Lodging CPI benchmarks national hotel price inflation — when Dana Point ADR grows "
-            "faster than CUUR0000SEHB, the market is capturing real premium. When it lags, pricing is losing ground.",
-            "Rising disposable income + falling unemployment historically precede 6–12 month "
-            "occupancy recovery cycles — the earliest institutional-grade demand forecast signal.",
-            "Set FRED_API_KEY in .env to activate (free key at fred.stlouisfed.org)",
-        ),
-        unsafe_allow_html=True,
-    )
-    if not df_fred.empty:
-        _fred_series = df_fred["series_id"].unique().tolist()
-        _fred_sel    = st.selectbox(
-            "Select FRED Series",
-            options=_fred_series,
-            format_func=lambda s: df_fred[df_fred["series_id"] == s]["series_name"].iloc[0]
-                if len(df_fred[df_fred["series_id"] == s]) else s,
-            key="fred_series_sel",
-        )
-        _fred_data = df_fred[df_fred["series_id"] == _fred_sel].copy()
-        _fred_data["data_date"] = pd.to_datetime(_fred_data["data_date"])
-        _fred_data = _fred_data.dropna(subset=["value"]).sort_values("data_date")
-
-        if not _fred_data.empty:
-            _fc1, _fc2 = st.columns([3, 1])
-            with _fc1:
-                fig_fred = go.Figure()
-                fig_fred.add_trace(go.Scatter(
-                    x=_fred_data["data_date"], y=_fred_data["value"],
-                    mode="lines", name=_fred_data["series_name"].iloc[0],
-                    line=dict(color="#8B5CF6", width=2.5),
-                    fill="tozeroy", fillcolor="rgba(139,92,246,0.08)",
-                    hovertemplate="<b>%{x|%b %Y}</b><br>Value: %{y:,.2f}<extra></extra>",
-                ))
-                fig_fred.update_layout(
-                    title=_fred_data["series_name"].iloc[0],
-                    yaxis_title=_fred_data["unit"].iloc[0] if "unit" in _fred_data.columns else "",
-                )
-                st.plotly_chart(style_fig(fig_fred, height=260), use_container_width=True, config=PLOTLY_CONFIG)
-                st.caption(f"Source: Federal Reserve Bank of St. Louis (FRED). Series: {_fred_sel}. "
-                           f"Category: {_fred_data['category'].iloc[0] if 'category' in _fred_data.columns else '—'}")
-            with _fc2:
-                _recent = _fred_data.tail(1).iloc[0]
-                _prior  = _fred_data.tail(13).iloc[0] if len(_fred_data) >= 13 else None
-                st.metric(
-                    label=_fred_data["series_name"].iloc[0],
-                    value=f"{_recent['value']:,.2f}",
-                    delta=f"{((_recent['value'] - _prior['value']) / _prior['value'] * 100):+.1f}% YoY"
-                          if _prior is not None and _prior["value"] else None,
-                )
-                st.markdown(
-                    f'<div class="dp-callout" style="margin-top:10px;">'
-                    f'<strong>How to read this:</strong><br>'
-                    f'{_fred_data["category"].iloc[0] if "category" in _fred_data.columns else "Economic indicator"}'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-    else:
-        st.markdown(
-            '<div class="empty-card">'
-            '<div class="empty-icon">📉</div>'
-            '<div class="empty-title">FRED Economic Data Not Loaded</div>'
-            '<div class="empty-body">Add <code>FRED_API_KEY=your_key</code> to your .env file, '
-            'then run the pipeline.<br>'
-            'Free key at <strong>fred.stlouisfed.org</strong> — 30-second registration.</div>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-
-    # ── BLS Hospitality Employment ────────────────────────────────────────────
-    st.markdown(sec_div("👥 Hospitality Employment Trends"), unsafe_allow_html=True)
-    st.markdown(_sh("👥", "Hospitality Employment Trends", "green", "BLS · Bureau of Labor Statistics"), unsafe_allow_html=True)
-    st.markdown(
-        sec_intel(
-            "Hospitality Employment",
-            "monthly employment in Leisure & Hospitality and Accommodation sectors — national and California",
-            "Employment tracks hotel occupancy with a 2–3 month lag — rising hotel employment = "
-            "supply expansion and labor cost pressure, while falling employment signals demand risk.",
-            "California Accommodation employment serves as the regional demand barometer. "
-            "Watch for YoY acceleration as an early signal of market tightening ahead of peak season.",
-            "Run pipeline step 15 (fetch_bls_data.py) to populate — no API key required",
-        ),
-        unsafe_allow_html=True,
-    )
-    if not df_bls.empty:
-        _bls_series = df_bls["series_name"].unique().tolist()
-        _bls_sel    = st.multiselect(
-            "Select Employment Series",
-            options=_bls_series,
-            default=_bls_series[:2] if len(_bls_series) >= 2 else _bls_series,
-            key="bls_series_sel",
-        )
-        _bls_data = df_bls[df_bls["series_name"].isin(_bls_sel)].copy() if _bls_sel else df_bls.copy()
-
-        if not _bls_data.empty and "date" in _bls_data.columns:
-            _bc1, _bc2 = st.columns([3, 1])
-            with _bc1:
-                fig_bls = go.Figure()
-                _bls_colors = [GREEN, TEAL_LIGHT, ORANGE, "#8B5CF6"]
-                for i, (s_name, s_df) in enumerate(_bls_data.groupby("series_name")):
-                    s_df = s_df.sort_values("date")
-                    fig_bls.add_trace(go.Scatter(
-                        x=s_df["date"], y=s_df["value_thousands"],
-                        mode="lines", name=s_name,
-                        line=dict(color=_bls_colors[i % len(_bls_colors)], width=2),
-                        hovertemplate=f"<b>%{{x|%b %Y}}</b><br>{s_name}: %{{y:,.0f}}K<extra></extra>",
-                    ))
-                fig_bls.update_layout(
-                    title="Hospitality Employment (thousands)",
-                    yaxis_title="Employees (thousands)",
-                )
-                st.plotly_chart(style_fig(fig_bls, height=270), use_container_width=True, config=PLOTLY_CONFIG)
-                st.caption("Source: U.S. Bureau of Labor Statistics. Seasonally adjusted, all employees. "
-                           "National = US total; CA = California statewide.")
-            with _bc2:
-                for s_name, s_df in _bls_data.groupby("series_name"):
-                    s_df = s_df.sort_values("date")
-                    if not s_df.empty:
-                        _latest = s_df.iloc[-1]
-                        st.metric(
-                            label=s_name[:35] + "…" if len(s_name) > 35 else s_name,
-                            value=f"{_latest['value_thousands']:,.0f}K",
-                            delta=f"{_latest['yoy_chg_pct']:+.1f}% YoY"
-                                  if pd.notna(_latest.get("yoy_chg_pct")) else None,
-                        )
-    else:
-        st.markdown(
-            '<div class="empty-card">'
-            '<div class="empty-icon">👥</div>'
-            '<div class="empty-title">BLS Employment Data Not Loaded</div>'
-            '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> '
-            'to fetch BLS hospitality employment data.<br>No API key required for basic access.</div>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-
-    # ── EIA California Gas Prices ─────────────────────────────────────────────
-    st.markdown(sec_div("⛽ California Gas Prices — Drive-Market Demand Signal"), unsafe_allow_html=True)
-    st.markdown(_sh("⛽", "EIA California Retail Gas Prices", "orange", "DRIVE-MARKET SIGNAL"), unsafe_allow_html=True)
-    st.caption(
-        "Source: U.S. Energy Information Administration (EIA) · Weekly California retail regular-grade gasoline. "
-        "Drive market (LA/OC/SD/IE) within 120 miles of Dana Point — gas price spikes correlate with 2–4% weekend occupancy softening 2–4 weeks out."
-    )
-    if not df_eia_gas.empty and "date" in df_eia_gas.columns:
-        _eia_ca = df_eia_gas[df_eia_gas["state_label"] == "CA"].copy()
-        _eia_us = df_eia_gas[df_eia_gas["state_label"] == "US"].copy()
-        if not _eia_ca.empty:
-            _eia_ca = _eia_ca.sort_values("date")
-            _ec1, _ec2 = st.columns([3, 1])
-            with _ec1:
-                fig_eia = go.Figure()
-                fig_eia.add_trace(go.Scatter(
-                    x=_eia_ca["date"], y=_eia_ca["price_per_gallon"],
-                    mode="lines+markers", name="CA Regular",
-                    line=dict(color=ORANGE, width=2.5),
-                    marker=dict(size=4),
-                    hovertemplate="<b>%{x|%b %d, %Y}</b><br>CA Price: $%{y:.3f}/gal<extra></extra>",
-                ))
-                if not _eia_us.empty:
-                    _eia_us = _eia_us.sort_values("date")
-                    fig_eia.add_trace(go.Scatter(
-                        x=_eia_us["date"], y=_eia_us["price_per_gallon"],
-                        mode="lines", name="US National Avg",
-                        line=dict(color=TEAL_LIGHT, width=1.8, dash="dot"),
-                        hovertemplate="<b>%{x|%b %d, %Y}</b><br>US Avg: $%{y:.3f}/gal<extra></extra>",
-                    ))
-                # Add trendline band for high-gas-price alert
-                _eia_max = _eia_ca["price_per_gallon"].max() if not _eia_ca.empty else 5.0
-                fig_eia.add_hline(y=4.50, line_dash="dash", line_color="#DC2626", line_width=1,
-                                  annotation_text="$4.50 demand risk threshold", annotation_position="top right")
-                fig_eia.update_layout(
-                    title="CA Weekly Retail Gas Price ($/gal)",
-                    yaxis_title="Price per Gallon ($)",
-                    yaxis_tickformat="$,.3f",
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02),
-                )
-                st.plotly_chart(style_fig(fig_eia, height=280), use_container_width=True, config=PLOTLY_CONFIG)
-            with _ec2:
-                _eia_latest = _eia_ca.iloc[-1]
-                _eia_prior  = _eia_ca.iloc[-5] if len(_eia_ca) >= 5 else _eia_ca.iloc[0]
-                _eia_delta  = _eia_latest["price_per_gallon"] - _eia_prior["price_per_gallon"]
-                st.metric("Latest CA Price",
-                          f"${_eia_latest['price_per_gallon']:.3f}/gal",
-                          f"{_eia_delta:+.3f} vs 4wk prior")
-                _eia_yr_avg = _eia_ca[_eia_ca["date"].dt.year == _eia_ca["date"].dt.year.max()]["price_per_gallon"].mean()
-                st.metric("YTD CA Avg", f"${_eia_yr_avg:.3f}/gal")
-                _demand_risk = "🔴 High" if _eia_latest["price_per_gallon"] >= 4.50 else ("🟡 Moderate" if _eia_latest["price_per_gallon"] >= 4.00 else "🟢 Low")
-                st.metric("Drive-Market Risk", _demand_risk)
-                st.caption(
-                    "📌 **Rule of thumb:** Every $0.20/gal increase above $4.00 correlates with ~2–3% softening "
-                    "in LA/OC/SD weekend trip decisions 2–3 weeks out."
-                )
-        else:
-            st.info("Run `python scripts/fetch_eia_gas.py` to populate CA gas price data.")
-    else:
-        st.markdown(
-            '<div class="empty-card">'
-            '<div class="empty-icon">⛽</div>'
-            '<div class="empty-title">EIA Gas Price Data Not Loaded</div>'
-            '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> '
-            'to fetch EIA gas prices. Add <code>EIA_API_KEY</code> to .env for live data '
-            '(free at eia.gov/opendata). Demo data seeds automatically without a key.</div>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-
-    # ── TSA Checkpoint Throughput ─────────────────────────────────────────────
-    st.markdown(sec_div("✈️ TSA Checkpoint Throughput — Air Travel Demand"), unsafe_allow_html=True)
-    st.markdown(_sh("✈️", "TSA Checkpoint Throughput", "indigo", "FLY-MARKET SIGNAL"), unsafe_allow_html=True)
-    st.caption(
-        "Source: U.S. Transportation Security Administration · Daily checkpoint traveler counts. "
-        "Dana Point's fly-market feeders (SLC, DFW, PHX, DEN) generate highest-ADR overnight visitors — TSA surge signals premium demand 3–7 days out."
-    )
-    if not df_tsa.empty and "date" in df_tsa.columns:
-        _tsa_sorted = df_tsa.sort_values("date")
-        _tc1, _tc2 = st.columns([3, 1])
-        with _tc1:
-            fig_tsa = go.Figure()
-            fig_tsa.add_trace(go.Scatter(
-                x=_tsa_sorted["date"], y=_tsa_sorted["travelers_count"],
-                mode="lines", name="2025/2026 Travelers",
-                line=dict(color=BLUE, width=2.5),
-                fill="tozeroy", fillcolor="rgba(5,103,200,0.07)",
-                hovertemplate="<b>%{x|%b %d, %Y}</b><br>Travelers: %{y:,.0f}<extra></extra>",
-            ))
-            if "travelers_prior_year" in _tsa_sorted.columns:
-                fig_tsa.add_trace(go.Scatter(
-                    x=_tsa_sorted["date"], y=_tsa_sorted["travelers_prior_year"],
-                    mode="lines", name="Prior Year",
-                    line=dict(color=TEAL_LIGHT, width=1.5, dash="dot"),
-                    hovertemplate="<b>%{x|%b %Y}</b><br>Prior Year: %{y:,.0f}<extra></extra>",
-                ))
-            if "rolling_7d_avg" in _tsa_sorted.columns:
-                fig_tsa.add_trace(go.Scatter(
-                    x=_tsa_sorted["date"], y=_tsa_sorted["rolling_7d_avg"],
-                    mode="lines", name="7-Day Avg",
-                    line=dict(color=ORANGE, width=2, dash="dash"),
-                    hovertemplate="<b>%{x|%b %Y}</b><br>7d Avg: %{y:,.0f}<extra></extra>",
-                ))
-            fig_tsa.update_layout(
-                title="Daily TSA Checkpoint Travelers",
-                yaxis_title="Travelers",
-                yaxis_tickformat=",",
-                legend=dict(orientation="h", yanchor="bottom", y=1.02),
-            )
-            st.plotly_chart(style_fig(fig_tsa, height=280), use_container_width=True, config=PLOTLY_CONFIG)
-        with _tc2:
-            _tsa_latest = _tsa_sorted.iloc[-1]
-            _tsa_prior  = _tsa_sorted.iloc[-2] if len(_tsa_sorted) >= 2 else _tsa_sorted.iloc[0]
-            _tsa_delta  = int(_tsa_latest["travelers_count"] - _tsa_prior["travelers_count"]) if _tsa_prior["travelers_count"] else 0
-            st.metric("Latest Count",
-                      f"{int(_tsa_latest['travelers_count']):,}",
-                      f"{_tsa_delta:+,} vs prior")
-            if pd.notna(_tsa_latest.get("yoy_pct_change")):
-                st.metric("YOY Change", f"{_tsa_latest['yoy_pct_change']:+.1f}%")
-            _tsa_yr_avg = int(_tsa_sorted[_tsa_sorted["date"].dt.year == _tsa_sorted["date"].dt.year.max()]["travelers_count"].mean())
-            st.metric("YTD Daily Avg", f"{_tsa_yr_avg:,}")
-            st.caption(
-                "📌 **Fly-market strategy:** When TSA throughput > 2.8M/day, "
-                "activate fly-market ADR premiums. SLC, DFW, PHX visitors average 1.3–1.4× ADR vs. drive markets."
-            )
-    else:
-        st.markdown(
-            '<div class="empty-card">'
-            '<div class="empty-icon">✈️</div>'
-            '<div class="empty-title">TSA Checkpoint Data Not Loaded</div>'
-            '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> '
-            'to fetch TSA throughput data. No API key required.</div>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-
-    # ── External Correlations ─────────────────────────────────────────────────
-    with st.expander("🔗 External Correlations — Gas Prices vs. Hotel Demand", expanded=False):
-        st.caption(
-            "Correlation analysis: CA gas prices vs. STR occupancy · "
-            "Positive correlation = gas price drop boosts drive-market demand. "
-            "Negative correlation = gas spike suppresses weekend leisure travel."
-        )
-        if not df_eia_gas.empty and not df_kpi.empty and "date" in df_eia_gas.columns:
+        # ── Insights freshness check ──────────────────────────────────────────────
+        _insights_status = "🔴 No insights — run pipeline"
+        _insights_detail = "insights_daily is empty"
+        if not df_insights.empty and "as_of_date" in df_insights.columns:
             try:
-                _eia_ca_corr = df_eia_gas[df_eia_gas["state_label"] == "CA"][["date", "price_per_gallon"]].copy()
-                _eia_ca_corr["year_month"] = _eia_ca_corr["date"].dt.to_period("M")
-                _eia_monthly_avg = _eia_ca_corr.groupby("year_month")["price_per_gallon"].mean().reset_index()
-                _eia_monthly_avg["date"] = _eia_monthly_avg["year_month"].dt.to_timestamp()
-
-                _kpi_corr = df_kpi[["as_of_date", "occ_pct", "adr", "revpar"]].copy()
-                _kpi_corr["year_month"] = pd.to_datetime(_kpi_corr["as_of_date"]).dt.to_period("M")
-                _kpi_monthly = _kpi_corr.groupby("year_month").agg(
-                    avg_occ=("occ_pct", "mean"), avg_adr=("adr", "mean"), avg_rvp=("revpar", "mean")
-                ).reset_index()
-                _kpi_monthly["date"] = _kpi_monthly["year_month"].dt.to_timestamp()
-
-                _merged = pd.merge(_eia_monthly_avg, _kpi_monthly, on="date", how="inner")
-                if len(_merged) >= 6:
-                    _corr_occ = _merged["price_per_gallon"].corr(_merged["avg_occ"])
-                    _corr_adr = _merged["price_per_gallon"].corr(_merged["avg_adr"])
-                    _corr_rvp = _merged["price_per_gallon"].corr(_merged["avg_rvp"])
-                    _cc1, _cc2, _cc3 = st.columns(3)
-                    with _cc1:
-                        _occ_dir = "inverse" if _corr_occ < -0.1 else ("positive" if _corr_occ > 0.1 else "neutral")
-                        st.metric("Gas ↔ Occupancy", f"r = {_corr_occ:.2f}", f"Correlation: {_occ_dir}")
-                    with _cc2:
-                        _adr_dir = "positive" if _corr_adr > 0.1 else ("inverse" if _corr_adr < -0.1 else "neutral")
-                        st.metric("Gas ↔ ADR", f"r = {_corr_adr:.2f}", f"Correlation: {_adr_dir}")
-                    with _cc3:
-                        _rvp_dir = "positive" if _corr_rvp > 0.1 else ("inverse" if _corr_rvp < -0.1 else "neutral")
-                        st.metric("Gas ↔ RevPAR", f"r = {_corr_rvp:.2f}", f"Correlation: {_rvp_dir}")
-
-                    fig_corr = go.Figure()
-                    fig_corr.add_trace(go.Bar(
-                        x=["Gas ↔ Occupancy", "Gas ↔ ADR", "Gas ↔ RevPAR"],
-                        y=[_corr_occ, _corr_adr, _corr_rvp],
-                        marker_color=[ORANGE if v < 0 else GREEN for v in [_corr_occ, _corr_adr, _corr_rvp]],
-                        text=[f"r={v:.2f}" for v in [_corr_occ, _corr_adr, _corr_rvp]],
-                        textposition="outside",
-                    ))
-                    fig_corr.update_layout(
-                        title="Pearson Correlation: CA Gas Price vs. STR Metrics",
-                        yaxis=dict(range=[-1, 1], title="Correlation Coefficient (r)"),
-                        showlegend=False,
-                    )
-                    st.plotly_chart(style_fig(fig_corr, height=240), use_container_width=True, config=PLOTLY_CONFIG)
-                    st.caption(
-                        "Interpretation: r > +0.5 = strong positive correlation · r < −0.5 = strong inverse. "
-                        "Negative gas↔occupancy means higher gas prices suppress drive-market leisure demand. "
-                        f"Based on {len(_merged)} months of overlapping data."
-                    )
+                _latest_ins = pd.to_datetime(df_insights["as_of_date"]).max()
+                _ins_age = (_now.date() - _latest_ins.date()).days
+                if _ins_age == 0:
+                    _insights_status = "🟢 Current"
+                    _insights_detail = f"Insights generated today ({_latest_ins.strftime('%Y-%m-%d')})"
+                elif _ins_age <= 7:
+                    _insights_status = "🟡 Recent"
+                    _insights_detail = f"Last updated {_ins_age}d ago ({_latest_ins.strftime('%Y-%m-%d')})"
                 else:
-                    st.info("Not enough overlapping data yet to compute correlations. Run the pipeline to build up data.")
-            except Exception as _corr_err:
-                st.caption(f"Correlation analysis unavailable: {_corr_err}")
-        else:
-            st.info("Load both EIA gas prices and STR KPIs to see correlation analysis.")
+                    _insights_status = "🔴 Stale"
+                    _insights_detail = f"Last updated {_ins_age}d ago — run pipeline to refresh"
+            except Exception:
+                pass
 
-    # ── Live Market Intelligence (Perplexity Sonar) ──────────────────────────
-    st.markdown(sec_div("🌐 Live Market Intelligence"), unsafe_allow_html=True)
-    st.markdown(_sh("🌐", "Live Competitive Intelligence — Real-Time Web Search", "indigo", "PERPLEXITY SONAR"), unsafe_allow_html=True)
-    st.caption(
-        "Powered by Perplexity Sonar Pro — searches the live web for competitor news, travel trends, and market events. "
-        "Configure PERPLEXITY_API_KEY in .env to activate. Claude / GPT-4o can be used for offline analysis."
-    )
+        # ── STR data recency check ────────────────────────────────────────────────
+        _str_status = "🔴 No STR data"
+        _str_detail = "fact_str_metrics is empty"
+        if not df_daily.empty and "as_of_date" in df_daily.columns:
+            try:
+                _latest_str = pd.to_datetime(df_daily["as_of_date"]).max()
+                _str_age = (_now.date() - _latest_str.date()).days
+                if _str_age <= 14:
+                    _str_status = "🟢 Current"
+                elif _str_age <= 45:
+                    _str_status = "🟡 Recent"
+                else:
+                    _str_status = "🔴 Stale (>45 days)"
+                _str_detail = f"Latest STR date: {_latest_str.strftime('%Y-%m-%d')} ({_str_age}d ago)"
+            except Exception:
+                pass
 
-    _LIVE_INTEL_PROMPTS = [
-        ("🏨 Dana Point Competitor News",
-         "Search for the latest news about Waldorf Astoria Monarch Beach, Ritz-Carlton Laguna Niguel, "
-         "and Laguna Cliffs Marriott. Any new renovations, rate changes, or ownership updates in 2025–2026? "
-         "How does this affect Dana Point's competitive position?"),
-        ("✈️ SoCal Travel Demand Trends",
-         "What are the current travel demand trends for Southern California coastal destinations in 2026? "
-         "Any data on visitor volume, ADR trends, or booking pace for Orange County hotels?"),
-        ("📈 OC Hotel Market News",
-         "What is the latest news about Orange County hotel market performance in 2025–2026? "
-         "Any new hotel openings, closures, renovations, or major group bookings in Dana Point or South OC?"),
-        ("🎪 Dana Point Events 2026",
-         "What major events are coming to Dana Point, California in 2026? "
-         "Include festivals, sporting events, concerts, and community events that drive hotel demand."),
-        ("⛽ Gas Price Impact on SoCal Drive Markets",
-         "What are the current California gas prices and trends as of 2026? "
-         "How is this affecting drive-market leisure travel to Orange County coastal destinations like Dana Point?"),
-        ("💡 DMO Best Practices 2026",
-         "What are the most innovative destination marketing strategies being used by California coastal DMOs in 2026? "
-         "Any case studies of successful TBID campaigns or visitor economy growth initiatives?"),
-    ]
-
-    _li_cols = st.columns(3)
-    for _li_i, (_li_lbl, _li_prompt) in enumerate(_LIVE_INTEL_PROMPTS):
-        with _li_cols[_li_i % 3]:
-            if st.button(_li_lbl, key=f"li_btn_{_li_i}", use_container_width=True):
-                st.session_state["li_pending_prompt"] = _li_prompt
-                st.session_state["li_pending_label"]  = _li_lbl
-
-    _li_custom = st.text_input(
-        "Or search any market intelligence question:",
-        key="li_custom_q",
-        placeholder="e.g. What new hotel brands are expanding in Orange County in 2026?",
-    )
-    _li_model_opts = [k for k, v in AI_MODELS.items() if v["provider"] == "perplexity" and bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE]
-    _li_model_opts += [k for k, v in AI_MODELS.items() if v["provider"] in ("anthropic", "openai", "google")]
-    _li_model_sel = AI_MODELS.get(st.session_state.get("selected_model", CLAUDE_MODEL), AI_MODELS[CLAUDE_MODEL])
-    _li_use_model = st.session_state.get("selected_model", CLAUDE_MODEL)
-
-    _li_col1, _li_col2 = st.columns([1, 4])
-    with _li_col1:
-        if st.button("🔍 Search", key="li_search_btn", type="primary", use_container_width=True):
-            if _li_custom.strip():
-                st.session_state["li_pending_prompt"] = _li_custom.strip()
-                st.session_state["li_pending_label"]  = f"💬 {_li_custom.strip()[:50]}"
-
-    _li_pend = st.session_state.get("li_pending_prompt", "")
-    if _li_pend:
-        _li_lbl_disp = st.session_state.get("li_pending_label", "Search")
-        _li_mdl      = st.session_state.get("selected_model", CLAUDE_MODEL)
-        _li_mdl_info = AI_MODELS.get(_li_mdl, {})
-        _li_badge    = f"{_li_mdl_info.get('badge','🟦')} {_li_mdl_info.get('label', _li_mdl)}"
-        _li_any_ai   = (
-            (api_key_valid and ANTHROPIC_AVAILABLE) or
-            (bool(_OPENAI_KEY) and OPENAI_AVAILABLE) or
-            (bool(_GOOGLE_AI_KEY) and GEMINI_AVAILABLE) or
-            (bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE)
-        )
-        if _li_any_ai:
-            st.markdown(f"**{_li_lbl_disp}** — via {_li_badge}")
-            with st.spinner(f"Searching with {_li_badge}…"):
-                _li_result = st.write_stream(stream_ai_response(_li_pend, _li_mdl, _ai_keys))
-            if _li_result:
-                _li_dl = f"# {_li_lbl_disp}\n\n{_li_result}"
-                st.download_button(
-                    "⬇️ Download Intelligence Report",
-                    _li_dl.encode(),
-                    file_name=f"live_intel_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
-                    mime="text/markdown",
-                    key="li_dl_btn",
-                )
-            del st.session_state["li_pending_prompt"]
-        else:
-            st.info("💡 Add an API key in the sidebar (Anthropic, OpenAI, Google AI, or Perplexity) to activate Live Intelligence.")
-            del st.session_state["li_pending_prompt"]
-
-# ══════════════════════════════════════════════════════════════════════════════
-
-
-def render_audit_report() -> None:
-    """Generate and render a comprehensive data audit for the PULSE app."""
-    import datetime as _dt
-
-    st.markdown(_sh("🔍", "App Audit Report", color="indigo", tag="LIVE"), unsafe_allow_html=True)
-
-    _now = _dt.datetime.now()
-    _checks = []
-
-    # ── DataFrame emptiness checks ────────────────────────────────────────────
-    _df_registry = {
-        "STR Daily":           df_daily,
-        "STR Monthly":         df_monthly,
-        "KPI Daily Summary":   df_kpi,
-        "Compression Qtrs":    df_comp,
-        "CoStar Monthly":      df_cs_mon,
-        "CoStar Snapshot":     df_cs_snap,
-        "CoStar Pipeline":     df_cs_pipe,
-        "Datafy Overview":     df_dfy_ov,
-        "Datafy DMA":          df_dfy_dma,
-        "Datafy Spending":     df_dfy_spend,
-        "Datafy Media KPIs":   df_dfy_media,
-        "Datafy Website KPIs": df_dfy_web,
-        "Insights Daily":      df_insights,
-        "EIA Gas Prices":      df_eia_gas,
-        "TSA Checkpoint":      df_tsa,
-    }
-    _empty = []
-    _populated = []
-    for _lbl, _df in _df_registry.items():
-        if _df is None or (hasattr(_df, "empty") and _df.empty):
-            _empty.append(_lbl)
-            _checks.append(("🔴", _lbl, "Empty — source not loaded or pipeline step failed"))
-        else:
-            _populated.append(_lbl)
-            _checks.append(("🟢", _lbl, f"{len(_df):,} rows loaded"))
-
-    # ── Insights freshness check ──────────────────────────────────────────────
-    _insights_status = "🔴 No insights — run pipeline"
-    _insights_detail = "insights_daily is empty"
-    if not df_insights.empty and "as_of_date" in df_insights.columns:
-        try:
-            _latest_ins = pd.to_datetime(df_insights["as_of_date"]).max()
-            _ins_age = (_now.date() - _latest_ins.date()).days
-            if _ins_age == 0:
-                _insights_status = "🟢 Current"
-                _insights_detail = f"Insights generated today ({_latest_ins.strftime('%Y-%m-%d')})"
-            elif _ins_age <= 7:
-                _insights_status = "🟡 Recent"
-                _insights_detail = f"Last updated {_ins_age}d ago ({_latest_ins.strftime('%Y-%m-%d')})"
-            else:
-                _insights_status = "🔴 Stale"
-                _insights_detail = f"Last updated {_ins_age}d ago — run pipeline to refresh"
-        except Exception:
-            pass
-
-    # ── STR data recency check ────────────────────────────────────────────────
-    _str_status = "🔴 No STR data"
-    _str_detail = "fact_str_metrics is empty"
-    if not df_daily.empty and "as_of_date" in df_daily.columns:
-        try:
-            _latest_str = pd.to_datetime(df_daily["as_of_date"]).max()
-            _str_age = (_now.date() - _latest_str.date()).days
-            if _str_age <= 14:
-                _str_status = "🟢 Current"
-            elif _str_age <= 45:
-                _str_status = "🟡 Recent"
-            else:
-                _str_status = "🔴 Stale (>45 days)"
-            _str_detail = f"Latest STR date: {_latest_str.strftime('%Y-%m-%d')} ({_str_age}d ago)"
-        except Exception:
-            pass
-
-    # ── Render audit summary cards ────────────────────────────────────────────
-    _ac1, _ac2, _ac3 = st.columns(3)
-    with _ac1:
-        st.markdown(
-            f'<div style="background:#FFFFFF;border:1px solid rgba(5,150,105,0.20);border-left:3px solid #059669;'
-            f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
-            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#059669;margin-bottom:4px;">Populated Sources</div>'
-            f'<div style="font-size:28px;font-weight:800;color:#0D1B2E;">{len(_populated)}</div>'
-            f'<div style="font-size:12px;color:#64748B;">of {len(_df_registry)} tracked DataFrames</div>'
-            f'</div>', unsafe_allow_html=True)
-    with _ac2:
-        _ac2_color = "#DC2626" if _empty else "#059669"
-        st.markdown(
-            f'<div style="background:#FFFFFF;border:1px solid rgba(220,38,38,0.20);border-left:3px solid {_ac2_color};'
-            f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
-            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:{_ac2_color};margin-bottom:4px;">Empty Sources</div>'
-            f'<div style="font-size:28px;font-weight:800;color:#0D1B2E;">{len(_empty)}</div>'
-            f'<div style="font-size:12px;color:#64748B;">{"Run pipeline to fix" if _empty else "All sources healthy"}</div>'
-            f'</div>', unsafe_allow_html=True)
-    with _ac3:
-        st.markdown(
-            f'<div style="background:#FFFFFF;border:1px solid rgba(5,103,200,0.20);border-left:3px solid #0567C8;'
-            f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
-            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0567C8;margin-bottom:4px;">Insights Status</div>'
-            f'<div style="font-size:18px;font-weight:800;color:#0D1B2E;">{_insights_status}</div>'
-            f'<div style="font-size:12px;color:#64748B;">{_insights_detail}</div>'
-            f'</div>', unsafe_allow_html=True)
-
-    st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
-
-    # ── STR recency + detailed checklist ─────────────────────────────────────
-    _ac4, _ac5 = st.columns([1, 2])
-    with _ac4:
-        st.markdown(
-            f'<div style="background:#FFFFFF;border:1px solid rgba(5,103,200,0.15);border-left:3px solid #0567C8;'
-            f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
-            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0567C8;margin-bottom:4px;">STR Data Recency</div>'
-            f'<div style="font-size:18px;font-weight:800;color:#0D1B2E;">{_str_status}</div>'
-            f'<div style="font-size:12px;color:#64748B;">{_str_detail}</div>'
-            f'</div>', unsafe_allow_html=True)
-    with _ac5:
-        with st.expander("📋 Full DataFrame Status Checklist", expanded=False):
-            _rows_html = ""
-            for _dot, _lbl, _msg in _checks:
-                _rows_html += (
-                    f'<div style="display:flex;align-items:center;gap:10px;padding:5px 0;'
-                    f'border-bottom:1px solid rgba(0,0,0,0.05);">'
-                    f'<span style="font-size:14px;">{_dot}</span>'
-                    f'<span style="font-weight:600;color:#0D1B2E;min-width:160px;font-size:13px;">{_lbl}</span>'
-                    f'<span style="color:#64748B;font-size:12px;">{_msg}</span>'
-                    f'</div>'
-                )
+        # ── Render audit summary cards ────────────────────────────────────────────
+        _ac1, _ac2, _ac3 = st.columns(3)
+        with _ac1:
             st.markdown(
-                f'<div style="background:#F8FAFC;border-radius:8px;padding:10px 14px;">'
-                f'{_rows_html}</div>',
-                unsafe_allow_html=True)
+                f'<div style="background:#FFFFFF;border:1px solid rgba(5,150,105,0.20);border-left:3px solid #059669;'
+                f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
+                f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#059669;margin-bottom:4px;">Populated Sources</div>'
+                f'<div style="font-size:28px;font-weight:800;color:#0D1B2E;">{len(_populated)}</div>'
+                f'<div style="font-size:12px;color:#64748B;">of {len(_df_registry)} tracked DataFrames</div>'
+                f'</div>', unsafe_allow_html=True)
+        with _ac2:
+            _ac2_color = "#DC2626" if _empty else "#059669"
+            st.markdown(
+                f'<div style="background:#FFFFFF;border:1px solid rgba(220,38,38,0.20);border-left:3px solid {_ac2_color};'
+                f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
+                f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:{_ac2_color};margin-bottom:4px;">Empty Sources</div>'
+                f'<div style="font-size:28px;font-weight:800;color:#0D1B2E;">{len(_empty)}</div>'
+                f'<div style="font-size:12px;color:#64748B;">{"Run pipeline to fix" if _empty else "All sources healthy"}</div>'
+                f'</div>', unsafe_allow_html=True)
+        with _ac3:
+            st.markdown(
+                f'<div style="background:#FFFFFF;border:1px solid rgba(5,103,200,0.20);border-left:3px solid #0567C8;'
+                f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
+                f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0567C8;margin-bottom:4px;">Insights Status</div>'
+                f'<div style="font-size:18px;font-weight:800;color:#0D1B2E;">{_insights_status}</div>'
+                f'<div style="font-size:12px;color:#64748B;">{_insights_detail}</div>'
+                f'</div>', unsafe_allow_html=True)
 
-    st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+
+        # ── STR recency + detailed checklist ─────────────────────────────────────
+        _ac4, _ac5 = st.columns([1, 2])
+        with _ac4:
+            st.markdown(
+                f'<div style="background:#FFFFFF;border:1px solid rgba(5,103,200,0.15);border-left:3px solid #0567C8;'
+                f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
+                f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0567C8;margin-bottom:4px;">STR Data Recency</div>'
+                f'<div style="font-size:18px;font-weight:800;color:#0D1B2E;">{_str_status}</div>'
+                f'<div style="font-size:12px;color:#64748B;">{_str_detail}</div>'
+                f'</div>', unsafe_allow_html=True)
+        with _ac5:
+            with st.expander("📋 Full DataFrame Status Checklist", expanded=False):
+                _rows_html = ""
+                for _dot, _lbl, _msg in _checks:
+                    _rows_html += (
+                        f'<div style="display:flex;align-items:center;gap:10px;padding:5px 0;'
+                        f'border-bottom:1px solid rgba(0,0,0,0.05);">'
+                        f'<span style="font-size:14px;">{_dot}</span>'
+                        f'<span style="font-weight:600;color:#0D1B2E;min-width:160px;font-size:13px;">{_lbl}</span>'
+                        f'<span style="color:#64748B;font-size:12px;">{_msg}</span>'
+                        f'</div>'
+                    )
+                st.markdown(
+                    f'<div style="background:#F8FAFC;border-radius:8px;padding:10px 14px;">'
+                    f'{_rows_html}</div>',
+                    unsafe_allow_html=True)
+
+        st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
 
 
-# TAB 5 — DATA LOG
-# ══════════════════════════════════════════════════════════════════════════════
+    # TAB 5 — DATA LOG
+    # ══════════════════════════════════════════════════════════════════════════════
 with tab_dl:
     _tab_controls("dl", show_filter_badge=False)
     st.markdown("""
