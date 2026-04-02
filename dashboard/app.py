@@ -575,33 +575,33 @@ st.markdown("""
   /* ── Google Fonts ────────────────────────────────────────────────────── */
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
-  /* ── Design Tokens — Deep Ocean Dark ───────────────────────────────────── */
+  /* ── Design Tokens — Deep Ocean Dark (brightened for legibility) ────────── */
   :root {
-    --dp-bg:            #060C18;
-    --dp-bg2:           #090F20;
-    --dp-surface:       #0C1526;
-    --dp-card:          #0E1A30;
-    --dp-card-solid:    #0E1A30;
-    --dp-card-hover:    #122040;
-    --dp-border:        rgba(255,255,255,0.07);
-    --dp-border-accent: rgba(0,212,200,0.35);
+    --dp-bg:            #0D1B2E;
+    --dp-bg2:           #101F34;
+    --dp-surface:       #132440;
+    --dp-card:          #162844;
+    --dp-card-solid:    #162844;
+    --dp-card-hover:    #1C3050;
+    --dp-border:        rgba(255,255,255,0.11);
+    --dp-border-accent: rgba(0,212,200,0.40);
     --dp-teal:          #00D4C8;
-    --dp-teal-dim:      rgba(0,212,200,0.12);
-    --dp-teal-glow:     rgba(0,212,200,0.22);
+    --dp-teal-dim:      rgba(0,212,200,0.14);
+    --dp-teal-glow:     rgba(0,212,200,0.26);
     --dp-blue:          #38BDF8;
     --dp-green:         #10B981;
     --dp-amber:         #F5B940;
     --dp-red:           #EF4444;
     --dp-purple:        #A78BFA;
     --dp-orange:        #FB923C;
-    --dp-text-1:        #EFF6FF;
-    --dp-text-2:        #94B3CC;
-    --dp-text-3:        #5A7A95;
+    --dp-text-1:        #F0F8FF;
+    --dp-text-2:        #B8D4E8;
+    --dp-text-3:        #7A9DB8;
     --dp-radius:        12px;
     --dp-radius-lg:     16px;
-    --dp-shadow:        0 1px 4px rgba(0,0,0,0.35), 0 4px 20px rgba(0,0,0,0.28);
-    --dp-shadow-hover:  0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,212,200,0.22);
-    --dp-shadow-deep:   0 16px 48px rgba(0,0,0,0.55);
+    --dp-shadow:        0 1px 4px rgba(0,0,0,0.30), 0 4px 20px rgba(0,0,0,0.22);
+    --dp-shadow-hover:  0 8px 32px rgba(0,0,0,0.38), 0 0 0 1px rgba(0,212,200,0.22);
+    --dp-shadow-deep:   0 16px 48px rgba(0,0,0,0.48);
   }
 
   html, body, [class*="css"] {
@@ -613,13 +613,30 @@ st.markdown("""
     background-color: var(--dp-bg) !important;
     background-image: none !important;
   }
+  /* ── Scroll — stApp fills viewport, stMain scrolls the content ───────── */
+  .stApp {
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+  [data-testid="stAppViewContainer"] {
+    height: 100% !important;
+    overflow: hidden !important;
+    display: flex !important;
+  }
+  [data-testid="stMain"],
+  [data-testid="stMainBlockContainer"] {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: 100% !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
   .block-container {
     background-color: transparent !important;
   }
 
   /* ── Global dark overrides — all white surfaces → dark glass ─────────── */
   [data-testid="stSidebar"] > div:first-child {
-    background: linear-gradient(180deg, #080F1D 0%, #060C18 100%) !important;
+    background: linear-gradient(180deg, #0F1E33 0%, #0D1B2E 100%) !important;
     border-right: 1px solid rgba(0,212,200,0.12) !important;
   }
   [data-testid="stSidebar"] * { color: var(--dp-text-2) !important; }
@@ -664,7 +681,7 @@ st.markdown("""
     color: var(--dp-text-1) !important;
   }
   [data-baseweb="menu"],
-  [data-baseweb="popover"] { background: #0E1A30 !important; }
+  [data-baseweb="popover"] { background: #162844 !important; }
   [data-baseweb="option"]:hover { background: rgba(0,212,200,0.10) !important; }
   /* Tab bar dark */
   [data-testid="stTabs"] [role="tablist"] {
@@ -836,18 +853,16 @@ st.markdown("""
   a[href*="streamlit.io"]               { display:    none    !important; }
   a[href*="github.com/streamlit"]       { display:    none    !important; }
 
-  /* ── Fix sticky: inner containers must not clip overflow ────────────── */
-  /* Do NOT change stAppViewContainer — it provides the page scroll */
-  [data-testid="stMain"],
-  section.main,
+  /* ── Inner containers: must NOT clip so sticky tabs can work ────────── */
+  /* stMain/stMainBlockContainer are scroll containers — set above        */
   .main > div,
   [data-testid="stVerticalBlock"],
   [data-testid="stVerticalBlockBorderWrapper"] {
     overflow: visible !important;
   }
-  /* block-container is direct parent of hero + tabs — must be visible */
   .block-container {
     overflow: visible !important;
+    max-width: 100% !important;
   }
 
   /* ── Custom Scrollbar ────────────────────────────────────────────────── */
@@ -925,11 +940,11 @@ st.markdown("""
     to   { transform: scaleX(1); transform-origin: left; }
   }
   .hero-banner {
-    background: #060C18 !important;
+    background: #0D1B2E !important;
     background-image:
-      radial-gradient(circle at 80% 20%, rgba(0,212,200,0.16) 0%, transparent 55%),
-      radial-gradient(circle at 10% 80%, rgba(56,189,248,0.07) 0%, transparent 45%),
-      linear-gradient(180deg, #060C18 0%, #090F20 100%) !important;
+      radial-gradient(circle at 80% 20%, rgba(0,212,200,0.18) 0%, transparent 55%),
+      radial-gradient(circle at 10% 80%, rgba(56,189,248,0.09) 0%, transparent 45%),
+      linear-gradient(180deg, #0D1B2E 0%, #101F34 100%) !important;
     border-radius: 0 !important;
     margin: -1rem -1rem 0 -1rem;
     padding: 22px 36px 20px 36px;
@@ -1462,8 +1477,8 @@ st.markdown("""
 
   /* ── Sidebar Styling ─────────────────────────────────────────────────── */
   [data-testid="stSidebar"] {
-    background: #080F1D !important;
-    border-right: 1px solid rgba(0,212,200,0.12) !important;
+    background: #0F1E33 !important;
+    border-right: 1px solid rgba(0,212,200,0.14) !important;
   }
   [data-testid="stSidebar"] .stRadio label {
     font-size: 13px !important; font-weight: 500 !important;
@@ -1643,10 +1658,24 @@ st.markdown("""
      RESPONSIVE — Mobile & Tablet
      Phones < 640px · Tablets 640–1024px
   ═══════════════════════════════════════════════════════════════ */
+  /* ── Prevent horizontal scroll globally ─── */
+  body, html { overflow-x: hidden !important; }
+
   @media screen and (max-width: 768px) {
     .main .block-container {
       padding: 0.5rem 0.75rem 2rem 0.75rem !important;
       max-width: 100% !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+    /* Tab bar: allow wrapping so all tabs are reachable */
+    [data-testid="stTabs"] [data-baseweb="tab-list"] {
+      flex-wrap: wrap !important;
+      overflow-x: visible !important;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab"] {
+      font-size: 11px !important; padding: 5px 9px !important;
+      min-width: 0 !important;
     }
     .hero-banner { padding: 16px 14px !important; }
     .hero-title  { font-size: 1.35rem !important; }
@@ -1657,9 +1686,6 @@ st.markdown("""
       flex-direction: column !important;
       align-items: flex-start !important;
       gap: 14px !important; padding: 14px 16px !important;
-    }
-    button[data-baseweb="tab"] {
-      font-size: 11px !important; padding: 5px 9px !important;
     }
     .chart-header { font-size: 13px !important; }
     .sidebar-brand { font-size: 15px !important; }
@@ -1672,15 +1698,26 @@ st.markdown("""
     .nlm-briefing { padding: 12px 14px !important; }
     .src-card { padding: 10px 12px !important; }
     .kpi-value { font-size: 24px !important; }
+    /* Charts scroll horizontally on mobile rather than overflow */
+    .js-plotly-plot .plotly { overflow-x: auto !important; }
+    /* Stacked columns on small screens */
+    div[data-testid="stHorizontalBlock"] {
+      flex-wrap: wrap !important;
+      gap: 6px !important;
+    }
+    div[data-testid="stHorizontalBlock"] > div[data-testid="stVerticalBlock"] {
+      min-width: 140px !important;
+    }
   }
   @media screen and (max-width: 480px) {
     .hero-title { font-size: 1.15rem !important; }
     .main .block-container { padding: 0.25rem 0.5rem 2rem 0.5rem !important; }
     .sh-tag { display: none !important; }
     [data-testid="stMetricValue"] { font-size: 1.1rem !important; }
-  }
-  @media screen and (max-width: 768px) {
-    .js-plotly-plot .plotly { overflow-x: auto !important; }
+    /* Single column on phones */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="stVerticalBlock"] {
+      min-width: 100% !important;
+    }
   }
 
   /* ── Pill Button Style — Dark ────────────────────────────────────────── */
@@ -1713,9 +1750,9 @@ st.markdown("""
   /* Seamlessly extends the hero banner — same dark bg, no gap */
   .pulse-ticker-wrap {
     overflow: hidden;
-    background: linear-gradient(180deg, #060C18 0%, #090F20 100%);
+    background: linear-gradient(180deg, #0D1B2E 0%, #101F34 100%);
     border-bottom: 1px solid rgba(0,212,200,0.20);
-    box-shadow: 0 4px 28px rgba(0,0,0,0.45);
+    box-shadow: 0 4px 28px rgba(0,0,0,0.40);
     margin: 0 -1rem 1.5rem -1rem;
     padding: 0;
     position: relative;
@@ -1729,11 +1766,11 @@ st.markdown("""
   }
   .pulse-ticker-wrap::before {
     left: 0;
-    background: linear-gradient(90deg, #060C18 0%, transparent 100%);
+    background: linear-gradient(90deg, #0D1B2E 0%, transparent 100%);
   }
   .pulse-ticker-wrap::after {
     right: 0;
-    background: linear-gradient(270deg, #060C18 0%, transparent 100%);
+    background: linear-gradient(270deg, #0D1B2E 0%, transparent 100%);
   }
   .pulse-ticker-track {
     display: flex;
@@ -2161,13 +2198,28 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
+# ── Viewport meta tag (mobile-friendly scaling)
+st.markdown("""
+<script>
+(function(){
+  var doc = window.parent && window.parent.document ? window.parent.document : document;
+  if(!doc.querySelector('meta[name="viewport"]')){
+    var m = doc.createElement('meta');
+    m.name = 'viewport';
+    m.content = 'width=device-width, initial-scale=1, maximum-scale=5';
+    doc.head.appendChild(m);
+  }
+})();
+</script>
+""", unsafe_allow_html=True)
+
 # ── Back-to-top button (fixed action button)
 st.markdown("""
 <style>
   #back-to-top-btn {
     position: fixed; bottom: 24px; right: 20px; z-index: 99999;
     width: 40px; height: 40px; border-radius: 10px;
-    background: rgba(14,26,48,0.92);
+    background: rgba(22,40,68,0.94);
     border: 1px solid rgba(0,212,200,0.30); cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 2px 16px rgba(0,0,0,0.40);
@@ -4099,7 +4151,7 @@ def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
             itemsizing = "constant",
         ),
         hoverlabel = dict(
-            bgcolor     = "#0E1A30",
+            bgcolor     = "#162844",
             bordercolor = "rgba(0,212,200,0.55)",
             font        = dict(size=13.5, family=_font, color="#EFF6FF"),
             namelength  = -1,
@@ -4723,9 +4775,12 @@ st.markdown("""
     var doc = window.parent && window.parent.document ? window.parent.document : document;
     var tabEl = doc.querySelector('[data-testid="stTabs"]');
     if(!tabEl) return;
-    // Walk up the DOM tree and remove overflow:hidden on all ancestors
+    // Walk up the DOM tree and remove overflow:hidden on inner containers only.
+    // STOP before stMain/stAppViewContainer — those ARE the scroll container.
     var el = tabEl.parentElement;
     while(el && el !== doc.body){
+      var tid = el.getAttribute && el.getAttribute('data-testid');
+      if(tid === 'stMain' || tid === 'stAppViewContainer') break;
       var s = doc.defaultView.getComputedStyle(el);
       if(s.overflow === 'hidden' || s.overflowY === 'hidden'){
         el.style.overflow = 'visible';
@@ -4738,11 +4793,11 @@ st.markdown("""
       'position:sticky',
       'top:0',
       'z-index:9999',
-      'background:rgba(238,242,248,0.97)',
+      'background:rgba(13,27,46,0.97)',
       'backdrop-filter:blur(16px)',
       '-webkit-backdrop-filter:blur(16px)',
-      'border-bottom:2px solid rgba(5,103,200,0.18)',
-      'box-shadow:0 4px 24px rgba(15,28,46,0.12)',
+      'border-bottom:1px solid rgba(0,212,200,0.15)',
+      'box-shadow:0 4px 24px rgba(0,0,0,0.40)',
       'padding:6px 0 4px 0',
       'margin-bottom:0',
     ].join('!important;') + '!important';
@@ -6548,7 +6603,7 @@ with tab_ov:
         def _exec_kpi(label, value, sub="", color="#0567C8"):
             return (
                 f'<div style="flex:1;min-width:140px;padding:14px 18px;'
-                f'background:#0E1A30;'
+                f'background:#162844;'
                 f'border-radius:12px;border:1px solid rgba(15,28,46,0.08);'
                 f'border-top:3px solid {color};'
                 f'box-shadow:0 1px 4px rgba(15,28,46,0.07);">'
@@ -7241,7 +7296,7 @@ with tab_ov:
                 return (
                     f'<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;'
                     f'border-bottom:1px solid rgba(0,0,0,0.08);font-family:\'Syne\',sans-serif;'
-                    f'background:#0E1A30;">'
+                    f'background:#162844;">'
                     f'<div style="font-size:16px;flex-shrink:0;">{_dot}</div>'
                     f'<div style="flex:1.4;font-size:13px;font-weight:700;color:#0F1C2E;">{metric}</div>'
                     f'<div style="flex:0.8;font-size:14px;font-weight:900;color:{_col};">{value}</div>'
@@ -7273,7 +7328,7 @@ with tab_ov:
             _rc_trips_note  = (f"{_trips_fmt} annual trips · {_exec_overnight:.0f}% overnight · {'Strong visitation base.' if _exec_trips >= 1e6 else 'Opportunity to grow overnight conversion.'}") if _exec_trips > 0 else "Run Datafy pipeline."
 
             _rc_html = (
-                '<div style="background:#0E1A30;border-radius:14px;'
+                '<div style="background:#162844;border-radius:14px;'
                 'border:1px solid rgba(0,0,0,0.08);border-left:5px solid #D97706;'
                 'overflow:hidden;font-family:\'Syne\',sans-serif;margin-bottom:16px;'
                 'box-shadow:0 2px 8px rgba(0,0,0,0.08);">'
@@ -7365,7 +7420,7 @@ with tab_ov:
                     _type_colors = {"insight": "#0567C8", "opportunity": "#059669", "risk": "#DC2626", "gap": "#D97706"}
                     _tc = _type_colors.get(signal_type, "#0567C8")
                     return (
-                        f'<div style="background:#0E1A30;border-radius:12px;padding:16px 18px;'
+                        f'<div style="background:#162844;border-radius:12px;padding:16px 18px;'
                         f'border:1px solid rgba(15,28,46,0.07);border-left:3px solid {_tc};'
                         f'box-shadow:0 1px 4px rgba(15,28,46,0.06);margin-bottom:10px;">'
                         f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
@@ -8470,7 +8525,7 @@ with tab_tr:
 
                 def _ri_metric(label, val, note, icon, color):
                     return (
-                        f'<div style="background:#0E1A30;border-radius:10px;padding:14px 16px;'
+                        f'<div style="background:#162844;border-radius:10px;padding:14px 16px;'
                         f'border:1px solid rgba(15,28,46,0.07);border-top:3px solid {color};'
                         f'box-shadow:0 1px 4px rgba(15,28,46,0.06);">'
                         f'<div style="font-size:18px;margin-bottom:4px;">{icon}</div>'
@@ -8912,7 +8967,7 @@ with tab_fo:
 
     def _kfm_card(label, value, delta, delta_color="#718096"):
         return (
-            f'<div style="background:#0E1A30;'
+            f'<div style="background:#162844;'
             f'border-radius:12px;padding:16px 18px;'
             f'border:1px solid rgba(0,0,0,0.08);border-left:4px solid #0891B2;'
             f'position:relative;overflow:hidden;margin-bottom:8px;'
@@ -10934,7 +10989,7 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
                 _hom_v = f"${int(_hom.iloc[0]):,}" if not _hom.empty else "—"
                 short_geo = geo.replace(" County, CA", "").replace(" County", "")
                 st.markdown(
-                    f'<div style="background:#0E1A30;border:1px solid rgba(255,255,255,0.07);border-radius:12px;'
+                    f'<div style="background:#162844;border:1px solid rgba(255,255,255,0.07);border-radius:12px;'
                     f'border-top:3px solid #7C3AED;padding:14px 18px;">'
                     f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7A95;margin-bottom:6px;">{short_geo}</div>'
                     f'<div style="font-size:18px;font-weight:900;color:#7C3AED;">{_pop_v}</div>'
@@ -14535,31 +14590,31 @@ _GLOSSARY_TERMS = {
 
 _SOURCES_HTML = """
 <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">
-  <div style="background:#0E1A30;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#162844;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">STR</div>
     <div style="color:#718096;">Smith Travel Research · daily &amp; monthly hotel benchmarking</div>
   </div>
-  <div style="background:#0E1A30;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#162844;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">Datafy</div>
     <div style="color:#718096;">Visitor economy platform · trips, spend, DMA attribution</div>
   </div>
-  <div style="background:#0E1A30;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#162844;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">CoStar</div>
     <div style="color:#718096;">Market data · comp set, pipeline, profitability</div>
   </div>
-  <div style="background:#0E1A30;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#162844;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">Visit California</div>
     <div style="color:#718096;">State forecasts · lodging, travel volume, airport traffic</div>
   </div>
-  <div style="background:#0E1A30;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#162844;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">Zartico</div>
