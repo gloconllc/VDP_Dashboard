@@ -245,7 +245,7 @@ GREEN      = "#21808D"    # teal = positive to match brand
 BLUE       = "#0567C8"    # primary accent — TSA/wave/fly-market
 PURPLE     = "#7C3AED"    # CoStar / pipeline
 GOLD       = "#D97706"    # amber / warning
-NAVY       = "#0D1B2E"    # dark header bg
+NAVY       = "#162436"    # dark header bg
 
 # ─── AI constants ─────────────────────────────────────────────────────────────
 CLAUDE_MODEL = "claude-sonnet-4-6"
@@ -577,26 +577,26 @@ st.markdown("""
 
   /* ── Design Tokens — Deep Ocean Dark (brightened for legibility) ────────── */
   :root {
-    --dp-bg:            #0D1B2E;
-    --dp-bg2:           #101F34;
-    --dp-surface:       #132440;
-    --dp-card:          #162844;
-    --dp-card-solid:    #162844;
-    --dp-card-hover:    #1C3050;
-    --dp-border:        rgba(255,255,255,0.11);
-    --dp-border-accent: rgba(0,212,200,0.40);
+    --dp-bg:            #162436;
+    --dp-bg2:           #192840;
+    --dp-surface:       #1D2E4A;
+    --dp-card:          #213354;
+    --dp-card-solid:    #213354;
+    --dp-card-hover:    #273D60;
+    --dp-border:        rgba(255,255,255,0.14);
+    --dp-border-accent: rgba(0,212,200,0.42);
     --dp-teal:          #00D4C8;
-    --dp-teal-dim:      rgba(0,212,200,0.14);
-    --dp-teal-glow:     rgba(0,212,200,0.26);
+    --dp-teal-dim:      rgba(0,212,200,0.16);
+    --dp-teal-glow:     rgba(0,212,200,0.28);
     --dp-blue:          #38BDF8;
     --dp-green:         #10B981;
     --dp-amber:         #F5B940;
     --dp-red:           #EF4444;
     --dp-purple:        #A78BFA;
     --dp-orange:        #FB923C;
-    --dp-text-1:        #F0F8FF;
-    --dp-text-2:        #B8D4E8;
-    --dp-text-3:        #7A9DB8;
+    --dp-text-1:        #F4FAFF;
+    --dp-text-2:        #C4DCEE;
+    --dp-text-3:        #8AAEC6;
     --dp-radius:        12px;
     --dp-radius-lg:     16px;
     --dp-shadow:        0 1px 4px rgba(0,0,0,0.30), 0 4px 20px rgba(0,0,0,0.22);
@@ -636,7 +636,7 @@ st.markdown("""
 
   /* ── Global dark overrides — all white surfaces → dark glass ─────────── */
   [data-testid="stSidebar"] > div:first-child {
-    background: linear-gradient(180deg, #0F1E33 0%, #0D1B2E 100%) !important;
+    background: linear-gradient(180deg, #182840 0%, #162436 100%) !important;
     border-right: 1px solid rgba(0,212,200,0.12) !important;
   }
   [data-testid="stSidebar"] * { color: var(--dp-text-2) !important; }
@@ -681,7 +681,7 @@ st.markdown("""
     color: var(--dp-text-1) !important;
   }
   [data-baseweb="menu"],
-  [data-baseweb="popover"] { background: #162844 !important; }
+  [data-baseweb="popover"] { background: #213354 !important; }
   [data-baseweb="option"]:hover { background: rgba(0,212,200,0.10) !important; }
   /* Tab bar dark */
   [data-testid="stTabs"] [role="tablist"] {
@@ -940,11 +940,11 @@ st.markdown("""
     to   { transform: scaleX(1); transform-origin: left; }
   }
   .hero-banner {
-    background: #0D1B2E !important;
+    background: #162436 !important;
     background-image:
       radial-gradient(circle at 80% 20%, rgba(0,212,200,0.18) 0%, transparent 55%),
       radial-gradient(circle at 10% 80%, rgba(56,189,248,0.09) 0%, transparent 45%),
-      linear-gradient(180deg, #0D1B2E 0%, #101F34 100%) !important;
+      linear-gradient(180deg, #162436 0%, #192840 100%) !important;
     border-radius: 0 !important;
     margin: -1rem -1rem 0 -1rem;
     padding: 22px 36px 20px 36px;
@@ -1477,7 +1477,7 @@ st.markdown("""
 
   /* ── Sidebar Styling ─────────────────────────────────────────────────── */
   [data-testid="stSidebar"] {
-    background: #0F1E33 !important;
+    background: #182840 !important;
     border-right: 1px solid rgba(0,212,200,0.14) !important;
   }
   [data-testid="stSidebar"] .stRadio label {
@@ -1558,7 +1558,7 @@ st.markdown("""
   }
   .action-text {
     font-family: 'Inter', sans-serif;
-    font-size: 12.5px; color: #0D1B2E; line-height: 1.60;
+    font-size: 12.5px; color: #162436; line-height: 1.60;
   }
   .action-text strong { font-weight: 700; color: #0567C8; }
 
@@ -1615,7 +1615,7 @@ st.markdown("""
     font-family: 'Syne', 'Outfit', sans-serif !important;
     font-size: 14px !important; font-weight: 700 !important;
     letter-spacing: -.015em !important; line-height: 1.2 !important;
-    color: #0D1B2E !important;
+    color: #162436 !important;
   }
   .sh-tag {
     margin-left: auto !important; font-size: 10px !important;
@@ -1750,7 +1750,7 @@ st.markdown("""
   /* Seamlessly extends the hero banner — same dark bg, no gap */
   .pulse-ticker-wrap {
     overflow: hidden;
-    background: linear-gradient(180deg, #0D1B2E 0%, #101F34 100%);
+    background: linear-gradient(180deg, #162436 0%, #192840 100%);
     border-bottom: 1px solid rgba(0,212,200,0.20);
     box-shadow: 0 4px 28px rgba(0,0,0,0.40);
     margin: 0 -1rem 1.5rem -1rem;
@@ -1766,11 +1766,11 @@ st.markdown("""
   }
   .pulse-ticker-wrap::before {
     left: 0;
-    background: linear-gradient(90deg, #0D1B2E 0%, transparent 100%);
+    background: linear-gradient(90deg, #162436 0%, transparent 100%);
   }
   .pulse-ticker-wrap::after {
     right: 0;
-    background: linear-gradient(270deg, #0D1B2E 0%, transparent 100%);
+    background: linear-gradient(270deg, #162436 0%, transparent 100%);
   }
   .pulse-ticker-track {
     display: flex;
@@ -4151,7 +4151,7 @@ def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
             itemsizing = "constant",
         ),
         hoverlabel = dict(
-            bgcolor     = "#162844",
+            bgcolor     = "#213354",
             bordercolor = "rgba(0,212,200,0.55)",
             font        = dict(size=13.5, family=_font, color="#EFF6FF"),
             namelength  = -1,
@@ -6603,7 +6603,7 @@ with tab_ov:
         def _exec_kpi(label, value, sub="", color="#0567C8"):
             return (
                 f'<div style="flex:1;min-width:140px;padding:14px 18px;'
-                f'background:#162844;'
+                f'background:#213354;'
                 f'border-radius:12px;border:1px solid rgba(15,28,46,0.08);'
                 f'border-top:3px solid {color};'
                 f'box-shadow:0 1px 4px rgba(15,28,46,0.07);">'
@@ -7296,7 +7296,7 @@ with tab_ov:
                 return (
                     f'<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;'
                     f'border-bottom:1px solid rgba(0,0,0,0.08);font-family:\'Syne\',sans-serif;'
-                    f'background:#162844;">'
+                    f'background:#213354;">'
                     f'<div style="font-size:16px;flex-shrink:0;">{_dot}</div>'
                     f'<div style="flex:1.4;font-size:13px;font-weight:700;color:#0F1C2E;">{metric}</div>'
                     f'<div style="flex:0.8;font-size:14px;font-weight:900;color:{_col};">{value}</div>'
@@ -7328,7 +7328,7 @@ with tab_ov:
             _rc_trips_note  = (f"{_trips_fmt} annual trips · {_exec_overnight:.0f}% overnight · {'Strong visitation base.' if _exec_trips >= 1e6 else 'Opportunity to grow overnight conversion.'}") if _exec_trips > 0 else "Run Datafy pipeline."
 
             _rc_html = (
-                '<div style="background:#162844;border-radius:14px;'
+                '<div style="background:#213354;border-radius:14px;'
                 'border:1px solid rgba(0,0,0,0.08);border-left:5px solid #D97706;'
                 'overflow:hidden;font-family:\'Syne\',sans-serif;margin-bottom:16px;'
                 'box-shadow:0 2px 8px rgba(0,0,0,0.08);">'
@@ -7420,7 +7420,7 @@ with tab_ov:
                     _type_colors = {"insight": "#0567C8", "opportunity": "#059669", "risk": "#DC2626", "gap": "#D97706"}
                     _tc = _type_colors.get(signal_type, "#0567C8")
                     return (
-                        f'<div style="background:#162844;border-radius:12px;padding:16px 18px;'
+                        f'<div style="background:#213354;border-radius:12px;padding:16px 18px;'
                         f'border:1px solid rgba(15,28,46,0.07);border-left:3px solid {_tc};'
                         f'box-shadow:0 1px 4px rgba(15,28,46,0.06);margin-bottom:10px;">'
                         f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
@@ -8525,7 +8525,7 @@ with tab_tr:
 
                 def _ri_metric(label, val, note, icon, color):
                     return (
-                        f'<div style="background:#162844;border-radius:10px;padding:14px 16px;'
+                        f'<div style="background:#213354;border-radius:10px;padding:14px 16px;'
                         f'border:1px solid rgba(15,28,46,0.07);border-top:3px solid {color};'
                         f'box-shadow:0 1px 4px rgba(15,28,46,0.06);">'
                         f'<div style="font-size:18px;margin-bottom:4px;">{icon}</div>'
@@ -8967,7 +8967,7 @@ with tab_fo:
 
     def _kfm_card(label, value, delta, delta_color="#718096"):
         return (
-            f'<div style="background:#162844;'
+            f'<div style="background:#213354;'
             f'border-radius:12px;padding:16px 18px;'
             f'border:1px solid rgba(0,0,0,0.08);border-left:4px solid #0891B2;'
             f'position:relative;overflow:hidden;margin-bottom:8px;'
@@ -10989,7 +10989,7 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
                 _hom_v = f"${int(_hom.iloc[0]):,}" if not _hom.empty else "—"
                 short_geo = geo.replace(" County, CA", "").replace(" County", "")
                 st.markdown(
-                    f'<div style="background:#162844;border:1px solid rgba(255,255,255,0.07);border-radius:12px;'
+                    f'<div style="background:#213354;border:1px solid rgba(255,255,255,0.07);border-radius:12px;'
                     f'border-top:3px solid #7C3AED;padding:14px 18px;">'
                     f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7A95;margin-bottom:6px;">{short_geo}</div>'
                     f'<div style="font-size:18px;font-weight:900;color:#7C3AED;">{_pop_v}</div>'
@@ -14590,31 +14590,31 @@ _GLOSSARY_TERMS = {
 
 _SOURCES_HTML = """
 <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">
-  <div style="background:#162844;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#213354;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">STR</div>
     <div style="color:#718096;">Smith Travel Research · daily &amp; monthly hotel benchmarking</div>
   </div>
-  <div style="background:#162844;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#213354;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">Datafy</div>
     <div style="color:#718096;">Visitor economy platform · trips, spend, DMA attribution</div>
   </div>
-  <div style="background:#162844;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#213354;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">CoStar</div>
     <div style="color:#718096;">Market data · comp set, pipeline, profitability</div>
   </div>
-  <div style="background:#162844;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#213354;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">Visit California</div>
     <div style="color:#718096;">State forecasts · lodging, travel volume, airport traffic</div>
   </div>
-  <div style="background:#162844;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#213354;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">Zartico</div>
