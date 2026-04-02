@@ -1050,21 +1050,22 @@ st.markdown("""
   }
   .section-divider-line {
     flex: 1; height: 1px;
-    background: linear-gradient(90deg, rgba(0,212,200,0.30), rgba(255,255,255,0.04));
+    background: linear-gradient(90deg, rgba(0,212,200,0.40), rgba(255,255,255,0.06));
   }
   .section-divider-title {
     font-family: 'DM Sans', 'Outfit', sans-serif;
-    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .14em; color: var(--dp-teal);
-    white-space: nowrap; padding: 5px 16px;
-    background: rgba(0,212,200,0.08);
-    border: 1px solid rgba(0,212,200,0.22);
+    font-size: 10.5px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .14em;
+    color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+    white-space: nowrap; padding: 6px 18px;
+    background: rgba(0,212,200,0.22);
+    border: 1px solid rgba(0,212,200,0.50);
     border-radius: 20px;
-    box-shadow: 0 1px 8px rgba(0,212,200,0.10);
+    box-shadow: 0 2px 12px rgba(0,212,200,0.18);
   }
   .section-divider-line-r {
     flex: 1; height: 1px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.04), transparent);
+    background: linear-gradient(90deg, rgba(255,255,255,0.06), transparent);
   }
 
   /* ── Tab Summary Card ─────────────────────────────────────────────────── */
@@ -1598,12 +1599,12 @@ st.markdown("""
   /* ── Section Header Blocks ───────────────────────────────────────────── */
   .sh-block {
     display: flex !important; align-items: center !important; gap: 12px !important;
-    padding: 11px 18px !important; border-radius: 10px !important;
+    padding: 13px 20px !important; border-radius: 10px !important;
     margin: 28px 0 14px 0 !important;
-    background: var(--dp-card) !important;
-    border: 1px solid var(--dp-border) !important;
-    border-left: 3px solid var(--sh-accent, #00D4C8) !important;
-    box-shadow: var(--dp-shadow) !important;
+    background: rgba(255,255,255,0.07) !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
+    border-left: 4px solid var(--sh-accent, #00D4C8) !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25) !important;
     transition: box-shadow 0.22s ease, transform 0.22s ease !important;
   }
   .sh-block:hover {
@@ -1619,16 +1620,16 @@ st.markdown("""
     font-family: 'Syne', 'Outfit', sans-serif !important;
     font-size: 14px !important; font-weight: 700 !important;
     letter-spacing: -.015em !important; line-height: 1.2 !important;
-    color: var(--dp-text-1) !important;
+    color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
   }
   .sh-tag {
     margin-left: auto !important; font-size: 10px !important;
-    font-weight: 700 !important; letter-spacing: .08em !important;
-    text-transform: uppercase !important; padding: 2px 9px !important;
+    font-weight: 800 !important; letter-spacing: .10em !important;
+    text-transform: uppercase !important; padding: 3px 11px !important;
     border-radius: 20px !important; white-space: nowrap !important;
-    background: rgba(5,103,200,0.08) !important;
-    color: #0567C8 !important;
-    border: 1px solid rgba(5,103,200,0.18) !important;
+    background: rgba(0,212,200,0.18) !important;
+    color: #00D4C8 !important; -webkit-text-fill-color: #00D4C8 !important;
+    border: 1px solid rgba(0,212,200,0.45) !important;
   }
   /* Accent color variants */
   .sh-teal   { --sh-accent: #00D4C8; }
@@ -4124,7 +4125,7 @@ def event_stat(val, label, icon: str = "", date: str = "") -> str:
     )
 
 
-def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
+def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
     """Deep Ocean dark chart theme — Dana Point PULSE v8.
     Full dark mode: transparent bg, ocean-teal palette, crisp grid.
     """
@@ -4143,9 +4144,10 @@ def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
     fig.update_layout(
         plot_bgcolor  = "rgba(0,0,0,0)",
         paper_bgcolor = "rgba(0,0,0,0)",
-        font    = dict(family=_font, size=12.5, color="#94B3CC"),
+        font    = dict(family=_font, size=12.5, color="#C8E0F2"),
         height  = height,
-        margin  = dict(l=4, r=8, t=52, b=8),
+        autosize = True,
+        margin  = dict(l=14, r=20, t=52, b=14, autoexpand=True),
         transition = {"duration": 600, "easing": "cubic-in-out"},
         legend = dict(
             orientation = "h",
@@ -4173,22 +4175,24 @@ def style_fig(fig: go.Figure, height: int = 280) -> go.Figure:
     fig.update_xaxes(
         showgrid    = False,
         zeroline    = False,
-        tickfont    = dict(size=11, family=_font, color="#5A7A95"),
-        linecolor   = "rgba(255,255,255,0.08)",
+        tickfont    = dict(size=11, family=_font, color="#8AAEC6"),
+        linecolor   = "rgba(255,255,255,0.12)",
         linewidth   = 1,
         showline    = True,
         ticks       = "outside",
         ticklen     = 4,
-        tickcolor   = "rgba(255,255,255,0.08)",
+        tickcolor   = "rgba(255,255,255,0.10)",
+        automargin  = True,
     )
     fig.update_yaxes(
-        gridcolor   = "rgba(255,255,255,0.04)",
+        gridcolor   = "rgba(255,255,255,0.06)",
         gridwidth   = 1,
         griddash    = "dot",
         zeroline    = False,
-        tickfont    = dict(size=11, family=_font, color="#5A7A95"),
+        tickfont    = dict(size=11, family=_font, color="#8AAEC6"),
         showline    = False,
         ticks       = "",
+        automargin  = True,
     )
     # ── Deep Ocean fills: organic gradient fills + smooth spline lines ────
     _fill_palette = [
@@ -7956,7 +7960,7 @@ with tab_ov:
                                   annotation_position="top right",
                                   annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
                     fig.update_layout(yaxis_tickprefix="$", showlegend=False)
-                    st.plotly_chart(style_fig(fig, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.plotly_chart(style_fig(fig, height=340), use_container_width=True, config=PLOTLY_CONFIG)
 
                 with cb:
                     st.markdown('<div class="chart-header">Monthly ADR vs. Occupancy — Last 24 Months</div>', unsafe_allow_html=True)
@@ -7979,7 +7983,7 @@ with tab_ov:
                     if _occ_col:
                         fig2.update_yaxes(title_text="Occ %", ticksuffix="%",
                                           secondary_y=True, showgrid=False)
-                    st.plotly_chart(style_fig(fig2, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.plotly_chart(style_fig(fig2, height=340), use_container_width=True, config=PLOTLY_CONFIG)
 
             # ── Row 4: Datafy Visitor Economy Summary ─────────────────────────────
             if not df_dfy_ov.empty:
@@ -8262,7 +8266,7 @@ with tab_tr:
                 yaxis_tickprefix=_tick_pfx, yaxis_ticksuffix=_tick_sfx,
                 showlegend=False, transition={"duration": 800},
             )
-            st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+            st.plotly_chart(style_fig(fig, height=380), use_container_width=True, config=PLOTLY_CONFIG)
         else:
             st.markdown(empty_state(
                 "📊", f"No data for {_str_metric_label}.",
@@ -8293,7 +8297,7 @@ with tab_tr:
             ))
             fig.update_layout(yaxis_ticksuffix="%", showlegend=False,
                               transition={"duration": 800, "easing": "cubic-in-out"})
-            st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+            st.plotly_chart(style_fig(fig, height=380), use_container_width=True, config=PLOTLY_CONFIG)
 
         st.markdown("---")
         c1, c2 = st.columns(2)
@@ -8401,7 +8405,7 @@ with tab_tr:
             ))
             fig.update_layout(barmode="group",
                               transition={"duration": 700, "easing": "cubic-in-out"})
-            st.plotly_chart(style_fig(fig, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+            st.plotly_chart(style_fig(fig, height=340), use_container_width=True, config=PLOTLY_CONFIG)
         else:
             st.markdown(empty_state(
                 "📦", "No compression data.",
@@ -8455,7 +8459,7 @@ with tab_tr:
         fig.update_yaxes(title_text="RevPAR / ADR ($)", tickprefix="$", secondary_y=False)
         fig.update_yaxes(title_text="Occ %", ticksuffix="%",
                          secondary_y=True, showgrid=False)
-        st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+        st.plotly_chart(style_fig(fig, height=380), use_container_width=True, config=PLOTLY_CONFIG)
 
         # ── Beeswarm: Daily RevPAR Distribution ───────────────────────────────
         if not df_daily.empty and len(df_daily) >= 30:
@@ -8509,7 +8513,7 @@ with tab_tr:
                 showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             )
-            st.plotly_chart(style_fig(fig, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+            st.plotly_chart(style_fig(fig, height=360), use_container_width=True, config=PLOTLY_CONFIG)
             st.caption(f"Density clusters reveal seasonal patterns. Q3 (dark teal) = peak season. Spread = {_str_metric_label} variability. Filter metric above to switch views.")
 
         # ── Revenue Intelligence: STR × Visitor Economy Correlations ──────────
@@ -8658,7 +8662,7 @@ with tab_tr:
                         title="Dana Point vs. Competitor Search Interest (Last 12 Months)",
                         yaxis_title="Google Search Index (0–100)",
                     )
-                    st.plotly_chart(style_fig(fig_tr, height=260), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.plotly_chart(style_fig(fig_tr, height=340), use_container_width=True, config=PLOTLY_CONFIG)
                     st.caption("Google Trends search index, 0–100. 100 = peak search interest. Dana Point primary terms averaged weekly.")
 
                 with _trc2:
@@ -8742,7 +8746,7 @@ with tab_tr:
                                     showgrid=True, gridcolor="rgba(0,0,0,0.06)", range=[0, 115]),
                         legend=dict(orientation="h", yanchor="bottom", y=1.02),
                     )
-                    st.plotly_chart(style_fig(fig_wx, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.plotly_chart(style_fig(fig_wx, height=360), use_container_width=True, config=PLOTLY_CONFIG)
                     st.caption("Beach Day Score (0–100) is a composite of temperature comfort, low precipitation, and sunshine hours — the primary coastal demand driver.")
 
             with _wc2:
@@ -8763,7 +8767,7 @@ with tab_tr:
                             xaxis_title="Beach Day Score",
                             yaxis_title="Avg Occupancy %",
                         )
-                        st.plotly_chart(style_fig(fig_sc, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+                        st.plotly_chart(style_fig(fig_sc, height=360), use_container_width=True, config=PLOTLY_CONFIG)
                         if abs(_corr) >= 0.60:
                             st.success(f"Strong correlation (R={_corr}) confirms weather is a primary demand driver for Dana Point.")
                         else:
@@ -8782,7 +8786,7 @@ with tab_tr:
                 fill="tozeroy", fillcolor="rgba(0,195,190,0.10)",
             ))
             fig_wxonly.update_layout(title="Monthly Beach Day Score — Dana Point, CA")
-            st.plotly_chart(style_fig(fig_wxonly, height=220), use_container_width=True, config=PLOTLY_CONFIG)
+            st.plotly_chart(style_fig(fig_wxonly, height=300), use_container_width=True, config=PLOTLY_CONFIG)
         else:
             st.markdown(
                 '<div class="empty-card">'
@@ -8833,7 +8837,7 @@ with tab_tr:
                                 showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
                     legend=dict(orientation="h", yanchor="bottom", y=1.02),
                 )
-                st.plotly_chart(style_fig(fig_noaa, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+                st.plotly_chart(style_fig(fig_noaa, height=360), use_container_width=True, config=PLOTLY_CONFIG)
             with _nc2:
                 _noaa_latest = _noaa_plot.iloc[-1]
                 _nm1, _nm2 = st.columns(2)
@@ -9061,7 +9065,7 @@ with tab_fo:
                     ))
                 _fo_bar_fig.update_layout(barmode="stack", showlegend=True,
                                           transition={"duration": 600})
-                st.plotly_chart(style_fig(_fo_bar_fig, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+                st.plotly_chart(style_fig(_fo_bar_fig, height=360), use_container_width=True, config=PLOTLY_CONFIG)
 
         with _fo_ch2:
             st.markdown('<div class="chart-header">Insight Horizon — Planning Timeline</div>', unsafe_allow_html=True)
@@ -9089,7 +9093,7 @@ with tab_fo:
                 _hz_fig.update_layout(barmode="overlay", showlegend=True,
                                       xaxis_title="Horizon (days)",
                                       transition={"duration": 600})
-                st.plotly_chart(style_fig(_hz_fig, height=280), use_container_width=True, config=PLOTLY_CONFIG)
+                st.plotly_chart(style_fig(_hz_fig, height=360), use_container_width=True, config=PLOTLY_CONFIG)
 
         st.markdown("---")
 
@@ -9621,7 +9625,7 @@ with tab_ev:
                         ))
                         fig.update_layout(yaxis_ticksuffix="%", showlegend=False,
                                           xaxis_title="Age Group", yaxis_title="Share (%)")
-                        st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+                        st.plotly_chart(style_fig(fig, height=380), use_container_width=True, config=PLOTLY_CONFIG)
                     else:
                         st.info("Age data not available.")
                 else:
@@ -9647,7 +9651,7 @@ with tab_ev:
                         hovertemplate="<b>%{y}</b><br>%{x:.1f}% of fly-market passengers<extra></extra>",
                     ))
                     fig.update_layout(xaxis_ticksuffix="%", showlegend=False)
-                    st.plotly_chart(style_fig(fig, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.plotly_chart(style_fig(fig, height=380), use_container_width=True, config=PLOTLY_CONFIG)
                 else:
                     st.info("Airport data not available.")
 
@@ -9880,7 +9884,7 @@ with tab_ev:
                         hovertemplate="<b>%{y}</b><br>Sessions: %{x:,}<extra></extra>",
                     ))
                     fig_ch.update_layout(xaxis_title="Sessions", yaxis_title=None, margin=dict(l=0,r=0,t=20,b=20), height=220)
-                    st.plotly_chart(style_fig(fig_ch, height=220), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.plotly_chart(style_fig(fig_ch, height=300), use_container_width=True, config=PLOTLY_CONFIG)
                     with st.expander("📊 View raw channel data"):
                         st.dataframe(_ch[_ch_cols].reset_index(drop=True), use_container_width=True)
                         st.download_button("⬇️ Download", _ch[_ch_cols].to_csv(index=False), "website_channels.csv", "text/csv", key="dl_web_ch")
@@ -9906,7 +9910,7 @@ with tab_ev:
                         hovertemplate=f"<b>%{{y}}</b><br>{_x_col}: %{{x:,}}<extra></extra>",
                     ))
                     fig_wm.update_layout(xaxis_title=_x_col.replace("_"," ").title(), yaxis_title=None, margin=dict(l=0,r=0,t=20,b=20), height=220)
-                    st.plotly_chart(style_fig(fig_wm, height=220), use_container_width=True, config=PLOTLY_CONFIG)
+                    st.plotly_chart(style_fig(fig_wm, height=300), use_container_width=True, config=PLOTLY_CONFIG)
                     with st.expander("📊 View raw top markets data"):
                         st.dataframe(_wm[_wm_cols].reset_index(drop=True), use_container_width=True)
                         st.download_button("⬇️ Download", _wm[_wm_cols].to_csv(index=False), "website_top_markets.csv", "text/csv", key="dl_web_mkts")
