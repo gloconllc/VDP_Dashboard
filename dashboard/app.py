@@ -4850,15 +4850,15 @@ with st.sidebar:
         '<a href="?" style="text-decoration:none;">'
         '<div class="sidebar-brand">Dana Point PULSE</div>'
         '</a>'
-        '<div style="font-size:10px;color:#4A5568;font-weight:600;margin-top:1px;">'
+        '<div style="font-size:10px;color:#8EC4DC;font-weight:600;margin-top:1px;">'
         'South Orange County, CA</div>'
         '</div>'
         '</div>'
-        '<div style="font-size:10px;color:#718096;letter-spacing:.05em;font-weight:600;'
-        'text-transform:uppercase;border-top:1px solid rgba(0,0,0,0.08);padding-top:8px;">'
+        '<div style="font-size:10px;color:#8AAEC6;letter-spacing:.05em;font-weight:600;'
+        'text-transform:uppercase;border-top:1px solid rgba(255,255,255,0.10);padding-top:8px;">'
         'Performance · Intelligence · Strategy</div>'
         '</div>'
-        '<div style="font-size:10.5px;color:#718096;margin-bottom:4px;">'
+        '<div style="font-size:10.5px;color:#8AAEC6;margin-bottom:4px;">'
         'VDP Select Portfolio &nbsp;·&nbsp; 12 Properties</div>',
         unsafe_allow_html=True,
     )
@@ -6611,18 +6611,18 @@ with tab_ov:
         _down= "#FF4757"
         def _c(v): return _up if v >= 0 else _down
         def _arr(v): return "▲" if v >= 0 else "▼"
-        # Build banner HTML — light mode
-        def _exec_kpi(label, value, sub="", color="#0567C8"):
+        # Build banner HTML — dark mode
+        def _exec_kpi(label, value, sub="", color="#00D4C8"):
             return (
                 f'<div style="flex:1;min-width:140px;padding:14px 18px;'
-                f'background:#264B6E;'
-                f'border-radius:12px;border:1px solid rgba(15,28,46,0.08);'
+                f'background:rgba(255,255,255,0.05);'
+                f'border-radius:12px;border:1px solid rgba(255,255,255,0.10);'
                 f'border-top:3px solid {color};'
-                f'box-shadow:0 1px 4px rgba(15,28,46,0.07);">'
+                f'box-shadow:0 2px 8px rgba(0,0,0,0.20);">'
                 f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;'
-                f'text-transform:uppercase;color:#5A7A95;margin-bottom:5px;">{label}</div>'
-                f'<div style="font-size:22px;font-weight:900;letter-spacing:-.03em;font-family:\'Outfit\',sans-serif;color:{color};">{value}</div>'
-                + (f'<div style="font-size:11px;font-weight:600;margin-top:4px;color:#5A7A95;">{sub}</div>' if sub else '')
+                f'text-transform:uppercase;color:#8AAEC6;margin-bottom:5px;">{label}</div>'
+                f'<div style="font-size:22px;font-weight:900;letter-spacing:-.03em;font-family:\'Outfit\',sans-serif;color:#FFFFFF;">{value}</div>'
+                + (f'<div style="font-size:11px;font-weight:600;margin-top:4px;color:{color};">{sub}</div>' if sub else '')
                 + '</div>'
             )
         _rev12_fmt  = f"${_exec_rev12/1e6:.1f}M" if _exec_rev12 > 0 else "—"
@@ -6634,27 +6634,27 @@ with tab_ov:
                        else "Datafy media attr.")
         _social_fmt = f"{_exec_social_total/1e3:.0f}K" if _exec_social_total >= 1000 else (str(_exec_social_total) if _exec_social_total > 0 else "—")
         # Color accents per metric type
-        _c_rvp  = "#0567C8" if _exec_rvp_d >= 0 else "#DC2626"
-        _c_adr  = "#0567C8" if _exec_adr_d >= 0 else "#DC2626"
-        _c_occ  = "#059669" if _exec_occ >= 70 else "#D97706"
+        _c_rvp  = "#38BDF8" if _exec_rvp_d >= 0 else "#F87171"
+        _c_adr  = "#38BDF8" if _exec_adr_d >= 0 else "#F87171"
+        _c_occ  = "#34D399" if _exec_occ >= 70 else "#FBBF24"
         _banner_html = (
-            f'<div style="margin-bottom:20px;background:linear-gradient(135deg,#F0F7FF 0%,#EEF2FF 100%);'
-            f'border-radius:14px;border:1px solid rgba(5,103,200,0.12);'
-            f'border-left:5px solid #0567C8;padding:18px 20px;'
-            f'box-shadow:0 2px 12px rgba(5,103,200,0.08);">'
+            f'<div style="margin-bottom:20px;background:linear-gradient(135deg,#1E3D5E 0%,#224466 100%);'
+            f'border-radius:14px;border:1px solid rgba(0,212,200,0.20);'
+            f'border-left:5px solid #00D4C8;padding:18px 20px;'
+            f'box-shadow:0 4px 16px rgba(0,0,0,0.30);">'
             f'<div style="font-family:\'Outfit\',sans-serif;font-size:11px;font-weight:800;'
-            f'letter-spacing:.10em;text-transform:uppercase;color:#0567C8;margin-bottom:14px;'
+            f'letter-spacing:.10em;text-transform:uppercase;color:#00D4C8;margin-bottom:14px;'
             f'display:flex;align-items:center;gap:10px;">'
             f'📊 &nbsp;Board Executive Summary &nbsp;·&nbsp; {datetime.now().strftime("%B %Y").upper()}</div>'
             f'<div style="display:flex;flex-wrap:wrap;gap:10px;">'
             + _exec_kpi("RevPAR (30d)", f"${_exec_rvp:.0f}", f'{_arr(_exec_rvp_d)} {abs(_exec_rvp_d):.1f}% vs prior', _c_rvp)
             + _exec_kpi("ADR (30d)", f"${_exec_adr:.0f}", f'{_arr(_exec_adr_d)} {abs(_exec_adr_d):.1f}% vs prior', _c_adr)
             + _exec_kpi("Occupancy (30d)", f"{_exec_occ:.1f}%", f'{_arr(_exec_occ_d)} {abs(_exec_occ_d):.1f}pp vs prior', _c_occ)
-            + _exec_kpi("12-Mo Room Rev", _rev12_fmt, "Layer 1 STR truth", "#0567C8")
-            + _exec_kpi("12-Mo TBID Est.", _tbid12_fmt, "at blended 1.25%", "#7C3AED")
-            + _exec_kpi("12-Mo TOT Est.", _tot12_fmt, "at 10% rate", "#7C3AED")
-            + _exec_kpi("Annual Visitor Trips", _trips_fmt, f"{_exec_overnight:.0f}% overnight" if _exec_overnight > 0 else "Datafy", "#059669")
-            + _exec_kpi("Campaign ROAS", _roas_fmt, _roas_sub, "#EA580C")
+            + _exec_kpi("12-Mo Room Rev", _rev12_fmt, "Layer 1 STR truth", "#38BDF8")
+            + _exec_kpi("12-Mo TBID Est.", _tbid12_fmt, "at blended 1.25%", "#A78BFA")
+            + _exec_kpi("12-Mo TOT Est.", _tot12_fmt, "at 10% rate", "#A78BFA")
+            + _exec_kpi("Annual Visitor Trips", _trips_fmt, f"{_exec_overnight:.0f}% overnight" if _exec_overnight > 0 else "Datafy", "#34D399")
+            + _exec_kpi("Campaign ROAS", _roas_fmt, _roas_sub, "#FB923C")
             + _exec_kpi("Social Audience", _social_fmt, f"IG · FB · TikTok" if _exec_social_total > 0 else "Later.com exports", "#E1306C")
             + '</div></div>'
         )
@@ -8875,7 +8875,7 @@ with tab_tr:
                                 f'border-left:3px solid {_color};margin-top:8px;">'
                                 f'<div style="font-size:11px;font-weight:700;color:#065F46;">Ocean ↔ Occupancy</div>'
                                 f'<div style="font-size:20px;font-weight:900;color:{_color};">R = {_r}</div>'
-                                f'<div style="font-size:10px;color:#6B7280;">{len(_merged)} months of data</div>'
+                                f'<div style="font-size:10px;color:#8AAEC6;">{len(_merged)} months of data</div>'
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
@@ -8987,7 +8987,7 @@ with tab_fo:
             f'<div style="font-size:10px;color:#718096;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:.10em;margin-bottom:6px;">{label}</div>'
             f'<div style="font-size:1.9rem;font-weight:900;letter-spacing:-0.04em;line-height:1.1;'
-            f'color:#0F1C2E;">{value}</div>'
+            f'color:#F4FAFF;">{value}</div>'
             f'<div style="font-size:11px;color:{delta_color};font-weight:600;margin-top:5px;">{delta}</div>'
             f'</div>'
         )
@@ -9981,7 +9981,7 @@ with tab_ev:
                 f'<img src="{img_url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" />'
                 f'</div>'
                 f'<div style="padding:10px 14px 12px;">'
-                f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#718096;">{label}</div>'
+                f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8AAEC6;">{label}</div>'
                 f'<div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,#FFFFFF,#A8D8F0);'
                 f'-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'
                 f'font-family:\'Syne\',sans-serif;">{value}</div>'
@@ -11006,9 +11006,9 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
                     f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7A95;margin-bottom:6px;">{short_geo}</div>'
                     f'<div style="font-size:18px;font-weight:900;color:#7C3AED;">{_pop_v}</div>'
                     f'<div style="font-size:11px;color:#5A7A95;">Population</div>'
-                    f'<div style="font-size:14px;font-weight:700;color:#0F1C2E;margin-top:6px;">{_inc_v}</div>'
+                    f'<div style="font-size:14px;font-weight:700;color:#F4FAFF;margin-top:6px;">{_inc_v}</div>'
                     f'<div style="font-size:11px;color:#5A7A95;">Median HH Income</div>'
-                    f'<div style="font-size:13px;font-weight:600;color:#0F1C2E;margin-top:4px;">{_hom_v}</div>'
+                    f'<div style="font-size:13px;font-weight:600;color:#F4FAFF;margin-top:4px;">{_hom_v}</div>'
                     f'<div style="font-size:11px;color:#5A7A95;">Median Home Value</div>'
                     f'</div>',
                     unsafe_allow_html=True,
@@ -14083,7 +14083,7 @@ with tab_cs:
                         f'</div>'
                     )
                 st.markdown(
-                    f'<div style="background:#F8FAFC;border-radius:8px;padding:10px 14px;">'
+                    f'<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 14px;">'
                     f'{_rows_html}</div>',
                     unsafe_allow_html=True)
 
@@ -14605,32 +14605,32 @@ _SOURCES_HTML = """
   <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">STR</div>
-    <div style="color:#718096;">Smith Travel Research · daily &amp; monthly hotel benchmarking</div>
+    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">STR</div>
+    <div style="color:#8AAEC6;">Smith Travel Research · daily &amp; monthly hotel benchmarking</div>
   </div>
   <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">Datafy</div>
-    <div style="color:#718096;">Visitor economy platform · trips, spend, DMA attribution</div>
+    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">Datafy</div>
+    <div style="color:#8AAEC6;">Visitor economy platform · trips, spend, DMA attribution</div>
   </div>
   <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">CoStar</div>
-    <div style="color:#718096;">Market data · comp set, pipeline, profitability</div>
+    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">CoStar</div>
+    <div style="color:#8AAEC6;">Market data · comp set, pipeline, profitability</div>
   </div>
   <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">Visit California</div>
-    <div style="color:#718096;">State forecasts · lodging, travel volume, airport traffic</div>
+    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">Visit California</div>
+    <div style="color:#8AAEC6;">State forecasts · lodging, travel volume, airport traffic</div>
   </div>
   <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">Zartico</div>
-    <div style="color:#718096;">Historical reference · Jun 2025 snapshot · visitor trends</div>
+    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">Zartico</div>
+    <div style="color:#8AAEC6;">Historical reference · Jun 2025 snapshot · visitor trends</div>
   </div>
 </div>
 """
@@ -14642,7 +14642,7 @@ with _gl1:
             st.markdown(
                 f'<div style="margin-bottom:10px;">'
                 f'<span style="font-weight:700;color:#0891B2;">{_term}</span>'
-                f'<span style="color:#4A5568;font-size:13px;"> — {_defn}</span>'
+                f'<span style="color:#8AAEC6;font-size:13px;"> — {_defn}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
