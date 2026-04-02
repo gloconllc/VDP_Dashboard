@@ -1447,7 +1447,9 @@ st.markdown("""
 
   /* ── Layout Spacing ──────────────────────────────────────────────────── */
   .block-container { padding-top: 0.5rem !important; overflow: visible !important; }
-  [data-testid="stPlotlyChart"] { margin-bottom: 4px !important; }
+  [data-testid="stPlotlyChart"] { margin-bottom: 4px !important; width: 100% !important; }
+  [data-testid="stPlotlyChart"] > div { width: 100% !important; }
+  [data-testid="stPlotlyChart"] iframe { width: 100% !important; min-width: 100% !important; }
   div[data-testid="stHorizontalBlock"] { gap: 10px !important; }
 
   /* ── Streamlit Native Metric Styling ─────────────────────────────────── */
@@ -7305,16 +7307,16 @@ with tab_ov:
                 _dot, _col, _lbl = _dot_map.get(status, ("⚫", "#8FA3B8", "Unknown"))
                 return (
                     f'<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;'
-                    f'border-bottom:1px solid rgba(0,0,0,0.08);font-family:\'Syne\',sans-serif;'
-                    f'background:#264B6E;">'
+                    f'border-bottom:1px solid rgba(255,255,255,0.06);font-family:\'Syne\',sans-serif;'
+                    f'background:rgba(255,255,255,0.03);">'
                     f'<div style="font-size:16px;flex-shrink:0;">{_dot}</div>'
-                    f'<div style="flex:1.4;font-size:13px;font-weight:700;color:#0F1C2E;">{metric}</div>'
+                    f'<div style="flex:1.4;font-size:13px;font-weight:700;color:#F4FAFF;">{metric}</div>'
                     f'<div style="flex:0.8;font-size:14px;font-weight:900;color:{_col};">{value}</div>'
                     f'<div style="flex:1;font-size:11px;font-weight:800;color:{_col};text-transform:uppercase;'
                     f'letter-spacing:.06em;">{_lbl}</div>'
-                    f'<div style="flex:2;font-size:12px;color:#4A5568;line-height:1.4;">{note}</div>'
+                    f'<div style="flex:2;font-size:12px;color:#C8E0F2;line-height:1.4;">{note}</div>'
                     f'<div style="flex:0.8;font-size:10px;font-weight:700;letter-spacing:.05em;'
-                    f'color:#A0AEC0;text-transform:uppercase;">{source}</div>'
+                    f'color:rgba(200,224,242,0.55);text-transform:uppercase;">{source}</div>'
                     f'</div>'
                 )
 
@@ -7338,13 +7340,13 @@ with tab_ov:
             _rc_trips_note  = (f"{_trips_fmt} annual trips · {_exec_overnight:.0f}% overnight · {'Strong visitation base.' if _exec_trips >= 1e6 else 'Opportunity to grow overnight conversion.'}") if _exec_trips > 0 else "Run Datafy pipeline."
 
             _rc_html = (
-                '<div style="background:#264B6E;border-radius:14px;'
-                'border:1px solid rgba(0,0,0,0.08);border-left:5px solid #D97706;'
+                '<div style="background:#1E3D5E;border-radius:14px;'
+                'border:1px solid rgba(0,212,200,0.20);border-left:5px solid #D97706;'
                 'overflow:hidden;font-family:\'Syne\',sans-serif;margin-bottom:16px;'
-                'box-shadow:0 2px 8px rgba(0,0,0,0.08);">'
-                '<div style="padding:11px 16px;background:#F7F9FC;'
-                'border-bottom:1px solid rgba(0,0,0,0.08);font-size:10px;font-weight:800;'
-                'letter-spacing:.07em;text-transform:uppercase;color:#718096;display:flex;gap:40px;">'
+                'box-shadow:0 4px 16px rgba(0,0,0,0.30);">'
+                '<div style="padding:11px 16px;background:rgba(0,0,0,0.28);'
+                'border-bottom:1px solid rgba(255,255,255,0.10);font-size:10px;font-weight:800;'
+                'letter-spacing:.07em;text-transform:uppercase;color:rgba(200,224,242,0.65);display:flex;gap:40px;">'
                 '<span style="flex:0.15"></span>'
                 '<span style="flex:1.4">Metric</span>'
                 '<span style="flex:0.8">Current</span>'
