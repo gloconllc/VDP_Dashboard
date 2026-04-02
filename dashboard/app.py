@@ -245,7 +245,7 @@ GREEN      = "#21808D"    # teal = positive to match brand
 BLUE       = "#0567C8"    # primary accent — TSA/wave/fly-market
 PURPLE     = "#7C3AED"    # CoStar / pipeline
 GOLD       = "#D97706"    # amber / warning
-NAVY       = "#1A3756"    # dark header bg
+NAVY       = "#FFFFFF"    # chart background (light mode)
 
 # ─── AI constants ─────────────────────────────────────────────────────────────
 CLAUDE_MODEL = "claude-sonnet-4-6"
@@ -575,33 +575,33 @@ st.markdown("""
   /* ── Google Fonts ────────────────────────────────────────────────────── */
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
-  /* ── Design Tokens — Coastal Slate (readable, bright ocean dark) ─────────── */
+  /* ── Design Tokens — Clean Light / Coastal White ─────────────────────────── */
   :root {
-    --dp-bg:            #1A3756;
-    --dp-bg2:           #1E3D5E;
-    --dp-surface:       #224466;
-    --dp-card:          #264B6E;
-    --dp-card-solid:    #264B6E;
-    --dp-card-hover:    #2C547A;
-    --dp-border:        rgba(255,255,255,0.16);
-    --dp-border-accent: rgba(0,212,200,0.45);
-    --dp-teal:          #00D4C8;
-    --dp-teal-dim:      rgba(0,212,200,0.18);
-    --dp-teal-glow:     rgba(0,212,200,0.30);
-    --dp-blue:          #38BDF8;
-    --dp-green:         #10B981;
-    --dp-amber:         #F5B940;
-    --dp-red:           #EF4444;
-    --dp-purple:        #A78BFA;
-    --dp-orange:        #FB923C;
-    --dp-text-1:        #F4FAFF;
-    --dp-text-2:        #C8E0F2;
-    --dp-text-3:        #8EC4DC;
+    --dp-bg:            #F4F8FC;
+    --dp-bg2:           #EBF2F8;
+    --dp-surface:       #E0EAF4;
+    --dp-card:          #FFFFFF;
+    --dp-card-solid:    #FFFFFF;
+    --dp-card-hover:    #EEF5FF;
+    --dp-border:        rgba(15,35,75,0.10);
+    --dp-border-accent: rgba(0,140,132,0.40);
+    --dp-teal:          #00897F;
+    --dp-teal-dim:      rgba(0,137,127,0.10);
+    --dp-teal-glow:     rgba(0,137,127,0.20);
+    --dp-blue:          #0567C8;
+    --dp-green:         #059669;
+    --dp-amber:         #D97706;
+    --dp-red:           #DC2626;
+    --dp-purple:        #7C3AED;
+    --dp-orange:        #EA580C;
+    --dp-text-1:        #0D1B2E;
+    --dp-text-2:        #2D4F7A;
+    --dp-text-3:        #5A7A95;
     --dp-radius:        12px;
     --dp-radius-lg:     16px;
-    --dp-shadow:        0 1px 4px rgba(0,0,0,0.30), 0 4px 20px rgba(0,0,0,0.22);
-    --dp-shadow-hover:  0 8px 32px rgba(0,0,0,0.38), 0 0 0 1px rgba(0,212,200,0.22);
-    --dp-shadow-deep:   0 16px 48px rgba(0,0,0,0.48);
+    --dp-shadow:        0 1px 3px rgba(15,35,75,0.08), 0 4px 16px rgba(15,35,75,0.05);
+    --dp-shadow-hover:  0 6px 24px rgba(15,35,75,0.14), 0 0 0 1px rgba(0,137,127,0.18);
+    --dp-shadow-deep:   0 10px 40px rgba(15,35,75,0.18);
   }
 
   html, body, [class*="css"] {
@@ -634,26 +634,28 @@ st.markdown("""
     background-color: transparent !important;
   }
 
-  /* ── Global dark overrides — all white surfaces → dark glass ─────────── */
+  /* ── Sidebar stays dark for contrast ─────────────────────────────────── */
   [data-testid="stSidebar"] > div:first-child {
     background: linear-gradient(180deg, #1C3B5A 0%, #1A3756 100%) !important;
-    border-right: 1px solid rgba(0,212,200,0.12) !important;
+    border-right: 1px solid rgba(0,212,200,0.14) !important;
   }
-  [data-testid="stSidebar"] * { color: var(--dp-text-2) !important; }
+  /* Sidebar text must stay LIGHT since sidebar bg is dark */
+  [data-testid="stSidebar"],
+  [data-testid="stSidebar"] * { color: #B8D4E8 !important; }
   [data-testid="stSidebar"] label,
   [data-testid="stSidebar"] .st-emotion-cache-16idsys p,
   [data-testid="stSidebar"] [data-testid="stWidgetLabel"] {
-    color: var(--dp-text-2) !important; font-size: 12px !important;
+    color: #B8D4E8 !important; font-size: 12px !important;
   }
   [data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div,
   [data-testid="stSidebar"] [data-testid="stMultiSelect"] > div > div,
   [data-testid="stSidebar"] input,
   [data-testid="stSidebar"] select {
-    background: rgba(255,255,255,0.05) !important;
-    border-color: rgba(255,255,255,0.10) !important;
-    color: var(--dp-text-1) !important;
+    background: rgba(255,255,255,0.08) !important;
+    border-color: rgba(255,255,255,0.14) !important;
+    color: #EFF6FF !important;
   }
-  /* Streamlit metric dark */
+  /* Streamlit metric — light mode */
   [data-testid="stMetric"] {
     background: var(--dp-card) !important;
     border: 1px solid var(--dp-border) !important;
@@ -663,29 +665,29 @@ st.markdown("""
   [data-testid="stMetricValue"] { color: var(--dp-text-1) !important; }
   [data-testid="stMetricLabel"] { color: var(--dp-text-3) !important; }
   [data-testid="stMetricDelta"]  { font-size: 11px !important; }
-  /* Streamlit expander dark */
+  /* Streamlit expander — light mode */
   [data-testid="stExpander"] {
     background: var(--dp-card) !important;
     border: 1px solid var(--dp-border) !important;
     border-radius: var(--dp-radius) !important;
   }
   [data-testid="stExpander"] summary { color: var(--dp-text-2) !important; }
-  /* Streamlit dataframe dark */
+  /* Streamlit dataframe — light mode */
   [data-testid="stDataFrame"] { background: var(--dp-card) !important; }
-  /* Select/input dark */
+  /* Select/input — light mode */
   [data-baseweb="select"] > div,
   [data-baseweb="input"] > div,
   div[data-testid="stSelectbox"] > div > div {
-    background: rgba(255,255,255,0.05) !important;
-    border-color: rgba(255,255,255,0.10) !important;
+    background: #FFFFFF !important;
+    border-color: rgba(15,35,75,0.14) !important;
     color: var(--dp-text-1) !important;
   }
   [data-baseweb="menu"],
-  [data-baseweb="popover"] { background: #264B6E !important; }
-  [data-baseweb="option"]:hover { background: rgba(0,212,200,0.10) !important; }
-  /* Tab bar dark */
+  [data-baseweb="popover"] { background: #FFFFFF !important; border: 1px solid var(--dp-border) !important; }
+  [data-baseweb="option"]:hover { background: rgba(0,137,127,0.08) !important; }
+  /* Tab bar — light mode */
   [data-testid="stTabs"] [role="tablist"] {
-    background: rgba(255,255,255,0.03) !important;
+    background: rgba(15,35,75,0.04) !important;
     border-bottom: 1px solid var(--dp-border) !important;
     border-radius: 10px 10px 0 0;
   }
@@ -867,11 +869,11 @@ st.markdown("""
 
   /* ── Custom Scrollbar ────────────────────────────────────────────────── */
   ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { background: rgba(15,28,46,0.04); }
+  ::-webkit-scrollbar-track { background: rgba(15,35,75,0.05); }
   ::-webkit-scrollbar-thumb {
-    background: rgba(5,103,200,0.22); border-radius: 3px;
+    background: rgba(15,35,75,0.20); border-radius: 3px;
   }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(5,103,200,0.45); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(15,35,75,0.38); }
 
   /* ── Empty State ─────────────────────────────────────────────────────── */
   .empty-card {
@@ -1475,28 +1477,28 @@ st.markdown("""
     transform: translateY(-2px) !important;
   }
 
-  /* ── Sidebar Styling ─────────────────────────────────────────────────── */
+  /* ── Sidebar Styling — stays dark ────────────────────────────────────── */
   [data-testid="stSidebar"] {
-    background: #1C3B5A !important;
+    background: #1A3756 !important;
     border-right: 1px solid rgba(0,212,200,0.14) !important;
   }
   [data-testid="stSidebar"] .stRadio label {
     font-size: 13px !important; font-weight: 500 !important;
-    color: var(--dp-text-2) !important;
+    color: #B8D4E8 !important;
   }
-  [data-testid="stSidebar"] * { color: var(--dp-text-2) !important; }
-  [data-testid="stSidebar"] .stMarkdown p { color: var(--dp-text-3) !important; }
+  [data-testid="stSidebar"] * { color: #B8D4E8 !important; }
+  [data-testid="stSidebar"] .stMarkdown p { color: #8AAEC6 !important; }
 
-  /* ── Selectbox / Widget Styling ──────────────────────────────────────── */
+  /* ── Selectbox / Widget Styling — light mode ─────────────────────────── */
   [data-testid="stSelectbox"] > div,
   [data-testid="stDateInput"] > div {
-    background: rgba(255,255,255,0.05) !important;
-    border-color: rgba(255,255,255,0.10) !important;
+    background: #FFFFFF !important;
+    border-color: rgba(15,35,75,0.14) !important;
     border-radius: 8px !important; color: var(--dp-text-1) !important;
   }
   [data-testid="stSelectbox"] [data-baseweb="select"] > div {
-    background: rgba(255,255,255,0.05) !important;
-    border-color: rgba(255,255,255,0.10) !important;
+    background: #FFFFFF !important;
+    border-color: rgba(15,35,75,0.14) !important;
     color: var(--dp-text-1) !important;
   }
 
@@ -1522,8 +1524,8 @@ st.markdown("""
     box-shadow: var(--dp-shadow);
   }
   .filter-bar .stSelectbox > div > div {
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.10) !important;
+    background: #FFFFFF !important;
+    border: 1px solid rgba(15,35,75,0.12) !important;
     border-radius: 8px !important;
     font-size: 13px !important; color: var(--dp-text-1) !important;
   }
@@ -1596,9 +1598,9 @@ st.markdown("""
     display: flex !important; align-items: center !important; gap: 12px !important;
     padding: 11px 18px !important; border-radius: 10px !important;
     margin: 28px 0 14px 0 !important;
-    background: var(--dp-card) !important;
+    background: var(--dp-surface) !important;
     border: 1px solid var(--dp-border) !important;
-    border-left: 3px solid var(--sh-accent, #00D4C8) !important;
+    border-left: 4px solid var(--sh-accent, #00897F) !important;
     box-shadow: var(--dp-shadow) !important;
     transition: box-shadow 0.22s ease, transform 0.22s ease !important;
   }
@@ -2219,8 +2221,8 @@ st.markdown("""
   #back-to-top-btn {
     position: fixed; bottom: 24px; right: 20px; z-index: 99999;
     width: 40px; height: 40px; border-radius: 10px;
-    background: rgba(22,40,68,0.94);
-    border: 1px solid rgba(0,212,200,0.30); cursor: pointer;
+    background: rgba(255,255,255,0.95);
+    border-color: rgba(0,137,127,0.30); cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 2px 16px rgba(0,0,0,0.40);
     opacity: 0; transition: opacity 0.3s, transform .2s, box-shadow .2s;
@@ -2231,7 +2233,7 @@ st.markdown("""
     background: rgba(0,212,200,0.15);
     box-shadow: 0 4px 20px rgba(0,212,200,0.22);
   }
-  #back-to-top-btn svg { width: 18px; height: 18px; fill: #00D4C8; pointer-events: none; }
+  #back-to-top-btn svg { width: 18px; height: 18px; fill: #00897F; pointer-events: none; }
 </style>
 <button id="back-to-top-btn" title="Back to top">
   <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
@@ -4793,10 +4795,10 @@ st.markdown("""
       'position:sticky',
       'top:0',
       'z-index:9999',
-      'background:rgba(13,27,46,0.97)',
+      'background:rgba(244,248,252,0.97)',
+      'border-bottom:1px solid rgba(15,35,75,0.10)',
       'backdrop-filter:blur(16px)',
       '-webkit-backdrop-filter:blur(16px)',
-      'border-bottom:1px solid rgba(0,212,200,0.15)',
       'box-shadow:0 4px 24px rgba(0,0,0,0.40)',
       'padding:6px 0 4px 0',
       'margin-bottom:0',
@@ -6603,7 +6605,7 @@ with tab_ov:
         def _exec_kpi(label, value, sub="", color="#0567C8"):
             return (
                 f'<div style="flex:1;min-width:140px;padding:14px 18px;'
-                f'background:#264B6E;'
+                f'background:#FFFFFF;'
                 f'border-radius:12px;border:1px solid rgba(15,28,46,0.08);'
                 f'border-top:3px solid {color};'
                 f'box-shadow:0 1px 4px rgba(15,28,46,0.07);">'
@@ -7296,7 +7298,7 @@ with tab_ov:
                 return (
                     f'<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;'
                     f'border-bottom:1px solid rgba(0,0,0,0.08);font-family:\'Syne\',sans-serif;'
-                    f'background:#264B6E;">'
+                    f'background:#FFFFFF;">'
                     f'<div style="font-size:16px;flex-shrink:0;">{_dot}</div>'
                     f'<div style="flex:1.4;font-size:13px;font-weight:700;color:#0F1C2E;">{metric}</div>'
                     f'<div style="flex:0.8;font-size:14px;font-weight:900;color:{_col};">{value}</div>'
@@ -7328,7 +7330,7 @@ with tab_ov:
             _rc_trips_note  = (f"{_trips_fmt} annual trips · {_exec_overnight:.0f}% overnight · {'Strong visitation base.' if _exec_trips >= 1e6 else 'Opportunity to grow overnight conversion.'}") if _exec_trips > 0 else "Run Datafy pipeline."
 
             _rc_html = (
-                '<div style="background:#264B6E;border-radius:14px;'
+                '<div style="background:#FFFFFF;border-radius:14px;'
                 'border:1px solid rgba(0,0,0,0.08);border-left:5px solid #D97706;'
                 'overflow:hidden;font-family:\'Syne\',sans-serif;margin-bottom:16px;'
                 'box-shadow:0 2px 8px rgba(0,0,0,0.08);">'
@@ -7420,7 +7422,7 @@ with tab_ov:
                     _type_colors = {"insight": "#0567C8", "opportunity": "#059669", "risk": "#DC2626", "gap": "#D97706"}
                     _tc = _type_colors.get(signal_type, "#0567C8")
                     return (
-                        f'<div style="background:#264B6E;border-radius:12px;padding:16px 18px;'
+                        f'<div style="background:#FFFFFF;border-radius:12px;padding:16px 18px;'
                         f'border:1px solid rgba(15,28,46,0.07);border-left:3px solid {_tc};'
                         f'box-shadow:0 1px 4px rgba(15,28,46,0.06);margin-bottom:10px;">'
                         f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
@@ -8525,7 +8527,7 @@ with tab_tr:
 
                 def _ri_metric(label, val, note, icon, color):
                     return (
-                        f'<div style="background:#264B6E;border-radius:10px;padding:14px 16px;'
+                        f'<div style="background:#FFFFFF;border-radius:10px;padding:14px 16px;'
                         f'border:1px solid rgba(15,28,46,0.07);border-top:3px solid {color};'
                         f'box-shadow:0 1px 4px rgba(15,28,46,0.06);">'
                         f'<div style="font-size:18px;margin-bottom:4px;">{icon}</div>'
@@ -8967,7 +8969,7 @@ with tab_fo:
 
     def _kfm_card(label, value, delta, delta_color="#718096"):
         return (
-            f'<div style="background:#264B6E;'
+            f'<div style="background:#FFFFFF;'
             f'border-radius:12px;padding:16px 18px;'
             f'border:1px solid rgba(0,0,0,0.08);border-left:4px solid #0891B2;'
             f'position:relative;overflow:hidden;margin-bottom:8px;'
@@ -10989,7 +10991,7 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
                 _hom_v = f"${int(_hom.iloc[0]):,}" if not _hom.empty else "—"
                 short_geo = geo.replace(" County, CA", "").replace(" County", "")
                 st.markdown(
-                    f'<div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);border-radius:12px;'
+                    f'<div style="background:#FFFFFF;border:1px solid rgba(255,255,255,0.07);border-radius:12px;'
                     f'border-top:3px solid #7C3AED;padding:14px 18px;">'
                     f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7A95;margin-bottom:6px;">{short_geo}</div>'
                     f'<div style="font-size:18px;font-weight:900;color:#7C3AED;">{_pop_v}</div>'
@@ -14590,31 +14592,31 @@ _GLOSSARY_TERMS = {
 
 _SOURCES_HTML = """
 <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">
-  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">STR</div>
     <div style="color:#718096;">Smith Travel Research · daily &amp; monthly hotel benchmarking</div>
   </div>
-  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">Datafy</div>
     <div style="color:#718096;">Visitor economy platform · trips, spend, DMA attribution</div>
   </div>
-  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">CoStar</div>
     <div style="color:#718096;">Market data · comp set, pipeline, profitability</div>
   </div>
-  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">Visit California</div>
     <div style="color:#718096;">State forecasts · lodging, travel volume, airport traffic</div>
   </div>
-  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F1C2E;margin-bottom:2px;">Zartico</div>
