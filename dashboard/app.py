@@ -1195,6 +1195,90 @@ st.markdown("""
     font-size: 10.5px; color: #8AAEC6; -webkit-text-fill-color: #8AAEC6; line-height: 1.4;
   }
 
+  /* ── VDP Status Bar ────────────────────────────────────────────────── */
+  .vdp-status-bar {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+    background: rgba(0,0,0,0.22); border-radius: 10px;
+    padding: 10px 18px; margin: 0 0 18px 0;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .vdp-status-date {
+    font-size: 11px; font-weight: 700; color: #8AAEC6;
+    -webkit-text-fill-color: #8AAEC6; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  .vdp-status-sep { color: rgba(255,255,255,0.20); }
+  .vdp-status-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 11px; border-radius: 99px; font-size: 11px;
+    font-weight: 700; white-space: nowrap; letter-spacing: .02em;
+  }
+  .vdp-status-chip.green  { background: rgba(16,185,129,0.15); color: #34D399; -webkit-text-fill-color: #34D399; border: 1px solid rgba(16,185,129,0.35); }
+  .vdp-status-chip.yellow { background: rgba(245,158,11,0.15);  color: #FBBF24; -webkit-text-fill-color: #FBBF24; border: 1px solid rgba(245,158,11,0.35); }
+  .vdp-status-chip.red    { background: rgba(239,68,68,0.15);   color: #FCA5A5; -webkit-text-fill-color: #FCA5A5; border: 1px solid rgba(239,68,68,0.35); }
+  .vdp-status-chip.blue   { background: rgba(56,189,248,0.15);  color: #93C5FD; -webkit-text-fill-color: #93C5FD; border: 1px solid rgba(56,189,248,0.35); }
+
+  /* ── VDP Quick Actions Row ──────────────────────────────────────────── */
+  .vdp-quick-actions {
+    display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px 0;
+  }
+  .vdp-qa-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 8px; font-size: 12px;
+    font-weight: 700; cursor: pointer; white-space: nowrap;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: #F4FAFF; -webkit-text-fill-color: #F4FAFF;
+    transition: background 0.18s, border-color 0.18s, transform 0.12s;
+    text-decoration: none;
+  }
+  .vdp-qa-btn:hover { background: rgba(0,212,200,0.12); border-color: rgba(0,212,200,0.35); transform: translateY(-1px); }
+  .vdp-qa-btn.primary { background: rgba(0,212,200,0.18); border-color: rgba(0,212,200,0.50); color: #00D4C8; -webkit-text-fill-color: #00D4C8; }
+
+  /* ── AI Command Panel ───────────────────────────────────────────────── */
+  .ai-command-panel {
+    background: linear-gradient(135deg, rgba(0,212,200,0.06) 0%, rgba(56,189,248,0.04) 100%);
+    border: 1px solid rgba(0,212,200,0.22); border-radius: 14px;
+    padding: 20px 22px; margin: 0 0 20px 0;
+  }
+  .ai-command-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+  }
+  .ai-command-title {
+    font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800;
+    color: #F4FAFF; -webkit-text-fill-color: #F4FAFF; letter-spacing: -.01em;
+  }
+  .ai-command-sub {
+    font-size: 11px; color: #8AAEC6; -webkit-text-fill-color: #8AAEC6;
+    margin-left: auto;
+  }
+  .ai-prompt-grid {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+  }
+  .ai-prompt-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 13px; border-radius: 99px; font-size: 11.5px;
+    font-weight: 600; cursor: pointer;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+    color: #C8E0F2; -webkit-text-fill-color: #C8E0F2;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .ai-prompt-chip:hover { background: rgba(0,212,200,0.12); border-color: rgba(0,212,200,0.35); }
+
+  /* ── Section Nav Strip ──────────────────────────────────────────────── */
+  .section-nav {
+    display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 20px 0;
+    padding: 10px 14px; background: rgba(255,255,255,0.03);
+    border-radius: 8px; border: 1px solid rgba(255,255,255,0.07);
+  }
+  .section-nav-item {
+    font-size: 11px; font-weight: 700; color: #8AAEC6;
+    -webkit-text-fill-color: #8AAEC6; padding: 3px 0;
+    letter-spacing: .03em;
+  }
+  .section-nav-item.active { color: #00D4C8; -webkit-text-fill-color: #00D4C8; }
+  .section-nav-sep { color: rgba(255,255,255,0.18); font-size: 11px; padding: 3px 2px; }
+
   /* ── Mini Data Card ─────────────────────────────────────────────────── */
   .mini-data-card {
     background: var(--dp-card);
@@ -5323,15 +5407,15 @@ with st.sidebar:
     # ── Quick Navigation Guide ─────────────────────────────────────────────────
     with st.expander("🧭 Tab Guide — Where to Find What", expanded=False):
         _nav_items = [
-            ("⚡", "Executive Overview", "Start here. Top-line KPIs, board summary, and PULSE score."),
-            ("📊", "Hotel Performance", "Deep-dive into occupancy, rate, and revenue trends over time."),
-            ("🔮", "AI Outlook", "Forward-looking insights generated fresh every pipeline run."),
-            ("🧭", "Visitor Intelligence", "Who visits, where they're from, and what they spend."),
-            ("🗺️", "Origin Markets", "Which cities send the most (and most valuable) visitors."),
-            ("🎯", "Event ROI", "How major events like Ohana Fest drive hotel revenue."),
-            ("🏗️", "Supply Pipeline", "New hotels coming — how they'll affect competition."),
-            ("📈", "Competitive Intel", "Dana Point vs. the broader market, plus economic signals."),
-            ("🗄️", "Data Vault", "Raw data, downloads, and pipeline health."),
+            ("🏠", "Today's Overview", "Daily KPIs, AI Analyst, board summary, and PULSE score."),
+            ("🏨", "Hotel Trends", "Deep-dive: occupancy, room rates, and revenue over time."),
+            ("🔮", "What's Next", "AI-generated forward-looking insights for every audience."),
+            ("👥", "Our Visitors", "Who visits Dana Point, what they spend, and how they travel."),
+            ("🗺️", "Where They're From", "Which cities send the most (and most valuable) visitors."),
+            ("🎉", "Event Impact", "How Ohana Fest, Doheny Blues, Tall Ships drive hotel revenue."),
+            ("🏗️", "New Competition", "New hotels coming to South OC — supply impact analysis."),
+            ("📈", "Market Intel", "Dana Point vs. the broader OC market + economic signals."),
+            ("🗄️", "Data & Downloads", "All data tables, CSV downloads, and pipeline health."),
         ]
         st.markdown(
             "".join(
@@ -6631,15 +6715,15 @@ def render_intel_panel(
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
-    "⚡ Executive Overview",
-    "📊 Hotel Performance",
-    "🔮 AI Outlook",
-    "🧭 Visitor Intelligence",
-    "🗺️ Origin Markets",
-    "🎯 Event ROI",
-    "🏗️ Supply Pipeline",
-    "📈 Competitive Intel",
-    "🗄️ Data Vault",
+    "🏠 Today's Overview",
+    "🏨 Hotel Trends",
+    "🔮 What's Next",
+    "👥 Our Visitors",
+    "🗺️ Where They're From",
+    "🎉 Event Impact",
+    "🏗️ New Competition",
+    "📈 Market Intel",
+    "🗄️ Data & Downloads",
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -6717,38 +6801,15 @@ with tab_ov:
     # Filter: Time Period only — Overview uses the window to compute 30-day KPI snapshot
     _str_filters("ov", show_grain=False, show_metric=False)
     st.markdown(tab_intro(
-        "Executive Overview",
-        "Your command center for Dana Point hotel and visitor performance. "
-        "All numbers come from verified data sources — STR, Datafy, and CoStar.",
+        "Today's Overview — Visit Dana Point",
+        "Your live command center. All numbers are from verified hotel and visitor data — updated automatically.",
         [
-            "📊 Scroll down to see all key metrics at a glance",
-            "🔴🟡🟢 Traffic-light status shows what needs attention",
-            "🤖 Use the AI Analyst panel to ask questions in plain English",
-            "📋 Board Report tab generates ready-to-present talking points",
+            "🤖 AI Analyst is right below — click any quick prompt or type your own question",
+            "📊 KPI cards show 30-day performance vs. same period last year",
+            "🔴🟡🟢 Status bar at top shows if anything needs immediate attention",
+            "📋 Scroll to 'Board Report' sub-tab for copy-ready presentation content",
         ]
     ), unsafe_allow_html=True)
-    # How-to strip
-    st.markdown(
-        '<div class="dp-howto">'
-        '<div class="dp-howto-step"><div class="dp-howto-num">1</div><div class="dp-howto-body">'
-        '<div class="dp-howto-title">Read the KPI cards</div>'
-        '<div class="dp-howto-text">The big numbers at the top show how hotels are performing right now vs. the same period last year.</div>'
-        '</div></div>'
-        '<div class="dp-howto-step"><div class="dp-howto-num">2</div><div class="dp-howto-body">'
-        '<div class="dp-howto-title">Check the PULSE Score</div>'
-        '<div class="dp-howto-text">A 0–100 score that combines occupancy, rate growth, and market position into one number.</div>'
-        '</div></div>'
-        '<div class="dp-howto-step"><div class="dp-howto-num">3</div><div class="dp-howto-body">'
-        '<div class="dp-howto-title">Explore the other tabs</div>'
-        '<div class="dp-howto-text">Each tab above zooms in on a different topic — hotels, visitors, events, competition, and more.</div>'
-        '</div></div>'
-        '<div class="dp-howto-step"><div class="dp-howto-num">4</div><div class="dp-howto-body">'
-        '<div class="dp-howto-title">Ask the AI Analyst</div>'
-        '<div class="dp-howto-text">Every section has a "Ask about this data" panel. Type any question — it reads the live data to answer.</div>'
-        '</div></div>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
     # ── Board Executive Summary Banner ─────────────────────────────────────────
     try:
         _exec_rvp   = m.get("revpar_30", 0.0) if m else 0.0
@@ -6875,8 +6936,122 @@ with tab_ov:
         pass
 
 
+    # ── VDP Status Bar — always-visible daily snapshot ────────────────────────
+    try:
+        _sb_occ   = m.get("occ_30", 0) if m else 0
+        _sb_rvpd  = m.get("revpar_delta", 0) if m else 0
+        _sb_rvp   = m.get("revpar_30", 0) if m else 0
+        _occ_cls  = "green" if _sb_occ >= 75 else ("yellow" if _sb_occ >= 60 else "red")
+        _rvp_cls  = "green" if _sb_rvpd >= 2 else ("yellow" if _sb_rvpd >= -2 else "red")
+        _occ_lbl  = f"{'✅' if _occ_cls=='green' else ('⚠️' if _occ_cls=='yellow' else '🔴')} Occupancy {_sb_occ:.1f}%"
+        _rvp_lbl  = f"{'✅' if _rvp_cls=='green' else ('⚠️' if _rvp_cls=='yellow' else '🔴')} RevPAR ${_sb_rvp:.0f} ({_sb_rvpd:+.1f}%)"
+        _today_str = datetime.now().strftime("%A, %B %d, %Y")
+        st.markdown(
+            f'<div class="vdp-status-bar">'
+            f'<span class="vdp-status-date">📅 {_today_str}</span>'
+            f'<span class="vdp-status-sep">|</span>'
+            f'<span class="vdp-status-chip {_occ_cls}">{_occ_lbl}</span>'
+            f'<span class="vdp-status-chip {_rvp_cls}">{_rvp_lbl}</span>'
+            f'<span class="vdp-status-chip blue">🌊 Dana Point, CA</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        pass
+
+    # ── VDP AI Analyst — Visible on load, no clicks needed ────────────────────
+    st.markdown(
+        '<div class="ai-command-panel">'
+        '<div class="ai-command-header">'
+        '<span style="font-size:22px;">🤖</span>'
+        '<span class="ai-command-title">VDP AI Analyst</span>'
+        '<span class="ai-command-sub">Powered by Claude · Ask anything about Dana Point hotel & visitor performance</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    # Preset prompt chips (rendered as Streamlit buttons for interactivity)
+    _OV_PROMPTS = [
+        ("📬 Morning Brief",       "morning_brief"),
+        ("💹 RevPAR Performance",  "revpar"),
+        ("📋 Board Talking Points","board"),
+        ("📅 Best & Worst Months", "opportunity"),
+        ("🏖️ Event Impact",        "visitor_econ"),
+        ("📢 Campaign ROI",        "visitor_econ"),
+        ("🏨 Hotel Rankings",      "revpar"),
+        ("📈 30-Day Forecast",     "forecast"),
+    ]
+    _ai_btn_cols = st.columns(len(_OV_PROMPTS))
+    for _ai_i, (_ai_lbl, _ai_key) in enumerate(_OV_PROMPTS):
+        with _ai_btn_cols[_ai_i]:
+            if st.button(_ai_lbl, key=f"ov_ai_{_ai_key}_{_ai_i}", use_container_width=True):
+                if _ai_key == "morning_brief":
+                    _brief_ctx = (
+                        f"Dana Point Visit Dana Point Portfolio — {datetime.now().strftime('%B %d, %Y')}. "
+                        f"RevPAR ${m.get('revpar_30',0):.0f} ({m.get('revpar_delta',0):+.1f}% YOY), "
+                        f"ADR ${m.get('adr_30',0):.0f}, Occ {m.get('occ_30',0):.1f}% ({m.get('occ_delta',0):+.1f}pp YOY). "
+                        f"Write a concise, professional morning briefing for the Visit Dana Point team. "
+                        f"Lead with the headline metric, note anything that needs attention, and end with one strategic recommendation."
+                    ) if m else "Write a brief morning overview for the Visit Dana Point DMO team."
+                    st.session_state.ai_current_prompt = _brief_ctx
+                else:
+                    st.session_state.ai_current_prompt = build_prompt(_ai_key, m)
+                st.session_state.ai_prompt_label = _ai_lbl
+                st.session_state.ai_result = ""
+                st.session_state.ai_needs_call = True
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── AI custom input and response — always visible ──────────────────────────
+    _ov_ai_c1, _ov_ai_c2 = st.columns([5, 1])
+    with _ov_ai_c1:
+        _ov_custom_q = st.text_input(
+            "_ov_custom_q", label_visibility="collapsed",
+            placeholder="💬 Ask anything — 'What's our best performing month?' · 'How does Ohana Fest affect ADR?' · 'Draft a board summary' …",
+            key="ov_main_ai_input",
+        )
+    with _ov_ai_c2:
+        if st.button("⚡ Ask AI", type="primary", use_container_width=True, key="ov_main_ai_btn"):
+            if _ov_custom_q.strip():
+                st.session_state.ai_current_prompt = build_custom_prompt(_ov_custom_q, m)
+                st.session_state.ai_prompt_label   = f"💬 {_ov_custom_q.strip()[:60]}"
+                st.session_state.ai_result         = ""
+                st.session_state.ai_needs_call     = True
+
+    # Response area for overview AI
+    if st.session_state.get("ai_needs_call") or st.session_state.get("ai_result"):
+        if st.session_state.get("ai_prompt_label"):
+            st.caption(f"**Query:** {st.session_state.ai_prompt_label}")
+        if st.session_state.get("ai_needs_call"):
+            _ov_prompt = st.session_state.ai_current_prompt
+            _ov_model  = st.session_state.get("selected_model", CLAUDE_MODEL)
+            _ov_any_ai = (
+                (api_key_valid and ANTHROPIC_AVAILABLE) or
+                (bool(_OPENAI_KEY) and OPENAI_AVAILABLE) or
+                (bool(_GOOGLE_AI_KEY) and GEMINI_AVAILABLE) or
+                (bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE)
+            )
+            if _ov_any_ai:
+                with st.chat_message("assistant", avatar="🌊"):
+                    _ov_resp = st.write_stream(stream_ai_response(_ov_prompt, _ov_model, _ai_keys))
+                st.session_state.ai_result = _ov_resp
+            else:
+                _ov_resp = local_fallback("default", m)
+                with st.chat_message("assistant", avatar="🌊"):
+                    st.markdown(_ov_resp)
+                st.session_state.ai_result = _ov_resp
+                st.info("💡 Add an API key in the sidebar to activate full AI responses.")
+            st.session_state.ai_needs_call = False
+        elif st.session_state.get("ai_result"):
+            with st.chat_message("assistant", avatar="🌊"):
+                st.markdown(st.session_state.ai_result)
+        if st.button("✕ Clear", key="ov_clear_ai"):
+            st.session_state.ai_result = ""
+            st.session_state.ai_prompt_label = ""
+            st.rerun()
+
+    st.markdown("---")
+
     # ── Overview Sub-Tabs ──────────────────────────────────────────────────────
-    _ov_t1, _ov_t2, _ov_t3 = st.tabs(["📊 Key Metrics", "📄 Board Report", "🧠 AI Analysis"])
+    _ov_t1, _ov_t2, _ov_t3 = st.tabs(["📊 Performance Metrics", "📋 Board Report", "🧠 More Analysis"])
 
     # ── Board Report → sub-tab 2 ──────────────────────────────────────────────
     with _ov_t2:
@@ -8312,7 +8487,7 @@ with tab_tr:
     # Full filters: Time Period + Daily/Monthly grain (metric controlled by "View Metric" below)
     _str_filters("tr", show_grain=True, show_metric=False)
     st.markdown(tab_intro(
-        "Hotel Performance",
+        "Hotel Trends",
         "Deep-dive into STR hotel data: how full are the hotels, what are guests paying, and how is revenue trending over time.",
         [
             "📅 Switch between Daily and Monthly view using the filter above",
@@ -9133,7 +9308,7 @@ with tab_fo:
     # Time Period filter: controls how much STR history backs the outlook narrative
     _str_filters("fo", show_grain=False, show_metric=False)
     st.markdown(tab_intro(
-        "AI Outlook",
+        "What's Next",
         "Forward-looking insights generated fresh every time data is updated — written for four different audiences.",
         [
             "🏢 DMO tab: strategy and budget recommendations for the Visit Dana Point team",
@@ -9142,13 +9317,16 @@ with tab_fo:
             "🏠 Resident tab: peak crowd alerts, economic benefits, quiet windows",
         ]
     ), unsafe_allow_html=True)
-    # ── Header ─────────────────────────────────────────────────────────────────
+    # ── Audience selector strip ────────────────────────────────────────────────
     st.markdown(
-        '<div style="font-family:\'Syne\',sans-serif;font-size:1.55rem;'
-        'font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">'
-        'Forward Outlook</div>'
-        '<div style="font-size:12px;opacity:0.50;font-weight:500;margin-bottom:20px;">'
-        'Daily forward-looking insights from analytics.sqlite — updated every pipeline run</div>',
+        '<div class="vdp-status-bar">'
+        '<span class="vdp-status-date">📬 Choose your audience below</span>'
+        '<span class="vdp-status-sep">|</span>'
+        '<span class="vdp-status-chip green">🏢 DMO Strategy</span>'
+        '<span class="vdp-status-chip blue">🏛️ City Council</span>'
+        '<span class="vdp-status-chip yellow">🏖️ Visitors</span>'
+        '<span class="vdp-status-chip blue">🏠 Residents</span>'
+        '</div>',
         unsafe_allow_html=True,
     )
 
@@ -9610,7 +9788,7 @@ with tab_fo:
 with tab_ev:
     _tab_controls("ev")
     st.markdown(tab_intro(
-        "Visitor Intelligence",
+        "Our Visitors",
         "Who is actually visiting Dana Point? This tab breaks down trip volume, spending, demographics, and whether your website and ads are driving real visits.",
         [
             "✈️ Overnight vs. day-trip split shows how many visitors book hotel rooms",
@@ -10669,7 +10847,7 @@ with tab_fm:
     </div>
     """, unsafe_allow_html=True)
     st.markdown(tab_intro(
-        "Origin Markets",
+        "Where They're From",
         "Where your visitors come from matters — fly markets (Utah, Texas, NYC) spend 1.3–1.4× more per trip than LA/San Diego drive markets.",
         [
             "🗺️ Map view shows which cities send the most visitors",
@@ -11329,7 +11507,7 @@ with tab_ei:
     </div>
     """, unsafe_allow_html=True)
     st.markdown(tab_intro(
-        "Event ROI",
+        "Event Impact",
         "Major events are the most powerful tool to fill hotels. Ohana Fest alone generated $14.6M in spending — this tab shows the impact of every event.",
         [
             "📅 See how each event pushes up hotel occupancy and room rates (ADR)",
@@ -12319,7 +12497,7 @@ with tab_sp:
     </div>
     """, unsafe_allow_html=True)
     st.markdown(tab_intro(
-        "Supply Pipeline",
+        "New Competition",
         "New hotels are being built nearby. This tab tracks every project — what's under construction, when it opens, and how it affects competition.",
         [
             "🏗️ Under Construction = opening soon · Planned = still in permitting",
@@ -12669,7 +12847,7 @@ with tab_cs:
     """, unsafe_allow_html=True)
     st.info("📌 **Data Context:** This tab displays CoStar Hospitality Analytics data extracted from the March 2026 Newport Beach/Dana Point Submarket Report. Annual performance figures reflect **Full Year 2024** actuals — the most recent full-year period available. CoStar market forecasts (2025–2030) are also included for strategic planning context. For **current 2026 STR performance**, see the Hotel Performance tab (data through Feb 2026).")
     st.markdown(tab_intro(
-        "Competitive Intel",
+        "Market Intel",
         "How does Dana Point compare to the broader South OC market? CoStar data shows where VDP hotels rank on occupancy, rate, and revenue vs. competition.",
         [
             "🏆 MPI / ARI / RGI are market share indexes — above 100 means outperforming",
@@ -14376,7 +14554,7 @@ with tab_dl:
     </div>
     """, unsafe_allow_html=True)
     st.markdown(tab_intro(
-        "Data Vault",
+        "Data & Downloads",
         "The transparency layer — every data source tracked, with row counts, freshness, and download links. If something looks wrong, check here first.",
         [
             "🟢 Green dot = data loaded · ⚫ Black dot = no data (run the pipeline)",
