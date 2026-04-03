@@ -1070,15 +1070,130 @@ st.markdown("""
 
   /* ── Tab Summary Card ─────────────────────────────────────────────────── */
   .tab-summary {
-    background: rgba(0,212,200,0.05);
-    border: 1px solid rgba(0,212,200,0.14);
-    border-left: 4px solid var(--dp-teal);
+    background: rgba(0,212,200,0.06);
+    border: 1px solid rgba(0,212,200,0.20);
+    border-left: 5px solid var(--dp-teal);
     border-radius: var(--dp-radius-lg);
-    padding: 16px 20px; margin: 8px 0 20px 0;
+    padding: 18px 22px; margin: 8px 0 22px 0;
     font-family: 'DM Sans', 'Inter', sans-serif;
     font-size: 13.5px; color: var(--dp-text-2); line-height: 1.70;
   }
   .tab-summary strong { color: var(--dp-teal); font-weight: 700; }
+  .tab-summary .ts-label {
+    font-size: 9.5px; font-weight: 800; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--dp-teal); margin-bottom: 6px;
+    display: block;
+  }
+  .tab-summary .ts-bullets {
+    margin: 8px 0 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .tab-summary .ts-bullets li {
+    font-size: 11.5px; color: var(--dp-text-3);
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 20px; padding: 3px 12px; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .tab-summary .ts-bullets li::before { content: "→"; color: var(--dp-teal); font-weight: 700; }
+
+  /* ── Callout / Key Takeaway ──────────────────────────────────────────── */
+  .dp-callout {
+    background: rgba(0,212,200,0.08);
+    border: 1px solid rgba(0,212,200,0.25);
+    border-left: 4px solid #00D4C8;
+    border-radius: 10px; padding: 14px 18px; margin: 16px 0;
+  }
+  .dp-callout-amber {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-left: 4px solid #FBBF24;
+    border-radius: 10px; padding: 14px 18px; margin: 16px 0;
+  }
+  .dp-callout-purple {
+    background: rgba(139,92,246,0.08);
+    border: 1px solid rgba(139,92,246,0.25);
+    border-left: 4px solid #A78BFA;
+    border-radius: 10px; padding: 14px 18px; margin: 16px 0;
+  }
+  .dp-callout-green {
+    background: rgba(16,185,129,0.08);
+    border: 1px solid rgba(16,185,129,0.25);
+    border-left: 4px solid #34D399;
+    border-radius: 10px; padding: 14px 18px; margin: 16px 0;
+  }
+  .dp-callout .dp-callout-head {
+    font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 800;
+    letter-spacing: .06em; text-transform: uppercase; color: #00D4C8;
+    margin-bottom: 5px; display: flex; align-items: center; gap: 7px;
+  }
+  .dp-callout-amber .dp-callout-head { color: #FBBF24; }
+  .dp-callout-purple .dp-callout-head { color: #A78BFA; }
+  .dp-callout-green  .dp-callout-head { color: #34D399; }
+  .dp-callout p, .dp-callout-amber p, .dp-callout-purple p, .dp-callout-green p {
+    font-size: 13px; color: #C8E0F2; line-height: 1.65; margin: 0;
+    -webkit-text-fill-color: #C8E0F2;
+  }
+  .dp-callout strong, .dp-callout-amber strong, .dp-callout-purple strong, .dp-callout-green strong {
+    color: #F4FAFF; -webkit-text-fill-color: #F4FAFF; font-weight: 700;
+  }
+
+  /* ── Nav Guide chips in sidebar ────────────────────────────────────────── */
+  .nav-guide-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 12px; border-radius: 8px; margin-bottom: 4px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: background 0.18s ease;
+  }
+  .nav-guide-item:hover { background: rgba(0,212,200,0.08); }
+  .nav-guide-icon { font-size: 16px; flex-shrink: 0; line-height: 1.3; }
+  .nav-guide-text { flex: 1; }
+  .nav-guide-name {
+    font-family: 'Syne', sans-serif; font-size: 11.5px; font-weight: 700;
+    color: #F4FAFF; -webkit-text-fill-color: #F4FAFF; line-height: 1.2;
+    margin-bottom: 2px;
+  }
+  .nav-guide-desc {
+    font-size: 10.5px; color: #8AAEC6; -webkit-text-fill-color: #8AAEC6; line-height: 1.3;
+  }
+
+  /* ── Plain-language metric label ───────────────────────────────────────── */
+  .metric-plain {
+    font-size: 10px; color: #8AAEC6; -webkit-text-fill-color: #8AAEC6;
+    margin-top: 2px; line-height: 1.3;
+  }
+
+  /* ── "What to look for" chart primer ──────────────────────────────────── */
+  .chart-primer {
+    font-size: 12px; color: #8AAEC6; -webkit-text-fill-color: #8AAEC6;
+    padding: 7px 14px; background: rgba(255,255,255,0.03);
+    border-radius: 6px; margin-bottom: 6px; line-height: 1.5;
+    border-left: 3px solid rgba(0,212,200,0.30);
+  }
+  .chart-primer strong { color: #C8E0F2; -webkit-text-fill-color: #C8E0F2; }
+
+  /* ── Howto welcome strip ────────────────────────────────────────────── */
+  .dp-howto {
+    background: linear-gradient(135deg, rgba(0,212,200,0.10) 0%, rgba(56,189,248,0.06) 100%);
+    border: 1px solid rgba(0,212,200,0.22); border-radius: 12px;
+    padding: 16px 20px; margin: 0 0 18px 0;
+    display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;
+  }
+  .dp-howto-step {
+    flex: 1; min-width: 160px; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .dp-howto-num {
+    width: 26px; height: 26px; border-radius: 50%; background: rgba(0,212,200,0.20);
+    border: 1px solid rgba(0,212,200,0.40); color: #00D4C8; -webkit-text-fill-color: #00D4C8;
+    font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .dp-howto-body { flex: 1; }
+  .dp-howto-title {
+    font-size: 11px; font-weight: 700; color: #F4FAFF; -webkit-text-fill-color: #F4FAFF;
+    margin-bottom: 2px;
+  }
+  .dp-howto-text {
+    font-size: 10.5px; color: #8AAEC6; -webkit-text-fill-color: #8AAEC6; line-height: 1.4;
+  }
 
   /* ── Mini Data Card ─────────────────────────────────────────────────── */
   .mini-data-card {
@@ -4605,6 +4720,35 @@ def empty_state(icon: str, title: str, body: str) -> str:
     )
 
 
+def tab_intro(title: str, desc: str, bullets: list[str]) -> str:
+    """Enhanced tab summary with label + bullets for plain-language navigation."""
+    _bullet_html = "".join(f"<li>{b}</li>" for b in bullets)
+    return (
+        f'<div class="tab-summary">'
+        f'<span class="ts-label">What you\'ll find here</span>'
+        f'<strong>{title}</strong> — {desc}'
+        f'<ul class="ts-bullets">{_bullet_html}</ul>'
+        f'</div>'
+    )
+
+
+def callout(icon: str, headline: str, body: str, style: str = "teal") -> str:
+    """Plain-language insight callout box. style: teal | amber | purple | green"""
+    _cls = {"teal": "dp-callout", "amber": "dp-callout-amber",
+            "purple": "dp-callout-purple", "green": "dp-callout-green"}.get(style, "dp-callout")
+    return (
+        f'<div class="{_cls}">'
+        f'<div class="dp-callout-head">{icon} {headline}</div>'
+        f'<p>{body}</p>'
+        f'</div>'
+    )
+
+
+def chart_primer(text: str) -> str:
+    """Plain-language 'what to look for' text above a chart."""
+    return f'<div class="chart-primer"><strong>What to look for:</strong> {text}</div>'
+
+
 def _safe_section(fn, section_name: str = "section"):
     """GloCon Solutions LLC — failsafe wrapper for any dashboard section.
     Catches exceptions and renders a user-friendly error card instead of crashing.
@@ -5173,6 +5317,34 @@ with st.sidebar:
         mon_min = df_monthly["as_of_date"].min().strftime("%b %Y")
         mon_max = df_monthly["as_of_date"].max().strftime("%b %Y")
         st.caption(f"Monthly data: {mon_min} → {mon_max}")
+
+    st.divider()
+
+    # ── Quick Navigation Guide ─────────────────────────────────────────────────
+    with st.expander("🧭 Tab Guide — Where to Find What", expanded=False):
+        _nav_items = [
+            ("⚡", "Executive Overview", "Start here. Top-line KPIs, board summary, and PULSE score."),
+            ("📊", "Hotel Performance", "Deep-dive into occupancy, rate, and revenue trends over time."),
+            ("🔮", "AI Outlook", "Forward-looking insights generated fresh every pipeline run."),
+            ("🧭", "Visitor Intelligence", "Who visits, where they're from, and what they spend."),
+            ("🗺️", "Origin Markets", "Which cities send the most (and most valuable) visitors."),
+            ("🎯", "Event ROI", "How major events like Ohana Fest drive hotel revenue."),
+            ("🏗️", "Supply Pipeline", "New hotels coming — how they'll affect competition."),
+            ("📈", "Competitive Intel", "Dana Point vs. the broader market, plus economic signals."),
+            ("🗄️", "Data Vault", "Raw data, downloads, and pipeline health."),
+        ]
+        st.markdown(
+            "".join(
+                f'<div class="nav-guide-item">'
+                f'<div class="nav-guide-icon">{icon}</div>'
+                f'<div class="nav-guide-text">'
+                f'<div class="nav-guide-name">{name}</div>'
+                f'<div class="nav-guide-desc">{desc}</div>'
+                f'</div></div>'
+                for icon, name, desc in _nav_items
+            ),
+            unsafe_allow_html=True,
+        )
 
     st.divider()
 
@@ -6544,11 +6716,39 @@ with tab_ov:
     _tab_controls("ov")
     # Filter: Time Period only — Overview uses the window to compute 30-day KPI snapshot
     _str_filters("ov", show_grain=False, show_metric=False)
-    st.markdown(tab_summary(
-        "<strong>Executive Overview</strong> — Board-level dashboard combining 30-day STR hotel performance, "
-        "annual visitor economy data from Datafy, CoStar supply intelligence, and VDP-generated insights. "
-        "All metrics are sourced from verified Layer 1 data (STR, Datafy, TBID records)."
+    st.markdown(tab_intro(
+        "Executive Overview",
+        "Your command center for Dana Point hotel and visitor performance. "
+        "All numbers come from verified data sources — STR, Datafy, and CoStar.",
+        [
+            "📊 Scroll down to see all key metrics at a glance",
+            "🔴🟡🟢 Traffic-light status shows what needs attention",
+            "🤖 Use the AI Analyst panel to ask questions in plain English",
+            "📋 Board Report tab generates ready-to-present talking points",
+        ]
     ), unsafe_allow_html=True)
+    # How-to strip
+    st.markdown(
+        '<div class="dp-howto">'
+        '<div class="dp-howto-step"><div class="dp-howto-num">1</div><div class="dp-howto-body">'
+        '<div class="dp-howto-title">Read the KPI cards</div>'
+        '<div class="dp-howto-text">The big numbers at the top show how hotels are performing right now vs. the same period last year.</div>'
+        '</div></div>'
+        '<div class="dp-howto-step"><div class="dp-howto-num">2</div><div class="dp-howto-body">'
+        '<div class="dp-howto-title">Check the PULSE Score</div>'
+        '<div class="dp-howto-text">A 0–100 score that combines occupancy, rate growth, and market position into one number.</div>'
+        '</div></div>'
+        '<div class="dp-howto-step"><div class="dp-howto-num">3</div><div class="dp-howto-body">'
+        '<div class="dp-howto-title">Explore the other tabs</div>'
+        '<div class="dp-howto-text">Each tab above zooms in on a different topic — hotels, visitors, events, competition, and more.</div>'
+        '</div></div>'
+        '<div class="dp-howto-step"><div class="dp-howto-num">4</div><div class="dp-howto-body">'
+        '<div class="dp-howto-title">Ask the AI Analyst</div>'
+        '<div class="dp-howto-text">Every section has a "Ask about this data" panel. Type any question — it reads the live data to answer.</div>'
+        '</div></div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     # ── Board Executive Summary Banner ─────────────────────────────────────────
     try:
         _exec_rvp   = m.get("revpar_30", 0.0) if m else 0.0
@@ -6659,6 +6859,18 @@ with tab_ov:
             + '</div></div>'
         )
         st.markdown(_banner_html, unsafe_allow_html=True)
+        # Plain-language KPI guide
+        st.markdown(callout(
+            "📖", "What Do These Numbers Mean?",
+            "<strong>RevPAR</strong> = Revenue Per Available Room — the master metric. It combines how full rooms are AND what guests paid. "
+            "<strong>ADR</strong> = Average Daily Rate — what guests actually paid per night. "
+            "<strong>Occupancy</strong> = what % of rooms were filled. "
+            "<strong>12-Mo Room Rev</strong> = total hotel room revenue over the past year, from verified STR data. "
+            "<strong>TBID</strong> = Tourism Business Improvement District assessment — a fee collected from hotel guests that funds marketing. "
+            "<strong>TOT</strong> = Transient Occupancy Tax — the 10% hotel room tax that goes to the City of Dana Point. "
+            "All arrows (▲▼) compare to the same period last year.",
+            "amber",
+        ), unsafe_allow_html=True)
     except Exception:
         pass
 
@@ -7112,14 +7324,23 @@ with tab_ov:
             # Tier legend — light mode
             st.markdown(
                 '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;margin-bottom:12px;">'
-                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#FEE2E2;color:#991B1B;font-weight:700;border:1px solid #FCA5A5;">0–39 Caution</span>'
-                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#FEF3C7;color:#92400E;font-weight:700;border:1px solid #FCD34D;">40–59 Stable</span>'
-                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#DBEAFE;color:#1E40AF;font-weight:700;border:1px solid #93C5FD;">60–74 Strong</span>'
-                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#D1FAE5;color:#065F46;font-weight:700;border:1px solid #6EE7B7;">75–89 Exceptional</span>'
-                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:#EDE9FE;color:#4C1D95;font-weight:700;border:1px solid #C4B5FD;">90–100 Historic</span>'
+                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:rgba(239,68,68,0.18);color:#FCA5A5;-webkit-text-fill-color:#FCA5A5;font-weight:700;border:1px solid rgba(239,68,68,0.45);">0–39 Caution</span>'
+                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:rgba(245,158,11,0.18);color:#FCD34D;-webkit-text-fill-color:#FCD34D;font-weight:700;border:1px solid rgba(245,158,11,0.45);">40–59 Stable</span>'
+                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:rgba(56,189,248,0.18);color:#93C5FD;-webkit-text-fill-color:#93C5FD;font-weight:700;border:1px solid rgba(56,189,248,0.45);">60–74 Strong</span>'
+                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:rgba(16,185,129,0.18);color:#6EE7B7;-webkit-text-fill-color:#6EE7B7;font-weight:700;border:1px solid rgba(16,185,129,0.45);">75–89 Exceptional</span>'
+                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:rgba(139,92,246,0.18);color:#C4B5FD;-webkit-text-fill-color:#C4B5FD;font-weight:700;border:1px solid rgba(139,92,246,0.45);">90–100 Historic</span>'
                 '</div>',
                 unsafe_allow_html=True,
             )
+
+        # ── PULSE Score plain-language context ────────────────────────────────────
+        st.markdown(callout(
+            "💡", "How to Read the PULSE Score",
+            "The PULSE Score combines three factors into one number: <strong>how full hotels are</strong> (occupancy), "
+            "<strong>how much guests are paying</strong> (RevPAR growth), and <strong>how well the market compares</strong> to the wider Orange County hotel market. "
+            "A score of 60–74 means the market is performing well. 75–89 is exceptional. Above 90 is historic. "
+            "Scores below 60 signal the need for demand-generation or rate strategy action.",
+        ), unsafe_allow_html=True)
 
         # ── Overview Section Intelligence ─────────────────────────────────────────
         if m:
@@ -8090,10 +8311,15 @@ with tab_tr:
     _tab_controls("tr")
     # Full filters: Time Period + Daily/Monthly grain (metric controlled by "View Metric" below)
     _str_filters("tr", show_grain=True, show_metric=False)
-    st.markdown(tab_summary(
-        "<strong>Hotel Performance</strong> — STR trend analysis for RevPAR, ADR, Occupancy, Revenue, Supply, and Demand. "
-        "Switch between Daily and Monthly grain using the filter above. "
-        "Year-over-year comparisons highlight rate discipline vs. volume growth."
+    st.markdown(tab_intro(
+        "Hotel Performance",
+        "Deep-dive into STR hotel data: how full are the hotels, what are guests paying, and how is revenue trending over time.",
+        [
+            "📅 Switch between Daily and Monthly view using the filter above",
+            "📈 RevPAR = Revenue Per Available Room — the single most important hotel metric",
+            "🆚 Every chart shows year-over-year comparison — green means improvement",
+            "⬇️ Download any dataset as a CSV from the Data Vault tab",
+        ]
     ), unsafe_allow_html=True)
     # ── Metric toggle filter ────────────────────────────────────────────────────
     _str_metric_label = st.selectbox(
@@ -8220,6 +8446,13 @@ with tab_tr:
             pass
 
         st.markdown(sec_div("📈 Trend Charts"), unsafe_allow_html=True)
+        st.markdown(callout(
+            "📈", "How to Read These Charts",
+            "Each bar shows one month of hotel data. <strong>Teal = performing above the average</strong> for that metric. "
+            "The line (if shown) is the year-over-year comparison. "
+            "Use the <strong>'View Metric' selector above</strong> to switch between RevPAR, ADR, Occupancy, Revenue, Supply, and Demand. "
+            "<strong>Monthly grain</strong> smooths out daily swings and is best for strategic planning.",
+        ), unsafe_allow_html=True)
         # ── Primary metric chart — responds to metric selector ─────────────────
         _yoy_col   = "revpar_yoy" if _str_metric_col in ("revpar", "occ_pct") else None
         _main_col  = _str_metric_col if _str_metric_col in monthly.columns else "revpar"
@@ -8899,10 +9132,15 @@ with tab_fo:
     _tab_controls("fo")
     # Time Period filter: controls how much STR history backs the outlook narrative
     _str_filters("fo", show_grain=False, show_metric=False)
-    st.markdown(tab_summary(
-        "<strong>VDP Forward Outlook</strong> — VDP-generated, daily-refreshed insights for four stakeholder audiences: "
-        "DMO leadership, city council, visitors, and residents. "
-        "Insights are derived from cross-dataset signals invisible in any single source alone."
+    st.markdown(tab_intro(
+        "AI Outlook",
+        "Forward-looking insights generated fresh every time data is updated — written for four different audiences.",
+        [
+            "🏢 DMO tab: strategy and budget recommendations for the Visit Dana Point team",
+            "🏛️ City tab: economic impact and infrastructure insights for city leadership",
+            "🏖️ Visitor tab: best time to book, rate trends, upcoming events",
+            "🏠 Resident tab: peak crowd alerts, economic benefits, quiet windows",
+        ]
     ), unsafe_allow_html=True)
     # ── Header ─────────────────────────────────────────────────────────────────
     st.markdown(
@@ -9371,10 +9609,15 @@ with tab_fo:
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ev:
     _tab_controls("ev")
-    st.markdown(tab_summary(
-        "<strong>Visitor Intelligence</strong> — Annual visitor economy data from Datafy: trip volume, overnight vs. day-trip split, "
-        "demographics, spending by category, and website/media attribution performance. "
-        "Primary current data source (Layer 1)."
+    st.markdown(tab_intro(
+        "Visitor Intelligence",
+        "Who is actually visiting Dana Point? This tab breaks down trip volume, spending, demographics, and whether your website and ads are driving real visits.",
+        [
+            "✈️ Overnight vs. day-trip split shows how many visitors book hotel rooms",
+            "💰 See which spending categories (hotels, dining, retail) capture the most dollars",
+            "📢 Attribution shows which marketing channels drove measurable visitor trips",
+            "🧑‍🤝‍🧑 Demographics reveal age, income, and travel-party profiles",
+        ]
     ), unsafe_allow_html=True)
     st.markdown("""
     <div class="hero-banner">
@@ -9480,6 +9723,13 @@ with tab_ev:
             pass
 
         st.markdown(sec_div("🔢 Visitor Economy KPIs"), unsafe_allow_html=True)
+        st.markdown(callout(
+            "🧭", "Understanding These Visitor Metrics",
+            "<strong>Total Trips</strong> counts every visit to Dana Point — both people who slept in a hotel and day visitors who just came for the day. "
+            "<strong>Overnight %</strong> is key: overnight guests spend roughly 3× more than day visitors and generate the hotel revenue that funds TBID and TOT. "
+            "<strong>Out-of-State %</strong> matters because out-of-state visitors generally spend more and stay longer — they're the high-value segment. "
+            "<strong>Average Length of Stay (LOS)</strong>: even one extra night per trip represents millions in incremental revenue.",
+        ), unsafe_allow_html=True)
         if df_dfy_ov.empty:
             st.markdown(empty_state(
                 "📊", "No Datafy visitor economy data loaded.",
@@ -10293,11 +10543,11 @@ with tab_ev:
         st.markdown("---")
 
         # ── Zartico Historical Reference ─────────────────────────────────────────
-        st.markdown("""<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px 14px;
+        st.markdown("""<div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:8px 14px;
     margin-bottom:12px;display:flex;align-items:center;gap:8px;">
     <span style="font-size:16px;">📦</span>
     <div>
-      <span style="font-weight:700;color:#92400E;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
+      <span style="font-weight:700;color:#FCD34D;-webkit-text-fill-color:#FCD34D;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
       <span style="font-size:11px;color:#78350F;">Current data: Datafy &amp; CoStar. Zartico provides baseline &amp; trend context only.</span>
     </div></div>""", unsafe_allow_html=True)
         st.markdown(_sh("📚", "Zartico Historical Reference", "gray", "JUN 2025 SNAPSHOT"), unsafe_allow_html=True)
@@ -10418,11 +10668,15 @@ with tab_fm:
       <div class="hero-subtitle">DMA Origin Analysis · Visitor Value Matrix · Strategic Budget Allocation</div>
     </div>
     """, unsafe_allow_html=True)
-    st.markdown(tab_summary(
-        "<strong>Origin Market Strategy:</strong> Where visitors come from determines how much they spend. "
-        "Fly markets (SLC, Dallas, NYC) generate 1.3–1.4× more revenue per trip than drive markets. "
-        "This tab maps volume vs. value across all feeder DMAs so VDP can allocate media spend where it earns the highest ROI. "
-        "<strong>Use this data</strong> to shift budget toward high-spend, high-ADR origin markets and away from volume-only drive markets."
+    st.markdown(tab_intro(
+        "Origin Markets",
+        "Where your visitors come from matters — fly markets (Utah, Texas, NYC) spend 1.3–1.4× more per trip than LA/San Diego drive markets.",
+        [
+            "🗺️ Map view shows which cities send the most visitors",
+            "💎 Market Value Matrix plots volume vs. spend to find the best ROI cities",
+            "✈️ Fly markets = higher hotel spend · Drive markets = more volume but lower spend",
+            "📣 Use this to decide where to run paid advertising campaigns",
+        ]
     ), unsafe_allow_html=True)
 
     # ── Feeder Markets Section Intelligence ─────────────────────────────────
@@ -10486,6 +10740,15 @@ with tab_fm:
 
     # ── DMA Overview ───────────────────────────────────────────────────────────
     st.markdown(sec_div("🗺️ Origin Market Volume vs. Value"), unsafe_allow_html=True)
+    st.markdown(callout(
+        "🗺️", "Drive Markets vs. Fly Markets — Why It Matters",
+        "<strong>Drive markets</strong> (Los Angeles, San Diego, Inland Empire) send the most visitors by volume — they're close and easy to reach. "
+        "But <strong>fly markets</strong> (Salt Lake City, Dallas, Denver, New York) spend 1.3–1.4× more per trip because they travel farther, stay longer, and book nicer rooms. "
+        "The goal is to grow fly-market share without losing drive-market volume. "
+        "The <strong>Market Value Matrix</strong> below plots every origin city: upper-right = high volume AND high spend (the ideal). "
+        "Upper-left = high spend but low volume — these are fly markets with room to grow through targeted advertising.",
+        "purple",
+    ), unsafe_allow_html=True)
     if not df_dfy_dma.empty:
         _fm_period = str(df_dfy_dma.iloc[0].get("report_period_start", ""))[:4] + " Annual" if not df_dfy_dma.empty else ""
         _dma_top10 = df_dfy_dma[df_dfy_dma["visitor_days_share_pct"].notna()].head(10).copy()
@@ -10939,11 +11202,11 @@ with tab_fm:
         # ── Zartico Top Markets (historical comparison) ────────────────────────
         if not df_zrt_markets.empty:
             st.markdown(sec_div("📦 Historical Reference — Zartico Feeder Markets"), unsafe_allow_html=True)
-            st.markdown("""<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px 14px;
+            st.markdown("""<div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:8px 14px;
 margin-bottom:12px;display:flex;align-items:center;gap:8px;">
 <span style="font-size:16px;">📦</span>
 <div>
-  <span style="font-weight:700;color:#92400E;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
+  <span style="font-weight:700;color:#FCD34D;-webkit-text-fill-color:#FCD34D;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
   <span style="font-size:11px;color:#78350F;">Current data: Datafy &amp; CoStar. Zartico provides baseline &amp; trend context only.</span>
 </div></div>""", unsafe_allow_html=True)
             st.markdown("#### Historical Feeder Markets — Zartico Reference (Q1 2025)")
@@ -11065,11 +11328,15 @@ with tab_ei:
       <div class="hero-subtitle">STR Performance · Ohana Fest · Doheny Days · Tall Ships · July 4 · Zartico · Datafy · Full Events Calendar</div>
     </div>
     """, unsafe_allow_html=True)
-    st.markdown(tab_summary(
-        "<strong>Events Drive the Peak:</strong> Ohana Fest alone generated $14.6M in direct event expenditure and a 3.2× spend multiplier. "
-        "68% of attendees came from out-of-state — events are the single most effective demand generator for incremental hotel revenue. "
-        "This tab quantifies STR lift, ADR premiums, and destination spend for each major event. "
-        "<strong>Forward strategy:</strong> target Q1 and Q4 shoulder season programming to reduce seasonal revenue concentration."
+    st.markdown(tab_intro(
+        "Event ROI",
+        "Major events are the most powerful tool to fill hotels. Ohana Fest alone generated $14.6M in spending — this tab shows the impact of every event.",
+        [
+            "📅 See how each event pushes up hotel occupancy and room rates (ADR)",
+            "💵 $14.6M event spend · 3.2× spend multiplier · 68% out-of-state attendees",
+            "📊 Compare event weeks vs. baseline to see the exact revenue lift",
+            "📆 Calendar view shows all upcoming events and their expected impact",
+        ]
     ), unsafe_allow_html=True)
 
     # ── Monthly baseline lookup from live KPI data ─────────────────────────────
@@ -11550,11 +11817,11 @@ with tab_ei:
     # ══════════════════════════════════════════════════════════════════════════
     # ZARTICO EVENT IMPACT — Historical reference (OC Marathon period)
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown("""<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px 14px;
+    st.markdown("""<div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:8px 14px;
 margin-bottom:12px;display:flex;align-items:center;gap:8px;">
 <span style="font-size:16px;">📦</span>
 <div>
-  <span style="font-weight:700;color:#92400E;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
+  <span style="font-weight:700;color:#FCD34D;-webkit-text-fill-color:#FCD34D;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
   <span style="font-size:11px;color:#78350F;">Current data: Datafy &amp; CoStar. Zartico provides baseline &amp; trend context only. Event window: May 4–10, 2025 (OC Marathon period).</span>
 </div></div>""", unsafe_allow_html=True)
     st.markdown(_sh("📚", "Event Spend Impact Analysis", "gray", "ZARTICO HISTORICAL"), unsafe_allow_html=True)
@@ -11667,11 +11934,11 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
     # VISITOR/RESIDENT RATIO — Zartico seasonality index
     # ══════════════════════════════════════════════════════════════════════════
     if not df_zrt_movement.empty:
-        st.markdown("""<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px 14px;
+        st.markdown("""<div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:8px 14px;
 margin-bottom:12px;display:flex;align-items:center;gap:8px;">
 <span style="font-size:16px;">📦</span>
 <div>
-  <span style="font-weight:700;color:#92400E;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
+  <span style="font-weight:700;color:#FCD34D;-webkit-text-fill-color:#FCD34D;font-size:12px;">HISTORICAL REFERENCE ONLY — Zartico (Jun 2025 Snapshot)</span><br>
   <span style="font-size:11px;color:#78350F;">Current data: Datafy &amp; CoStar. Zartico provides baseline &amp; trend context only.</span>
 </div></div>""", unsafe_allow_html=True)
         st.markdown("#### Visitor-to-Resident Ratio — Event Season Intensity (Zartico Historical Reference)")
@@ -12051,11 +12318,15 @@ with tab_sp:
       <div class="hero-subtitle">CoStar Supply Pipeline · New Hotel Openings · Market Competitive Dynamics</div>
     </div>
     """, unsafe_allow_html=True)
-    st.markdown(tab_summary(
-        "<strong>Know What's Coming:</strong> The South OC hotel supply pipeline adds rooms at a pace that will affect occupancy and rate positioning across VDP member hotels. "
-        "New luxury and upper-upscale product intensifies competition at the top of the market. "
-        "This tab shows every project under construction or planned, its opening timeline, and the aggregate impact on market supply. "
-        "<strong>ADR discipline and direct-booking programs are critical</strong> to defending RevPAR during the supply absorption period."
+    st.markdown(tab_intro(
+        "Supply Pipeline",
+        "New hotels are being built nearby. This tab tracks every project — what's under construction, when it opens, and how it affects competition.",
+        [
+            "🏗️ Under Construction = opening soon · Planned = still in permitting",
+            "📊 New rooms increase supply — can push occupancy down if demand doesn't match",
+            "🎯 ADR discipline and direct booking programs protect revenue during absorption",
+            "📅 Pipeline total vs. current market supply shows % growth impact",
+        ]
     ), unsafe_allow_html=True)
 
     # ── Supply & Pipeline Section Intelligence ───────────────────────────────
@@ -12397,11 +12668,15 @@ with tab_cs:
     </div>
     """, unsafe_allow_html=True)
     st.info("📌 **Data Context:** This tab displays CoStar Hospitality Analytics data extracted from the March 2026 Newport Beach/Dana Point Submarket Report. Annual performance figures reflect **Full Year 2024** actuals — the most recent full-year period available. CoStar market forecasts (2025–2030) are also included for strategic planning context. For **current 2026 STR performance**, see the Hotel Performance tab (data through Feb 2026).")
-    st.markdown(tab_summary(
-        "<strong>Know the Market:</strong> CoStar data places the VDP portfolio inside the South Orange County competitive set. "
-        "Luxury properties (Waldorf Astoria, Ritz-Carlton) set the rate ceiling at $782 ADR; the full market generates $1.15B in annual room revenue. "
-        "This tab shows where VDP member hotels rank on MPI, ARI, and RGI — and what new supply is arriving that will affect that position. "
-        "<strong>Lead indicator:</strong> the pipeline adds rooms before year-end — monitor absorption and defend RevPAR with direct-booking programs."
+    st.markdown(tab_intro(
+        "Competitive Intel",
+        "How does Dana Point compare to the broader South OC market? CoStar data shows where VDP hotels rank on occupancy, rate, and revenue vs. competition.",
+        [
+            "🏆 MPI / ARI / RGI are market share indexes — above 100 means outperforming",
+            "🏨 Luxury ceiling: Waldorf Astoria & Ritz-Carlton set the $700+ rate benchmark",
+            "⛽ Gas price & travel demand signals show leading indicators for booking pace",
+            "📈 CoStar forecasts model room revenue through 2030 for planning",
+        ]
     ), unsafe_allow_html=True)
 
     # ── Market Intelligence Section Intelligence ─────────────────────────────
@@ -14100,11 +14375,15 @@ with tab_dl:
       <div class="hero-subtitle">Pipeline Audit Trail · Source Health · Row Counts · CSV Downloads · Database Inventory</div>
     </div>
     """, unsafe_allow_html=True)
-    st.markdown(tab_summary(
-        "<strong>Full Transparency:</strong> Every table loaded into analytics.sqlite is tracked here with row counts, date coverage, and ETL timestamps. "
-        "This is the operational layer — use it to verify data freshness, diagnose missing sources, and download raw CSVs for external analysis. "
-        "A green dot means the source is populated and current. A black dot means the ETL step did not run or returned no data. "
-        "<strong>Run the pipeline</strong> (<code>python scripts/run_pipeline.py</code>) to refresh all sources."
+    st.markdown(tab_intro(
+        "Data Vault",
+        "The transparency layer — every data source tracked, with row counts, freshness, and download links. If something looks wrong, check here first.",
+        [
+            "🟢 Green dot = data loaded · ⚫ Black dot = no data (run the pipeline)",
+            "⬇️ Download any table as a CSV for use in Excel or other tools",
+            "🕒 Timestamps show exactly when each source was last updated",
+            "⚙️ Admins can trigger pipeline runs from the sidebar (?admin=true)",
+        ]
     ), unsafe_allow_html=True)
     st.markdown(sec_div("📋 Load Log — ETL Audit Trail"), unsafe_allow_html=True)
     col_a, col_b = st.columns([3, 1])
