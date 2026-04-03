@@ -409,6 +409,129 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
     ("insights_daily",           "vdp_events",                   "cross_ref",     "horizon_days",
      "Forward-looking insights reference upcoming VDP events within the horizon_days window"),
 
+    # ── New Datafy Overview Tables (April 2026 format) ────────────────────
+    ("datafy_overview_total_kpis",       "datafy_overview_kpis",              "enriches",    "report_period",
+     "New-format total trips/visitor days/avg LOS enriches the legacy overview KPIs for same period"),
+
+    ("datafy_overview_total_kpis",       "insights_daily",                    "derived_from","report_period",
+     "Total trip count and avg LOS feed into compute_insights.py forward-looking demand projections"),
+
+    ("datafy_overview_top_markets",      "datafy_overview_dma",               "cross_ref",   "dma",
+     "New-format top feeder markets (trips share) cross-referenced with legacy DMA spend detail"),
+
+    ("datafy_overview_top_markets",      "kpi_daily_summary",                 "cross_ref",   "report_period",
+     "Top feeder DMA markets cross-referenced with KPI daily summary for drive/fly market segmentation"),
+
+    ("datafy_overview_top_pois",         "datafy_overview_cluster_visitation","cross_ref",   "cluster",
+     "Top POI clusters (City Council Districts, Lantern District) cross-referenced with legacy cluster visitation"),
+
+    ("datafy_overview_top_pois",         "datafy_attribution_polygons",       "cross_ref",   "cluster",
+     "Overview POI clusters cross-referenced with attribution polygon footprints for overlap analysis"),
+
+    ("datafy_overview_spending_by_market","datafy_overview_dma",              "cross_ref",   "dma",
+     "Per-DMA spend share (new format) cross-referenced with legacy DMA visitor days share for efficiency calc"),
+
+    ("datafy_overview_spending_by_market","kpi_daily_summary",                "cross_ref",   "report_period",
+     "Feeder market spend shares cross-referenced with STR ADR trends for market-value gap analysis"),
+
+    ("datafy_overview_spending_by_category","datafy_overview_category_spending","cross_ref", "category",
+     "New-format category spending (with avg spend) cross-references legacy category spend share table"),
+
+    ("datafy_overview_spending_by_category","kpi_daily_summary",              "cross_ref",   "report_period",
+     "Accommodation spend share and avg rate cross-referenced with ADR trends for rate capture analysis"),
+
+    # ── New Datafy Attribution Tables ──────────────────────────────────────
+    ("datafy_attribution_polygons",      "datafy_attribution_website_clusters","cross_ref",  "cluster",
+     "Attribution polygon footprints cross-referenced with website attribution cluster breakdown"),
+
+    ("datafy_attribution_polygons",      "datafy_overview_top_pois",          "cross_ref",   "cluster",
+     "Destination polygon trip shares cross-referenced with overall POI visitation rankings"),
+
+    ("datafy_attribution_website_groups","datafy_attribution_website_kpis",   "enriches",    "report_period",
+     "Attribution group breakdown (Destination/Resorts/Hotels) enriches the website attribution KPI summary"),
+
+    ("datafy_attribution_website_groups","datafy_attribution_media_groups",   "cross_platform","report_period",
+     "Website vs. media attribution group performance compared for channel effectiveness analysis"),
+
+    ("datafy_attribution_website_visitor_markets","datafy_attribution_website_dma","enriches","report_period",
+     "Visitor-level market attribution (spend, impact share) enriches the website attribution DMA table"),
+
+    ("datafy_attribution_website_visitor_markets","datafy_overview_dma",      "cross_ref",   "market",
+     "Website-attributed visitor markets cross-referenced with organic DMA visitor share for lift analysis"),
+
+    ("datafy_attribution_website_market_performance","datafy_attribution_website_dma","enriches","report_period",
+     "Detailed market performance (spend/LOS/impact by DMA) enriches the website attribution DMA summary"),
+
+    ("datafy_attribution_website_market_performance","kpi_daily_summary",     "cross_ref",   "report_period",
+     "Website attribution market performance cross-referenced with STR KPIs for revenue attribution analysis"),
+
+    ("datafy_attribution_peak_visitation","kpi_daily_summary",                "cross_ref",   "day_of_week",
+     "Peak visitation days/months (% of max) cross-referenced with KPI daily summary for demand timing"),
+
+    ("datafy_attribution_peak_visitation","vdp_events",                       "cross_ref",   "month",
+     "Peak visitation months cross-referenced with VDP events calendar to identify event-driven demand peaks"),
+
+    ("datafy_attribution_media_groups",  "datafy_attribution_media_kpis",     "enriches",    "report_period",
+     "Media attribution group breakdown (Destination/Resorts/Hotels) enriches media campaign KPI summary"),
+
+    ("datafy_attribution_media_groups",  "datafy_attribution_website_groups", "cross_platform","report_period",
+     "Media vs. website attribution groups compared to identify channel-specific conversion patterns"),
+
+    ("datafy_attribution_website_media_breakdown","datafy_attribution_website_channels","enriches","report_period",
+     "Channel-level estimated impact (search/direct/redirect) enriches website attribution channel breakdown"),
+
+    ("datafy_attribution_website_media_breakdown","datafy_attribution_media_kpis","cross_ref","report_period",
+     "Website media channel impact cross-referenced with media campaign ROAS for budget allocation analysis"),
+
+    # ── New Datafy Social / GA4 Tables ─────────────────────────────────────
+    ("datafy_social_ga_overview",        "datafy_social_audience_overview",   "cross_platform","report_period",
+     "New GA4 audience overview (Total Users, sessions, engagement) cross-references legacy audience overview"),
+
+    ("datafy_social_ga_overview",        "later_ig_profile_growth",           "cross_platform","data_date",
+     "GA4 website session data cross-referenced with Instagram follower growth for social-to-web funnel"),
+
+    ("datafy_social_ga_overview",        "kpi_daily_summary",                 "context",     "report_period",
+     "Website audience metrics (sessions, engagement rate) provide digital demand context for hotel KPIs"),
+
+    ("datafy_social_ga_channels",        "datafy_social_traffic_sources",     "cross_ref",   "report_period",
+     "New GA4 channel user share (organic/direct/display) cross-references legacy traffic source breakdown"),
+
+    ("datafy_social_ga_channels",        "datafy_attribution_website_channels","cross_ref",  "channel",
+     "GA4 acquisition channels cross-referenced with Datafy website attribution channels for funnel analysis"),
+
+    ("datafy_social_ga_channels",        "datafy_attribution_website_media_breakdown","cross_ref","channel",
+     "GA4 channel share cross-referenced with estimated destination impact per channel for ROI analysis"),
+
+    ("datafy_social_device_breakdown",   "datafy_social_ga_overview",         "enriches",    "report_period",
+     "Device breakdown (desktop/mobile/tablet) enriches the GA4 website audience overview"),
+
+    ("datafy_social_device_breakdown",   "datafy_social_audience_overview",   "enriches",    "report_period",
+     "Device usage split enriches the overall website audience overview for UX optimization insight"),
+
+    ("datafy_social_new_vs_returning",   "datafy_social_ga_overview",         "enriches",    "report_period",
+     "New vs. returning visitor ratio enriches the GA4 website audience overview"),
+
+    ("datafy_social_new_vs_returning",   "datafy_attribution_website_visitor_markets","cross_ref","report_period",
+     "New visitor share cross-referenced with website-attributed visitor markets for acquisition efficiency"),
+
+    ("datafy_social_top_searches",       "datafy_social_ga_overview",         "enriches",    "report_period",
+     "Top site search terms enrich the GA4 website audience overview with intent signals"),
+
+    ("datafy_social_top_searches",       "vdp_events",                        "context",     "report_period",
+     "Top search terms cross-referenced with VDP events calendar to identify event-driven search intent"),
+
+    ("datafy_social_top_searches",       "google_trends_weekly",              "cross_platform","report_period",
+     "Onsite search terms cross-referenced with Google external search trends for full demand intent picture"),
+
+    ("datafy_social_geo_breakdown",      "datafy_overview_dma",               "cross_ref",   "market",
+     "GA4 city-level visitor geography cross-referenced with Datafy DMA feeder market rankings"),
+
+    ("datafy_social_geo_breakdown",      "datafy_overview_top_markets",       "cross_ref",   "market",
+     "GA4 geographic user origins cross-referenced with top feeder market trip share data"),
+
+    ("datafy_social_geo_breakdown",      "census_demographics",               "context",     "county_name",
+     "GA4 geographic traffic origins contextualized with Census feeder market population data"),
+
     # ── Cross-platform social ──────────────────────────────────────────────
     ("later_ig_profile_growth",  "datafy_social_audience_overview","cross_ref",   "data_date",
      "Instagram follower/engagement cross-referenced with GA4 website audience — social-to-web funnel"),

@@ -63,7 +63,7 @@ REQUIRED_TABLES = {
     "datafy_overview_dma":      3,
     "vdp_events":               5,
     "costar_annual_performance": 10,
-    "costar_snapshot":           1,
+    "costar_market_snapshot":    1,
     "table_relationships":       50,
     "load_log":                  5,
 }
