@@ -942,14 +942,28 @@ st.markdown("""
   .hero-banner {
     background: #0F2540 !important;
     background-image:
-      radial-gradient(circle at 78% 18%, rgba(0,212,200,0.22) 0%, transparent 50%),
-      radial-gradient(circle at 8%  80%, rgba(56,189,248,0.12) 0%, transparent 42%),
-      linear-gradient(160deg, #0F2540 0%, #132D50 60%, #172F52 100%) !important;
+      radial-gradient(circle at 78% 18%, rgba(0,212,200,0.24) 0%, transparent 50%),
+      radial-gradient(circle at 8%  80%, rgba(56,189,248,0.14) 0%, transparent 42%),
+      radial-gradient(circle at 50% 120%, rgba(167,139,250,0.10) 0%, transparent 40%),
+      linear-gradient(160deg, #0B1E38 0%, #132D50 60%, #162E52 100%) !important;
     border-radius: 0 !important;
     margin: -1rem -1rem 0 -1rem;
     padding: 26px 36px 22px 36px;
-    border-bottom: 1px solid rgba(0,212,200,0.18) !important;
+    border-bottom: 1px solid rgba(0,212,200,0.20) !important;
     overflow: hidden;
+    /* Dot grid ambient pattern */
+    --dot-color: rgba(255,255,255,0.04);
+    --dot-size: 1.5px;
+    --dot-space: 22px;
+  }
+  .hero-banner::before {
+    /* Override — use animated horizontal light bar instead */
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(0,212,200,0.80) 20%,
+      rgba(56,189,248,0.60) 50%,
+      rgba(0,212,200,0.80) 80%,
+      transparent 100%) !important;
   }
   .hero-banner::before {
     content: '';
@@ -2466,6 +2480,461 @@ st.markdown("""
     onScroll();
   }
   attachBtn();
+})();
+</script>
+""", unsafe_allow_html=True)
+
+# ─── PULSE v6 — Premium Interaction Layer ─────────────────────────────────────
+# Godly.website-inspired: scroll animations, counter fx, ambient effects, glass cards
+st.markdown("""
+<style>
+  /* ════════════════════════════════════════════════════════════════
+     PULSE v6 — Interaction & Animation System
+     Scroll-reveal · Counter animation · Ambient glow · Glass cards
+  ════════════════════════════════════════════════════════════════ */
+
+  /* ── Animated background dot grid (hero ambient) ─────────────── */
+  @keyframes dot-drift {
+    0%   { background-position: 0 0; }
+    100% { background-position: 40px 40px; }
+  }
+  @keyframes aurora-shift {
+    0%,100% { opacity: 0.18; transform: translate(0,0) scale(1); }
+    33%      { opacity: 0.28; transform: translate(30px,-20px) scale(1.06); }
+    66%      { opacity: 0.22; transform: translate(-20px,15px) scale(0.97); }
+  }
+  @keyframes aurora-shift-2 {
+    0%,100% { opacity: 0.12; transform: translate(0,0) scale(1); }
+    50%      { opacity: 0.22; transform: translate(-40px,25px) scale(1.09); }
+  }
+
+  /* ── Scroll-reveal animation classes ────────────────────────────── */
+  @keyframes pulse-fade-up {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes pulse-scale-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .reveal-up   { opacity: 0; animation: pulse-fade-up 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .reveal-fade { opacity: 0; animation: pulse-fade-in 0.45s ease forwards; }
+  .reveal-scale { opacity: 0; animation: pulse-scale-in 0.40s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.12s; }
+  .stagger-3 { animation-delay: 0.20s; }
+  .stagger-4 { animation-delay: 0.28s; }
+  .stagger-5 { animation-delay: 0.36s; }
+
+  /* ── Live pulse ring (data freshness dots) ───────────────────── */
+  @keyframes live-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(0,212,200,0.55); }
+    70%  { box-shadow: 0 0 0 8px rgba(0,212,200,0); }
+    100% { box-shadow: 0 0 0 0 rgba(0,212,200,0); }
+  }
+  .live-dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: #00D4C8; border-radius: 50%;
+    animation: live-ring 2s ease-in-out infinite;
+    vertical-align: middle; margin-right: 5px;
+  }
+  .live-dot.green  { background: #10B981; animation: none;
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.22); }
+  .live-dot.amber  { background: #F5B940;
+    animation: none; box-shadow: 0 0 0 3px rgba(245,185,64,0.22); }
+  .live-dot.red    { background: #EF4444;
+    animation: none; box-shadow: 0 0 0 3px rgba(239,68,68,0.22); }
+
+  /* ── Enhanced glass card ─────────────────────────────────────── */
+  .glass-card {
+    background: rgba(36,67,102,0.72);
+    backdrop-filter: blur(18px) saturate(1.5);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08);
+    transition: transform 0.28s cubic-bezier(0.22,1,0.36,1),
+                box-shadow 0.28s cubic-bezier(0.22,1,0.36,1);
+  }
+  .glass-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,212,200,0.22),
+                inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+
+  /* ── Noise texture overlay (premium grain) ───────────────────── */
+  .noise-overlay::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 128px 128px;
+    pointer-events: none;
+    border-radius: inherit;
+    opacity: 0.45;
+    mix-blend-mode: overlay;
+  }
+
+  /* ── Enhanced KPI card — neon glow on hover ──────────────────── */
+  .kpi-card {
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 50% 0%, rgba(0,212,200,0.10) 0%, transparent 65%);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+  }
+  .kpi-card:hover::after { opacity: 1; }
+
+  /* ── Animated number counter (JS handles the actual counting) ── */
+  .counter-num {
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s ease;
+  }
+
+  /* ── Shimmer skeleton loading ────────────────────────────────── */
+  @keyframes shimmer-slide {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg,
+      rgba(255,255,255,0.04) 0%,
+      rgba(255,255,255,0.10) 50%,
+      rgba(255,255,255,0.04) 100%);
+    background-size: 800px 100%;
+    animation: shimmer-slide 1.6s linear infinite;
+    border-radius: 8px;
+    min-height: 18px;
+  }
+
+  /* ── Gradient border cards ───────────────────────────────────── */
+  .grad-border-card {
+    position: relative;
+    border-radius: 16px;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(0,212,200,0.40) 0%, rgba(56,189,248,0.20) 50%, rgba(167,139,250,0.25) 100%);
+  }
+  .grad-border-card > * {
+    background: var(--dp-card);
+    border-radius: 15px;
+  }
+
+  /* ── Data signal card — animated border ─────────────────────── */
+  @keyframes border-sweep {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .signal-card {
+    position: relative;
+    border-radius: 14px;
+    background: var(--dp-card);
+    padding: 18px 20px;
+    overflow: hidden;
+  }
+  .signal-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 14px;
+    padding: 1px;
+    background: linear-gradient(270deg, #00D4C8, #38BDF8, #A78BFA, #00D4C8);
+    background-size: 300% 300%;
+    animation: border-sweep 5s ease infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* ── Enhanced tab bar — sliding pill ────────────────────────── */
+  [data-testid="stTabs"] [role="tablist"] {
+    position: relative;
+    gap: 2px !important;
+  }
+  button[data-baseweb="tab"] {
+    border-radius: 8px 8px 0 0 !important;
+    transition: background 0.22s ease, color 0.22s ease !important;
+    padding: 8px 14px !important;
+  }
+  button[data-baseweb="tab"][aria-selected="true"] {
+    background: rgba(0,212,200,0.10) !important;
+    color: var(--dp-teal) !important;
+  }
+  button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
+    background: rgba(255,255,255,0.05) !important;
+    color: var(--dp-text-2) !important;
+  }
+
+  /* ── Chart container enhancement ────────────────────────────── */
+  .chart-wrap {
+    background: rgba(22,40,66,0.65);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.07);
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.28);
+    backdrop-filter: blur(4px);
+  }
+  .chart-header {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .10em;
+    color: var(--dp-text-3);
+    padding: 14px 18px 0 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .chart-header .ch-title {
+    color: var(--dp-text-1);
+    font-size: 13.5px; letter-spacing: -.01em;
+    font-weight: 700; text-transform: none;
+  }
+  .chart-header .ch-badge {
+    margin-left: auto; font-size: 10px; font-weight: 700;
+    padding: 2px 9px; border-radius: 20px;
+    background: rgba(0,212,200,0.10); color: var(--dp-teal);
+    border: 1px solid rgba(0,212,200,0.22);
+    text-transform: uppercase; letter-spacing: .08em;
+  }
+
+  /* ── Metric number glow on hover ─────────────────────────────── */
+  .kpi-card:hover .kpi-value {
+    text-shadow: 0 0 24px rgba(0,212,200,0.35);
+    transition: text-shadow 0.3s ease;
+  }
+
+  /* ── Animated section label line ─────────────────────────────── */
+  .section-label::after {
+    animation: pulse-fade-in 0.8s ease 0.2s both;
+  }
+
+  /* ── Tooltip enhancement ──────────────────────────────────────── */
+  .dp-tooltip {
+    position: relative; display: inline-block;
+    cursor: help;
+  }
+  .dp-tooltip-content {
+    display: none;
+    position: absolute; bottom: calc(100% + 8px); left: 50%;
+    transform: translateX(-50%);
+    background: #1A3756; border: 1px solid rgba(0,212,200,0.30);
+    border-radius: 8px; padding: 8px 12px;
+    font-size: 11px; color: var(--dp-text-2);
+    white-space: nowrap; z-index: 9999;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+    backdrop-filter: blur(10px);
+  }
+  .dp-tooltip:hover .dp-tooltip-content { display: block; }
+
+  /* ── Status chip improvement ──────────────────────────────────── */
+  .vdp-status-chip {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .vdp-status-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+
+  /* ── Data table hover rows ────────────────────────────────────── */
+  [data-testid="stDataFrame"] tbody tr:hover td {
+    background: rgba(0,212,200,0.05) !important;
+  }
+
+  /* ── Expander enhancement ────────────────────────────────────── */
+  [data-testid="stExpander"] {
+    transition: box-shadow 0.22s ease, border-color 0.22s ease;
+  }
+  [data-testid="stExpander"]:hover {
+    border-color: rgba(0,212,200,0.25) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.28) !important;
+  }
+
+  /* ── Focus ring on interactive elements ──────────────────────── */
+  button:focus-visible, [role="tab"]:focus-visible {
+    outline: 2px solid rgba(0,212,200,0.55) !important;
+    outline-offset: 2px;
+  }
+
+  /* ── Insight card stagger reveal ─────────────────────────────── */
+  .insight-card { animation: pulse-fade-up 0.45s cubic-bezier(0.22,1,0.36,1) both; }
+
+  /* ── Horizontal rule aesthetic ───────────────────────────────── */
+  hr {
+    border: none !important;
+    border-top: 1px solid rgba(0,212,200,0.15) !important;
+    margin: 20px 0 !important;
+  }
+
+  /* ── Quick-action button glow ────────────────────────────────── */
+  .vdp-qa-btn.primary {
+    box-shadow: 0 0 0 0 rgba(0,212,200,0.40);
+    animation: live-ring 2.5s ease-in-out infinite;
+  }
+
+</style>
+<script>
+/* ── PULSE v6 Interaction Engine ─────────────────────────────────
+   1. Scroll-reveal (IntersectionObserver)
+   2. Animated number counter
+   3. Stagger children of .stagger-children
+   4. Tab bar pill indicator
+   ─────────────────────────────────────────────────────────────── */
+(function(){
+
+  /* 1 ─ Intersection-Observer scroll-reveal ─────────────────── */
+  function initScrollReveal(){
+    if(!window.IntersectionObserver) return;
+    var items = document.querySelectorAll(
+      '.kpi-card, .insight-card, .event-stat, .src-card, ' +
+      '.glass-card, .signal-card, .sh-block, .tab-summary, ' +
+      '.dp-callout, .dp-callout-amber, .dp-callout-purple, .dp-callout-green'
+    );
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){
+          var el = e.target;
+          if(!el.dataset.revealed){
+            el.dataset.revealed = '1';
+            el.style.animation = 'pulse-fade-up 0.50s cubic-bezier(0.22,1,0.36,1) both';
+          }
+          io.unobserve(el);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
+    items.forEach(function(el){
+      if(!el.dataset.revealed){
+        el.style.opacity = '0';
+        io.observe(el);
+      }
+    });
+  }
+
+  /* 2 ─ Number counter animation ────────────────────────────── */
+  function animateCounter(el){
+    var raw = el.textContent || '';
+    var prefix = raw.match(/^[^0-9.,-]*/)[0];
+    var suffix = raw.match(/[^0-9.,]*$/)[0];
+    var numStr = raw.replace(prefix,'').replace(suffix,'').replace(/,/g,'');
+    var target = parseFloat(numStr);
+    if(isNaN(target) || target === 0) return;
+    var decimals = (numStr.indexOf('.') >= 0) ? numStr.split('.')[1].length : 0;
+    var duration = Math.min(1200, Math.max(600, target * 2));
+    var start = null;
+    function step(ts){
+      if(!start) start = ts;
+      var progress = Math.min((ts - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var cur = target * eased;
+      var formatted = decimals > 0
+        ? cur.toFixed(decimals)
+        : Math.floor(cur).toLocaleString();
+      el.textContent = prefix + formatted + suffix;
+      if(progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function initCounters(){
+    if(!window.IntersectionObserver) return;
+    var nums = document.querySelectorAll('.kpi-value, .event-val, [data-counter]');
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting && !e.target.dataset.counted){
+          e.target.dataset.counted = '1';
+          animateCounter(e.target);
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.5 });
+    nums.forEach(function(el){ io.observe(el); });
+  }
+
+  /* 3 ─ Stagger children animation ──────────────────────────── */
+  function initStagger(){
+    document.querySelectorAll('.stagger-children').forEach(function(parent){
+      var kids = parent.children;
+      Array.from(kids).forEach(function(child, i){
+        child.style.opacity = '0';
+        child.style.animation = 'pulse-fade-up 0.45s cubic-bezier(0.22,1,0.36,1) '
+          + (i * 0.08) + 's both';
+      });
+    });
+  }
+
+  /* 4 ─ Ambient aurora effect enhancement ───────────────────── */
+  function initAuroraHero(){
+    var hero = document.querySelector('.hero-banner');
+    if(!hero) return;
+    hero.style.position = 'relative';
+    hero.style.overflow = 'hidden';
+    // Add a secondary aurora orb if not already present
+    if(!hero.querySelector('.hero-aurora-2')){
+      var orb = document.createElement('div');
+      orb.className = 'hero-aurora-2';
+      orb.style.cssText = [
+        'position:absolute','bottom:-60px','left:-40px',
+        'width:280px','height:280px','border-radius:50%',
+        'background:radial-gradient(circle,rgba(56,189,248,0.14) 0%,transparent 70%)',
+        'pointer-events:none',
+        'animation:aurora-shift-2 7s ease-in-out infinite'
+      ].join(';');
+      hero.appendChild(orb);
+    }
+  }
+
+  /* 5 ─ Live status dots pulse (sidebar pipeline dots) ──────── */
+  function initLiveDots(){
+    // Find sidebar text nodes containing green circle emoji and add pulse
+    document.querySelectorAll('[data-testid="stSidebar"] p, [data-testid="stSidebar"] span').forEach(function(el){
+      if(el.textContent && el.textContent.includes('🟢')){
+        el.style.animation = 'none'; // handled by sidebar CSS
+      }
+    });
+  }
+
+  /* Bootstrap — run after DOM is ready, re-run on Streamlit rerenders */
+  function bootstrap(){
+    initScrollReveal();
+    initCounters();
+    initStagger();
+    initAuroraHero();
+    initLiveDots();
+  }
+
+  if(document.readyState !== 'loading'){
+    bootstrap();
+    setTimeout(bootstrap, 800);
+    setTimeout(bootstrap, 2000);
+  } else {
+    document.addEventListener('DOMContentLoaded', function(){
+      bootstrap();
+      setTimeout(bootstrap, 800);
+    });
+  }
+
+  /* Re-run on Streamlit dynamic updates (tab switches, rerenders) */
+  if(window.MutationObserver){
+    var _lastRun = 0;
+    new MutationObserver(function(){
+      var now = Date.now();
+      if(now - _lastRun > 400){
+        _lastRun = now;
+        setTimeout(bootstrap, 100);
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
 })();
 </script>
 """, unsafe_allow_html=True)
@@ -4327,8 +4796,8 @@ def event_stat(val, label, icon: str = "", date: str = "") -> str:
 
 
 def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
-    """Deep Ocean dark chart theme — Dana Point PULSE v8.
-    Full dark mode: transparent bg, ocean-teal palette, crisp grid.
+    """Deep Ocean dark chart theme — Dana Point PULSE v9.
+    Full dark mode: transparent bg, vibrant ocean-teal palette, premium grid.
     """
     _font  = "Syne, DM Sans, Inter, system-ui, sans-serif"
     _title = "Syne, Outfit, DM Sans, system-ui, sans-serif"
@@ -4349,20 +4818,21 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
         height  = height,
         autosize = True,
         margin  = dict(l=14, r=20, t=52, b=14, autoexpand=True),
-        transition = {"duration": 600, "easing": "cubic-in-out"},
+        transition = {"duration": 500, "easing": "cubic-in-out"},
         legend = dict(
             orientation = "h",
             yanchor = "bottom", y = 1.04,
             xanchor = "left",   x = 0,
-            font    = dict(size=11.5, family=_font, color="#5A7A95"),
+            font    = dict(size=11.5, family=_font, color="#8AAEC6"),
             bgcolor = "rgba(0,0,0,0)",
             borderwidth = 0,
-            itemsizing = "constant",
+            itemsizing  = "constant",
+            tracegroupgap = 4,
         ),
         hoverlabel = dict(
-            bgcolor     = "#264B6E",
-            bordercolor = "rgba(0,212,200,0.55)",
-            font        = dict(size=13.5, family=_font, color="#EFF6FF"),
+            bgcolor     = "rgba(20,50,80,0.96)",
+            bordercolor = "rgba(0,212,200,0.60)",
+            font        = dict(size=13, family=_font, color="#EFF6FF"),
             namelength  = -1,
             align       = "left",
         ),
@@ -4372,21 +4842,23 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
             color       = "#5A7A95",
             activecolor = "#00D4C8",
         ),
+        dragmode = "zoom",
     )
     fig.update_xaxes(
         showgrid    = False,
         zeroline    = False,
         tickfont    = dict(size=11, family=_font, color="#8AAEC6"),
-        linecolor   = "rgba(255,255,255,0.12)",
+        linecolor   = "rgba(255,255,255,0.10)",
         linewidth   = 1,
         showline    = True,
         ticks       = "outside",
-        ticklen     = 4,
-        tickcolor   = "rgba(255,255,255,0.10)",
+        ticklen     = 3,
+        tickcolor   = "rgba(255,255,255,0.08)",
         automargin  = True,
+        tickangle   = 0,
     )
     fig.update_yaxes(
-        gridcolor   = "rgba(255,255,255,0.06)",
+        gridcolor   = "rgba(255,255,255,0.05)",
         gridwidth   = 1,
         griddash    = "dot",
         zeroline    = False,
@@ -4395,10 +4867,14 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
         ticks       = "",
         automargin  = True,
     )
-    # ── Deep Ocean fills: organic gradient fills + smooth spline lines ────
+    # ── Vibrant fill palette with stronger gradients ──────────────────────
     _fill_palette = [
-        "rgba(0,212,200,0.12)", "rgba(245,185,64,0.10)", "rgba(16,185,129,0.10)",
-        "rgba(167,139,250,0.10)", "rgba(251,146,60,0.10)",
+        "rgba(0,212,200,0.16)",   "rgba(245,185,64,0.14)",
+        "rgba(16,185,129,0.14)",  "rgba(167,139,250,0.13)",
+        "rgba(251,146,60,0.14)",  "rgba(56,189,248,0.14)",
+    ]
+    _line_palette = [
+        "#00D4C8", "#F5B940", "#10B981", "#A78BFA", "#FB923C", "#38BDF8",
     ]
     _fill_idx = 0
     for trace in fig.data:
@@ -4409,35 +4885,47 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
                 trace.fill = "tozeroy"
                 _c = (getattr(trace.line, "color", None) or _colorway[0])
                 if "rgb(" in str(_c):
-                    trace.fillcolor = _c.replace("rgb(", "rgba(").replace(")", ",0.09)")
+                    # Convert existing rgb to rgba with stronger opacity
+                    trace.fillcolor = _c.replace("rgb(", "rgba(").replace(")", ",0.13)")
                 else:
                     trace.fillcolor = _fill_palette[_fill_idx % len(_fill_palette)]
+                    # Ensure line color matches fill color
+                    if not getattr(trace.line, "color", None):
+                        try: trace.line.color = _line_palette[_fill_idx % len(_line_palette)]
+                        except Exception: pass
                     _fill_idx += 1
             # Smooth spline for organic painted feel
             if hasattr(trace, "line") and trace.line is not None:
                 if not getattr(trace.line, "shape", None):
                     try:
                         trace.line.shape = "spline"
-                        trace.line.smoothing = 0.85
+                        trace.line.smoothing = 0.8
                     except Exception:
                         pass
-                if getattr(trace.line, "width", None) is None or getattr(trace.line, "width", 2) < 2:
-                    try:
+                try:
+                    if (getattr(trace.line, "width", None) is None or
+                            getattr(trace.line, "width", 2) < 2):
                         trace.line.width = 2.5
-                    except Exception:
-                        pass
+                except Exception:
+                    pass
         elif ttype == "Bar":
             try:
                 if not getattr(trace.marker, "cornerradius", None):
-                    trace.marker.cornerradius = 4
+                    trace.marker.cornerradius = 5
             except Exception:
                 pass
-    # ── Title styling ──────────────────────────────────────────────────────
+            # Add subtle opacity variation for bar depth
+            try:
+                if getattr(trace.marker, "opacity", None) is None:
+                    trace.marker.opacity = 0.88
+            except Exception:
+                pass
+    # ── Title styling (white text on dark bg) ─────────────────────────────
     if fig.layout.title and fig.layout.title.text:
         fig.update_layout(
-            title_font = dict(family=_title, size=15, color="#07111F"),
+            title_font = dict(family=_title, size=14, color="#C8E0F2"),
             title_x    = 0,
-            title_pad  = dict(l=4, t=6),
+            title_pad  = dict(l=4, t=4),
         )
     return fig
 

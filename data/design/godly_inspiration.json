@@ -1,0 +1,80 @@
+{
+  "fetched_at": "2026-04-04T16:18:11.930522",
+  "source": "https://godly.website",
+  "live_links_found": 0,
+  "live_site_paths": [],
+  "design_patterns": [
+    {
+      "source": "godly.website",
+      "category": "data_cards",
+      "pattern": "Glassmorphism stat cards",
+      "description": "Frosted glass cards with backdrop-filter: blur(18px), subtle 1px border at rgba(255,255,255,0.10), inner highlight via box-shadow inset 0 1px 0 rgba(255,255,255,0.08). Hover: translateY(-4px) + glow ring 0 0 0 1px accent-color.",
+      "css_snippet": "backdrop-filter: blur(18px) saturate(1.5);\nborder: 1px solid rgba(255,255,255,0.10);\nbox-shadow: 0 4px 24px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08);"
+    },
+    {
+      "source": "godly.website",
+      "category": "color_palette",
+      "pattern": "Aurora gradient mesh backgrounds",
+      "description": "Multi-layer radial gradients layered over dark base (#0D1B2A–#1A3756). Orbs at corners: teal/cyan top-right, blue/indigo bottom-left. Animation: 6–8s ease-in-out infinite scale + translate for living feel.",
+      "css_snippet": "background:\n  radial-gradient(ellipse at 80% 10%, rgba(0,212,200,0.20) 0%, transparent 50%),\n  radial-gradient(ellipse at 10% 90%, rgba(56,189,248,0.15) 0%, transparent 45%),\n  linear-gradient(160deg, #0D1B2A 0%, #1A3756 100%);"
+    },
+    {
+      "source": "godly.website",
+      "category": "typography",
+      "pattern": "Tabular-numeral KPI display",
+      "description": "Large KPI numbers use font-variant-numeric: tabular-nums for alignment. Font: Syne or Outfit at 800 weight, letter-spacing -0.04em. Color: pure white #FFFFFF with text-shadow: 0 0 24px accent-color for glow.",
+      "css_snippet": "font-variant-numeric: tabular-nums;\nfont-size: clamp(28px, 3.5vw, 48px);\nfont-weight: 800;\nletter-spacing: -0.04em;\ntext-shadow: 0 0 24px rgba(0,212,200,0.35);"
+    },
+    {
+      "source": "godly.website",
+      "category": "navigation",
+      "pattern": "Floating pill navigation with indicator",
+      "description": "Tab bar uses a sliding pill indicator behind active tab. Pill uses background: accent-color at 10% opacity + border-radius: 8px. Transition: left 0.25s cubic-bezier(0.22,1,0.36,1) for smooth slide.",
+      "css_snippet": "button[role='tab'][aria-selected='true'] {\n  background: rgba(0,212,200,0.12);\n  border-radius: 8px;\n  color: #00D4C8;\n  transition: background 0.25s cubic-bezier(0.22,1,0.36,1);\n}"
+    },
+    {
+      "source": "godly.website",
+      "category": "animations",
+      "pattern": "Scroll-triggered stagger reveal",
+      "description": "Cards use IntersectionObserver to trigger fade-up animations on scroll. Each card: opacity 0 → 1, translateY 20px → 0, duration 0.55s. Stagger delay: 0.08s per card. Easing: cubic-bezier(0.22,1,0.36,1) (spring).",
+      "css_snippet": "@keyframes fade-up {\n  from { opacity: 0; transform: translateY(20px); }\n  to   { opacity: 1; transform: translateY(0); }\n}\n.reveal { animation: fade-up 0.55s cubic-bezier(0.22,1,0.36,1) both; }"
+    },
+    {
+      "source": "godly.website",
+      "category": "data_visualization",
+      "pattern": "Gradient area fills under line charts",
+      "description": "Area fill under line chart uses gradient from accent-color at 18% opacity at top to 0% at bottom (tozeroy fill in Plotly). Line width 2.5px, spline smoothing 0.8. Hover tooltip: dark glass background rgba(20,50,80,0.96) with colored border.",
+      "css_snippet": "fillcolor: rgba(0,212,200,0.16) → transparent (tozeroy)"
+    },
+    {
+      "source": "godly.website",
+      "category": "scrolling",
+      "pattern": "Smooth custom scrollbar",
+      "description": "Scrollbar: 5px wide, rounded thumb, accent-color at 22% opacity. Track: transparent. Hover: accent-color at 45%. Combined with scroll-behavior: smooth on the container.",
+      "css_snippet": "::-webkit-scrollbar { width: 5px; }\n::-webkit-scrollbar-track { background: transparent; }\n::-webkit-scrollbar-thumb { background: rgba(0,212,200,0.22); border-radius: 3px; }\n::-webkit-scrollbar-thumb:hover { background: rgba(0,212,200,0.45); }"
+    },
+    {
+      "source": "godly.website",
+      "category": "color_contrast",
+      "pattern": "Three-tier text hierarchy",
+      "description": "Primary text: #F4FAFF (near white). Secondary text: #C8E0F2 (light blue-gray). Tertiary/muted: #8AAEC6 (mid blue-gray). All pass WCAG AA contrast on dark backgrounds. Accent color: #00D4C8 (teal) for links, highlights, active states.",
+      "css_snippet": "--text-1: #F4FAFF;\n--text-2: #C8E0F2;\n--text-3: #8AAEC6;\n--accent: #00D4C8;"
+    },
+    {
+      "source": "godly.website",
+      "category": "cards",
+      "pattern": "Animated gradient border on signal cards",
+      "description": "Signal/alert cards use an animated gradient border that rotates. Technique: CSS mask to show only border with -webkit-mask-composite: xor. Gradient animates via background-position over 5s infinite. Works on Chrome/Safari — fallback to static accent border on Firefox.",
+      "css_snippet": ".signal-card::before {\n  background: linear-gradient(270deg, #00D4C8, #38BDF8, #A78BFA, #00D4C8);\n  background-size: 300% 300%;\n  animation: border-sweep 5s ease infinite;\n  -webkit-mask: linear-gradient(#fff 0 0) content-box,\n                linear-gradient(#fff 0 0);\n  -webkit-mask-composite: xor;\n}"
+    },
+    {
+      "source": "godly.website",
+      "category": "microinteractions",
+      "pattern": "Counter animation on KPI numbers",
+      "description": "KPI numbers count up from 0 using requestAnimationFrame when they enter viewport. Uses IntersectionObserver (threshold 0.5). Duration scales with target value. Easing: cubic deceleration (1 - (1-t)^3). Preserves prefix ($) and suffix (%,×).",
+      "css_snippet": "// JS-based — see PULSE v6 interaction engine in app.py"
+    }
+  ],
+  "applied_to": "dashboard/app.py — PULSE v6 interaction layer",
+  "note": "This file is design inspiration only — no analytics data. Re-run to refresh live site links from godly.website gallery. Curated patterns are maintained manually and applied to app.py CSS/JS."
+}
