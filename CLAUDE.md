@@ -294,6 +294,17 @@ git add <specific files> && git commit -m "description" && git push origin main
 
 ---
 
+## John Picou Writing Style
+
+When drafting any communication (emails, summaries, reports) on behalf of John Picou:
+
+- **Never use em dashes** ("—"). Use a comma, period, or restructure the sentence instead.
+- Tone: warm, direct, and professional. Not stiff or corporate.
+- Sign-offs: "Sincerely, John Picou / GloCon Solutions LLC"
+- AP style for all user-facing text (no Oxford comma, numerals for 10+, etc.)
+
+---
+
 ## Self-Improvement Protocol
 
 After every session or error correction:
@@ -327,6 +338,13 @@ After every session or error correction:
 - `build_table_relationships.py` is the LAST step (step 20) in `run_pipeline.py` — it auto-rebuilds ALL 120+ relationships from the RELATIONSHIPS registry. Always add new entries there when adding tables.
 - `table_relationships.created_at` is the correct column name (not `updated_at`) — check schema with `PRAGMA table_info(table_relationships)` before writing UPSERT SQL.
 - Multi-model AI: `stream_ai_response(prompt, model_key, _ai_keys)` routes to Anthropic/OpenAI/Google/Perplexity. `_ai_keys` is computed in the sidebar; `selected_model` is stored in session_state. Both have module-level defaults before sidebar renders to prevent NameError.
+- NEVER use the Write tool on `.env` — it overwrites the file and destroys live API keys. Always Read first; if the file exists, use Edit to add/change only specific lines.
+- Bare `except:` blocks silently hide errors; use specific exceptions like `except ValueError:` to preserve traceback visibility and enable debugging.
+- Add schema version tracking (db_schema_version table) to track migrations; increment DB_SCHEMA_VERSION constant when schema changes occur.
+- Add docstrings to cached data loaders (`@st.cache_data`) to clarify what each function returns and what table(s) it reads from.
+- Add logging infrastructure at module load (not in functions) to capture structured logs for production diagnostics; use `logger.info()`/`.warning()` for key events.
+- Helper functions used in multiple tabs (e.g., `segment_image_card`) must be at module level — defining them inside a `with tab:` block causes NameError if called from outside that block.
+- TikTok chart color must be `#69C9D0` (TikTok teal) not `#010101` — near-black is invisible on the dark theme background.
 
 ---
 
@@ -364,3 +382,5 @@ After every session or error correction:
 | 2026-03-30 | EIA gas prices + TSA checkpoint data sources (pipeline steps 16+17); intel panels added to tab_sp and tab_dl; gas price correlation section in Market Intelligence; EIA/TSA source health cards in Data Vault; updated DB inventory; EIA/TSA sidebar status dots | Claude + John Picou |
 | 2026-03-31 | Multi-model AI engine (Claude + GPT-4o + Gemini + Perplexity Sonar — 8 models); universal stream_ai_response() router; sidebar model selector; Live Market Intelligence panel; all charts downloadable (scale=3, 1600×800); 7 new CSV download buttons; style_fig v4 | Claude + John Picou |
 | 2026-03-31 | Data organization standard: all raw data in data/<source>/ canonical dirs; STR files moved to data/str/; build_table_relationships.py (step 20, always-last); 120 relationships (from 37); FRED_API_KEY placeholder; Standard Process section in CLAUDE.md | Claude + John Picou |
+| 2026-04-16 | Code quality audit & enhancements: bare except:blocks → ValueError; schema version tracking (db_schema_version table); return type hints on 10+ functions; logging infrastructure + structured logger; docstrings on data loaders; deleted orphaned load_str_monthly_sqlite_broken.py | Claude |
+| 2026-04-16 | Visitor Intelligence frontend design upgrade: vi-snapshot strip (funnel panel with progress bars), dynamic cluster hero cards, kpi_card() upgrade for all 6 visitor KPIs, overnight/day-trip stacked bar visualization, segment_image_card() moved to module level, TikTok chart color fix (#69C9D0), sub-tab renamed to "Spending & Attribution" | Claude + John Picou |

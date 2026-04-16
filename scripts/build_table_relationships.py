@@ -547,6 +547,25 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("later_fb_profile_growth",  "datafy_social_traffic_sources","cross_ref",     "data_date",
      "Facebook reach cross-referenced with social traffic sources from GA4 analytics"),
+
+    # ── Strategy Goals ─────────────────────────────────────────────────────────
+    ("strategy_goals",           "kpi_daily_summary",            "derived_from",  "as_of_date",
+     "RevPAR and ADR goals track progress against kpi_daily_summary trailing averages"),
+
+    ("strategy_goals",           "kpi_compression_quarterly",    "cross_ref",     "quarter",
+     "Compression-day goals track progress against kpi_compression_quarterly counts"),
+
+    ("strategy_goals",           "datafy_overview_kpis",         "cross_ref",     "report_period",
+     "Visitor trip and OOS share goals track progress against Datafy annual KPIs"),
+
+    ("strategy_goals",           "datafy_attribution_media_kpis","cross_ref",     "report_period",
+     "Media ROAS goals track progress against Datafy media attribution ROAS values"),
+
+    ("strategy_goals",           "fact_str_metrics",             "derived_from",  "as_of_date",
+     "TBID revenue goals compute current progress from fact_str_metrics room revenue × 0.0125"),
+
+    ("strategy_goals",           "insights_daily",               "enriches",      "as_of_date",
+     "Strategy goal progress informs and contextualizes daily AI insights for all audiences"),
 ]
 
 

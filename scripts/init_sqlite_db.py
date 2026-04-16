@@ -1,9 +1,12 @@
 import os
 import sqlite3
+from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
+
+DB_SCHEMA_VERSION = 3  # Increment when schema changes occur
 
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
@@ -37,8 +40,21 @@ CREATE TABLE IF NOT EXISTS load_log (
 );
 """)
 
+cur.execute("""
+CREATE TABLE IF NOT EXISTS db_schema_version (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    version INTEGER NOT NULL,
+    migration_date TEXT DEFAULT (datetime('now')),
+    description TEXT,
+    UNIQUE(version)
+);
+""")
+
+cur.execute("INSERT OR IGNORE INTO db_schema_version (version, description) VALUES (?, ?)",
+    (DB_SCHEMA_VERSION, f"Schema initialized on {datetime.now().isoformat()}"))
+
 conn.commit()
 conn.close()
 
-print(f"Initialized SQLite DB at {DB_PATH}")
+print(f"Initialized SQLite DB at {DB_PATH} (schema version {DB_SCHEMA_VERSION})")
 

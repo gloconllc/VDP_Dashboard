@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-09T13:25:51.346886",
+  "fetched_at": "2026-04-12T21:42:53.701714",
   "source": "https://godly.website",
   "live_links_found": 0,
   "live_site_paths": [],
@@ -73,6 +73,41 @@
       "pattern": "Counter animation on KPI numbers",
       "description": "KPI numbers count up from 0 using requestAnimationFrame when they enter viewport. Uses IntersectionObserver (threshold 0.5). Duration scales with target value. Easing: cubic deceleration (1 - (1-t)^3). Preserves prefix ($) and suffix (%,×).",
       "css_snippet": "// JS-based — see PULSE v6 interaction engine in app.py"
+    },
+    {
+      "source": "railway.com",
+      "category": "color_palette",
+      "pattern": "Railway deep purple-dark foundation",
+      "description": "Background: hsl(250,24%,9%) = #13111C (deep purple-tinted dark). Secondary BG: hsl(250,21%,11%). Foreground: white. Accents: blue hsl(220,80%,55%), cyan hsl(180,50%,44%), pink hsl(270,60%,52%), green hsl(152,38%,42%). Hero overlay: purple rgba(33,0,75,0.24) + pink rgba(209,21,111,0.16). Shadows: 0 0 30px hsla(0,0%,30%,.25). Applied to PULSE: purple tint in conic gradient ambient glow.",
+      "css_snippet": "--railway-bg: hsl(250, 24%, 9%);\n--railway-accent-blue: hsl(220, 80%, 55%);\n--railway-accent-cyan: hsl(180, 50%, 44%);\nbackground: conic-gradient(from 0deg at 65% 35%,\n  rgba(0,212,200,0.04), rgba(56,189,248,0.03),\n  rgba(167,139,250,0.03), rgba(0,212,200,0.04));"
+    },
+    {
+      "source": "linear.app",
+      "category": "typography",
+      "pattern": "Linear 4-tier CSS variable text hierarchy",
+      "description": "Four-tier text color hierarchy via CSS custom properties for flexible theming. --color-text-primary (headings/values), --color-text-secondary (labels), --color-text-tertiary (metadata), --color-text-quaternary (disabled/muted). Typography scale: --title-1 through --title-9 + --text-regular/small/mini/micro. text-wrap: balance on headings for better line breaks. letter-spacing and line-height customized per scale level.",
+      "css_snippet": "--text-1: #F4FAFF;   /* primary: values, headings */\n--text-2: #C8E0F2;   /* secondary: labels */\n--text-3: #8EC4DC;   /* tertiary: metadata */\n--text-4: #5A7A95;   /* quaternary: muted/disabled */\nh1, h2, h3 { text-wrap: balance; }\n.kpi-label { text-wrap: balance; }"
+    },
+    {
+      "source": "chartmogul.com",
+      "category": "data_visualization",
+      "pattern": "Slope-line forecasting with dotted projections",
+      "description": "Revenue forecasts use dotted line treatment (dash='dot') in Plotly to distinguish historical (solid) from projected (dashed) data. Cohort-based color coding: each segment (plan tier, feeder market) gets its own distinct color. Slope annotations show 'If nothing changes' baseline vs. scenario lines. Applied to PULSE: forward demand calendar proj ADR uses distinct styling.",
+      "css_snippet": "# Plotly trace for forecast/projection:\ngo.Scatter(line=dict(dash='dot', width=1.5, color='rgba(0,212,200,0.55)'),\n           name='Projected', fill=None)"
+    },
+    {
+      "source": "posthog.com",
+      "category": "typography",
+      "pattern": "IBM Plex Sans Variable analytics font stack",
+      "description": "Analytics products use IBM Plex Sans Variable (variable font, wght 100-700) for body text — it reads clearly at small sizes in data-dense UIs. Monospace: SFMono-Regular > Menlo > Monaco > Consolas for code/data values. Prose sizing: 1rem base, responsive with prose-sm (0.875rem) and prose-lg (1.125rem). Applied to PULSE: JetBrains Mono for KPI values, Inter for labels (equivalent stack).",
+      "css_snippet": "font-family: 'IBM Plex Sans Variable', 'Inter', system-ui, -apple-system, sans-serif;\nfont-family: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace; /* data */"
+    },
+    {
+      "source": "retool.com",
+      "category": "color_palette",
+      "pattern": "Retool near-black high-contrast analytics base",
+      "description": "Background: #151515 (near-black, not pure black — prevents eye fatigue). Surfaces use CSS custom properties: surface-text-primary, surface-background-base. Typography: PxGrotesk Bold for display/headings, SaansVF variable font for body. Gradient hero: 'cascading waterfalls' illustration with dark overlay. Applied to PULSE: hero-banner uses #0F2540 as near-black alternative to #1A3756.",
+      "css_snippet": "/* Near-black base — avoid pure #000 for eye fatigue */\n--surface-bg: #151515;\n/* Hero uses deeper shade for contrast */\n.hero-banner { background: #0F2540; }"
     }
   ],
   "applied_to": "dashboard/app.py — PULSE v6 interaction layer",

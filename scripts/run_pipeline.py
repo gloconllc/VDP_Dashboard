@@ -89,6 +89,8 @@ STEPS = [
     ("fetch_tsa",         os.path.join(BASE_DIR, "fetch_tsa_data.py"),          False),
     ("fetch_noaa_marine", os.path.join(BASE_DIR, "fetch_noaa_marine.py"),         False),
     ("fetch_census_acs",  os.path.join(BASE_DIR, "fetch_census_acs.py"),         False),
+    # Strategy goal progress — refresh current_value for all active goals from live data
+    ("strategy_progress", os.path.join(BASE_DIR, "compute_strategy_progress.py"), False),
     # Design inspiration — no DB writes; saves to data/design/godly_inspiration.json
     ("fetch_godly_design", os.path.join(BASE_DIR, "fetch_godly_design.py"),      False),
     # ALWAYS LAST — rebuilds all table relationships after every pipeline run
