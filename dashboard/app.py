@@ -8399,6 +8399,36 @@ with st.sidebar:
     st.markdown(f"{_tsa_dot} TSA Checkpoint &nbsp;·&nbsp; {_tsa_lbl}")
     st.markdown(f"{_noaa_sb_dot} NOAA Ocean &nbsp;·&nbsp; {_noaa_sb_lbl}")
     st.markdown(f"{_cen_sb_dot} Census ACS &nbsp;·&nbsp; {_cen_sb_lbl}")
+
+    # ── Data Quality indicator ─────────────────────────────────────────────────
+    try:
+        _dq_conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=5)
+        _dq_checks = [
+            ("occ decimal range",   "SELECT COUNT(*) FROM fact_str_metrics WHERE metric_name='occ' AND (metric_value > 1.5 OR metric_value < 0)"),
+            ("kpi occ_pct range",   "SELECT COUNT(*) FROM kpi_daily_summary WHERE occ_pct > 100 OR occ_pct < 0"),
+            ("group occ range",     "SELECT COUNT(*) FROM fact_str_group_metrics WHERE metric_name IN ('Occupancy (%)','occ_pct') AND metric_value > 1.5 AND metric_value IS NOT NULL"),
+            ("adr group range",     "SELECT COUNT(*) FROM fact_str_group_metrics WHERE metric_name IN ('ADR','adr') AND metric_value > 2000 AND metric_value IS NOT NULL"),
+            ("insight duplicates",  "SELECT COUNT(*) FROM (SELECT as_of_date,audience,category,COUNT(*) AS c FROM insights_daily GROUP BY as_of_date,audience,category HAVING c>1)"),
+        ]
+        _dq_fail = 0
+        for _dq_label, _dq_sql in _dq_checks:
+            try:
+                _dq_cnt = _dq_conn.execute(_dq_sql).fetchone()[0]
+                if _dq_cnt > 0:
+                    _dq_fail += 1
+            except Exception:
+                pass
+        _dq_conn.close()
+        if _dq_fail == 0:
+            _dq_dot, _dq_lbl = "🟢", "All checks pass"
+        elif _dq_fail <= 2:
+            _dq_dot, _dq_lbl = "🟡", f"{_dq_fail} issue(s) — run pipeline"
+        else:
+            _dq_dot, _dq_lbl = "🔴", f"{_dq_fail} issues — re-import data"
+        st.markdown(f"{_dq_dot} Data Quality &nbsp;·&nbsp; {_dq_lbl}")
+    except Exception:
+        st.markdown("⚫ Data Quality &nbsp;·&nbsp; Unable to check")
+
     st.caption(f"Last ETL run: {last_log}")
 
     if not df_daily.empty:

@@ -1,0 +1,24 @@
+Data Quality Audit — 2026-06-09
+Database: /home/user/VDP_Dashboard/data/analytics.sqlite
+============================================================
+
+[PASS] ✓  occ decimal range
+[PASS] ✓  adr range
+[FAIL] ✗  revpar range (1 bad rows)
+       → RevPAR should be $20–$1,500. Out-of-range values suggest unit mismatch or data corruption.
+[PASS] ✓  kpi occ_pct range
+[FAIL] ✗  group occ range (436 bad rows)
+       → Group segment occupancy should be stored as decimal 0.0–1.0. Values > 1.5 are room-night counts stored in the wrong field.
+[PASS] ✓  stvr occ range
+[PASS] ✓  bts passengers
+[PASS] ✓  insights count
+[PASS] ✓  insight duplicates
+[FAIL] ✗  adr group range (396 bad rows)
+       → Group ADR should be $0–$2,000. Large values (millions) indicate revenue totals stored in the ADR field.
+[PASS] ✓  kpi daily rows
+[PASS] ✓  insights rows
+
+============================================================
+Summary: 9 PASS  |  3 FAIL  |  0 SKIP
+
+3 check(s) failed. Review the items above and re-run the pipeline.

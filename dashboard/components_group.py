@@ -1350,20 +1350,32 @@ def _chart_group_event_correlation(df_group: pd.DataFrame) -> go.Figure:
         return fig
 
     latest = df_group["as_of_date"].max()
+    # occ is stored as decimal (0.688 = 68.8%) — multiply by 100.
+    # Metric name may be 'occ_pct' (new loader) or 'Occupancy (%)' (legacy).
+    occ_mask = df_group["metric_name"].isin(["occ_pct", "Occupancy (%)"])
+    raw = df_group[
+        (df_group["as_of_date"] == latest) &
+        (df_group["segment"] == "Grp.") &
+        occ_mask
+    ].copy()
+    # Values already stored as decimal (≤1.0) → multiply by 100.
+    # If legacy data was mistakenly stored as room-night counts (>100), reject it.
+    raw["occ_pct"] = raw["metric_value"].apply(
+        lambda v: v * 100 if pd.notna(v) and 0 <= v <= 1.5 else (v if pd.notna(v) and 0 < v <= 100 else None)
+    )
     prop_group = (
-        df_group[
-            (df_group["as_of_date"] == latest) &
-            (df_group["segment"] == "Grp.") &
-            (df_group["metric_name"] == "Occupancy (%)")
-        ]
-        .groupby("property")["metric_value"].sum()
+        raw.dropna(subset=["occ_pct"])
+        .groupby("property")["occ_pct"].mean()
         .sort_values(ascending=True)
         .tail(10)
     )
 
     if prop_group.empty:
         fig = _dark_fig(height=360)
-        fig.add_annotation(text="No group occupancy data for latest date", showarrow=False)
+        fig.add_annotation(
+            text="Group occupancy data pending re-import.<br>Re-run the pipeline with the latest STR multi-segment export.",
+            showarrow=False, font=dict(size=12, color="#94A3B8"),
+        )
         return fig
 
     # Shorten long names
@@ -1391,7 +1403,7 @@ def _chart_group_event_correlation(df_group: pd.DataFrame) -> go.Figure:
         showlegend=False,
         margin=dict(l=14, r=60, t=56, b=36, autoexpand=True),
     )
-    fig.update_xaxes(title_text="Group Occupancy (%)", range=[0, prop_group.max() * 1.25])
+    fig.update_xaxes(title_text="Group Occupancy (%)", range=[0, min(prop_group.max() * 1.25, 100)])
     fig.update_yaxes(automargin=True, tickfont=dict(size=10))
     return fig
 
@@ -1405,12 +1417,16 @@ def _chart_property_group_performance(df_group: pd.DataFrame) -> go.Figure:
 
     latest = df_group["as_of_date"].max()
     latest_df = df_group[df_group["as_of_date"] == latest]
+    occ_mask = latest_df["metric_name"].isin(["occ_pct", "Occupancy (%)"])
 
     prop_data = []
     for prop in latest_df["property"].unique():
         sub = latest_df[latest_df["property"] == prop]
-        grp_occ   = sub[(sub["segment"] == "Grp.")   & (sub["metric_name"] == "Occupancy (%)")]["metric_value"].sum()
-        total_occ = sub[sub["metric_name"] == "Occupancy (%)"]["metric_value"].sum()
+        # Use only rows with valid occupancy metric names; filter out room-night counts (>1.5 as decimal, >100 as pct)
+        grp_sub   = sub[(sub["segment"] == "Grp.")  & occ_mask & sub["metric_value"].between(0, 1.5)]
+        total_sub = sub[(sub["segment"] == "Total") & occ_mask & sub["metric_value"].between(0, 1.5)]
+        grp_occ   = grp_sub["metric_value"].sum()
+        total_occ = total_sub["metric_value"].sum()
         if total_occ > 0:
             prop_data.append({"property": prop, "group_pct": grp_occ / total_occ * 100})
 
@@ -1451,24 +1467,38 @@ def _chart_property_group_performance(df_group: pd.DataFrame) -> go.Figure:
 
 
 def _chart_segment_occupancy_heatmap(df_group: pd.DataFrame) -> go.Figure:
-    """Heatmap: Property × Segment Occupancy — latest date."""
+    """Heatmap: Property × Segment Occupancy — latest date.
+
+    occ is stored as decimal (0.688 = 68.8%); multiplied by 100 before display.
+    Values > 1.5 (room-night counts from malformed imports) are treated as invalid.
+    """
     if df_group.empty:
         fig = _dark_fig(height=420)
         fig.add_annotation(text="No group segment data available", showarrow=False)
         return fig
 
     latest = df_group["as_of_date"].max()
+    occ_mask = df_group["metric_name"].isin(["occ_pct", "Occupancy (%)"])
     latest_df = df_group[
         (df_group["as_of_date"] == latest) &
-        (df_group["metric_name"] == "Occupancy (%)")
-    ]
+        occ_mask
+    ].copy()
+
+    # occ stored as decimal (0.0–1.0); multiply by 100 → percentage.
+    # Reject legacy room-night counts stored in this field (value > 1.5).
+    latest_df = latest_df[latest_df["metric_value"].between(0, 1.5)].copy()
+    latest_df["occ_pct"] = latest_df["metric_value"] * 100
+
     heatmap_pivot = latest_df.pivot_table(
         index="property", columns="segment",
-        values="metric_value", aggfunc="first"
+        values="occ_pct", aggfunc="first"
     )
     if heatmap_pivot.empty:
         fig = _dark_fig(height=420)
-        fig.add_annotation(text="No occupancy heatmap data available", showarrow=False)
+        fig.add_annotation(
+            text="Segment occupancy data pending re-import.<br>Re-run the pipeline with the latest STR multi-segment export.",
+            showarrow=False, font=dict(size=12, color="#94A3B8"),
+        )
         return fig
 
     # Sort by group occupancy; shorten long names
@@ -1491,7 +1521,7 @@ def _chart_segment_occupancy_heatmap(df_group: pd.DataFrame) -> go.Figure:
             thickness=12, len=0.75, x=1.01,
             tickfont=dict(size=10, color=_FONT_CLR),
         ),
-        text=[[f"{v:.0f}%" if v == v else "" for v in row] for row in heatmap_pivot.values],
+        text=[[f"{v:.0f}%" if pd.notna(v) else "" for v in row] for row in heatmap_pivot.values],
         texttemplate="%{text}",
         textfont=dict(size=9.5, color="#0F172A"),
         hovertemplate="<b>%{y}</b><br>%{x}: %{z:.1f}%<extra></extra>",

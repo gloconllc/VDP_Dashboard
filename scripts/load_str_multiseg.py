@@ -137,13 +137,15 @@ def parse_seg_sheet(df: pd.DataFrame, grain: str) -> list[tuple]:
     if len(segs) < 4:
         segs = ["Trans.", "Grp.", "Cont.", "Total"]
 
+    # metric_name uses "Occupancy (%)" to match the DB column values expected by the dashboard charts.
+    # occ values from STR Excel are already in decimal form (0.0–1.0); store as-is.
     metric_blocks = [
-        ("occ_pct",  2,  "%",   "current"),
-        ("adr",      6,  "USD", "current"),
-        ("revpar",  10,  "USD", "current"),
-        ("occ_pct", 15,  "%",   "pct_change"),
-        ("adr",     19,  "USD", "pct_change"),
-        ("revpar",  23,  "USD", "pct_change"),
+        ("Occupancy (%)",  2,  "%",   "current"),
+        ("ADR",            6,  "USD", "current"),
+        ("RevPAR",        10,  "USD", "current"),
+        ("Occupancy (%)", 15,  "%",   "pct_change"),
+        ("ADR",           19,  "USD", "pct_change"),
+        ("RevPAR",        23,  "USD", "pct_change"),
     ]
 
     for row_idx in range(9, min(len(df), 20)):
@@ -154,8 +156,12 @@ def parse_seg_sheet(df: pd.DataFrame, grain: str) -> list[tuple]:
 
         for metric_name, col_start, unit, period in metric_blocks:
             for i, seg in enumerate(segs):
-                val = _float(df.iloc[row_idx, col_start + i] if col_start + i < df.shape[1] else None)
-                rows.append(("STR", grain, as_of_date, market, seg, metric_name, val, unit, period))
+                raw_val = _float(df.iloc[row_idx, col_start + i] if col_start + i < df.shape[1] else None)
+                # Normalize occ: STR exports may deliver as percent (e.g. 68.8) or decimal (0.688).
+                # Store as decimal (0.0–1.0) for consistency with fact_str_metrics convention.
+                if metric_name == "Occupancy (%)" and raw_val is not None and raw_val > 1.5:
+                    raw_val = raw_val / 100.0
+                rows.append(("STR", grain, as_of_date, market, seg, metric_name, raw_val, unit, period))
 
     return rows
 
