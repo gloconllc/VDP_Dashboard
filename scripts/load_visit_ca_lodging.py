@@ -18,7 +18,14 @@ ROOT = Path(__file__).resolve().parent.parent
 DB   = ROOT / "data" / "analytics.sqlite"
 DATA_DIR = ROOT / "data" / "Visit_California"
 
-XLS_FILE = DATA_DIR / "CALodgingPerformance_202601.xls"
+def _latest_lodging() -> Path:
+    matches = sorted(
+        list(DATA_DIR.glob("CALodgingPerformance_*.xls")) + list(DATA_DIR.glob("CALodgingPerformance_*.xlsx")),
+        key=lambda p: p.stat().st_mtime, reverse=True
+    )
+    return matches[0] if matches else DATA_DIR / "CALodgingPerformance_202601.xls"
+
+XLS_FILE = _latest_lodging()
 
 DDL = """
 CREATE TABLE IF NOT EXISTS visit_ca_lodging_monthly (

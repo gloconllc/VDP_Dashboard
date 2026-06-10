@@ -231,11 +231,16 @@ def load_file(fpath: Path, grain: str, conn: sqlite3.Connection) -> int:
         all_rows.extend(parse_raw_sheet(df, grain))
 
     if all_rows:
+        # Add property='VDP Select Portfolio' to each row (required NOT NULL column)
+        rows_with_property = [
+            (r[0], r[1], r[2], "VDP Select Portfolio", r[3], r[4], r[5], r[6], r[7], r[8])
+            for r in all_rows
+        ]
         conn.executemany(
             """INSERT OR REPLACE INTO fact_str_group_metrics
-               (source, grain, as_of_date, market, segment, metric_name, metric_value, unit, data_period)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
-            all_rows,
+               (source, grain, as_of_date, property, market, segment, metric_name, metric_value, unit, data_period)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            rows_with_property,
         )
         conn.commit()
         _logger.info("  %s → %d rows", fpath.name, len(all_rows))

@@ -235,6 +235,15 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
     ("visit_ca_lodging_monthly",   "costar_market_snapshot",     "cross_ref",     "report_period",
      "CA lodging monthly actuals cross-referenced with CoStar South OC market snapshot for benchmarking"),
 
+    ("visit_ca_resident_sentiment", "datafy_overview_demographics", "cross_ref",   "area",
+     "CA resident sentiment by county/city cross-referenced with Datafy visitor demographics for community impact"),
+
+    ("visit_ca_resident_sentiment", "insights_daily",             "derived_from",  "survey_year",
+     "Resident sentiment scores feed resident/city audience insights on community support for tourism"),
+
+    ("visit_ca_resident_sentiment", "visit_ca_travel_forecast",   "context",       "survey_year",
+     "Resident sentiment trends contextualize CA travel forecast — high sentiment supports demand growth"),
+
     ("visit_ca_travel_forecast", "kpi_daily_summary",            "context",       "year",
      "CA statewide travel demand forecast provides macro demand context for VDP KPI interpretation"),
 

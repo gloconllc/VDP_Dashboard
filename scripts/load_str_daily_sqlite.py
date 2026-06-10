@@ -137,8 +137,12 @@ def _collect_daily_sources() -> list[tuple[str, str, pd.DataFrame]]:
     sources = []
     for fname in _sorted_xlsx_files(WEEKLY_DIR):
         sources.extend(_read_all_sheets(os.path.join(WEEKLY_DIR, fname)))
-    if os.path.exists(DAILY_FILE):
-        sources.extend(_read_all_sheets(DAILY_FILE))
+    # Primary daily file(s): str_daily.xlsx + any str_daily_*.xlsx dated exports
+    daily_files = sorted(
+        [f for f in os.listdir(STR_DIR) if f.lower().startswith("str_daily") and f.lower().endswith((".xlsx", ".xls"))]
+    )
+    for fname in daily_files:
+        sources.extend(_read_all_sheets(os.path.join(STR_DIR, fname)))
     return sources
 
 

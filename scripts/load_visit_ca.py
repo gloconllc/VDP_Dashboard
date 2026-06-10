@@ -16,10 +16,15 @@ warnings.filterwarnings("ignore")
 DB_PATH = Path(__file__).parent.parent / "data" / "analytics.sqlite"
 DATA_DIR = Path(__file__).parent.parent / "data" / "Visit_California"
 
-TRAVEL_FILE = DATA_DIR / "CATravelForecast_Feb2026_data.xlsx"
-LODGING_FILE = DATA_DIR / "State and Regional lodging Forecast -February 2026.xlsx"
-AIRPORT_FILE = DATA_DIR / "CAAirportPassengerTraffic -December 2025 .xlsx"
-INTL_FILE = DATA_DIR / "CAInternationalArrivals_Jan 2026.xlsx"
+def _latest(pattern: str) -> Path:
+    """Return the most recently modified file matching glob pattern, or first match alphabetically."""
+    matches = sorted(DATA_DIR.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+    return matches[0] if matches else DATA_DIR / pattern
+
+TRAVEL_FILE  = _latest("CATravelForecast_*.xlsx")
+LODGING_FILE = _latest("State and Regional lodging Forecast*.xlsx")
+AIRPORT_FILE = _latest("CAAirportPassengerTraffic*.xlsx")
+INTL_FILE    = _latest("CAInternationalArrivals*.xlsx")
 
 # Forecast threshold: years >= this are forecast
 FORECAST_FROM = 2025
@@ -145,18 +150,20 @@ def load_travel_forecast(conn):
 
     df = pd.read_excel(TRAVEL_FILE, header=None)
 
-    # Row 5 contains year values starting at col 2
-    years_row = df.iloc[5]
+    # Find the row containing year values (2009–2030) — row index varies by file version
     year_cols = {}
-    for col_idx, val in years_row.items():
-        try:
-            yr = int(float(val))
-            if 2009 <= yr <= 2030 and col_idx not in year_cols.values():
-                # Only take first occurrence of each year (cols 2-23 are actuals/forecast)
-                if yr not in year_cols:
-                    year_cols[yr] = col_idx
-        except (TypeError, ValueError):
-            pass
+    for row_idx in range(min(10, len(df))):
+        candidate = {}
+        for col_idx, val in df.iloc[row_idx].items():
+            try:
+                yr = int(float(val))
+                if 2009 <= yr <= 2030:
+                    candidate[yr] = col_idx
+            except (TypeError, ValueError):
+                pass
+        if len(candidate) >= 4:
+            year_cols = candidate
+            break
 
     # Rows of interest by label in column 1
     label_map = {

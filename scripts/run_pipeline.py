@@ -145,6 +145,8 @@ STEPS = [
     ("load_visit_ca_gmp",     os.path.join(BASE_DIR, "load_visit_ca_gmp.py"),     False),
     # CA statewide lodging performance monthly data (XLS format)
     ("load_visit_ca_lodging", os.path.join(BASE_DIR, "load_visit_ca_lodging.py"), False),
+    # CA Resident Sentiment on travel & tourism (4-wave annual survey 2022-2025)
+    ("load_resident_sentiment", os.path.join(BASE_DIR, "load_resident_sentiment.py"), False),
     # InsideAirbnb STVR market data — competitive landscape for hotel market
     ("fetch_airbnb_market",   os.path.join(BASE_DIR, "fetch_airbnb_market.py"),   False),
     # Beach + marine visitor-experience data (added 2026-05-22)
