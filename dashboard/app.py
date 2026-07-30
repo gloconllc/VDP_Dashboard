@@ -2690,17 +2690,20 @@ st.markdown("""
     position: relative;
     width: 100%;
     border-radius: 16px;
-    background: linear-gradient(135deg, #050A14 0%, #0F2537 50%, #050A14 100%);
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-top: 4px solid #0E7490;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.08);
     padding: 28px 32px;
     overflow: hidden;
     cursor: pointer;
     transition: transform 0.4s ease, box-shadow 0.4s ease;
     margin-bottom: 20px;
   }
-  .dp-spotlight-card:hover { transform: perspective(800px) rotateY(4deg) rotateX(-2deg) scale(1.01); box-shadow: 0 20px 60px rgba(0,195,190,0.25); }
+  .dp-spotlight-card:hover { transform: perspective(800px) rotateY(4deg) rotateX(-2deg) scale(1.01); box-shadow: 0 20px 60px rgba(14,116,144,0.18); }
   .dp-spotlight-card::before {
     content:'';position:absolute;inset:0;
-    background:conic-gradient(from var(--dp-angle,0deg) at 50% 50%, transparent 0deg, rgba(0,195,190,0.15) 60deg, transparent 120deg);
+    background:conic-gradient(from var(--dp-angle,0deg) at 50% 50%, transparent 0deg, rgba(14,116,144,0.10) 60deg, transparent 120deg);
     animation: dp-spotlight-spin 6s linear infinite;
     border-radius:16px;
   }
@@ -10332,9 +10335,9 @@ with tab_ov:
                 st.markdown(f'''
 <div class="dp-spotlight-card">
   <div class="dp-spotlight-inner">
-    <div style="font-size:10px;font-weight:800;letter-spacing:.14em;color:#3DE8E2;text-transform:uppercase;margin-bottom:10px;">⚡ Top Signal</div>
-    <div style="font-size:19px;font-weight:800;color:#FFFFFF;line-height:1.35;margin-bottom:12px;">{bold_key_data(_spot_head)}</div>
-    <div style="font-size:13px;color:rgba(255,255,255,0.92);line-height:1.65;">{bold_key_data(_spot_body)}</div>
+    <div style="font-size:10px;font-weight:800;letter-spacing:.14em;color:#0E7490;text-transform:uppercase;margin-bottom:10px;">⚡ Top Signal</div>
+    <div style="font-size:19px;font-weight:800;color:#0F172A;line-height:1.35;margin-bottom:12px;">{bold_key_data(_spot_head)}</div>
+    <div style="font-size:13px;color:#334155;line-height:1.65;">{bold_key_data(_spot_body)}</div>
   </div>
 </div>
 ''', unsafe_allow_html=True)
