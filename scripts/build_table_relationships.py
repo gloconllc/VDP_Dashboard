@@ -1137,6 +1137,113 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("datafy_campaign_pixel_fires_daily",    "kpi_daily_summary",                "cross_ref", "fire_date→as_of_date",
      "Daily campaign pixel activity cross-referenced against same-day STR demand to gauge campaign-to-booking lag"),
+
+    # ── New CoStar Market Daily/Monthly (July 2026) ────────────────────────────
+    ("costar_market_daily",      "costar_market_monthly",        "enriches",      "report_date→month",
+     "CoStar daily submarket data aggregates into monthly grain for month-over-month performance"),
+
+    ("costar_market_daily",      "kpi_daily_summary",            "cross_ref",     "report_date→as_of_date",
+     "CoStar South OC market daily occ/ADR/RevPAR benchmarks VDP portfolio daily KPIs"),
+
+    ("costar_market_daily",      "fact_str_metrics",             "cross_ref",     "report_date→as_of_date",
+     "CoStar daily submarket performance cross-referenced with STR daily metrics for direct comp"),
+
+    ("costar_market_monthly",    "kpi_daily_summary",            "cross_ref",     "report_period→month",
+     "CoStar monthly TTM and capital market metrics benchmark VDP portfolio monthly compression"),
+
+    ("costar_market_monthly",    "costar_monthly_performance",   "enriches",      "report_date",
+     "New CoStar daily/monthly loaders supplement legacy costar_monthly_performance for trend continuity"),
+
+    ("costar_market_daily",      "datafy_overview_kpis",         "context",       "year",
+     "CoStar daily market context informs Datafy annual visitor economy segmentation"),
+
+    # ── Visit California Resident Sentiment (July 2026) ───────────────────────
+    ("visit_ca_resident_sentiment","kpi_daily_summary",          "context",       "area,report_period",
+     "OC resident sentiment on tourism (support, concerns, community impact) contextualizes hotel performance"),
+
+    ("visit_ca_resident_sentiment","datafy_overview_kpis",       "context",       "report_period",
+     "Resident attitudes on visitor economy benefits/costs inform destination management narrative"),
+
+    ("visit_ca_resident_sentiment","insights_daily",             "derived_from",  "report_period",
+     "Resident sentiment feeds compute_insights.py for resident audience cards on community relations"),
+
+    ("visit_ca_resident_sentiment","vdp_events",                 "cross_ref",     "area,report_period",
+     "Major events (Ohana Fest) correlated with resident sentiment shifts in Community section"),
+
+    # ── US Travel Inbound Market Profiles (July 2026) ───────────────────────────
+    ("us_travel_inbound_market_profile","datafy_overview_airports", "enriches",    "report_period",
+     "U.S. Travel overseas visitor profiles by activity (Air, Hotel, Shopping) enrich airport/origin analysis"),
+
+    ("us_travel_inbound_market_profile","datafy_overview_kpis",   "context",       "year",
+     "Overseas visitor trends contextualize Datafy domestic visitor growth and market composition"),
+
+    ("us_travel_inbound_market_profile","visit_ca_intl_market_profiles","cross_ref","category",
+     "U.S. Travel national activity profiles cross-referenced with Visit CA international market spend profiles"),
+
+    ("us_travel_inbound_market_profile","kpi_daily_summary",      "context",       "year",
+     "International visitor arrivals/category participation contextualize ADR and foreign-exchange trends"),
+
+    # ── Demand Signals (Cross-Source Correlation Engine) ──────────────────────
+    ("demand_signal_weekly",     "kpi_daily_summary",            "derived_from",  "week_date→as_of_date",
+     "Demand signal weekly index computed from cross-source correlations (STR, Datafy, Google, BLS, EIA)"),
+
+    ("demand_signal_weekly",     "fact_str_metrics",             "derived_from",  "week_date→as_of_date",
+     "Demand signal aggregates STR OCC/ADR trends with external signals (weather, employment, gas prices)"),
+
+    ("demand_signal_weekly",     "google_trends_weekly",         "enriches",       "week_date",
+     "Search interest correlation matrix feeds the demand signal weekly index calculation"),
+
+    ("demand_signal_weekly",     "weather_monthly",              "enriches",       "month",
+     "Weather-demand correlation computed and stored in demand_signal_weekly for impact modeling"),
+
+    ("demand_signal_weekly",     "eia_gas_prices",               "enriches",       "week_date",
+     "Gas price-demand correlation (negative: higher gas → lower drive-market occ) in demand signal"),
+
+    ("demand_signal_weekly",     "bls_employment_monthly",       "enriches",       "year_month",
+     "Employment-demand correlation (positive: OC employment ↔ hotel occupancy) in signal index"),
+
+    ("demand_signal_weekly",     "tsa_checkpoint_daily",         "enriches",       "data_date",
+     "National air travel (TSA) correlation with local demand provides fly-market signal component"),
+
+    ("demand_signal_weekly",     "insights_daily",               "derived_from",  "week_date",
+     "Demand signal index feeds compute_insights.py forward-looking visitor/dmo demand outlook cards"),
+
+    # ── BTS Transit (regional trip mobility) ───────────────────────────────────
+    ("bts_route_passengers",     "kpi_daily_summary",            "context",       "month",
+     "Regional transit passenger volume provides macro mobility context for regional hotel demand"),
+
+    ("bts_route_passengers",     "datafy_overview_kpis",         "context",       "month",
+     "BTS ridership trends contextualize visitor trip volume — transit accessibility → visitation"),
+
+    ("bts_route_passengers",     "demand_signal_weekly",         "enriches",       "month",
+     "Transit mobility trends incorporated into cross-source demand signal correlation"),
+
+    # ── STVR Market Summary (Vacation Rental Competitive Set) ──────────────────
+    ("stvr_market_summary",      "fact_str_metrics",             "cross_ref",     "month",
+     "Vacation rental market occupancy/ADR cross-referenced with hotel STR metrics for total-lodging picture"),
+
+    ("stvr_market_summary",      "kpi_daily_summary",            "cross_ref",     "month",
+     "STVR occupancy and rates alongside hotel KPIs show competitive pressure on pricing"),
+
+    ("stvr_market_summary",      "datafy_overview_kpis",         "context",       "report_period",
+     "STVR availability contextualize visitor accommodation choices (hotel vs. short-term rental)"),
+
+    # ── Weather Forecast (real-time operational signal) ────────────────────────
+    ("weather_forecast",         "kpi_daily_summary",            "context",       "forecast_date→as_of_date",
+     "14-day weather forecast drives same-week occupancy pacing adjustments and pricing signals"),
+
+    ("weather_forecast",         "vdp_events",                   "context",       "forecast_date→event_date",
+     "Beach events (Ohana Fest, whale watching) weather-sensitive; forecast affects attendance"),
+
+    ("weather_forecast",         "insights_daily",               "derived_from",  "forecast_date",
+     "Weekend weather forecast informs visitor audience cards (best_value, booking_timing)"),
+
+    ("weather_forecast",         "ca_state_parks_visitation",    "cross_ref",     "forecast_date",
+     "Forecast quality affects park day-use visitation proxy for overall beach tourism"),
+
+    # ── Ticketmaster Events (Regional Demand Drivers) ───────────────────────
+    ("ticketmaster_events",      "demand_signal_weekly",         "enriches",      "event_date",
+     "Regional concert/sports events factored into weekly demand signal correlation computation"),
 ]
 
 
