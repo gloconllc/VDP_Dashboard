@@ -46,6 +46,7 @@ from utils import (
     format_hero_kpi_card, format_exec_kpi_banner, safe_sql_query,
     combine_social_followers, safe_execute_with_logging, format_metric_delta,
     format_stat_band, format_benchmark_band, auto_distribution_analysis,
+    format_insight_card, format_action_card,
 )
 # The chart theme is shared with components_group and components_coastal so every
 # chart in the app draws from one validated palette and one type scale.
@@ -12870,6 +12871,131 @@ with tab_fo:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# SPEND CATEGORY EXPLORER, click-to-drill interactive panel (tab_ev)
+# ══════════════════════════════════════════════════════════════════════════════
+_SPEND_CATEGORY_ICONS = {
+    "Accommodations": "🏨",
+    "Dining and Nightlife": "🍽️",
+    "Grocery and Dept Stores": "🛒",
+    "Specialty Retail": "🛍️",
+    "Service Stations": "⛽",
+    "Clothing and Accessories": "👕",
+    "Leisure Recreation and Entertainment": "🎟️",
+    "Fast Food Restaurants": "🍔",
+    "Personal Care and Services": "💆",
+    "Transportation": "🚗",
+}
+
+
+def _spend_category_actions(name: str, share_pct: float, corr_pct, rank: int) -> list:
+    """Return 1-2 action cards tailored to a Datafy spend category.
+
+    Signal/body text is built at render time from the live spend_share_pct and
+    spending_correlation_pct for the selected category, so the cards track
+    whatever the pipeline last loaded rather than a fixed snapshot.
+    """
+    corr_txt = f"{corr_pct:.0f}%" if corr_pct is not None else "not yet reported"
+    plays = {
+        "Accommodations": [{
+            "signal": f"#{rank} category at {share_pct:.1f}% of total spend",
+            "title": "Protect Rate Discipline on the Largest Spend Pool",
+            "body": ("Accommodations is the single biggest driver of destination spend. Coordinate minimum-stay "
+                     "policy and rate floors across the comp set during compression windows so gains here aren't "
+                     "given back to discounting."),
+            "kpi": "kpi_daily_summary.revpar, kpi_compression_quarterly.days_above_80_occ",
+            "accent_color": "#21808D",
+        }],
+        "Dining and Nightlife": [{
+            "signal": f"#{rank} category, correlates {corr_txt} with total spend growth",
+            "title": "Formalize a Dining Partnership Program",
+            "body": ("Dining and nightlife is the #2 spend category and one of the most tightly linked to overall "
+                     "visitor spend growth. A curated restaurant week or BID-backed promotion captures a larger "
+                     "share of trips that are already happening."),
+            "kpi": "datafy_overview_category_spending.spend_share_pct, Dining and Nightlife",
+            "accent_color": "#E68161",
+        }],
+        "Grocery and Dept Stores": [{
+            "signal": f"{share_pct:.1f}% of spend, largely local-serving",
+            "title": "Bundle Grocery and Essentials Into Visitor Packaging",
+            "body": ("A meaningful share of visitor dollars already lands in grocery and department spend. "
+                     "Cross-promote local grocers and specialty markets in visitor guides to keep this spend "
+                     "concentrated in Dana Point rather than leaking to neighboring cities."),
+            "kpi": "datafy_overview_category_spending.spend_share_pct, Grocery and Dept Stores",
+            "accent_color": "#5E5240",
+        }],
+        "Specialty Retail": [{
+            "signal": f"{share_pct:.1f}% of spend, correlates {corr_txt} with total growth",
+            "title": "Co-Brand Specialty Retail With the Destination",
+            "body": ("Specialty retail spend tracks visitor volume growth. Local surf, lifestyle, and boutique "
+                     "retailers are natural co-marketing partners for seasonal campaigns and event tie-ins."),
+            "kpi": "datafy_overview_category_spending.spend_share_pct, Specialty Retail",
+            "accent_color": "#7C3AED",
+        }],
+        "Service Stations": [{
+            "signal": f"{share_pct:.1f}% of spend, drive-market indicator",
+            "title": "Track as a Drive-Market Health Signal",
+            "body": ("Fuel spend is a proxy for drive-market visitation from LA, San Diego, and the Inland Empire. "
+                     "Watch this line alongside the feeder-market DMA mix to sanity-check drive vs. fly market "
+                     "share shifts."),
+            "kpi": "datafy_overview_category_spending.spend_share_pct vs. datafy_overview_dma drive-market share",
+            "accent_color": "#DC2626",
+        }],
+        "Clothing and Accessories": [{
+            "signal": f"{share_pct:.1f}% of spend, correlates {corr_txt} with total growth",
+            "title": "Low Priority for Direct Investment",
+            "body": ("Clothing and accessories is a smaller, loosely correlated slice of spend. Fine as a "
+                     "secondary line in co-branded merchandise tie-ins, but not a category to build a standalone "
+                     "campaign around."),
+            "kpi": "datafy_overview_category_spending.spend_share_pct, Clothing and Accessories",
+            "accent_color": "#626C71",
+        }],
+        "Leisure Recreation and Entertainment": [{
+            "signal": f"{share_pct:.1f}% of spend, correlates {corr_txt} with total growth",
+            "title": "Extend Programming Into Shoulder Days",
+            "body": ("Leisure, recreation, and entertainment spend is small in share but directly reflects "
+                     "activity-driven visits. Beach, paddleboard, and outdoor activation packages on shoulder "
+                     "days convert day-trippers into higher-spend visitors."),
+            "kpi": "datafy_overview_category_spending.spend_share_pct, Leisure Recreation and Entertainment",
+            "accent_color": "#059669",
+        }],
+        "Fast Food Restaurants": [{
+            "signal": f"{share_pct:.1f}% of spend, correlates {corr_txt} with total growth",
+            "title": "Watch This Category as an Early Growth Signal",
+            "body": ("Fast food spend is small in share but often correlates more tightly with overall spend "
+                     "growth than larger categories, it moves with visitor volume. Useful as a fast-moving "
+                     "leading indicator between quarterly Datafy pulls."),
+            "kpi": "datafy_overview_category_spending.spending_correlation_pct, Fast Food Restaurants",
+            "accent_color": "#D97706",
+        }],
+        "Personal Care and Services": [{
+            "signal": f"{share_pct:.1f}% of spend",
+            "title": "Wellness Bundling Opportunity",
+            "body": ("Personal care is a small but present spend line. Bundle spa, wellness, and salon offers "
+                     "into overnight hotel packages to lift accommodations ADR while giving this category a "
+                     "reason to grow."),
+            "kpi": "datafy_overview_category_spending.spend_share_pct, Personal Care and Services",
+            "accent_color": "#0891B2",
+        }],
+        "Transportation": [{
+            "signal": f"{share_pct:.1f}% of spend, smallest tracked category",
+            "title": "Monitor Only",
+            "body": ("Transportation is the smallest spend category Datafy tracks for Dana Point. Not worth "
+                     "dedicated campaign spend, but useful as a sanity check against JWA passenger and BTS "
+                     "route data in Market Intelligence."),
+            "kpi": "datafy_overview_category_spending.spend_share_pct, Transportation",
+            "accent_color": "#94A3B8",
+        }],
+    }
+    return plays.get(name, [{
+        "signal": f"#{rank} category at {share_pct:.1f}% of total spend",
+        "title": f"Monitor {name}",
+        "body": f"{name} represents {share_pct:.1f}% of destination spend, correlating {corr_txt} with total visitor spend growth.",
+        "kpi": "datafy_overview_category_spending.spend_share_pct",
+        "accent_color": "#21808D",
+    }])
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # TAB 4, VISITOR ECONOMY (Datafy)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ev:
@@ -13169,6 +13295,52 @@ with tab_ev:
                         _logger.debug(f"spend analysis band failed: {_e}")
                 else:
                     st.info("Spending data not available. Run the pipeline.")
+
+            st.markdown("---")
+
+            # ── Spend Category Explorer, click-to-drill interactive panel ──────────
+            st.markdown('<div class="chart-header">Spend Category Explorer</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="chart-caption">Select a category to see its concentration, growth correlation, '
+                f'and recommended play · Datafy {period_label}</div>',
+                unsafe_allow_html=True,
+            )
+            if not df_dfy_spend.empty:
+                _cat_ranked = df_dfy_spend.sort_values("spend_share_pct", ascending=False).reset_index(drop=True)
+                _cat_options = _cat_ranked["category"].tolist()
+                _sel_cat = st.pills(
+                    "Spend category", _cat_options, default=_cat_options[0],
+                    key="ve_cat_explorer", label_visibility="collapsed",
+                )
+                _sel_cat = _sel_cat or _cat_options[0]
+                _cat_idx = int(_cat_ranked.index[_cat_ranked["category"] == _sel_cat][0])
+                _cat_row = _cat_ranked.loc[_cat_idx]
+                _cat_share = float(_cat_row["spend_share_pct"])
+                _cat_corr = _cat_row.get("spending_correlation_pct")
+                _cat_corr = float(_cat_corr) if pd.notna(_cat_corr) else None
+
+                _cexp1, _cexp2 = st.columns([1, 1.3])
+                with _cexp1:
+                    if _cat_corr is not None:
+                        _corr_body = (
+                            f"Correlates at <strong>{_cat_corr:.0f}%</strong> with total visitor spend growth, "
+                            f"{'one of the tightest links to overall destination performance.' if _cat_corr >= 20 else 'a moderate link to overall destination performance.'}"
+                        )
+                    else:
+                        _corr_body = "Correlation to total spend growth not yet reported for this category."
+                    st.markdown(format_insight_card(
+                        icon=_SPEND_CATEGORY_ICONS.get(_sel_cat, "💳"),
+                        title=_sel_cat,
+                        main_value=f"{_cat_share:.1f}%",
+                        subtitle=f"Rank #{_cat_idx + 1} of {len(_cat_options)} spend categories · share of total destination spend",
+                        body=_corr_body,
+                        accent_color="#21808D",
+                    ), unsafe_allow_html=True)
+                with _cexp2:
+                    for _card in _spend_category_actions(_sel_cat, _cat_share, _cat_corr, _cat_idx + 1):
+                        st.markdown(format_action_card(**_card), unsafe_allow_html=True)
+            else:
+                st.info("Spending data not available. Run the pipeline.")
 
             st.markdown("---")
 
@@ -13856,8 +14028,72 @@ with tab_ev:
         st.markdown("---")
 
     # ══════════════════════════════════════════════════════════════════════════════
-    # TAB 5, FEEDER MARKETS
+    # FEEDER MARKET EXPLORER, click-to-drill interactive panel (tab_fm)
     # ══════════════════════════════════════════════════════════════════════════════
+
+def _dma_market_playbook(dma: str, vol_pct, spend_usd, yoy_pp, los_days, eff_index) -> list:
+    """Return 1-2 data-driven action cards for a single feeder-market DMA.
+
+    Classification is computed live from the row's own numbers (spend
+    efficiency = spending share ÷ visitor-days share, trend = YOY visitor-days
+    delta) rather than a hardcoded list of market names, so it stays correct
+    as new DMAs enter or leave the top-10 on each pipeline refresh.
+    """
+    is_fly = eff_index is not None and eff_index > 1.15
+    is_drive = eff_index is not None and eff_index < 0.85
+    if yoy_pp is not None and yoy_pp > 0.05:
+        trend, trend_label = "growing", "📈 Growing"
+    elif yoy_pp is not None and yoy_pp < -0.05:
+        trend, trend_label = "softening", "⚠️ Softening"
+    else:
+        trend, trend_label = "flat", "➖ Flat"
+    yoy_txt = f"{yoy_pp:+.1f} pts YOY" if yoy_pp is not None else "YOY not reported"
+    eff_txt = f"{eff_index:.2f}×" if eff_index is not None else "N/A"
+
+    cards = []
+    if is_fly:
+        cards.append({
+            "signal": f"{trend_label} · Efficiency index {eff_txt} · {yoy_txt}",
+            "title": f"{dma} Is a High-Value Fly Market",
+            "body": (f"{dma} spends more per visitor than its visitation volume alone would predict "
+                     f"(spend efficiency {eff_txt}). Build dedicated campaign creative and, where reachable "
+                     f"by air, a fly-and-stay package rather than competing on drive-market volume."),
+            "kpi": f"datafy_overview_dma.avg_spend_usd, spending_share_pct for {dma}",
+            "accent_color": "#E68161",
+        })
+    elif is_drive:
+        cards.append({
+            "signal": f"{trend_label} · Efficiency index {eff_txt} · {yoy_txt}",
+            "title": f"{dma} Is a Volume Market, Convert Day-Trippers to Overnight",
+            "body": (f"{dma} sends a large share of visitor days but under-indexes on spend per visitor "
+                     f"(efficiency {eff_txt}). Target with overnight-stay incentives and length-of-stay "
+                     f"extension offers rather than pure reach campaigns."),
+            "kpi": f"datafy_overview_dma.visitor_days_share_pct vs. avg_length_of_stay_days for {dma}",
+            "accent_color": "#2563EB",
+        })
+    else:
+        cards.append({
+            "signal": f"{trend_label} · {yoy_txt}",
+            "title": f"{dma} Is Balanced, Maintain Current Mix",
+            "body": (f"{dma}'s visitation volume and spend per visitor are roughly in line with each other. "
+                     f"No urgent reallocation signal, monitor for drift on each pipeline refresh."),
+            "kpi": f"datafy_overview_dma.visitor_days_vs_compare_pct for {dma}",
+            "accent_color": "#64748B",
+        })
+
+    if trend == "softening":
+        cards.append({
+            "signal": yoy_txt,
+            "title": f"Investigate the {dma} Softening Trend",
+            "body": (f"{dma}'s visitor-days share is down versus the comparison period. Cross-check against "
+                     f"website and media attribution DMA tables to see if paid or organic reach has pulled "
+                     f"back in this market."),
+            "kpi": f"datafy_attribution_website_dma.total_trips, datafy_attribution_media_top_markets for {dma}",
+            "accent_color": "#DC2626",
+        })
+    return cards
+
+
 with tab_fm:
     _tab_controls("fm")
     st.markdown("""
@@ -14396,6 +14632,48 @@ with tab_fm:
         st.download_button("⬇️ Download Full Market Intelligence CSV", _dma_dl,
                            file_name="feeder_market_intelligence.csv", mime="text/csv",
                            key="fm_dl_full")
+
+        # ── Feeder Market Explorer, click-to-drill interactive panel ───────────
+        st.markdown(sec_div("🔎 Explore a Market"), unsafe_allow_html=True)
+        st.markdown('<div class="chart-header">Feeder Market Explorer</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="chart-caption">Pick one DMA for a full passport view and a tailored play, rebuilt '
+            'live from the table above</div>',
+            unsafe_allow_html=True,
+        )
+        _dma_names = df_dfy_dma["dma"].dropna().tolist()
+        if _dma_names:
+            _default_dma = _dma_names[0]
+            _sel_dma = st.pills(
+                "Feeder market", _dma_names, default=_default_dma,
+                key="fm_dma_explorer", label_visibility="collapsed",
+            )
+            _sel_dma = _sel_dma or _default_dma
+            _dma_row = df_dfy_dma[df_dfy_dma["dma"] == _sel_dma].iloc[0]
+            _vol_pct   = float(_dma_row["visitor_days_share_pct"]) if pd.notna(_dma_row.get("visitor_days_share_pct")) else None
+            _spend_usd = float(_dma_row["avg_spend_usd"]) if pd.notna(_dma_row.get("avg_spend_usd")) else None
+            _spend_shr = float(_dma_row["spending_share_pct"]) if pd.notna(_dma_row.get("spending_share_pct")) else None
+            _yoy_pp    = float(_dma_row["visitor_days_vs_compare_pct"]) if pd.notna(_dma_row.get("visitor_days_vs_compare_pct")) else None
+            _los_days  = float(_dma_row["avg_length_of_stay_days"]) if pd.notna(_dma_row.get("avg_length_of_stay_days")) else None
+            _eff_idx   = round(_spend_shr / _vol_pct, 2) if (_spend_shr and _vol_pct) else None
+
+            _dex1, _dex2 = st.columns([1, 1.3])
+            with _dex1:
+                _dex_stats = [
+                    {"label": "Visitor Days Share", "value": f"{_vol_pct:.1f}%" if _vol_pct is not None else "N/A"},
+                    {"label": "Avg Spend / Visitor", "value": f"${_spend_usd:,.0f}" if _spend_usd is not None else "N/A"},
+                    {"label": "Avg Length of Stay", "value": f"{_los_days:.1f}d" if _los_days is not None else "N/A"},
+                    {"label": "Spend Efficiency", "value": f"{_eff_idx:.2f}×" if _eff_idx is not None else "N/A"},
+                ]
+                _dex_status = (f"{_yoy_pp:+.1f} pts YOY", "green" if _yoy_pp >= 0 else "red") if _yoy_pp is not None else None
+                st.markdown(format_stat_band(
+                    icon="🗺️", title=f"{_sel_dma} Market Passport", points=[],
+                    eyebrow="Datafy DMA breakdown", accent="blue",
+                    stats=_dex_stats, status=_dex_status,
+                ), unsafe_allow_html=True)
+            with _dex2:
+                for _card in _dma_market_playbook(_sel_dma, _vol_pct, _spend_usd, _yoy_pp, _los_days, _eff_idx):
+                    st.markdown(format_action_card(**_card), unsafe_allow_html=True)
 
         # ── Zartico Top Markets (historical comparison) ────────────────────────
         if not df_zrt_markets.empty:

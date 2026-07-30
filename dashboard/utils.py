@@ -269,6 +269,39 @@ def format_insight_card(icon: str, title: str, main_value: str, subtitle: str = 
     </div>"""
 
 
+def format_action_card(signal: str, title: str, body: str, kpi: str = "", accent_color: str = "#0891B2") -> str:
+    """
+    Compact recommendation card for click-to-drill explorer panels: a data
+    signal chip, a recommended play, supporting body copy, and a KPI-to-watch
+    footer. Pair with a category/market picker (e.g. st.pills) so each
+    selection swaps in a fresh card built from live data.
+
+    Args:
+        signal: short data-driven trigger, e.g. "#2 category at 24.0% of spend"
+        title: the recommended play, e.g. "Formalize a Dining Partnership Program"
+        body: supporting context paragraph
+        kpi: table.column to monitor for this recommendation
+        accent_color: left border + signal label color
+
+    Returns:
+        HTML string for the action card
+    """
+    kpi_html = (
+        f'<div style="font-size:11px;color:#64748B;font-style:italic;margin-top:9px;">'
+        f'📍 KPI to watch: {kpi}</div>' if kpi else ""
+    )
+    return f"""<div style="
+    background:#F8FAFC;border:1px solid #E2E8F0;border-left:3px solid {accent_color};
+    border-radius:10px;padding:14px 16px;margin:0 0 10px 0;">
+    <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    color:{accent_color};margin-bottom:6px;">📊 {signal}</div>
+    <div style="font-family:'Outfit',sans-serif;font-size:14px;font-weight:800;color:#0F172A;
+    -webkit-text-fill-color:#0F172A;margin-bottom:5px;line-height:1.3;">{title}</div>
+    <div style="font-size:12.5px;color:#334155;line-height:1.55;">{body}</div>
+    {kpi_html}
+    </div>"""
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # INFOGRAPHIC STAT BAND, OCFEC-inspired, but sleeker
 # A color-coded band that pulls the MAIN IDEAS out of a plain paragraph into
