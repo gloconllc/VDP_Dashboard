@@ -15,8 +15,31 @@ Tables created / replaced:
   costar_market_snapshot       — Current-period market overview (one row per report period)
   costar_monthly_performance   — Monthly time series: occ, ADR, RevPAR, supply, demand
   costar_supply_pipeline       — Active hotel supply pipeline: rooms under construction / planned
-  costar_chain_scale_breakdown — Performance by chain scale segment
-  costar_competitive_set       — Named property-level competitive benchmarks
+  costar_chain_scale_breakdown — UNVERIFIED. See warning below.
+  costar_competitive_set       — UNVERIFIED. See warning below.
+  costar_annual_performance    — Real, PDF-extracted multi-year occ/ADR/RevPAR by market and
+                                  report_scope (Overall + 3 chain-scale tiers for Newport Beach/
+                                  Dana Point: Luxury & Upper Upscale, Upscale & Upper Midscale,
+                                  Midscale & Economy)
+  costar_segment_room_split    — Real, PDF-extracted current room-inventory split by chain-scale
+                                  tier (from the submarket overview narrative)
+
+*** DATA INTEGRITY WARNING (2026-08-11) ***
+costar_chain_scale_breakdown and costar_competitive_set are written from
+HARDCODED_BASELINE data below (write_chain_csv / write_compset_csv), not
+parsed from any real CoStar export. Their market label ("South Orange
+County CA"), 6-tier chain-scale granularity, and named individual
+properties (Waldorf Astoria Monarch Beach, Ritz-Carlton Laguna Niguel,
+etc.) do not trace to any CoStar PDF found in data/costar/ as of this
+date. They were kept in place (not deleted) because dashboard/pages.py,
+dashboard/components_group.py, scripts/compute_insights.py, and
+scripts/build_table_relationships.py still read them, and this file's
+current scope was fixing the weekly PDF report (generate_weekly_report.py),
+which now sources its chain-scale/segment pages from the real
+costar_annual_performance + costar_segment_room_split tables instead. If
+you're building on top of costar_chain_scale_breakdown or
+costar_competitive_set elsewhere, verify against a real CoStar export
+first, or migrate that consumer to costar_annual_performance the same way.
 
 Run from project root:
     python scripts/load_costar_reports.py
@@ -601,6 +624,56 @@ def load_annual_performance(cur: sqlite3.Cursor, rows: list) -> int:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# TABLE 6b — costar_segment_room_split
+# Current room-inventory split by chain-scale tier, parsed from the
+# submarket overview narrative. Point-in-time (one row per market per
+# report_date), not a year series — feeds the segment-level tax-estimate
+# table alongside costar_annual_performance's occ/ADR figures.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def load_segment_room_split(cur: sqlite3.Cursor, rows: list) -> int:
+    cur.executescript("""
+    CREATE TABLE IF NOT EXISTS costar_segment_room_split (
+        id                           INTEGER PRIMARY KEY AUTOINCREMENT,
+        market                       TEXT NOT NULL,
+        report_date                  TEXT NOT NULL,
+        total_properties             INTEGER,
+        total_rooms                  INTEGER,
+        luxury_upper_upscale_rooms   INTEGER,
+        upscale_upper_midscale_rooms INTEGER,
+        midscale_economy_rooms       INTEGER,
+        source_file                  TEXT,
+        loaded_at                    TEXT DEFAULT (datetime('now')),
+        UNIQUE(market, report_date)
+    );
+    """)
+    n = 0
+    for r in rows:
+        cur.execute("""
+            INSERT INTO costar_segment_room_split
+                (market, report_date, total_properties, total_rooms,
+                 luxury_upper_upscale_rooms, upscale_upper_midscale_rooms,
+                 midscale_economy_rooms, source_file)
+            VALUES (?,?,?,?,?,?,?,?)
+            ON CONFLICT(market, report_date) DO UPDATE SET
+                total_properties             = excluded.total_properties,
+                total_rooms                  = excluded.total_rooms,
+                luxury_upper_upscale_rooms    = excluded.luxury_upper_upscale_rooms,
+                upscale_upper_midscale_rooms  = excluded.upscale_upper_midscale_rooms,
+                midscale_economy_rooms        = excluded.midscale_economy_rooms,
+                source_file                   = excluded.source_file,
+                loaded_at                     = datetime('now')
+        """, (
+            r["market"], r["report_date"], r.get("total_properties"), r.get("total_rooms"),
+            r.get("luxury_upper_upscale_rooms"), r.get("upscale_upper_midscale_rooms"),
+            r.get("midscale_economy_rooms"), r.get("source_file"),
+        ))
+        n += 1
+    print(f"  ✓ costar_segment_room_split ({n} rows upserted)")
+    return n
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # TABLE 7 — costar_profitability
 # Full-service hotel P&L benchmarks extracted from CoStar PDF reports
 # ══════════════════════════════════════════════════════════════════════════════
@@ -848,7 +921,101 @@ def _extract_annual_performance(pages: list, market: str, source_file: str, repo
             row.update(sd_by_year[yr])
         rows.append(row)
 
+    # Chain-scale segment tables (Luxury & Upper Upscale / Upscale & Upper
+    # Midscale / Midscale & Economy) live on the same appendix pages as
+    # OVERALL PERFORMANCE, in the CoStar "Hospitality-Submarket" report.
+    # No matching "X SUPPLY & DEMAND" table exists per segment, so these
+    # rows carry occ/ADR/RevPAR only; see _extract_segment_room_split for
+    # the current-period room-count split used to derive room revenue.
+    for scope_label, header in (
+        ("Luxury & Upper Upscale", "LUXURY & UPPER UPSCALE PERFORMANCE"),
+        ("Upscale & Upper Midscale", "UPSCALE & UPPER MIDSCALE PERFORMANCE"),
+        ("Midscale & Economy", "MIDSCALE & ECONOMY PERFORMANCE"),
+    ):
+        rows.extend(_extract_segment_performance(pages, header, scope_label, market, source_file, report_date))
+
     return rows
+
+
+def _extract_segment_performance(
+    pages: list, header: str, scope_label: str, market: str, source_file: str, report_date: str
+) -> list:
+    """Extract one chain-scale segment's PERFORMANCE table (same row shape as
+    OVERALL PERFORMANCE: year/YTD, occ%, occ YoY%, ADR, ADR YoY%, RevPAR,
+    RevPAR YoY%). Segment tables can land on a different PDF page than
+    OVERALL, so this re-searches all pages for the segment's own header."""
+    _, full_text = _find_page_text(pages, header, "Occupancy", "ADR", "RevPAR")
+    if not full_text:
+        return []
+
+    m = re.search(re.escape(header) + r"\s*\n", full_text)
+    if not m:
+        return []
+    start = m.end()
+    next_section = re.search(r"\n[A-Z &]+PERFORMANCE\s*\n", full_text[start:])
+    end = start + next_section.start() if next_section else len(full_text)
+    text = full_text[start:end]
+
+    rows = []
+    for pm in _PERF_ROW_RE.finditer(text):
+        rows.append({
+            "year_label":     pm.group(1),
+            "market":         market,
+            "report_scope":   scope_label,
+            "occupancy_pct":  float(pm.group(2)),
+            "occ_yoy_pct":    float(pm.group(3)),
+            "adr_usd":        float(pm.group(4)),
+            "adr_yoy_pct":    float(pm.group(5)),
+            "revpar_usd":     float(pm.group(6)),
+            "revpar_yoy_pct": float(pm.group(7)),
+            "source_file":    source_file,
+            "report_date":    report_date,
+        })
+    return rows
+
+
+_ROOM_SPLIT_RE = re.compile(
+    r"comprises\s+([\d,]+)\s+hotel\s+properties,\s*which contain around\s+([\d,]+)\s+rooms\.\s*"
+    r"Among the subtypes,\s*there are\s+([\d,]+)\s+Luxury\s*&\s*Upper Upscale\s+rooms,\s*"
+    r"([\d,]+)\s+Upscale\s*&\s*Upper Midscale rooms,\s*and\s+([\d,]+)\s+Midscale\s*&\s*Economy rooms",
+    re.IGNORECASE,
+)
+
+
+def _extract_segment_room_split(pages: list, market: str, source_file: str, report_date: str):
+    """Extract the current room-inventory split by chain-scale tier from the
+    submarket overview narrative, e.g. '...comprises 110 hotel properties,
+    which contain around 12,000 rooms. Among the subtypes, there are 6,000
+    Luxury & Upper Upscale rooms, 4,300 Upscale & Upper Midscale rooms, and
+    1,300 Midscale & Economy rooms...'. Point-in-time (not a year series),
+    used to convert segment occupancy/ADR into an estimated room-revenue
+    figure for the tax-estimate table. Returns None if the narrative
+    wording doesn't match (CoStar's own template phrasing can drift).
+
+    This overview narrative runs in a two-column layout. pdfplumber's plain
+    extract_text() reads left-to-right across the full page width, which
+    interleaves fragments from both columns on the same line and breaks any
+    phrase-level regex. Cropping each page into left/right halves and
+    extracting them separately keeps each column's sentences intact."""
+    chunks = []
+    for page in pages:
+        mid = page.width / 2
+        chunks.append(page.crop((0, 0, mid, page.height)).extract_text() or "")
+        chunks.append(page.crop((mid, 0, page.width, page.height)).extract_text() or "")
+    full_text = re.sub(r"\s+", " ", " ".join(chunks))
+    m = _ROOM_SPLIT_RE.search(full_text)
+    if not m:
+        return None
+    return {
+        "market":                       market,
+        "total_properties":             _parse_int(m.group(1)),
+        "total_rooms":                  _parse_int(m.group(2)),
+        "luxury_upper_upscale_rooms":   _parse_int(m.group(3)),
+        "upscale_upper_midscale_rooms": _parse_int(m.group(4)),
+        "midscale_economy_rooms":       _parse_int(m.group(5)),
+        "source_file":                  source_file,
+        "report_date":                  report_date,
+    }
 
 
 def _extract_profitability(pages: list, market: str, source_file: str) -> list:
@@ -975,18 +1142,21 @@ def parse_costar_pdf(pdf_path: Path) -> dict:
             annual   = _extract_annual_performance(pages, market, source_file, report_date)
             profit   = _extract_profitability(pages, market, source_file)
             snaps    = _extract_snapshot_rows(overview, trend, annual, market, source_file, report_date)
+            room_split = _extract_segment_room_split(pages, market, source_file, report_date)
 
         n_annual = len(annual)
         n_profit = len(profit)
         n_snaps  = len(snaps)
         log("costar_pdf", "OK  ",
-            f"  → {n_annual} annual perf rows, {n_profit} P&L rows, {n_snaps} snapshot rows")
+            f"  → {n_annual} annual perf rows, {n_profit} P&L rows, {n_snaps} snapshot rows"
+            + (", room split found" if room_split else ""))
 
         return {
             "market":              market,
             "report_type":         report_type,
             "source_file":         source_file,
             "report_date":         report_date,
+            "room_split":          room_split,
             "overview":            overview,
             "trend":               trend,
             "annual_performance":  annual,
@@ -1018,6 +1188,7 @@ def parse_all_pdfs() -> dict:
     all_annual: list = []
     all_profit: list = []
     all_snaps:  list = []
+    all_room_splits: list = []
 
     for pdf_path in pdf_files:
         result = parse_costar_pdf(pdf_path)
@@ -1025,11 +1196,14 @@ def parse_all_pdfs() -> dict:
             all_annual.extend(result.get("annual_performance", []))
             all_profit.extend(result.get("profitability", []))
             all_snaps.extend(result.get("snapshot_rows", []))
+            if result.get("room_split"):
+                all_room_splits.append(result["room_split"])
 
     return {
         "annual_performance": all_annual,
         "profitability":      all_profit,
         "snapshot_rows":      all_snaps,
+        "room_splits":        all_room_splits,
     }
 
 
@@ -1119,6 +1293,12 @@ def main() -> None:
         if snap_rows:
             n = _load_pdf_snapshots(cur, snap_rows)
             log("costar_pdf", "OK  ", f"  Added {n} new snapshot rows from PDFs")
+
+        # Segment room-inventory split (feeds the weekly report's tax-estimate table)
+        room_splits = pdf_data.get("room_splits", [])
+        if room_splits:
+            n = load_segment_room_split(cur, room_splits)
+            totals["costar_segment_room_split"] = n
     else:
         log("costar_load", "INFO", "No PDF data extracted — baseline data only loaded")
 

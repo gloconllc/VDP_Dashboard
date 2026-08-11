@@ -304,37 +304,89 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
     compression_label = comp_q["quarter"].iloc[-1] if not comp_q.empty else "Q-"
     compression_days = int(comp_q["days_above_80_occ"].iloc[-1]) if not comp_q.empty else 0
 
-    # CoStar chain-scale segments
+    # CoStar chain-scale segments -- real submarket-level data parsed from the
+    # newest CoStar "Hospitality-Submarket" PDF (see load_costar_reports.py's
+    # _extract_annual_performance / _extract_segment_room_split). This
+    # replaces costar_chain_scale_breakdown.csv / costar_competitive_set.csv,
+    # two hand-built files ("South Orange County CA", 6 tiers, named
+    # individual properties) that traced to no real CoStar export on file.
+    # See CLAUDE.md Lessons Learned, 2026-08-11.
+    COSTAR_MARKET = "Newport Beach/Dana Point"
+    SEGMENT_SCOPES = ["Luxury & Upper Upscale", "Upscale & Upper Midscale", "Midscale & Economy"]
+
+    year_labels = pd.read_sql_query(
+        "SELECT DISTINCT year_label FROM costar_annual_performance "
+        "WHERE market=? AND report_scope='Overall'", con, params=(COSTAR_MARKET,)
+    )["year_label"].tolist()
+    current_year = datetime.now().year
+    # CoStar's numeric row for the current year is a pace/forecast figure, not
+    # a complete "Full Year" actual -- only years strictly before this one are
+    # real, closed-book years. The current year's real, actual-to-date figure
+    # is the "YTD" row instead.
+    real_years = sorted(int(y) for y in year_labels if y.isdigit() and int(y) < current_year)
+    has_ytd = "YTD" in year_labels
+
+    seg_year_label = str(real_years[-1]) if real_years else None
+    seg_period_text = f"Full Year {seg_year_label}" if seg_year_label else "N/A"
+
+    if date_range and len(date_range) == 2 and date_range[1]:
+        req_year = pd.Timestamp(date_range[1]).year
+        if req_year == current_year and has_ytd:
+            seg_year_label, seg_period_text = "YTD", f"Year-to-Date {current_year}"
+        elif req_year in real_years:
+            seg_year_label, seg_period_text = str(req_year), f"Full Year {req_year}"
+        # else: requested year has no real CoStar data -- keep the freshest actual year
+
     seg = pd.read_sql_query(
-        "SELECT chain_scale, occupancy_pct, revpar_usd, room_revenue_usd, year "
-        "FROM costar_chain_scale_breakdown WHERE year = (SELECT MAX(year) FROM costar_chain_scale_breakdown) "
-        "ORDER BY revpar_usd DESC", con
+        "SELECT report_scope AS chain_scale, occupancy_pct, adr_usd, revpar_usd "
+        "FROM costar_annual_performance WHERE market=? AND report_scope IN (?,?,?) "
+        "AND year_label=? ORDER BY revpar_usd DESC",
+        con, params=[COSTAR_MARKET] + SEGMENT_SCOPES + [seg_year_label],
+    ) if seg_year_label else pd.DataFrame(columns=["chain_scale", "occupancy_pct", "adr_usd", "revpar_usd"])
+
+    room_split = pd.read_sql_query(
+        "SELECT * FROM costar_segment_room_split WHERE market=? ORDER BY report_date DESC LIMIT 1",
+        con, params=(COSTAR_MARKET,),
     )
-    seg_year = seg["year"].iloc[0] if not seg.empty else "N/A"
+    rooms_by_segment = {}
+    if not room_split.empty:
+        rs = room_split.iloc[0]
+        rooms_by_segment = {
+            "Luxury & Upper Upscale": rs["luxury_upper_upscale_rooms"],
+            "Upscale & Upper Midscale": rs["upscale_upper_midscale_rooms"],
+            "Midscale & Economy": rs["midscale_economy_rooms"],
+        }
+    seg["rooms"] = seg["chain_scale"].map(rooms_by_segment) if not seg.empty else None
+    seg["room_revenue_usd"] = (
+        seg["occupancy_pct"] / 100 * seg["rooms"].fillna(0) * 365 * seg["adr_usd"] if not seg.empty else None
+    )
+
     chart_segments = _dual_axis_bar(
         seg["chain_scale"].tolist(), seg["occupancy_pct"].tolist(), seg["revpar_usd"].tolist()
-    )
-    segment_list = " · ".join(seg["chain_scale"].tolist())
+    ) if not seg.empty else _dual_axis_bar([], [], [])
+    segment_list = " · ".join(seg["chain_scale"].tolist()) if not seg.empty else "No CoStar segment data for this period"
 
-    # property detail + tax estimate (luxury / upper upscale only, matching template)
-    props = pd.read_sql_query(
-        "SELECT property_name, chain_scale, occupancy_pct, adr_usd, revpar_usd FROM costar_competitive_set "
-        "WHERE chain_scale IN ('Luxury','Upper Upscale') ORDER BY chain_scale, revpar_usd DESC", con
-    )
-    pill = {"Luxury": "pill-luxury", "Upper Upscale": "pill-upper"}
+    pill = {
+        "Luxury & Upper Upscale": "pill-luxury",
+        "Upscale & Upper Midscale": "pill-upper",
+        "Midscale & Economy": "pill-mid",
+    }
     property_rows = ""
-    for _, r in props.iterrows():
+    for _, r in seg.iterrows():
         cls = pill.get(r["chain_scale"], "pill-upper")
+        rooms_txt = f'{int(r["rooms"]):,}' if pd.notna(r["rooms"]) else "N/A"
         property_rows += (
-            f'<tr><td>{r["property_name"]}</td><td><span class="{cls}">{r["chain_scale"]}</span></td>'
+            f'<tr><td><span class="{cls}">{r["chain_scale"]}</span></td><td class="num">{rooms_txt}</td>'
             f'<td class="num">{r["occupancy_pct"]:.1f}%</td><td class="num">${r["adr_usd"]:,.0f}</td>'
             f'<td class="num strong">${r["revpar_usd"]:,.0f}</td></tr>\n'
         )
+    if not property_rows:
+        property_rows = '<tr><td colspan="5" style="text-align:center; color:#94A3B8;">No CoStar segment data for this period</td></tr>'
 
     tax_rows = ""
     total_rev = seg["room_revenue_usd"].sum() if not seg.empty else 0
-    for _, r in seg[seg["chain_scale"].isin(["Luxury", "Upper Upscale"])].iterrows():
-        rev = r["room_revenue_usd"]
+    for _, r in seg.iterrows():
+        rev = r["room_revenue_usd"] or 0
         share = (rev / total_rev * 100) if total_rev else 0
         tbid = rev * 0.0125
         tot = rev * 0.10
@@ -344,6 +396,8 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
             f'<td class="num">${rev/1e6:,.1f}M</td><td class="num">{share:.1f}%</td>'
             f'<td class="num">${tbid/1e6:,.2f}M</td><td class="num strong">${tot/1e6:,.2f}M</td></tr>\n'
         )
+    if not tax_rows:
+        tax_rows = '<tr><td colspan="5" style="text-align:center; color:#94A3B8;">No CoStar segment data for this period</td></tr>'
 
     # Datafy visitor profile -- prefer the freshest export for each metric.
     # The August 2026 "DynamicHomePage" export set covers 2026-01-01 to
@@ -529,7 +583,7 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
         "CHART_ORIGINS": chart_origins,
         "ORIGINS_LEGEND": origins_legend,
         "DATAFY_PERIOD": datafy_period,
-        "COSTAR_SEGMENT_PERIOD": f"Full Year {seg_year}, South Orange County CA",
+        "COSTAR_SEGMENT_PERIOD": f"{seg_period_text}, {COSTAR_MARKET}",
         "COSTAR_SEGMENT_LIST": segment_list,
         "CHART_SEGMENTS": chart_segments,
         "PROPERTY_ROWS": property_rows,
