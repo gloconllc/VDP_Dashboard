@@ -326,8 +326,16 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
     real_years = sorted(int(y) for y in year_labels if y.isdigit() and int(y) < current_year)
     has_ytd = "YTD" in year_labels
 
-    seg_year_label = str(real_years[-1]) if real_years else None
-    seg_period_text = f"Full Year {seg_year_label}" if seg_year_label else "N/A"
+    # Default to the YTD row when it exists -- it's CoStar's real, actual-
+    # to-date figure for the current year and is fresher than "Full Year
+    # {last complete year}", even though it covers a partial year. Falls
+    # back to the freshest complete year only if no YTD row was parsed.
+    if has_ytd:
+        seg_year_label, seg_period_text = "YTD", f"Year-to-Date {current_year}"
+    elif real_years:
+        seg_year_label, seg_period_text = str(real_years[-1]), f"Full Year {real_years[-1]}"
+    else:
+        seg_year_label, seg_period_text = None, "N/A"
 
     if date_range and len(date_range) == 2 and date_range[1]:
         req_year = pd.Timestamp(date_range[1]).year
@@ -335,7 +343,7 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
             seg_year_label, seg_period_text = "YTD", f"Year-to-Date {current_year}"
         elif req_year in real_years:
             seg_year_label, seg_period_text = str(req_year), f"Full Year {req_year}"
-        # else: requested year has no real CoStar data -- keep the freshest actual year
+        # else: requested year has no real CoStar data -- keep the default above
 
     seg = pd.read_sql_query(
         "SELECT report_scope AS chain_scale, occupancy_pct, adr_usd, revpar_usd "
