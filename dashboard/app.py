@@ -7,6 +7,7 @@ it in full.
 """
 
 import base64
+import io
 import os
 import sys
 from datetime import datetime
@@ -57,11 +58,14 @@ st.markdown(
       footer {visibility: hidden;}
       .block-container { padding-top: 3rem; max-width: 100%; padding-left: 3rem; padding-right: 3rem; }
       .pulse-header { display:flex; align-items:center; justify-content:space-between;
-                      padding-top: 6px; padding-bottom: 12px; border-bottom: 1px solid #E2E8F0; margin-bottom: 18px;
-                      overflow: visible; line-height: 1.3; }
-      .pulse-header-left { display:flex; align-items:center; gap:14px; }
-      .pulse-logo-badge { background:#123C4A; border-radius:10px; width:52px; height:44px;
-                           display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+                      padding-top: 6px; padding-bottom: 14px;
+                      border-bottom: 3px solid transparent;
+                      border-image: linear-gradient(90deg, #123C4A 0%, #1D6E86 45%, #B4530980 100%) 1;
+                      margin-bottom: 18px; overflow: visible; line-height: 1.3; }
+      .pulse-header-left { display:flex; align-items:center; gap:16px; }
+      .pulse-logo-badge { background:#123C4A; border-radius:10px; width:58px; height:50px;
+                           display:flex; align-items:center; justify-content:center; flex-shrink:0;
+                           box-shadow: 0 2px 6px rgba(18,60,74,0.35); }
 
       /* Destination hero band: real Dana Point photography */
       .pulse-hero { position:relative; height:180px; border-radius:14px; overflow:hidden;
@@ -75,8 +79,17 @@ st.markdown(
       .pulse-hero-tag { color:#FFFFFF; font-size:13px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
         text-shadow: 0 1px 6px rgba(0,0,0,0.55); }
       .pulse-logo-badge img { width:36px; height:auto; }
-      .pulse-title { font-family:Georgia,'DejaVu Serif',serif; font-style:italic; font-size: 24px; font-weight: 700; color: #0F172A; }
-      .pulse-sub { font-size: 13px; color: #64748B; margin-top:2px; }
+      .pulse-eyebrow { font-size: 11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+        color:#1D6E86; margin-bottom:2px; }
+      .pulse-title { font-family:Georgia,'DejaVu Serif',serif; font-style:italic; font-size: 28px;
+        font-weight: 700; color: #0B2530; line-height:1.15; }
+      .pulse-sub { font-size: 13.5px; color: #475569; margin-top:5px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+      .pulse-sub .pulse-sub-brand { color:#1D6E86; font-weight:600; }
+      .pulse-sub .pulse-sub-dot { color:#CBD9DE; }
+      .pulse-sub .pulse-status-pill { display:inline-flex; align-items:center; gap:6px;
+        background:#F0F7F9; border:1px solid #CBE3EA; border-radius:20px; padding:3px 10px 3px 8px;
+        color:#0E4B5C; font-weight:600; font-size:12.5px; }
+      .pulse-sub .pulse-status-dot { width:7px; height:7px; border-radius:50%; background:#1D9E6F; flex-shrink:0; }
 
       /* Regenerate button + filter row */
       div[data-testid="stButton"] > button {
@@ -178,20 +191,64 @@ def _generate(_cache_key: str, range_start: str | None, range_end: str | None):
     return build_report(date_range=override)
 
 
+# Section map: each entry is one poppable section a viewer can jump to.
+# "page" is the 0-based index into the physical PDF (0 = cover, which is
+# intentionally not offered as its own pop-out section).
+SECTIONS = [
+    {"icon": "📊", "title": "Executive Summary & Hotel Performance",
+     "desc": "Headline KPIs, the occupancy trend, and the story behind this week's numbers.", "page": 1},
+    {"icon": "🏨", "title": "Hotel Performance (ADR) & Visitor Origins",
+     "desc": "Average daily rate by day of week and where visitors are traveling from.", "page": 2},
+    {"icon": "🏢", "title": "Market Segments",
+     "desc": "CoStar chain-scale occupancy and RevPAR by tier for the Newport Beach/Dana Point submarket.", "page": 3},
+    {"icon": "🏬", "title": "Chain-Scale Segment Detail",
+     "desc": "Segment-level performance and the TBID/TOT tax estimate.", "page": 4},
+    {"icon": "🧳", "title": "Visitor Profile & Spend",
+     "desc": "Datafy visitor demographics, category spend, and length of stay.", "page": 5},
+    {"icon": "📈", "title": "Forward Outlook & Group Business",
+     "desc": "What's ahead for compression, group bookings, and travel trends.", "page": 6},
+]
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _split_pdf_pages(pdf_bytes: bytes) -> list[bytes]:
+    """Split the full report into single-page PDFs so a section can be
+    viewed or printed on its own without the rest of the report."""
+    from pypdf import PdfReader, PdfWriter
+
+    reader = PdfReader(io.BytesIO(pdf_bytes))
+    pages: list[bytes] = []
+    for page in reader.pages:
+        writer = PdfWriter()
+        writer.add_page(page)
+        buf = io.BytesIO()
+        writer.write(buf)
+        pages.append(buf.getvalue())
+    return pages
+
+
 def _pdf_generated_at() -> str:
     if os.path.exists(PDF_PATH):
         return datetime.fromtimestamp(os.path.getmtime(PDF_PATH)).strftime("%b %d, %Y at %I:%M %p")
     return "not yet generated"
 
 
-def _header_html(status_text: str) -> str:
+def _header_html(status_text: str, ok: bool = True) -> str:
+    dot_color = "#1D9E6F" if ok else "#C2410C"
     return f"""
         <div class="pulse-header">
           <div class="pulse-header-left">
             <div class="pulse-logo-badge"><img src="{_logo_data_uri()}"></div>
             <div>
+              <div class="pulse-eyebrow">Destination Intelligence Report</div>
               <div class="pulse-title">Dana Point PULSE</div>
-              <div class="pulse-sub">Prepared by GloCon Solutions LLC for Visit Dana Point &nbsp;|&nbsp; {status_text}</div>
+              <div class="pulse-sub">
+                <span class="pulse-sub-brand">Prepared by GloCon Solutions LLC for Visit Dana Point</span>
+                <span class="pulse-sub-dot">&bull;</span>
+                <span class="pulse-status-pill">
+                  <span class="pulse-status-dot" style="background:{dot_color};"></span>{status_text}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -242,14 +299,14 @@ try:
     pdf_path = _generate(cache_key, range_start_iso, range_end_iso)
 except Exception as exc:  # noqa: BLE001
     splash.empty()
-    header_slot.markdown(_header_html("Last generated: generation failed, see logs"), unsafe_allow_html=True)
+    header_slot.markdown(_header_html("Last generated: generation failed, see logs", ok=False), unsafe_allow_html=True)
     st.error(f"Report generation failed: {exc}")
     st.stop()
 
 splash.empty()
 
 if not os.path.exists(pdf_path):
-    header_slot.markdown(_header_html("Last generated: report file missing"), unsafe_allow_html=True)
+    header_slot.markdown(_header_html("Last generated: report file missing", ok=False), unsafe_allow_html=True)
     st.error("Report file was not created. Check logs for details.")
     st.stop()
 
@@ -261,10 +318,64 @@ with open(pdf_path, "rb") as f:
 st.download_button(
     "⬇ Download PDF",
     data=pdf_bytes,
-    file_name=f"dana_point_pulse_report_{datetime.now().strftime('%Y-%m-%d')}.pdf",
+    file_name=f"Visit Dana Point PULSE Report {datetime.now().strftime('%Y-%m-%d')}.pdf",
     mime="application/pdf",
 )
 
+section_pages = _split_pdf_pages(pdf_bytes)
+available_sections = [s for s in SECTIONS if s["page"] < len(section_pages)]
+
+if "open_section" not in st.session_state:
+    st.session_state["open_section"] = None
+
+if available_sections:
+    st.markdown("#### View a Section")
+    st.caption("Click any section below to open, view, or print just that part of the report.")
+    grid_cols = st.columns(3)
+    for i, section in enumerate(available_sections):
+        with grid_cols[i % 3]:
+            with st.container(border=True):
+                st.markdown(f"**{section['icon']} {section['title']}**")
+                st.caption(section["desc"])
+                if st.button("View section", key=f"open_section_{i}", use_container_width=True):
+                    st.session_state["open_section"] = i
+                    st.rerun()
+
+open_idx = st.session_state.get("open_section")
+if open_idx is not None and 0 <= open_idx < len(available_sections):
+    open_section = available_sections[open_idx]
+
+    @st.dialog(open_section["title"], width="large")
+    def _section_dialog():
+        st.caption(open_section["desc"])
+        page_bytes = section_pages[open_section["page"]]
+        page_b64 = base64.b64encode(page_bytes).decode("utf-8")
+        st.markdown(
+            f"""
+            <iframe src="data:application/pdf;base64,{page_b64}"
+                    width="100%" height="620px" style="border:1px solid #E2E8F0; border-radius:8px;">
+            </iframe>
+            """,
+            unsafe_allow_html=True,
+        )
+        dl_col, close_col = st.columns(2)
+        with dl_col:
+            st.download_button(
+                "⬇ Download this section",
+                data=page_bytes,
+                file_name=f"Visit Dana Point PULSE - {open_section['title']} - {datetime.now().strftime('%Y-%m-%d')}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key="download_section_pdf",
+            )
+        with close_col:
+            if st.button("Close, return to full report", use_container_width=True, key="close_section_dialog"):
+                st.session_state["open_section"] = None
+                st.rerun()
+
+    _section_dialog()
+
+st.markdown("#### Full Report")
 b64 = base64.b64encode(pdf_bytes).decode("utf-8")
 st.markdown(
     f"""
