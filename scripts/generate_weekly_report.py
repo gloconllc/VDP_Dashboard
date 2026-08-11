@@ -212,8 +212,18 @@ def _fmt_usd(v, decimals=0):
         return "N/A"
 
 
-def build_report() -> str:
-    """Returns path to the generated PDF."""
+def build_report(date_range: tuple[str, str] | None = None) -> str:
+    """Returns path to the generated PDF.
+
+    date_range: optional (start, end) ISO date strings (YYYY-MM-DD) that
+    override the hotel-performance (STR) window shown on the cover and on
+    the Executive Summary / Hotel Performance pages. When omitted, or when
+    the requested range contains no STR data, this falls back to the last
+    complete 7-day window ending on the freshest STR date. Datafy and
+    CoStar sections always report on their own freshest available period
+    regardless of this override, since those sources update on a different
+    cadence than STR.
+    """
     con = _connect()
 
     kpi = pd.read_sql_query(
@@ -222,10 +232,23 @@ def build_report() -> str:
     kpi["as_of_date"] = pd.to_datetime(kpi["as_of_date"])
     latest_date = kpi["as_of_date"].max()
 
-    # --- last complete 7-day window ---
-    week_end = latest_date
-    week_start = week_end - timedelta(days=6)
-    week_df = kpi[(kpi["as_of_date"] >= week_start) & (kpi["as_of_date"] <= week_end)].copy()
+    # --- hotel-performance window: user override, else last complete 7 days ---
+    range_note = ""
+    week_df = pd.DataFrame()
+    if date_range and len(date_range) == 2 and date_range[0] and date_range[1]:
+        req_start = pd.Timestamp(date_range[0])
+        req_end = pd.Timestamp(date_range[1])
+        week_df = kpi[(kpi["as_of_date"] >= req_start) & (kpi["as_of_date"] <= req_end)].copy()
+        if not week_df.empty:
+            week_start, week_end = req_start, req_end
+        else:
+            range_note = " (no hotel data in requested range; showing latest available week)"
+
+    if week_df.empty:
+        week_end = latest_date
+        week_start = week_end - timedelta(days=6)
+        week_df = kpi[(kpi["as_of_date"] >= week_start) & (kpi["as_of_date"] <= week_end)].copy()
+
     week_df = week_df.sort_values("as_of_date")
 
     occ_avg = week_df["occ_pct"].mean()
@@ -239,6 +262,7 @@ def build_report() -> str:
         week_label = f"{week_start.strftime('%B %-d')} – {week_end.strftime('%-d, %Y')}"
     else:
         week_label = f"{week_start.strftime('%B %-d')} – {week_end.strftime('%B %-d, %Y')}"
+    week_label += range_note
 
     # day-of-week occ/adr for the week (Sun-Sat order)
     week_df["dow"] = week_df["as_of_date"].dt.dayofweek  # Mon=0..Sun=6

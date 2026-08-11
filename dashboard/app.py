@@ -1,8 +1,9 @@
 """
-Dana Point PULSE, Weekly Report Viewer
+Dana Point PULSE Report Viewer
 -----------------------------------------
-Minimal app. Its only job: generate the weekly report PDF from live STR /
-CoStar / Datafy data and display it in full.
+Minimal app. Its only job: generate the PULSE report PDF from live STR /
+CoStar / Datafy data (each on its own native reporting window) and display
+it in full.
 """
 
 import base64
@@ -23,7 +24,7 @@ LOGO_NAV_PATH = os.path.join(BASE_DIR, "assets", "vdp_logo_nav.svg")
 HERO_PHOTO_PATH = os.path.join(BASE_DIR, "assets", "photos", "hero_coast.jpg")
 
 st.set_page_config(
-    page_title="Dana Point PULSE, Weekly Report",
+    page_title="Dana Point PULSE",
     page_icon="📄",
     layout="wide",
 )
@@ -171,9 +172,10 @@ WHALE_SPLASH_HTML = f"""
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def _generate(_cache_key: str):
+def _generate(_cache_key: str, range_start: str | None, range_end: str | None):
     from generate_weekly_report import build_report
-    return build_report()
+    override = (range_start, range_end) if range_start and range_end else None
+    return build_report(date_range=override)
 
 
 def _pdf_generated_at() -> str:
@@ -190,7 +192,7 @@ with col1:
           <div class="pulse-header-left">
             <div class="pulse-logo-badge"><img src="{_logo_data_uri()}"></div>
             <div>
-              <div class="pulse-title">Dana Point PULSE, Weekly Report</div>
+              <div class="pulse-title">Dana Point PULSE</div>
               <div class="pulse-sub">Prepared by GloCon Solutions LLC for Visit Dana Point &nbsp;|&nbsp; Last generated: {_pdf_generated_at()}</div>
             </div>
           </div>
@@ -203,10 +205,13 @@ with col2:
         "Report window",
         value=(),
         label_visibility="collapsed",
-        help="Filter the report to a specific date range. Full report reflow by range is in progress.",
+        help="Pick a start and end date to rebuild the hotel-performance window (cover, Executive Summary, Hotel Performance pages). Datafy and CoStar sections always show their own freshest available period.",
     )
 with col3:
     regenerate = st.button("Regenerate", use_container_width=True)
+
+range_start_iso = date_range[0].isoformat() if len(date_range) == 2 else None
+range_end_iso = date_range[1].isoformat() if len(date_range) == 2 else None
 
 st.markdown(
     f"""
@@ -229,7 +234,7 @@ splash.markdown(WHALE_SPLASH_HTML, unsafe_allow_html=True)
 
 try:
     cache_key = datetime.now().strftime("%Y-%m-%d-%H") if not regenerate else datetime.now().isoformat()
-    pdf_path = _generate(cache_key)
+    pdf_path = _generate(cache_key, range_start_iso, range_end_iso)
 except Exception as exc:  # noqa: BLE001
     splash.empty()
     st.error(f"Report generation failed: {exc}")
@@ -247,7 +252,7 @@ with open(pdf_path, "rb") as f:
 st.download_button(
     "⬇ Download PDF",
     data=pdf_bytes,
-    file_name=f"dana_point_pulse_weekly_report_{datetime.now().strftime('%Y-%m-%d')}.pdf",
+    file_name=f"dana_point_pulse_report_{datetime.now().strftime('%Y-%m-%d')}.pdf",
     mime="application/pdf",
 )
 
