@@ -184,22 +184,27 @@ def _pdf_generated_at() -> str:
     return "not yet generated"
 
 
-col1, col2, col3 = st.columns([4, 2, 1])
-with col1:
-    st.markdown(
-        f"""
+def _header_html(status_text: str) -> str:
+    return f"""
         <div class="pulse-header">
           <div class="pulse-header-left">
             <div class="pulse-logo-badge"><img src="{_logo_data_uri()}"></div>
             <div>
               <div class="pulse-title">Dana Point PULSE</div>
-              <div class="pulse-sub">Prepared by GloCon Solutions LLC for Visit Dana Point &nbsp;|&nbsp; Last generated: {_pdf_generated_at()}</div>
+              <div class="pulse-sub">Prepared by GloCon Solutions LLC for Visit Dana Point &nbsp;|&nbsp; {status_text}</div>
             </div>
           </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """
+
+
+col1, col2, col3 = st.columns([4, 2, 1])
+with col1:
+    header_slot = st.empty()
+    # Shown immediately, before this run's report generation has actually
+    # happened, so it can't yet reflect a real timestamp. Replaced below
+    # with the true "Last generated" stamp once generation completes.
+    header_slot.markdown(_header_html("Generating latest report&hellip;"), unsafe_allow_html=True)
 with col2:
     date_range = st.date_input(
         "Report window",
@@ -237,14 +242,18 @@ try:
     pdf_path = _generate(cache_key, range_start_iso, range_end_iso)
 except Exception as exc:  # noqa: BLE001
     splash.empty()
+    header_slot.markdown(_header_html("Last generated: generation failed, see logs"), unsafe_allow_html=True)
     st.error(f"Report generation failed: {exc}")
     st.stop()
 
 splash.empty()
 
 if not os.path.exists(pdf_path):
+    header_slot.markdown(_header_html("Last generated: report file missing"), unsafe_allow_html=True)
     st.error("Report file was not created. Check logs for details.")
     st.stop()
+
+header_slot.markdown(_header_html(f"Last generated: {_pdf_generated_at()}"), unsafe_allow_html=True)
 
 with open(pdf_path, "rb") as f:
     pdf_bytes = f.read()
