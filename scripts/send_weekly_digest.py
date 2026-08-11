@@ -5,12 +5,18 @@ Reads insights_daily and kpi_daily_summary from analytics.sqlite and sends
 a formatted HTML weekly email digest.
 
 Env vars (all required for live send; missing any triggers dry-run mode):
-    DIGEST_EMAIL_FROM   -- sender address
+    DIGEST_EMAIL_FROM   -- sender address (must be a verified sender if using SendGrid/Mailgun)
     DIGEST_EMAIL_TO     -- recipient(s), comma-separated
     DIGEST_SMTP_HOST    -- SMTP host (default: smtp.gmail.com)
     DIGEST_SMTP_PORT    -- SMTP port (default: 587)
     DIGEST_SMTP_USER    -- SMTP username
     DIGEST_SMTP_PASS    -- SMTP password
+    DIGEST_REPORT_URL   -- link the "View Full Report" button points to
+                           (default: https://vdppulse.gloconsolutions.com/)
+
+Any standard SMTP relay works, including transactional providers via their
+SMTP interface, e.g. SendGrid: DIGEST_SMTP_HOST=smtp.sendgrid.net,
+DIGEST_SMTP_PORT=587, DIGEST_SMTP_USER=apikey, DIGEST_SMTP_PASS=<API key>.
 
 Dry-run: writes HTML to logs/weekly_digest_YYYY-MM-DD.html
 
@@ -40,6 +46,7 @@ DB_PATH      = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
 LOGS_DIR     = os.path.join(PROJECT_ROOT, "logs")
 
 TODAY = date.today().isoformat()
+REPORT_URL = os.environ.get("DIGEST_REPORT_URL", "https://vdppulse.gloconsolutions.com/")
 
 
 # ---------------------------------------------------------------------------
@@ -214,7 +221,7 @@ def build_html(kpis: dict, insights_df: pd.DataFrame) -> str:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Dana Point PULSE — Weekly Intelligence Brief</title>
+<title>Dana Point PULSE, Intelligence Brief</title>
 </head>
 <body style="margin:0;padding:0;background:#f8f9fa;font-family:Arial,Helvetica,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
@@ -232,7 +239,7 @@ def build_html(kpis: dict, insights_df: pd.DataFrame) -> str:
               Dana Point PULSE
             </div>
             <div style="font-size:13px;color:#aec6e8;margin-top:4px;">
-              Weekly Intelligence Brief &mdash; {TODAY}
+              Intelligence Brief, {TODAY}
             </div>
           </td>
         </tr>
@@ -245,6 +252,17 @@ def build_html(kpis: dict, insights_df: pd.DataFrame) -> str:
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>{hero_row}</tr>
             </table>
+          </td>
+        </tr>
+
+        <!-- CTA -->
+        <tr>
+          <td style="padding:4px 32px 20px;text-align:center;">
+            <a href="{REPORT_URL}" target="_blank"
+               style="display:inline-block;background:#1D6E86;color:#ffffff;text-decoration:none;
+                      font-size:14px;font-weight:600;padding:12px 28px;border-radius:6px;">
+              View Full Report &rarr;
+            </a>
           </td>
         </tr>
 
@@ -296,7 +314,7 @@ def send_email(html: str) -> int:
     recipients = [r.strip() for r in to_raw.split(",") if r.strip()]
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"Dana Point PULSE — Weekly Intelligence Brief ({TODAY})"
+    msg["Subject"] = f"Dana Point PULSE, Intelligence Brief ({TODAY})"
     msg["From"]    = from_addr
     msg["To"]      = ", ".join(recipients)
     msg.attach(MIMEText(html, "html"))
