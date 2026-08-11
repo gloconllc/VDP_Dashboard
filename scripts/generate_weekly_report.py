@@ -117,27 +117,37 @@ def _connect() -> sqlite3.Connection:
 
 def _fig_to_b64(fig) -> str:
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", transparent=True)
+    # 220 dpi keeps bar-value labels and tick text sharp even when the PNG is
+    # scaled down inside a two-up grid; 150 dpi looked soft/blurry at that
+    # render size (2026-08-11 legibility pass).
+    fig.savefig(buf, format="png", dpi=220, bbox_inches="tight", transparent=True)
     plt.close(fig)
     buf.seek(0)
     return "data:image/png;base64," + base64.b64encode(buf.read()).decode("ascii")
 
 
-def _bar_chart(labels, series, colors, ylabel, figsize=(4.6, 2.4), legend=False):
+def _bar_chart(labels, series, colors, ylabel, figsize=(4.6, 2.4), legend=False, label_fmt=None):
+    """label_fmt: optional callable(value) -> str, printed above each bar."""
     fig, ax = plt.subplots(figsize=figsize)
     n = len(series)
     width = 0.8 / n
     x = range(len(labels))
     for i, (name, vals, color) in enumerate(zip([s[0] for s in series], [s[1] for s in series], colors)):
         offs = [xi + (i - (n - 1) / 2) * width for xi in x]
-        ax.bar(offs, vals, width=width, color=color, label=name)
+        bars = ax.bar(offs, vals, width=width, color=color, label=name)
+        if label_fmt:
+            ax.bar_label(bars, labels=[label_fmt(v) for v in vals],
+                          fontsize=9, fontweight="bold", color="#1E293B", padding=2)
     ax.set_xticks(list(x))
-    ax.set_xticklabels(labels, fontsize=9)
-    ax.set_ylabel(ylabel, fontsize=9)
+    ax.set_xticklabels(labels, fontsize=10.5)
+    ax.set_ylabel(ylabel, fontsize=10.5)
     ax.spines[["top", "right"]].set_visible(False)
-    ax.tick_params(labelsize=8)
+    ax.tick_params(labelsize=9.5)
     if legend:
-        ax.legend(fontsize=7, frameon=False, loc="upper left")
+        ax.legend(fontsize=9, frameon=False, loc="upper left")
+    top = ax.get_ylim()[1]
+    if top > 0:
+        ax.set_ylim(0, top * 1.18)  # headroom so bar-value labels don't clip
     fig.tight_layout()
     return _fig_to_b64(fig)
 
@@ -146,25 +156,37 @@ def _dual_axis_bar(labels, occ_vals, revpar_vals):
     fig, ax1 = plt.subplots(figsize=(9, 3.6))
     x = range(len(labels))
     width = 0.35
-    ax1.bar([xi - width / 2 for xi in x], occ_vals, width=width, color=TEAL, label="Occupancy %")
-    ax1.set_ylabel("Occupancy %", fontsize=9)
+    bars1 = ax1.bar([xi - width / 2 for xi in x], occ_vals, width=width, color=TEAL, label="Occupancy %")
+    ax1.bar_label(bars1, labels=[f"{v:.1f}%" for v in occ_vals], fontsize=9, fontweight="bold",
+                   color="#0E4B5C", padding=2)
+    ax1.set_ylabel("Occupancy %", fontsize=10.5)
     ax1.set_xticks(list(x))
-    ax1.set_xticklabels(labels, fontsize=10)
+    ax1.set_xticklabels(labels, fontsize=11)
+    ax1.set_ylim(0, max(occ_vals, default=0) * 1.25 if occ_vals else 1)
     ax2 = ax1.twinx()
-    ax2.bar([xi + width / 2 for xi in x], revpar_vals, width=width, color=TEAL_LT, label="RevPAR $")
-    ax2.set_ylabel("RevPAR $", fontsize=9)
+    bars2 = ax2.bar([xi + width / 2 for xi in x], revpar_vals, width=width, color=TEAL_LT, label="RevPAR $")
+    ax2.bar_label(bars2, labels=[f"${v:,.0f}" for v in revpar_vals], fontsize=9, fontweight="bold",
+                   color="#0E4B5C", padding=2)
+    ax2.set_ylabel("RevPAR $", fontsize=10.5)
+    ax2.set_ylim(0, max(revpar_vals, default=0) * 1.25 if revpar_vals else 1)
+    ax1.tick_params(labelsize=9.5)
+    ax2.tick_params(labelsize=9.5)
     ax1.spines[["top"]].set_visible(False)
     ax2.spines[["top"]].set_visible(False)
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, fontsize=8, frameon=False, loc="upper right")
+    ax1.legend(lines1 + lines2, labels1 + labels2, fontsize=9.5, frameon=False, loc="upper right")
     fig.tight_layout()
     return _fig_to_b64(fig)
 
 
 def _pie_chart(labels, values, colors, figsize=(3.2, 3.2)):
     fig, ax = plt.subplots(figsize=figsize)
-    ax.pie(values, colors=colors, startangle=90, wedgeprops={"linewidth": 1, "edgecolor": "white"})
+    ax.pie(
+        values, colors=colors, startangle=90, wedgeprops={"linewidth": 1, "edgecolor": "white"},
+        autopct=lambda p: f"{p:.0f}%" if p >= 5 else "", pctdistance=0.75,
+        textprops={"fontsize": 9, "fontweight": "bold", "color": "white"},
+    )
     ax.axis("equal")
     fig.tight_layout()
     return _fig_to_b64(fig)
@@ -172,25 +194,34 @@ def _pie_chart(labels, values, colors, figsize=(3.2, 3.2)):
 
 def _donut_chart(labels, values, colors, figsize=(3, 3)):
     fig, ax = plt.subplots(figsize=figsize)
-    wedges, _ = ax.pie(
+    wedges, _, _ = ax.pie(
         values, colors=colors, startangle=90,
         wedgeprops={"width": 0.42, "linewidth": 1, "edgecolor": "white"},
+        autopct="%1.0f%%", pctdistance=0.80,
+        textprops={"fontsize": 9.5, "fontweight": "bold", "color": "#1E293B"},
     )
     ax.legend(wedges, labels, loc="lower center", bbox_to_anchor=(0.5, -0.25),
-              fontsize=8, frameon=False, ncol=1)
+              fontsize=9, frameon=False, ncol=1)
     ax.axis("equal")
     fig.tight_layout()
     return _fig_to_b64(fig)
 
 
-def _hbar_chart(labels, values, color, xlabel, figsize=(6.4, 3.6)):
+def _hbar_chart(labels, values, color, xlabel, figsize=(6.4, 3.6), label_fmt=None):
     fig, ax = plt.subplots(figsize=figsize)
     y = range(len(labels))
-    ax.barh(list(y), values, color=color)
+    bars = ax.barh(list(y), values, color=color)
+    fmt = label_fmt or (lambda v: f"{v:.1f}%")
+    ax.bar_label(bars, labels=[fmt(v) for v in values], fontsize=9, fontweight="bold",
+                 color="#1E293B", padding=3)
     ax.set_yticks(list(y))
-    ax.set_yticklabels(labels, fontsize=9)
+    ax.set_yticklabels(labels, fontsize=10)
     ax.invert_yaxis()
-    ax.set_xlabel(xlabel, fontsize=9)
+    ax.set_xlabel(xlabel, fontsize=10.5)
+    ax.tick_params(labelsize=9.5)
+    right = ax.get_xlim()[1]
+    if right > 0:
+        ax.set_xlim(0, right * 1.15)  # headroom so bar-value labels don't clip
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     return _fig_to_b64(fig)
@@ -274,18 +305,23 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
         occ_by_dow.append(float(row["occ_pct"].mean()) if not row.empty else 0.0)
         adr_by_dow.append(float(row["adr"].mean()) if not row.empty else 0.0)
 
-    chart_occ_dp = _bar_chart(dow_labels, [("Occupancy %", occ_by_dow)], [MAROON], "Occ %", figsize=(4.8, 4.2))
-    chart_adr_dp = _bar_chart(dow_labels, [("ADR $", adr_by_dow)], [MAROON], "ADR $", figsize=(4.8, 4.2))
+    chart_occ_dp = _bar_chart(dow_labels, [("Occupancy %", occ_by_dow)], [MAROON], "Occ %",
+                               figsize=(4.8, 4.2), label_fmt=lambda v: f"{v:.0f}%")
+    chart_adr_dp = _bar_chart(dow_labels, [("ADR $", adr_by_dow)], [MAROON], "ADR $",
+                               figsize=(4.8, 4.2), label_fmt=lambda v: f"${v:.0f}")
 
     # comp-set chart: Dana Point (live) + 5 benchmark markets
     compset_labels = ["Dana Pt"] + list(COMPSET_BENCHMARK.keys())
     compset_vals = [round(revpar_avg, 2)] + list(COMPSET_BENCHMARK.values())
     compset_colors = [MAROON] + [SLATE] * len(COMPSET_BENCHMARK)
     fig, ax = plt.subplots(figsize=(4.8, 4.2))
-    ax.bar(compset_labels, compset_vals, color=compset_colors)
-    ax.set_ylabel("RevPAR $", fontsize=10)
-    ax.tick_params(labelsize=9)
-    ax.set_xticklabels(compset_labels, fontsize=9, rotation=30, ha="right")
+    compset_bars = ax.bar(compset_labels, compset_vals, color=compset_colors)
+    ax.bar_label(compset_bars, labels=[f"${v:,.0f}" for v in compset_vals], fontsize=9,
+                 fontweight="bold", color="#1E293B", padding=2)
+    ax.set_ylabel("RevPAR $", fontsize=10.5)
+    ax.tick_params(labelsize=9.5)
+    ax.set_xticklabels(compset_labels, fontsize=10, rotation=30, ha="right")
+    ax.set_ylim(0, max(compset_vals) * 1.18)
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     chart_compset = _fig_to_b64(fig)
@@ -300,6 +336,7 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
         q_labels,
         [("80%+ occ", comp_q["days_above_80_occ"].tolist()), ("90%+ occ", comp_q["days_above_90_occ"].tolist())],
         [MAROON, MAROON_LT], "Days", legend=True, figsize=(4.8, 4.2),
+        label_fmt=lambda v: f"{int(v)}",
     )
     compression_label = comp_q["quarter"].iloc[-1] if not comp_q.empty else "Q-"
     compression_days = int(comp_q["days_above_80_occ"].iloc[-1]) if not comp_q.empty else 0
