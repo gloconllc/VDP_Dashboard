@@ -292,19 +292,41 @@ def send_alert_email(alert_lines: list[str]) -> None:
 
     recipients = [r.strip() for r in to_raw.split(",") if r.strip()]
     html       = _build_alert_html(alert_lines)
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"Dana Point PULSE Alert ({TODAY_S})"
-    msg["From"]    = from_addr
-    msg["To"]      = ", ".join(recipients)
-    msg.attach(MIMEText(html, "html"))
+    subject    = f"Dana Point PULSE Alert ({TODAY_S})"
 
     try:
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(from_addr, recipients, msg.as_string())
+        # SendGrid's SMTP relay is frequently filtered outbound by PaaS hosts,
+        # which makes smtplib hang instead of failing cleanly. Their HTTP API
+        # runs over standard HTTPS and is used directly when SendGrid is the
+        # configured host. See send_weekly_digest.py for the same pattern.
+        if "sendgrid" in smtp_host.lower():
+            import requests
+
+            payload = {
+                "personalizations": [{"to": [{"email": r} for r in recipients]}],
+                "from": {"email": from_addr},
+                "subject": subject,
+                "content": [{"type": "text/html", "value": html}],
+            }
+            resp = requests.post(
+                "https://api.sendgrid.com/v3/mail/send",
+                headers={"Authorization": f"Bearer {smtp_pass}", "Content-Type": "application/json"},
+                json=payload,
+                timeout=20,
+            )
+            if resp.status_code not in (200, 202):
+                raise RuntimeError(f"SendGrid API error {resp.status_code}: {resp.text[:300]}")
+        else:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"]    = from_addr
+            msg["To"]      = ", ".join(recipients)
+            msg.attach(MIMEText(html, "html"))
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
+                server.ehlo()
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(from_addr, recipients, msg.as_string())
         print(f"[{_ts()}] ALERT: Email sent to {len(recipients)} recipient(s)")
     except Exception as exc:  # noqa: BLE001
         print(f"[{_ts()}] ALERT WARNING: Email send failed — {exc}")

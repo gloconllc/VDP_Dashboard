@@ -302,24 +302,55 @@ def _missing_env() -> list[str]:
     return [k for k in REQUIRED_ENV if not os.environ.get(k)]
 
 
+def _send_via_sendgrid_api(html: str, subject: str, from_addr: str, recipients: list[str], api_key: str) -> int:
+    """SendGrid's HTTP API runs over standard HTTPS (443), which PaaS hosts
+    never block. Their SMTP relay (587/465/2525) is frequently filtered or
+    silently dropped outbound, which makes smtplib hang indefinitely instead
+    of failing with a clear error. This is SendGrid's own recommended
+    integration path, so it is used directly whenever SendGrid is the host."""
+    import requests
+
+    payload = {
+        "personalizations": [{"to": [{"email": r} for r in recipients]}],
+        "from": {"email": from_addr},
+        "subject": subject,
+        "content": [{"type": "text/html", "value": html}],
+    }
+    resp = requests.post(
+        "https://api.sendgrid.com/v3/mail/send",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json=payload,
+        timeout=20,
+    )
+    if resp.status_code not in (200, 202):
+        raise RuntimeError(f"SendGrid API error {resp.status_code}: {resp.text[:300]}")
+    return len(recipients)
+
+
 def send_email(html: str) -> int:
     """Send HTML email. Returns recipient count."""
     from_addr  = os.environ["DIGEST_EMAIL_FROM"]
     to_raw     = os.environ["DIGEST_EMAIL_TO"]
     smtp_host  = os.environ.get("DIGEST_SMTP_HOST", "smtp.gmail.com")
     smtp_port  = int(os.environ.get("DIGEST_SMTP_PORT", "587"))
-    smtp_user  = os.environ["DIGEST_SMTP_USER"]
+    smtp_user  = os.environ.get("DIGEST_SMTP_USER", "")
     smtp_pass  = os.environ["DIGEST_SMTP_PASS"]
 
     recipients = [r.strip() for r in to_raw.split(",") if r.strip()]
+    subject = f"Dana Point PULSE, Intelligence Brief ({TODAY})"
+
+    if "sendgrid" in smtp_host.lower():
+        return _send_via_sendgrid_api(html, subject, from_addr, recipients, smtp_pass)
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"Dana Point PULSE, Intelligence Brief ({TODAY})"
+    msg["Subject"] = subject
     msg["From"]    = from_addr
     msg["To"]      = ", ".join(recipients)
     msg.attach(MIMEText(html, "html"))
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
+    # Explicit timeout so a filtered/blocked port fails fast with a clear
+    # error instead of hanging the request indefinitely.
+    with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
         server.ehlo()
         server.starttls()
         server.login(smtp_user, smtp_pass)
