@@ -22,3 +22,11 @@ enableXsrfProtection = false
 
 [browser]
 gatherUsageStats = false
+
+[client]
+# Default toolbar mode shows a "Deploy" button, GitHub/star icon, and other
+# Streamlit-branded chrome in the top-right corner, visible from first paint
+# (before app content or our custom splash JS has anything to hide). That is
+# almost certainly what read as "seeing Streamlit" on load. Minimal mode keeps
+# only the running-status spinner and drops every Streamlit-branded control.
+toolbarMode = "minimal"
