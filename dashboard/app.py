@@ -506,3 +506,30 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# Admin-only: manual digest send, gated per the project's existing ?admin=true
+# convention. Runs inside this app's own container, which has real outbound
+# network access, unlike a local sandbox, so this is also how a send gets
+# verified end to end before the scheduled morning send relies on it.
+if st.query_params.get("admin", "").lower() == "true":
+    st.markdown("---")
+    st.markdown("#### Admin: Intelligence Brief Digest")
+    missing_env = [
+        k for k in ("DIGEST_EMAIL_FROM", "DIGEST_EMAIL_TO", "DIGEST_SMTP_HOST", "DIGEST_SMTP_USER", "DIGEST_SMTP_PASS")
+        if not os.environ.get(k)
+    ]
+    if missing_env:
+        st.warning(f"Not configured yet, missing: {', '.join(missing_env)}")
+    else:
+        st.caption(f"Will send from {os.environ['DIGEST_EMAIL_FROM']} to {os.environ['DIGEST_EMAIL_TO']}.")
+        if st.button("Send Digest Email Now"):
+            with st.spinner("Sending…"):
+                try:
+                    import send_weekly_digest as digest
+                    kpis = digest.load_latest_kpis()
+                    insights = digest.load_insights()
+                    digest_html = digest.build_html(kpis, insights)
+                    n = digest.send_email(digest_html)
+                    st.success(f"Sent to {n} recipient(s).")
+                except Exception as exc:  # noqa: BLE001
+                    st.error(f"Send failed: {exc}")
