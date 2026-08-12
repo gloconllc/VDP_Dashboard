@@ -7,6 +7,7 @@ it in full.
 """
 
 import base64
+import html
 import io
 import os
 import sys
@@ -90,6 +91,18 @@ st.markdown(
         background:#F0F7F9; border:1px solid #CBE3EA; border-radius:20px; padding:3px 10px 3px 8px;
         color:#0E4B5C; font-weight:600; font-size:12.5px; }
       .pulse-sub .pulse-status-dot { width:7px; height:7px; border-radius:50%; background:#1D9E6F; flex-shrink:0; }
+
+      /* Quick-take summary card, shown before the full report */
+      .pulse-summary-card { background:#F0F7F9; border:1px solid #CBE3EA; border-left:4px solid #1D6E86;
+        border-radius:10px; padding:16px 20px; margin:4px 0 22px 0; }
+      .pulse-summary-label { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+        color:#1D6E86; margin-bottom:6px; }
+      .pulse-summary-body { font-size:14.5px; line-height:1.55; color:#1E293B; }
+
+      /* Help popover content */
+      .pulse-help-title { font-size:15px; font-weight:700; color:#0B2530; margin-bottom:8px; }
+      .pulse-help-item { font-size:13.5px; line-height:1.55; color:#334155; margin-bottom:10px; }
+      .pulse-help-item b { color:#0E4B5C; }
 
       /* Regenerate button + filter row */
       div[data-testid="stButton"] > button {
@@ -210,6 +223,88 @@ SECTIONS = [
 ]
 
 
+# How-to reference for the "?" help icon. Written in John Picou's voice:
+# formal, warm, and specific about what each control does and why it matters.
+HELP_HTML = """
+<div class="pulse-help-title">How to Use This Report</div>
+<div class="pulse-help-item">
+  This page brings live STR, CoStar, and Datafy data for Dana Point together in one place. Four
+  tools make it easy to work with, and each is described below.
+</div>
+<div class="pulse-help-item">
+  <b>Report Window.</b> Select a start and end date to rebuild the cover, executive summary, and
+  hotel performance pages around that period. CoStar and Datafy sections keep their own freshest
+  available window, since each source reports on a different schedule.
+</div>
+<div class="pulse-help-item">
+  <b>Summarize.</b> Select this for a short, plain-language read of what the current numbers show.
+  It draws directly from the report in front of you, so it always matches your selected window.
+</div>
+<div class="pulse-help-item">
+  <b>Regenerate.</b> Rebuilds the report from the latest data in the pipeline. Use this after a
+  fresh STR, CoStar, or Datafy load, or whenever you want to confirm you are looking at the most
+  current figures available.
+</div>
+<div class="pulse-help-item">
+  <b>Download PDF.</b> Saves the complete report to your computer, named for the day you
+  downloaded it.
+</div>
+<div class="pulse-help-item">
+  <b>View a Section.</b> Every major section, from the executive summary through forward outlook,
+  can open on its own. Select "View section" on any card to see, download, or print that page by
+  itself, then select "Close, return to full report" when you are finished.
+</div>
+<div class="pulse-help-item">
+  Questions about a specific figure are welcome. The Data &amp; Downloads section at the end of
+  the full report names the source behind every number.
+</div>
+"""
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _summarize_report(pdf_bytes: bytes) -> str:
+    """Pull the cover and executive summary text from the generated report and
+    have Claude write a short, plain-language take in John Picou's voice."""
+    import pdfplumber
+
+    text_chunks = []
+    with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+        for page in pdf.pages[:2]:
+            text_chunks.append(page.extract_text() or "")
+    source_text = "\n\n".join(text_chunks).strip()[:6000]
+    if not source_text:
+        return ""
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return ""
+
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=api_key)
+    system_prompt = (
+        "You are John Picou, Director of Business Intelligence at Visit Anaheim and founder of "
+        "GloCon Solutions. Write in his voice: formal, warm, analytically precise, and "
+        "solution-oriented. Use the Oxford comma. Never use em dashes, exclamation marks, or ALL "
+        "CAPS. Spell out numbers one through nine; use numerals for 10 and above. In four to five "
+        "sentences: state what the data shows, name the headline figure, note the trend "
+        "direction, and close with what it means for the team this week."
+    )
+    try:
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=400,
+            system=system_prompt,
+            messages=[{
+                "role": "user",
+                "content": f"Summarize the following Dana Point PULSE report excerpt:\n\n{source_text}",
+            }],
+        )
+        return resp.content[0].text.strip()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def _split_pdf_pages(pdf_bytes: bytes) -> list[bytes]:
     """Split the full report into single-page PDFs so a section can be
@@ -255,7 +350,7 @@ def _header_html(status_text: str, ok: bool = True) -> str:
         """
 
 
-col1, col2, col3 = st.columns([4, 2, 1])
+col1, col2, col3, col4, col5 = st.columns([3.2, 2, 1, 1, 0.5])
 with col1:
     header_slot = st.empty()
     # Shown immediately, before this run's report generation has actually
@@ -270,7 +365,12 @@ with col2:
         help="Pick a start and end date to rebuild the hotel-performance window (cover, Executive Summary, Hotel Performance pages). Datafy and CoStar sections always show their own freshest available period.",
     )
 with col3:
+    summarize_clicked = st.button("Summarize", use_container_width=True)
+with col4:
     regenerate = st.button("Regenerate", use_container_width=True)
+with col5:
+    with st.popover("❓", use_container_width=True):
+        st.markdown(HELP_HTML, unsafe_allow_html=True)
 
 range_start_iso = date_range[0].isoformat() if len(date_range) == 2 else None
 range_end_iso = date_range[1].isoformat() if len(date_range) == 2 else None
@@ -314,6 +414,27 @@ header_slot.markdown(_header_html(f"Last generated: {_pdf_generated_at()}"), uns
 
 with open(pdf_path, "rb") as f:
     pdf_bytes = f.read()
+
+if "show_summary" not in st.session_state:
+    st.session_state["show_summary"] = False
+if summarize_clicked:
+    st.session_state["show_summary"] = True
+
+if st.session_state["show_summary"]:
+    with st.spinner("Reading the numbers…"):
+        summary_text = _summarize_report(pdf_bytes)
+    if summary_text:
+        st.markdown(
+            f"""
+            <div class="pulse-summary-card">
+              <div class="pulse-summary-label">Quick Take, in John's Words</div>
+              <div class="pulse-summary-body">{html.escape(summary_text).replace(chr(10), "<br>")}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.info("A summary is not available right now. Check that ANTHROPIC_API_KEY is configured.")
 
 st.download_button(
     "⬇ Download PDF",
