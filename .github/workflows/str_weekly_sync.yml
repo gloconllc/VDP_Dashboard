@@ -1,0 +1,107 @@
+# ============================================================================
+# VDP Analytics — Weekly STR Sync (GitHub Actions)
+# ============================================================================
+#
+# Runs every Thursday morning. Checks the Dropbox shared "2026" STR folder for
+# new weekly .xls exports, downloads any new ones into data/str/weekly/,
+# reloads STR data + KPIs + insights, and pushes the updated database straight
+# to main. Railway auto-redeploys from main, so this is the mechanism that
+# keeps the live app's numbers current without anyone touching a keyboard.
+#
+# This is intentionally a smaller, faster job than the monthly full-source
+# pipeline in pipeline.yml — it only touches the STR-related loaders, not
+# CoStar/Datafy/Zartico/Later/etc.
+#
+# SECRETS USED (already configured for pipeline.yml, reused here):
+#   ANTHROPIC_API_KEY  — used by compute_insights.py
+#   DROPBOX_API_TOKEN  — OPTIONAL. The Dropbox folder is a public shared link,
+#                        so fetch_str_dropbox.py works without one (falls back
+#                        to scraping the public folder page). Set this secret
+#                        only if that fallback ever proves unreliable — a real
+#                        token makes listing sturdier. Not required to start.
+#
+# ============================================================================
+
+name: Weekly STR Sync
+
+on:
+  # Thursday mornings, 8:00 AM Pacific (15:00 UTC covers PDT, Mar-Nov;
+  # during PST, Nov-Mar, this lands at 7:00 AM Pacific instead).
+  schedule:
+    - cron: "0 15 * * 4"
+
+  # Allow manual trigger from the Actions tab for testing
+  workflow_dispatch: {}
+
+jobs:
+  str-weekly-sync:
+    name: STR Dropbox Sync + Reload
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # -----------------------------------------------------------------------
+      # Check Dropbox for new weekly/monthly STR exports and download them.
+      # Non-fatal: if Dropbox's folder page structure changes or the listing
+      # fails outright, the job still runs the loaders against whatever STR
+      # files already exist locally rather than stopping the whole workflow.
+      # -----------------------------------------------------------------------
+      - name: Sync new STR files from Dropbox
+        env:
+          DROPBOX_API_TOKEN: ${{ secrets.DROPBOX_API_TOKEN }}
+        run: python scripts/fetch_str_dropbox.py || echo "No new files or sync issue — continuing with existing local files."
+
+      # -----------------------------------------------------------------------
+      # Reload STR data and rebuild everything downstream of it.
+      # -----------------------------------------------------------------------
+      - name: Reload STR data + KPIs + insights
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python scripts/load_str_daily_sqlite.py
+          python scripts/load_str_monthly_sqlite.py
+          python scripts/load_str_multiseg.py || true
+          python scripts/load_str_response_sheets.py || true
+          python scripts/load_str_translation_table.py || true
+          python scripts/compute_kpis.py
+          python scripts/compute_insights.py
+          python scripts/optimize_db.py || true
+          python scripts/build_table_relationships.py || true
+
+      # -----------------------------------------------------------------------
+      # Commit and push straight to main — Railway auto-redeploys from main,
+      # so this is the step that puts fresh numbers on the live app.
+      # -----------------------------------------------------------------------
+      - name: Commit updated data to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/analytics.sqlite
+          git add data/str/ 2>/dev/null || true
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit — STR data is already up to date."
+          else
+            RUN_DATE=$(date -u +"%Y-%m-%d")
+            git commit -m "chore: weekly STR sync ${RUN_DATE} [automated]"
+            git push origin main
+            echo "Changes committed and pushed to main."
+          fi

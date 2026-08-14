@@ -46,14 +46,23 @@ HEADERS = {"Content-Type": "application/json"}
 
 
 def get_token() -> str:
-    """Read Dropbox token — accepts DROPBOX_API_TOKEN (GitHub secret) or DROPBOX_ACCESS_TOKEN."""
+    """Read Dropbox token — accepts DROPBOX_API_TOKEN (GitHub secret) or DROPBOX_ACCESS_TOKEN.
+
+    A token is OPTIONAL. The shared folder links above are public (dl=0 links with
+    an rlkey), so this script can list and download files with no token at all via
+    the HTML-scrape fallback (list_shared_folder_via_html / download_file_direct).
+    A real token just makes listing more reliable (uses the proper Dropbox API
+    instead of scraping the folder page). Never hard-exit here — that previously
+    caused every scheduled run to fail outright before it ever tried the public,
+    no-token path. Confirmed via logs/pipeline.log: every run since 2026-08-10
+    failed at this line with no attempt made.
+    """
     token = (
         os.environ.get("DROPBOX_API_TOKEN", "").strip()
         or os.environ.get("DROPBOX_ACCESS_TOKEN", "").strip()
     )
     if not token:
-        print("ERROR: DROPBOX_API_TOKEN not set. Add it to GitHub Secrets.")
-        sys.exit(1)
+        print("  [INFO] No DROPBOX_API_TOKEN set — using public shared-link access (no auth).")
     return token
 
 
