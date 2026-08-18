@@ -920,14 +920,16 @@ def list_archived_reports(limit: int = 20) -> list[dict]:
 
 def render_report_archive() -> None:
     reports = list_archived_reports()
+    if not reports:
+        # Nothing archived yet -- an empty "Past Issues (0)" expander reads as
+        # broken rather than simply new, so show nothing until there's a
+        # first report to list.
+        return
     with st.expander(f"\U0001F4C1 Report Repository — Past Issues ({len(reports)})", expanded=False):
         st.caption(
             "Every generated report is kept here. Moving to a synced SharePoint "
             "folder is next; this local archive is the repository until then."
         )
-        if not reports:
-            st.caption("No past reports archived yet. Click Regenerate to create the first one.")
-            return
         for r in reports:
             try:
                 with open(r["path"], "rb") as f:
@@ -960,6 +962,8 @@ SECTIONS = [
      "desc": "Datafy visitor demographics, category spend, and length of stay.", "page": 7},
     {"icon": "📈", "title": "Forward Outlook & Group Business",
      "desc": "What's ahead for compression, group bookings, and travel trends.", "page": 8},
+    {"icon": "📝", "title": "Notes & Commentary",
+     "desc": "Team commentary added live in the dashboard, carried into the report automatically.", "page": 9},
 ]
 
 
