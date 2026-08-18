@@ -1,29 +1,59 @@
 """
 Dana Point PULSE Report Viewer
 -----------------------------------------
-Minimal app. Its only job: generate the PULSE report PDF from live STR /
-CoStar / Datafy data (each on its own native reporting window) and display
-it in full.
+Generates the PULSE report PDF from live STR / CoStar / Datafy data (each on
+its own native reporting window) and displays it in full, alongside three
+interactive features built for Heather Johnston at Visit Dana Point: an
+Intelligence Brief AI assistant that answers questions against the full STR,
+CoStar, and Datafy history (not just the current PDF snapshot); an editable
+notes layer for her own commentary on the data; and a browsable archive of
+every past generated report.
+
+Notes and the report archive are NOT stored in analytics.sqlite (see
+NOTES_DB_PATH / REPORT_ARCHIVE_DIR below); on Railway, both need a mounted
+persistent Volume or they will not survive the next auto-redeploy.
 """
 
 import base64
 import html
 import io
 import os
+import sqlite3
 import sys
 from datetime import datetime
 
+import pandas as pd
 import streamlit as st
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 sys.path.insert(0, os.path.join(PROJECT_ROOT, "scripts"))
 
+DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
 LOGS_DIR = os.path.join(PROJECT_ROOT, "logs")
 PDF_PATH = os.path.join(LOGS_DIR, "weekly_report_latest.pdf")
 LOGO_PATH = os.path.join(BASE_DIR, "assets", "vdp_logo.svg")
 LOGO_NAV_PATH = os.path.join(BASE_DIR, "assets", "vdp_logo_nav.svg")
 HERO_PHOTO_PATH = os.path.join(BASE_DIR, "assets", "photos", "hero_coast.jpg")
+
+# Notes/annotation storage and the report archive both live OUTSIDE
+# analytics.sqlite and outside git entirely. analytics.sqlite is
+# git-committed and gets replaced by a brand-new container on every Railway
+# auto-redeploy, so anything written straight into that file would vanish
+# the next time new data lands. Point NOTES_DB_PATH / REPORT_ARCHIVE_DIR at
+# a Railway persistent Volume once one is configured; both fall back to a
+# local path for development so the features still work before that is set
+# up. See CLAUDE.md Lessons Learned, 2026-08-17.
+NOTES_DB_PATH = os.environ.get(
+    "NOTES_DB_PATH", os.path.join(PROJECT_ROOT, "data", "dashboard_notes.sqlite")
+)
+REPORT_ARCHIVE_DIR = os.environ.get(
+    "REPORT_ARCHIVE_DIR", os.path.join(PROJECT_ROOT, "data", "report_archive")
+)
+
+# Notes/annotation controls are editable by anyone viewing the app, no
+# special link required, per Heather Johnston's explicit request.
+IS_EDITOR = True
 
 st.set_page_config(
     page_title="Dana Point PULSE",
@@ -51,6 +81,13 @@ def _logo_nav_data_uri() -> str:
 
 def _hero_photo_data_uri() -> str:
     return _file_data_uri(HERO_PHOTO_PATH, "image/jpeg")
+
+
+PHOTOS_DIR = os.path.join(BASE_DIR, "assets", "photos")
+
+
+def _photo_data_uri(filename: str) -> str:
+    return _file_data_uri(os.path.join(PHOTOS_DIR, filename), "image/jpeg")
 
 st.markdown(
     """
@@ -174,6 +211,24 @@ st.markdown(
       .whale-splash .caption { color:#F0FAFF; font-size:13px; font-weight:600; letter-spacing:.02em;
         margin-top:14px; text-shadow:0 1px 4px rgba(0,0,0,0.25); }
       .whale-splash .caption-sub { color:#CFEFF9; font-size:11px; margin-top:2px; }
+
+      /* Intelligence Brief: AI synthesis banner + answer box */
+      .brain-banner { position:relative; height:120px; border-radius:12px; overflow:hidden;
+        background-size:cover; background-position:center; margin: 8px 0 16px 0; }
+      .brain-banner-overlay { position:absolute; inset:0;
+        background:linear-gradient(90deg, rgba(18,60,74,0.82) 0%, rgba(18,60,74,0.45) 100%); }
+      .brain-banner-content { position:absolute; inset:0; display:flex; flex-direction:column;
+        justify-content:center; padding: 0 24px; }
+      .brain-eyebrow { color:#A5DDE9; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+      .brain-title { color:#FFFFFF; font-size:19px; font-weight:700; margin-top:4px; max-width:640px; }
+      .ai-answer-box { background:#F0F7F9; border:1px solid #CBE3EA; border-left:4px solid #1D6E86;
+        border-radius:10px; padding:16px 20px; margin:8px 0 8px 0; font-size:14.5px; line-height:1.6; color:#1E293B; }
+      .notes-box { background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px; padding:14px 18px; margin: 8px 0; }
+      .notes-box-title { font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+        color:#1D6E86; margin-bottom:8px; }
+      .note-item { font-size:13.5px; color:#334155; padding:6px 0; border-top:1px solid #F1F5F9; }
+      .note-item:first-of-type { border-top:none; }
+      .note-date { font-weight:700; color:#0E4B5C; margin-right:6px; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -213,6 +268,371 @@ def _generate(_cache_key: str, range_start: str | None, range_end: str | None):
     from generate_weekly_report import build_report
     override = (range_start, range_end) if range_start and range_end else None
     return build_report(date_range=override)
+
+
+# ---------------------------------------------------------------------------
+# Data access for the Intelligence Brief AI assistant below. Read-only,
+# defensive: a missing table or a stale connection returns an empty
+# string/frame rather than crashing the page.
+# ---------------------------------------------------------------------------
+
+@st.cache_resource
+def _open_connection():
+    return sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
+
+
+def get_connection():
+    """Self-healing wrapper around the cached connection. analytics.sqlite
+    can throw a disk I/O error if the underlying file gets replaced out from
+    under an open handle. A dead handle doesn't fix itself; probe it on every
+    call and rebuild if it has gone stale, instead of letting the page crash."""
+    conn = _open_connection()
+    try:
+        conn.execute("SELECT 1")
+    except Exception:
+        _open_connection.clear()
+        conn = _open_connection()
+    return conn
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_str_monthly_summary(
+    months: float = 24, start_date: str | None = None, end_date: str | None = None
+) -> str:
+    try:
+        conn = get_connection()
+        if start_date and end_date:
+            df = pd.read_sql_query(
+                """
+                SELECT strftime('%Y-%m', as_of_date) AS month,
+                       ROUND(AVG(occ_pct), 1) AS avg_occ,
+                       ROUND(AVG(adr), 0) AS avg_adr,
+                       ROUND(AVG(revpar), 0) AS avg_revpar
+                FROM kpi_daily_summary
+                WHERE as_of_date >= ? AND as_of_date <= ?
+                GROUP BY month ORDER BY month DESC
+                """,
+                conn, params=(start_date, end_date),
+            )
+        else:
+            df = pd.read_sql_query(
+                """
+                SELECT strftime('%Y-%m', as_of_date) AS month,
+                       ROUND(AVG(occ_pct), 1) AS avg_occ,
+                       ROUND(AVG(adr), 0) AS avg_adr,
+                       ROUND(AVG(revpar), 0) AS avg_revpar
+                FROM kpi_daily_summary
+                GROUP BY month ORDER BY month DESC LIMIT ?
+                """,
+                conn, params=(max(1, int(round(months))),),
+            )
+        if df.empty:
+            return "No STR monthly history available."
+        return "\n".join(
+            f"{r.month}: Occupancy {r.avg_occ}%, ADR ${r.avg_adr:,.0f}, RevPAR ${r.avg_revpar:,.0f}"
+            for r in df.itertuples()
+        )
+    except Exception:
+        return "STR monthly history unavailable."
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_costar_summary(
+    months: float = 12, start_date: str | None = None, end_date: str | None = None
+) -> str:
+    """Pulls from costar_market_daily, the real day-by-day CoStar submarket
+    feed, windowed to the same trailing period as everything else (or an
+    explicit start_date/end_date for a custom range)."""
+    try:
+        conn = get_connection()
+        if start_date and end_date:
+            cutoff, latest_date = start_date, end_date
+        else:
+            latest_row = pd.read_sql_query("SELECT MAX(as_of_date) AS d FROM costar_market_daily", conn)
+            latest_date = latest_row.iloc[0]["d"]
+            if not latest_date:
+                return "No CoStar submarket history available."
+            cutoff = (pd.to_datetime(latest_date) - pd.Timedelta(days=30 * months)).strftime("%Y-%m-%d")
+        df = pd.read_sql_query(
+            """
+            SELECT strftime('%Y-%m', as_of_date) AS month,
+                   ROUND(AVG(occupancy_pct), 1) AS avg_occ,
+                   ROUND(AVG(adr_usd), 0) AS avg_adr,
+                   ROUND(AVG(revpar_usd), 0) AS avg_revpar
+            FROM costar_market_daily
+            WHERE as_of_date >= ? AND as_of_date <= ?
+            GROUP BY month ORDER BY month DESC
+            """,
+            conn, params=(cutoff, latest_date),
+        )
+        if df.empty:
+            return "No CoStar submarket history available."
+        header = f"Real CoStar daily feed, most recent report date {latest_date}:\n"
+        return header + "\n".join(
+            f"{r.month}: Occupancy {r.avg_occ}%, ADR ${r.avg_adr:,.0f}, RevPAR ${r.avg_revpar:,.0f}"
+            for r in df.itertuples()
+        )
+    except Exception:
+        return "CoStar history unavailable."
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_datafy_summary() -> str:
+    try:
+        conn = get_connection()
+        markets = pd.read_sql_query(
+            "SELECT dma, spend_share_pct FROM datafy_overview_spending_by_market "
+            "ORDER BY report_period_start DESC, spend_share_pct DESC LIMIT 10",
+            conn,
+        )
+        if not markets.empty:
+            markets_metric = "% of visitor spend"
+            markets_line = ", ".join(f"{r.dma} {r.spend_share_pct * 100:.1f}%" for r in markets.itertuples())
+        else:
+            markets = pd.read_sql_query(
+                "SELECT dma, trips_share_pct FROM datafy_overview_top_markets "
+                "ORDER BY report_period_start DESC, trips_share_pct DESC LIMIT 10",
+                conn,
+            )
+            markets_metric = "% of trips"
+            markets_line = ", ".join(f"{r.dma} {r.trips_share_pct:.1f}%" for r in markets.itertuples())
+        spending = pd.read_sql_query(
+            "SELECT category, spend_share_pct FROM datafy_overview_spending_by_category "
+            "ORDER BY report_period_start DESC, spend_share_pct DESC LIMIT 8",
+            conn,
+        )
+        parts = []
+        if not markets.empty:
+            parts.append(f"Top visitor origin markets ({markets_metric}): " + markets_line)
+        if not spending.empty:
+            parts.append(
+                "Visitor spending by category (% share): "
+                + ", ".join(f"{r.category} {r.spend_share_pct * 100:.1f}%" for r in spending.itertuples())
+            )
+        return "\n".join(parts) if parts else "No Datafy summary data available."
+    except Exception:
+        return "Datafy summary unavailable."
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_recent_insights_summary() -> str:
+    try:
+        conn = get_connection()
+        df = pd.read_sql_query(
+            "SELECT as_of_date, headline, body FROM insights_daily "
+            "WHERE audience IN ('dmo','cross') ORDER BY as_of_date DESC LIMIT 8",
+            conn,
+        )
+        if df.empty:
+            return "No recent insights available."
+        return "\n".join(
+            f"[{r.as_of_date}] {r.headline}: {(r.body or '')[:200]}" for r in df.itertuples()
+        )
+    except Exception:
+        return "Insights unavailable."
+
+
+def ask_hotel_partner_ai(
+    question: str, months: float = 24, start_date: str | None = None, end_date: str | None = None
+) -> str:
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if not api_key:
+        return (
+            "The AI assistant is not configured yet. Contact Visit Dana Point "
+            "to enable this feature."
+        )
+    try:
+        import anthropic
+    except ImportError:
+        return "The AI assistant is temporarily unavailable."
+
+    window_desc = f"{start_date} to {end_date}" if start_date and end_date else f"trailing {months} months"
+    system_prompt = f"""You are a helpful tourism data assistant for Dana Point hotel partners \
+and Visit Dana Point staff. Answer using ONLY the data provided below, which \
+covers STR (hotel performance), CoStar (submarket benchmarking), and Datafy \
+(visitor economy) history for Dana Point over the {window_desc}. If \
+the data below does not answer the question, say so plainly rather than \
+guessing or inventing figures. Keep answers concise, specific, and in plain, \
+non-technical language.
+
+=== STR Monthly History (Occupancy / ADR / RevPAR) ===
+{load_str_monthly_summary(months)}
+
+=== CoStar Submarket History (Newport Beach/Dana Point) ===
+{load_costar_summary(months, start_date=start_date, end_date=end_date)}
+
+=== Datafy Visitor Economy Summary ===
+{load_datafy_summary()}
+
+=== Recent Forward-Looking Insights ===
+{load_recent_insights_summary()}
+"""
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=600,
+            system=system_prompt,
+            messages=[{"role": "user", "content": question}],
+        )
+        return resp.content[0].text if resp.content else "No answer returned."
+    except Exception as e:
+        return f"The assistant could not answer right now ({type(e).__name__}). Please try again shortly."
+
+
+# ---------------------------------------------------------------------------
+# Notes / annotation layer, Heather Johnston's editable commentary. Writes
+# go to NOTES_DB_PATH, never to analytics.sqlite (see note above).
+# ---------------------------------------------------------------------------
+
+@st.cache_resource
+def get_notes_connection():
+    os.makedirs(os.path.dirname(NOTES_DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(NOTES_DB_PATH, check_same_thread=False, timeout=10)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS dashboard_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            section TEXT NOT NULL,
+            note_text TEXT NOT NULL,
+            author TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    return conn
+
+
+def load_notes(section: str) -> list[dict]:
+    try:
+        conn = get_notes_connection()
+        cur = conn.execute(
+            "SELECT id, note_text, author, created_at FROM dashboard_notes "
+            "WHERE section = ? ORDER BY created_at DESC",
+            (section,),
+        )
+        cols = ["id", "note_text", "author", "created_at"]
+        return [dict(zip(cols, row)) for row in cur.fetchall()]
+    except Exception:
+        return []
+
+
+def save_note(section: str, text: str, author: str = "Heather Johnston") -> None:
+    text = text.strip()
+    if not text:
+        return
+    conn = get_notes_connection()
+    conn.execute(
+        "INSERT INTO dashboard_notes (section, note_text, author, created_at) "
+        "VALUES (?, ?, ?, ?)",
+        (section, text, author, datetime.now().strftime("%Y-%m-%d %H:%M")),
+    )
+    conn.commit()
+
+
+def delete_note(note_id: int) -> None:
+    conn = get_notes_connection()
+    conn.execute("DELETE FROM dashboard_notes WHERE id = ?", (note_id,))
+    conn.commit()
+
+
+def render_notes_block(section: str, label: str) -> None:
+    notes = load_notes(section)
+
+    if IS_EDITOR:
+        with st.expander(f"\U0001F4DD {label} — add or manage notes", expanded=False):
+            new_text = st.text_area(
+                "Add a note",
+                key=f"note_input_{section}",
+                placeholder="e.g. Occupancy dip in early July tracks with the marina closure, not a demand issue.",
+            )
+            if st.button("Save note", key=f"note_save_{section}"):
+                if new_text.strip():
+                    save_note(section, new_text)
+                    st.success("Note saved.")
+                    st.rerun()
+                else:
+                    st.warning("Write something before saving.")
+            if notes:
+                st.markdown("---")
+                for n in notes:
+                    c1, c2 = st.columns([6, 1])
+                    with c1:
+                        st.markdown(f"**{n['created_at']}** — {html.escape(n['note_text'])}")
+                    with c2:
+                        if st.button("Delete", key=f"note_del_{n['id']}"):
+                            delete_note(n["id"])
+                            st.rerun()
+    elif notes:
+        items_html = "".join(
+            f'<div class="note-item"><span class="note-date">{html.escape(n["created_at"])}</span> '
+            f'{html.escape(n["note_text"])}</div>'
+            for n in notes
+        )
+        st.markdown(
+            f'<div class="notes-box"><div class="notes-box-title">\U0001F4CC {html.escape(label)}</div>{items_html}</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<div class="notes-box"><div class="notes-box-title">\U0001F4CC {html.escape(label)}</div>'
+            '<div class="note-item" style="font-style:italic; color:#94A3B8;">'
+            "No notes have been added yet. Add commentary on the data here."
+            "</div></div>",
+            unsafe_allow_html=True,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Report archive, dated copies of every generated PDF, browsable in-app.
+# ---------------------------------------------------------------------------
+
+def archive_report_copy(pdf_path: str) -> str | None:
+    try:
+        if not pdf_path or not os.path.exists(pdf_path):
+            return None
+        os.makedirs(REPORT_ARCHIVE_DIR, exist_ok=True)
+        dated_name = f"dana_point_pulse_{datetime.now().strftime('%Y-%m-%d_%H%M')}.pdf"
+        dest = os.path.join(REPORT_ARCHIVE_DIR, dated_name)
+        with open(pdf_path, "rb") as src, open(dest, "wb") as dst:
+            dst.write(src.read())
+        return dest
+    except Exception:
+        return None
+
+
+def list_archived_reports(limit: int = 20) -> list[dict]:
+    try:
+        if not os.path.isdir(REPORT_ARCHIVE_DIR):
+            return []
+        files = [f for f in os.listdir(REPORT_ARCHIVE_DIR) if f.lower().endswith(".pdf")]
+        files.sort(reverse=True)
+        return [{"name": f, "path": os.path.join(REPORT_ARCHIVE_DIR, f)} for f in files[:limit]]
+    except Exception:
+        return []
+
+
+def render_report_archive() -> None:
+    reports = list_archived_reports()
+    with st.expander(f"\U0001F4C1 Report Repository — Past Issues ({len(reports)})", expanded=False):
+        st.caption(
+            "Every generated report is kept here. Moving to a synced SharePoint "
+            "folder is next; this local archive is the repository until then."
+        )
+        if not reports:
+            st.caption("No past reports archived yet. Click Regenerate to create the first one.")
+            return
+        for r in reports:
+            try:
+                with open(r["path"], "rb") as f:
+                    data = f.read()
+                st.download_button(
+                    r["name"], data=data, file_name=r["name"], mime="application/pdf",
+                    key=f"archive_{r['name']}", use_container_width=True,
+                )
+            except Exception:
+                continue
 
 
 # Section map: each entry is one poppable section a viewer can jump to.
@@ -408,6 +828,8 @@ splash.markdown(WHALE_SPLASH_HTML, unsafe_allow_html=True)
 try:
     cache_key = datetime.now().strftime("%Y-%m-%d-%H") if not regenerate else datetime.now().isoformat()
     pdf_path = _generate(cache_key, range_start_iso, range_end_iso)
+    if regenerate:
+        archive_report_copy(pdf_path)
 except Exception as exc:  # noqa: BLE001
     splash.empty()
     header_slot.markdown(_header_html("Last generated: generation failed, see logs", ok=False), unsafe_allow_html=True)
@@ -456,6 +878,73 @@ with dl_center:
         mime="application/pdf",
         use_container_width=True,
     )
+
+# ---------------------------------------------------------------------------
+# Intelligence Brief — an AI assistant answering questions against this
+# week's live STR, CoStar, and Datafy data, plus a free-form follow-up
+# question box. Distinct from the "Summarize" button above: Summarize reads
+# only the current PDF's cover and executive summary; this reads the full
+# monthly STR/CoStar history, Datafy visitor economy summary, and recent
+# forward-looking insights, so it can answer trend and comparison questions
+# the PDF snapshot alone cannot.
+# ---------------------------------------------------------------------------
+
+brain_months = (
+    max((date_range[1] - date_range[0]).days, 1) / 30.0 if len(date_range) == 2 else 24.0
+)
+
+st.markdown(
+    f"""
+    <div class="brain-banner" style="background-image:url('{_photo_data_uri("drone_aerial.jpg")}');">
+      <div class="brain-banner-overlay"></div>
+      <div class="brain-banner-content">
+        <div class="brain-eyebrow">Dana Point Intelligence Brief</div>
+        <div class="brain-title">Ask a question about your STR, CoStar &amp; Datafy data</div>
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+brain_col1, brain_col2 = st.columns([1, 1])
+with brain_col1:
+    latest_intel_clicked = st.button(
+        "\U0001F9E0 Generate Latest Intelligence", use_container_width=True, type="primary",
+    )
+with brain_col2:
+    st.caption("Synthesizes STR, CoStar, and Datafy history into one plain-language read.")
+
+if latest_intel_clicked:
+    with st.spinner("Correlating STR, CoStar, and Datafy data..."):
+        brain_answer = ask_hotel_partner_ai(
+            "In plain, non-technical language, synthesize the current story across "
+            "STR hotel performance, CoStar submarket benchmarking, and Datafy visitor "
+            "economy data. Cover: where occupancy/ADR/RevPAR stand and their trend, "
+            "how Dana Point compares to its CoStar submarket, and the one or two most "
+            "important visitor-economy patterns. Keep it to three or four short paragraphs.",
+            months=brain_months, start_date=range_start_iso, end_date=range_end_iso,
+        )
+    st.markdown(f'<div class="ai-answer-box">{html.escape(brain_answer)}</div>', unsafe_allow_html=True)
+
+with st.expander("\U0001F50D Ask a follow-up question about this data"):
+    partner_question = st.text_input(
+        "Your question",
+        key="partner_question",
+        placeholder="e.g. How has occupancy trended over the last 12 months?",
+        label_visibility="collapsed",
+    )
+    if st.button("Ask", type="primary", key="ask_followup"):
+        if partner_question.strip():
+            with st.spinner("Reading STR, CoStar, and Datafy history..."):
+                answer = ask_hotel_partner_ai(
+                    partner_question.strip(), months=brain_months,
+                    start_date=range_start_iso, end_date=range_end_iso,
+                )
+            st.markdown(f'<div class="ai-answer-box">{html.escape(answer)}</div>', unsafe_allow_html=True)
+        else:
+            st.warning("Type a question first.")
+
+st.divider()
 
 section_pages = _split_pdf_pages(pdf_bytes)
 available_sections = [s for s in SECTIONS if s["page"] < len(section_pages)]
@@ -520,6 +1009,17 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+st.markdown("---")
+
+# ---------------------------------------------------------------------------
+# Notes & Report Repository — editable commentary on the data, and a
+# browsable archive of every past generated PDF.
+# ---------------------------------------------------------------------------
+
+st.markdown("#### Notes & Report Repository")
+render_notes_block("general", "General Notes")
+render_report_archive()
 
 # Admin-only: manual digest send, gated per the project's existing ?admin=true
 # convention. Runs inside this app's own container, which has real outbound

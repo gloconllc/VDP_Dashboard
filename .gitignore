@@ -25,6 +25,12 @@ venv/
 # Junk SQLite URI artifact (0-byte file created by sqlite3 URI bug)
 data/analytics.sqlite?*
 
+# Notes/annotation DB and the PDF report archive — user-generated content,
+# not source data, and not persistent across a Railway redeploy unless
+# NOTES_DB_PATH / REPORT_ARCHIVE_DIR point at a mounted Volume. Never commit.
+data/dashboard_notes.sqlite
+data/report_archive/
+
 # Claude Code internals
 .claude/worktrees/
 
