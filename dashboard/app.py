@@ -1601,6 +1601,12 @@ st.markdown('<div id="pulse-fullreport" class="pulse-anchor"></div>', unsafe_all
 section_pages = _split_pdf_pages(pdf_bytes)
 available_sections = [s for s in SECTIONS if s["page"] < len(section_pages)]
 
+# Rendered once (cached on pdf_bytes) and reused both for the section-card
+# thumbnails below and for the flipbook further down the page -- so every
+# section card shows an actual preview of that page's charts, not just text.
+with st.spinner("Rendering page previews..."):
+    _section_preview_images = _render_page_images(pdf_bytes)
+
 if "open_section" not in st.session_state:
     st.session_state["open_section"] = None
 
@@ -1611,6 +1617,8 @@ if available_sections:
     for i, section in enumerate(available_sections):
         with grid_cols[i % 3]:
             with st.container(border=True):
+                if section["page"] < len(_section_preview_images):
+                    st.image(_section_preview_images[section["page"]], use_container_width=True)
                 st.markdown(f"**{section['icon']} {section['title']}**")
                 st.caption(section["desc"])
                 if st.button("View section", key=f"open_section_{i}", use_container_width=True):
@@ -1653,8 +1661,7 @@ if open_idx is not None and 0 <= open_idx < len(available_sections):
 
 st.markdown("#### Flip Through the Full Report")
 st.caption("Browse the report page by page, just like flipping through Issuu. Use the arrows, the thumbnail strip, or the left and right arrow keys.")
-with st.spinner("Rendering pages..."):
-    page_images = _render_page_images(pdf_bytes)
+page_images = _section_preview_images
 components.html(_flipbook_html(page_images), height=800, scrolling=False)
 
 with st.expander("View the full report as one continuous scroll instead"):
