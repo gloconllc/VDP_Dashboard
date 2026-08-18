@@ -20,10 +20,12 @@ import io
 import os
 import sqlite3
 import sys
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
@@ -229,6 +231,35 @@ st.markdown(
       .note-item { font-size:13.5px; color:#334155; padding:6px 0; border-top:1px solid #F1F5F9; }
       .note-item:first-of-type { border-top:none; }
       .note-date { font-weight:700; color:#0E4B5C; margin-right:6px; }
+
+      /* Jump-to-section nav strip */
+      .pulse-jumpnav { display:flex; flex-wrap:wrap; gap:8px; margin: 4px 0 22px 0; }
+      .pulse-jumpnav a { display:inline-flex; align-items:center; gap:6px;
+        background:#F8FAFC; border:1px solid #E2E8F0; border-radius:20px;
+        padding:7px 14px; font-size:12.5px; font-weight:600; color:#123C4A;
+        text-decoration:none; transition: all 0.15s ease; scroll-margin-top: 16px; }
+      .pulse-jumpnav a:hover { background:#F0F7F9; border-color:#1D6E86; color:#1D6E86; }
+      .pulse-anchor { position:relative; top:-14px; visibility:hidden; }
+
+      /* Responsive: mobile + narrow desktop windows. Streamlit's own wide
+         layout defaults to a fixed-feeling multi-column grid that doesn't
+         reflow well under ~640px; these overrides keep the header, hero,
+         KPI tiles, and buttons legible on a phone instead of just shrinking
+         everything proportionally. */
+      @media (max-width: 640px) {
+        .block-container { padding-left:0.8rem !important; padding-right:0.8rem !important; padding-top:1.5rem !important; }
+        .pulse-title { font-size:20px; }
+        .pulse-eyebrow { font-size:10px; }
+        .pulse-header { flex-wrap:wrap; gap:10px; }
+        .pulse-hero { height:120px; }
+        .pulse-hero-logo { width:110px; }
+        .pulse-hero-tag { font-size:11px; }
+        .brain-banner { height:140px; }
+        .brain-title { font-size:15px; }
+        .pulse-summary-card, .ai-answer-box, .notes-box { padding:12px 14px; }
+        div[data-testid="stDownloadButton"] > button { font-size:13px; padding:10px 0; }
+        div[data-testid="column"] { min-width: 100% !important; flex: 1 1 100% !important; }
+      }
     </style>
     """,
     unsafe_allow_html=True,
@@ -430,6 +461,280 @@ def load_recent_insights_summary() -> str:
         )
     except Exception:
         return "Insights unavailable."
+
+
+def load_kpi_period_stats(
+    months: float = 12, start_date: str | None = None, end_date: str | None = None
+) -> dict | None:
+    """Averages over the selected data window, not just the single latest
+    day, so the KPI tiles actually move when the period filter changes.
+    Pass start_date/end_date for an explicit custom range (e.g. from a
+    date picker); otherwise falls back to a trailing window of `months`
+    ending at the latest STR-reported day."""
+    try:
+        conn = get_connection()
+        if start_date and end_date:
+            cutoff, latest_date = start_date, end_date
+        else:
+            latest_row = pd.read_sql_query("SELECT MAX(as_of_date) AS d FROM kpi_daily_summary", conn)
+            latest_date = latest_row.iloc[0]["d"]
+            if not latest_date:
+                return None
+            cutoff = (pd.to_datetime(latest_date) - pd.Timedelta(days=30 * months)).strftime("%Y-%m-%d")
+        df = pd.read_sql_query(
+            "SELECT AVG(occ_pct) AS occ_pct, AVG(adr) AS adr, AVG(revpar) AS revpar, "
+            "AVG(occ_yoy) AS occ_yoy, AVG(adr_yoy) AS adr_yoy, AVG(revpar_yoy) AS revpar_yoy, "
+            "COUNT(*) AS n_days "
+            "FROM kpi_daily_summary WHERE as_of_date >= ? AND as_of_date <= ?",
+            conn, params=(cutoff, latest_date),
+        )
+        if df.empty or pd.isna(df.iloc[0]["occ_pct"]):
+            return None
+        row = df.iloc[0].to_dict()
+        row["period_start"] = cutoff
+        row["period_end"] = latest_date
+        return row
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_kpi_trend_df(
+    months: float = 12, start_date: str | None = None, end_date: str | None = None
+) -> pd.DataFrame:
+    """Windowed by an explicit start_date/end_date when given (custom
+    range), otherwise a trailing window of `months` ending at the latest
+    STR-reported day. Buckets by day for short windows (This Week and any
+    custom range under ~45 days) since a single monthly average isn't a
+    trend line, and by month for longer windows."""
+    try:
+        conn = get_connection()
+        if start_date and end_date:
+            cutoff, latest_date = start_date, end_date
+        else:
+            latest_row = pd.read_sql_query("SELECT MAX(as_of_date) AS d FROM kpi_daily_summary", conn)
+            latest_date = latest_row.iloc[0]["d"]
+            if not latest_date:
+                return pd.DataFrame()
+            cutoff = (pd.to_datetime(latest_date) - pd.Timedelta(days=30 * months)).strftime("%Y-%m-%d")
+
+        window_days = (pd.to_datetime(latest_date) - pd.to_datetime(cutoff)).days
+        bucket_expr = "as_of_date" if window_days <= 45 else "strftime('%Y-%m', as_of_date)"
+        label_col = "day" if window_days <= 45 else "month"
+
+        return pd.read_sql_query(
+            f"""
+            SELECT {bucket_expr} AS {label_col},
+                   ROUND(AVG(occ_pct), 1) AS occ,
+                   ROUND(AVG(adr), 0) AS adr,
+                   ROUND(AVG(revpar), 0) AS revpar
+            FROM kpi_daily_summary
+            WHERE as_of_date >= ? AND as_of_date <= ?
+            GROUP BY {label_col} ORDER BY {label_col}
+            """,
+            conn, params=(cutoff, latest_date),
+        ).rename(columns={label_col: "month"})
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_datafy_markets_df(limit: int = 8) -> pd.DataFrame:
+    """Prefers datafy_overview_spending_by_market (DMA spend share, 2026 YTD,
+    the freshest markets table on file) over the older
+    datafy_overview_top_markets (trips share, stuck on a 2025 annual pull).
+    Returns a normalized `share_pct` column (0-100 scale) plus a `metric`
+    label so the chart/caption can say which one it's showing."""
+    try:
+        conn = get_connection()
+        df = pd.read_sql_query(
+            "SELECT dma, spend_share_pct FROM datafy_overview_spending_by_market "
+            "WHERE report_period_start = (SELECT MAX(report_period_start) FROM datafy_overview_spending_by_market) "
+            "ORDER BY spend_share_pct DESC LIMIT ?",
+            conn, params=(limit,),
+        )
+        if not df.empty:
+            df["share_pct"] = df["spend_share_pct"] * 100
+            df["metric"] = "Share of visitor spend"
+            return df[["dma", "share_pct", "metric"]]
+        df = pd.read_sql_query(
+            "SELECT dma, trips_share_pct FROM datafy_overview_top_markets "
+            "WHERE report_period_start = (SELECT MAX(report_period_start) FROM datafy_overview_top_markets) "
+            "ORDER BY trips_share_pct DESC LIMIT ?",
+            conn, params=(limit,),
+        )
+        df["share_pct"] = df["trips_share_pct"]
+        df["metric"] = "Share of trips"
+        return df[["dma", "share_pct", "metric"]]
+    except Exception:
+        return pd.DataFrame()
+
+
+# Approximate Nielsen DMA centroid coordinates (lat, lon) for every feeder
+# market name that appears in datafy_overview_spending_by_market /
+# datafy_overview_top_markets, so the visitor-origins section can plot a real
+# geographic bubble map instead of only a horizontal bar chart. Any DMA name
+# that shows up in the data but isn't in this dict is simply left off the
+# map; the bar chart below still shows every market.
+DMA_COORDS: dict[str, tuple[float, float]] = {
+    "Los Angeles": (34.05, -118.24), "San Diego": (32.72, -117.16),
+    "New York": (40.71, -74.01), "Phoenix -Prescott": (33.45, -112.07),
+    "San Francisco-Oak-San Jose": (37.77, -122.42), "Dallas-Ft. Worth": (32.78, -96.80),
+    "Las Vegas": (36.17, -115.14), "Portland- OR": (45.52, -122.68),
+    "Salt Lake City": (40.76, -111.89), "Sacramnto-Stkton-Modesto": (38.58, -121.49),
+    "Philadelphia": (39.95, -75.17), "Washington-DC -Hagrstwn": (38.90, -77.04),
+    "Seattle-Tacoma": (47.61, -122.33), "Houston": (29.76, -95.37),
+    "Chicago": (41.88, -87.63), "Boston -Manchester": (42.36, -71.06),
+    "Nashville": (36.16, -86.78), "Denver": (39.74, -104.99),
+    "Palm Springs": (33.83, -116.55), "Dayton": (39.76, -84.19),
+    "Atlanta": (33.75, -84.39), "Minneapolis-St. Paul": (44.98, -93.27),
+    "SantaBarbra-SanMar-SanLuob": (34.42, -119.70), "Boise": (43.62, -116.20),
+    "Cincinnati": (39.10, -84.51), "Orlando-Daytona Bch-Melbrn": (28.54, -81.38),
+    "Reno": (39.53, -119.81), "Cleveland-Akron -Canton": (41.50, -81.69),
+    "Miami-Ft. Lauderdale": (25.76, -80.19), "Tampa-St. Pete -Sarasota": (27.95, -82.46),
+    "Tucson -Sierra Vista": (32.22, -110.93), "Fresno-Visalia": (36.75, -119.77),
+    "Hartford & New Haven": (41.76, -72.69), "Raleigh-Durham -Fayetvlle": (35.78, -78.64),
+    "Bakersfield": (35.37, -119.02), "Baltimore": (39.29, -76.61),
+    "Detroit": (42.33, -83.05), "Colorado Springs-Pueblo": (38.83, -104.82),
+    "West Palm Beach-Ft. Pierce": (26.72, -80.05), "Charlotte": (35.23, -80.84),
+    "Buffalo": (42.89, -78.88), "Honolulu": (21.31, -157.86),
+    "Ft. Myers-Naples": (26.64, -81.87), "Eugene": (44.05, -123.09),
+    "Grand Rapids-Kalmzoo-B.Crk": (42.96, -85.67), "Missoula": (46.87, -113.99),
+    "Kansas City": (39.10, -94.58), "Indianapolis": (39.77, -86.16),
+    "Monterey-Salinas": (36.60, -121.65), "Spokane": (47.66, -117.43),
+    "Peoria-Bloomington": (40.69, -89.59), "Des Moines-Ames": (41.60, -93.61),
+    "Eureka": (40.80, -124.16), "Austin": (30.27, -97.74),
+    "Richmond-Petersburg": (37.54, -77.44), "Oklahoma City": (35.47, -97.52),
+    "Norfolk-Portsmth-Newpt Nws": (36.85, -76.29), "St. Louis": (38.63, -90.20),
+    "Albuquerque-Santa Fe": (35.08, -106.65), "Idaho Falls-Pocatllo-Jcksn": (43.49, -112.04),
+    "Milwaukee": (43.04, -87.91), "Jacksonville": (30.33, -81.66),
+    "Medford-Klamath Falls": (42.33, -122.87), "San Antonio": (29.42, -98.49),
+    "Portland-Auburn": (43.66, -70.26), "Erie": (42.13, -80.09),
+    "Huntsville-Decatur -Flor": (34.73, -86.59), "Memphis": (35.15, -90.05),
+    "Youngstown": (41.10, -80.65), "Lincoln & Hastings-Krny": (40.81, -96.68),
+    "Providence-New Bedford": (41.82, -71.41), "Ft. Smith-Fay-Sprngdl-Rgrs": (36.06, -94.16),
+    "Columbus- OH": (39.96, -82.99), "Louisville": (38.25, -85.76),
+    "Springfield- MO": (37.21, -93.29), "Greensboro-H.Point-W.Salem": (36.07, -79.79),
+    "Omaha": (41.26, -95.93), "Flint-Saginaw-Bay City": (43.01, -83.69),
+    "Wilkes Barre-Scranton-Hztn": (41.41, -75.66), "Birmingham -Ann and Tusc": (33.52, -86.80),
+    "El Paso -Las Cruces": (31.76, -106.49), "Cedar Rapids-Wtrlo-Iwc&Dub": (42.01, -91.64),
+    "Mobile-Pensacola -Ft Walt": (30.69, -88.04), "Tulsa": (36.15, -95.99),
+    "Yuma-El Centro": (32.69, -114.62), "Paducah-Cape Girard-Harsbg": (37.08, -88.60),
+    "Rochester- NY": (43.16, -77.61), "Little Rock-Pine Bluff": (34.75, -92.29),
+    "Chico-Redding": (39.73, -121.84), "Pittsburgh": (40.44, -79.99),
+    "Tyler-Longview-Lfkn&Ncgd": (32.35, -95.30), "Roanoke-Lynchburg": (37.27, -79.94),
+    "Greenvll-Spart-Ashevll-And": (34.85, -82.40), "Albany-Schenectady-Troy": (42.65, -73.75),
+    "Madison": (43.07, -89.40), "Ft. Wayne": (41.08, -85.14),
+    "Traverse City-Cadillac": (44.76, -85.62), "New Orleans": (29.95, -90.07),
+    "Biloxi-Gulfport": (30.40, -88.89),
+}
+
+
+def build_markets_map_figure(markets_df: pd.DataFrame) -> go.Figure | None:
+    """A real geographic bubble map of feeder markets, sized by their share
+    of visitor spend/trips, centered on Dana Point. Returns None if none of
+    the current markets_df rows have a known coordinate, so callers can fall
+    back to the bar chart alone rather than show an empty map."""
+    if markets_df.empty:
+        return None
+    mapped = markets_df.assign(
+        lat=markets_df["dma"].map(lambda d: DMA_COORDS.get(d, (None, None))[0]),
+        lon=markets_df["dma"].map(lambda d: DMA_COORDS.get(d, (None, None))[1]),
+    ).dropna(subset=["lat", "lon"])
+    if mapped.empty:
+        return None
+    max_share = mapped["share_pct"].max() or 1.0
+    fig = go.Figure()
+    fig.add_trace(go.Scattergeo(
+        lon=mapped["lon"], lat=mapped["lat"],
+        text=mapped.apply(lambda r: f"{r['dma']}: {r['share_pct']:.1f}%", axis=1),
+        hoverinfo="text",
+        marker=dict(
+            size=(mapped["share_pct"] / max_share) * 34 + 8,
+            color="#1D6E86", opacity=0.75,
+            line=dict(width=1, color="#123C4A"),
+        ),
+        mode="markers",
+    ))
+    fig.add_trace(go.Scattergeo(
+        lon=[-117.698], lat=[33.467], text=["Dana Point"], hoverinfo="text",
+        marker=dict(size=14, color="#B45309", symbol="star", line=dict(width=1, color="#7A3406")),
+        mode="markers",
+    ))
+    fig.update_geos(
+        scope="usa", showland=True, landcolor="#F1F5F9", showlakes=True,
+        lakecolor="#E2E8F0", showsubunits=True, subunitcolor="#CBD5E1",
+        bgcolor="rgba(0,0,0,0)",
+    )
+    fig.update_layout(
+        height=340, margin=dict(l=0, r=0, t=30, b=0),
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
+        showlegend=False, title="Where Dana Point's Visitors Come From",
+    )
+    return fig
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_datafy_spending_df(limit: int = 8) -> pd.DataFrame:
+    try:
+        conn = get_connection()
+        return pd.read_sql_query(
+            "SELECT category, spend_share_pct FROM datafy_overview_spending_by_category "
+            "ORDER BY report_period_start DESC, spend_share_pct DESC LIMIT ?",
+            conn,
+            params=(limit,),
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+_MONTH_ABBR_TO_NUM = {
+    "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
+    "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12,
+}
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_datafy_spending_trend_df(
+    months: float = 12, start_date: str | None = None, end_date: str | None = None
+) -> pd.DataFrame:
+    """datafy_overview_spending_by_month is the one Datafy table that carries
+    real month-by-month rows, unlike top_markets and spending_by_category,
+    which are one fixed annual snapshot. This is the genuinely fresh Datafy
+    series, so it is the one that should respond to the data-window filter.
+
+    The table's own `month` column is a 3-letter name ("Jan".."Dec"), not a
+    number, so the month-name conversion and chronological sort happen in
+    pandas instead of SQL. Trailing months that have not been reported yet
+    come through as a literal 0.0 (a placeholder, not a real $0 of visitor
+    spend) and are dropped rather than plotted as a cliff to zero."""
+    try:
+        conn = get_connection()
+        df = pd.read_sql_query(
+            "SELECT year, month, spending_usd FROM datafy_overview_spending_by_month", conn
+        )
+        if df.empty:
+            return df
+        df["month_num"] = df["month"].map(_MONTH_ABBR_TO_NUM)
+        df = df.dropna(subset=["month_num"])
+        df = df[df["spending_usd"] > 0]
+        if df.empty:
+            return df
+        df["month_num"] = df["month_num"].astype(int)
+        df["period"] = pd.to_datetime(dict(year=df["year"], month=df["month_num"], day=1))
+        df = df.sort_values("period")
+        if start_date and end_date:
+            df = df[(df["period"] >= pd.to_datetime(start_date)) & (df["period"] <= pd.to_datetime(end_date))]
+        else:
+            latest_period = df["period"].max()
+            cutoff_period = latest_period - pd.DateOffset(months=months)
+            df = df[df["period"] >= cutoff_period]
+        df = df.reset_index(drop=True)
+        df["month_label"] = df["period"].dt.strftime("%Y-%m")
+        return df[["year", "month", "spending_usd", "month_label"]]
+    except Exception:
+        return pd.DataFrame()
 
 
 def ask_hotel_partner_ai(
@@ -753,6 +1058,137 @@ def _split_pdf_pages(pdf_bytes: bytes) -> list[bytes]:
     return pages
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def _render_page_images(pdf_bytes: bytes) -> list[str]:
+    """Rasterize every page to a base64 PNG data URI for the flipbook viewer."""
+    import fitz  # PyMuPDF
+
+    images: list[str] = []
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    try:
+        for page in doc:
+            pix = page.get_pixmap(matrix=fitz.Matrix(2.0, 2.0))
+            b64 = base64.b64encode(pix.tobytes("png")).decode("ascii")
+            images.append(f"data:image/png;base64,{b64}")
+    finally:
+        doc.close()
+    return images
+
+
+def _flipbook_html(page_images: list[str], height: int = 760) -> str:
+    """An Issuu-style page-by-page viewer: one page at a time, prev/next,
+    a page counter, and a thumbnail strip, built from pre-rendered page
+    images so it never depends on the browser's native PDF plugin."""
+    pages_json = "[" + ",".join(f'"{p}"' for p in page_images) + "]"
+    thumbs_html = "".join(
+        f'<img class="pf-thumb" data-i="{i}" src="{p}" onclick="pfGo({i})">'
+        for i, p in enumerate(page_images)
+    )
+    return f"""
+    <div class="pf-wrap">
+      <div class="pf-stage">
+        <button class="pf-arrow pf-prev" onclick="pfPrev()" aria-label="Previous page">&#10094;</button>
+        <div class="pf-book">
+          <img id="pf-page" class="pf-page" src="{page_images[0] if page_images else ''}">
+          <div id="pf-shade" class="pf-shade"></div>
+        </div>
+        <button class="pf-arrow pf-next" onclick="pfNext()" aria-label="Next page">&#10095;</button>
+      </div>
+      <div class="pf-bar">
+        <span id="pf-counter">Page 1 of {len(page_images)}</span>
+      </div>
+      <div class="pf-thumbs">{thumbs_html}</div>
+    </div>
+    <style>
+      .pf-wrap {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }}
+      .pf-stage {{ position:relative; display:flex; align-items:center; justify-content:center;
+        background:#0B2530; border-radius:14px; padding:18px; min-height:{height}px;
+        perspective:1800px; }}
+      .pf-book {{ position:relative; max-width:92%; max-height:{height - 36}px; }}
+      .pf-page {{ display:block; max-width:100%; max-height:{height - 36}px; width:auto; height:auto;
+        box-shadow:0 12px 34px rgba(0,0,0,0.45); border-radius:4px; background:#fff;
+        transform-style:preserve-3d; backface-visibility:hidden; }}
+      .pf-shade {{ position:absolute; inset:0; border-radius:4px; opacity:0; pointer-events:none;
+        background:linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 35%); }}
+      .pf-page.pf-turn-next {{ animation: pfTurnNext 0.46s ease-in-out; transform-origin:left center; }}
+      .pf-page.pf-turn-prev {{ animation: pfTurnPrev 0.46s ease-in-out; transform-origin:right center; }}
+      .pf-shade.pf-turn-next, .pf-shade.pf-turn-prev {{ animation: pfShade 0.46s ease-in-out; }}
+      @keyframes pfTurnNext {{
+        0%   {{ transform: rotateY(0deg); }}
+        50%  {{ transform: rotateY(-92deg); }}
+        50.1%{{ transform: rotateY(92deg); }}
+        100% {{ transform: rotateY(0deg); }}
+      }}
+      @keyframes pfTurnPrev {{
+        0%   {{ transform: rotateY(0deg); }}
+        50%  {{ transform: rotateY(92deg); }}
+        50.1%{{ transform: rotateY(-92deg); }}
+        100% {{ transform: rotateY(0deg); }}
+      }}
+      @keyframes pfShade {{
+        0% {{ opacity:0; }} 45% {{ opacity:0.9; }} 55% {{ opacity:0.9; }} 100% {{ opacity:0; }}
+      }}
+      .pf-arrow {{ background:rgba(255,255,255,0.12); color:#fff; border:1px solid rgba(255,255,255,0.25);
+        border-radius:50%; width:44px; height:44px; font-size:16px; cursor:pointer;
+        position:absolute; top:50%; transform:translateY(-50%); z-index:5; }}
+      .pf-arrow:hover {{ background:rgba(255,255,255,0.28); }}
+      .pf-arrow:disabled {{ opacity:0.35; cursor:default; }}
+      .pf-prev {{ left:10px; }}
+      .pf-next {{ right:10px; }}
+      .pf-bar {{ text-align:center; padding:10px 0 4px 0; color:#0B2530; font-weight:700; font-size:13px; }}
+      .pf-thumbs {{ display:flex; gap:8px; overflow-x:auto; padding:8px 4px 4px 4px; }}
+      .pf-thumb {{ height:64px; border-radius:5px; border:2px solid transparent; cursor:pointer;
+        opacity:0.6; transition:opacity 0.15s ease, border-color 0.15s ease; flex-shrink:0; }}
+      .pf-thumb:hover {{ opacity:0.9; }}
+      .pf-thumb.pf-active {{ opacity:1; border-color:#1D6E86; }}
+      @media (max-width: 640px) {{
+        .pf-stage {{ min-height:{max(320, int(height * 0.55))}px; padding:10px; }}
+        .pf-book, .pf-page {{ max-height:{max(280, int((height - 36) * 0.55))}px; }}
+        .pf-arrow {{ width:36px; height:36px; font-size:13px; }}
+        .pf-thumb {{ height:46px; }}
+      }}
+    </style>
+    <script>
+      const pfPages = {pages_json};
+      let pfIdx = 0;
+      let pfBusy = false;
+      function pfSyncChrome() {{
+        document.getElementById('pf-counter').innerText = 'Page ' + (pfIdx + 1) + ' of ' + pfPages.length;
+        document.querySelectorAll('.pf-thumb').forEach((el, i) => {{
+          el.classList.toggle('pf-active', i === pfIdx);
+        }});
+        document.querySelector('.pf-prev').disabled = pfIdx === 0;
+        document.querySelector('.pf-next').disabled = pfIdx === pfPages.length - 1;
+      }}
+      function pfTurn(newIdx, direction) {{
+        if (pfBusy || newIdx === pfIdx || newIdx < 0 || newIdx >= pfPages.length) return;
+        pfBusy = true;
+        const img = document.getElementById('pf-page');
+        const shade = document.getElementById('pf-shade');
+        const cls = direction > 0 ? 'pf-turn-next' : 'pf-turn-prev';
+        img.classList.add(cls);
+        shade.classList.add(cls);
+        setTimeout(() => {{ img.src = pfPages[newIdx]; }}, 220);
+        setTimeout(() => {{
+          pfIdx = newIdx;
+          pfSyncChrome();
+          img.classList.remove(cls);
+          shade.classList.remove(cls);
+          pfBusy = false;
+        }}, 460);
+      }}
+      function pfGo(i) {{ pfTurn(i, i > pfIdx ? 1 : -1); }}
+      function pfPrev() {{ pfTurn(pfIdx - 1, -1); }}
+      function pfNext() {{ pfTurn(pfIdx + 1, 1); }}
+      document.addEventListener('keydown', (e) => {{
+        if (e.key === 'ArrowLeft') pfPrev();
+        if (e.key === 'ArrowRight') pfNext();
+      }});
+      pfSyncChrome();
+    </script>
+    """
+
+
 def _pdf_generated_at() -> str:
     if os.path.exists(PDF_PATH):
         return datetime.fromtimestamp(os.path.getmtime(PDF_PATH)).strftime("%b %d, %Y at %I:%M %p")
@@ -781,7 +1217,7 @@ def _header_html(status_text: str, ok: bool = True) -> str:
         """
 
 
-col1, col2, col3, col4, col5 = st.columns([3.2, 2, 1, 1, 0.5])
+col1, col2, col3, col4 = st.columns([4, 1, 1, 0.5])
 with col1:
     header_slot = st.empty()
     # Shown immediately, before this run's report generation has actually
@@ -789,22 +1225,54 @@ with col1:
     # with the true "Last generated" stamp once generation completes.
     header_slot.markdown(_header_html("Generating latest report&hellip;"), unsafe_allow_html=True)
 with col2:
-    date_range = st.date_input(
-        "Report window",
-        value=(),
-        label_visibility="collapsed",
-        help="Pick a start and end date to rebuild the hotel-performance window (cover, Executive Summary, Hotel Performance pages). Datafy and CoStar sections always show their own freshest available period.",
-    )
-with col3:
     summarize_clicked = st.button("Summarize", use_container_width=True)
-with col4:
+with col3:
     regenerate = st.button("Regenerate", use_container_width=True)
-with col5:
+with col4:
     with st.popover("❓", use_container_width=True):
         st.markdown(HELP_HTML, unsafe_allow_html=True)
 
-range_start_iso = date_range[0].isoformat() if len(date_range) == 2 else None
-range_end_iso = date_range[1].isoformat() if len(date_range) == 2 else None
+# Data window -- set here, before the report is built, so the KPI tiles,
+# trend charts, Datafy visitor-origins section, and Intelligence Brief below
+# all reflect the SAME selected period. Only "Custom range" overrides the
+# PDF's own date_range (cover, Executive Summary, Hotel Performance pages);
+# every preset window lets the PDF use its own freshest default while still
+# driving every native Streamlit chart on this page.
+PERIOD_OPTIONS = {
+    "This week": 7 / 30,
+    "Last 30 days": 1,
+    "Last 3 months": 3,
+    "Last 6 months": 6,
+    "Last 12 months": 12,
+    "Last 24 months": 24,
+}
+period_label = st.radio(
+    "Data window (drives KPI tiles, charts, and the Intelligence Brief below)",
+    list(PERIOD_OPTIONS.keys()) + ["Custom range"], index=4, horizontal=True, key="pulse_period",
+)
+
+range_start_iso, range_end_iso = None, None
+if period_label == "Custom range":
+    cust_c1, cust_c2 = st.columns(2)
+    with cust_c1:
+        custom_start_d = st.date_input(
+            "Start date", value=date.today() - timedelta(days=90),
+            max_value=date.today(), key="custom_start_date",
+        )
+    with cust_c2:
+        custom_end_d = st.date_input(
+            "End date", value=date.today(), max_value=date.today(), key="custom_end_date",
+        )
+    if custom_start_d > custom_end_d:
+        custom_start_d, custom_end_d = custom_end_d, custom_start_d
+        st.caption("Start date was after end date, swapped them.")
+    range_start_iso = custom_start_d.isoformat()
+    range_end_iso = custom_end_d.isoformat()
+    window_months = max((custom_end_d - custom_start_d).days, 1) / 30.0
+    period_label_display = f"{range_start_iso} to {range_end_iso}"
+else:
+    window_months = PERIOD_OPTIONS[period_label]
+    period_label_display = period_label
 
 st.markdown(
     f"""
@@ -880,6 +1348,189 @@ with dl_center:
     )
 
 # ---------------------------------------------------------------------------
+# Jump-to-section nav -- lets anyone see everything this page offers at a
+# glance and go straight to it, instead of scrolling past every section.
+# ---------------------------------------------------------------------------
+
+st.markdown(
+    """
+    <div class="pulse-jumpnav">
+      <a href="#pulse-snapshot">\U0001F4CA Performance Snapshot</a>
+      <a href="#pulse-origins">\U0001F30E Visitor Origins &amp; Spend</a>
+      <a href="#pulse-brain">\U0001F9E0 Intelligence Brief</a>
+      <a href="#pulse-fullreport">\U0001F4C4 Full Report</a>
+      <a href="#pulse-notes">\U00002B07 Notes &amp; Downloads</a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ---------------------------------------------------------------------------
+# Performance Snapshot -- KPI tiles and a trend chart read straight from the
+# database, not the static PDF, so the data window above drives a real
+# chart, not just PDF page selection.
+# ---------------------------------------------------------------------------
+
+st.markdown('<div id="pulse-snapshot" class="pulse-anchor"></div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">\U0001F4CA Performance Snapshot</div>', unsafe_allow_html=True)
+st.caption(f"Showing {period_label_display.lower()}. Change the data window above to update this section and the Intelligence Brief below.")
+
+period_kpi = load_kpi_period_stats(window_months, start_date=range_start_iso, end_date=range_end_iso)
+kpi_c1, kpi_c2, kpi_c3 = st.columns(3)
+if period_kpi:
+    kpi_c1.metric("Occupancy", f"{period_kpi['occ_pct']:.1f}%",
+                  delta=f"{period_kpi['occ_yoy']:+.1f} pts YoY" if pd.notna(period_kpi.get("occ_yoy")) else None)
+    kpi_c2.metric("ADR", f"${period_kpi['adr']:,.0f}",
+                  delta=f"{period_kpi['adr_yoy']:+.1f}% YoY" if pd.notna(period_kpi.get("adr_yoy")) else None)
+    kpi_c3.metric("RevPAR", f"${period_kpi['revpar']:,.0f}",
+                  delta=f"{period_kpi['revpar_yoy']:+.1f}% YoY" if pd.notna(period_kpi.get("revpar_yoy")) else None)
+    st.caption(
+        f"Averaged over {period_kpi['n_days']} STR-reported days, "
+        f"{period_kpi['period_start']} to {period_kpi['period_end']}."
+    )
+else:
+    st.info("STR KPI data is not available yet.")
+
+trend_df = load_kpi_trend_df(window_months, start_date=range_start_iso, end_date=range_end_iso)
+if not trend_df.empty:
+    st.markdown(
+        f'<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:2px;">'
+        f"STR Occupancy &amp; ADR Trend &mdash; {html.escape(period_label_display)}</div>",
+        unsafe_allow_html=True,
+    )
+    trend_fig = go.Figure()
+    trend_fig.add_trace(go.Scatter(x=trend_df["month"], y=trend_df["occ"], name="Occupancy %",
+                                    line=dict(color="#1D6E86", width=3), yaxis="y1"))
+    trend_fig.add_trace(go.Bar(x=trend_df["month"], y=trend_df["adr"], name="ADR ($)",
+                                marker=dict(color="#B45309"), opacity=0.55, yaxis="y2"))
+    trend_fig.update_layout(
+        height=340, margin=dict(l=10, r=10, t=40, b=10),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        yaxis=dict(title="Occupancy %", showgrid=True, gridcolor="#E2E8F0"),
+        yaxis2=dict(title="ADR ($)", overlaying="y", side="right", showgrid=False),
+    )
+    st.plotly_chart(trend_fig, use_container_width=True, config={"displayModeBar": False})
+else:
+    st.info("STR monthly trend data is not available yet.")
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# Visitor Origins & Spend -- Datafy's monthly spend trend (real, responds to
+# the data window above), then the latest snapshot pull: a geographic bubble
+# map of feeder markets alongside a bar chart, and spend by category.
+# ---------------------------------------------------------------------------
+
+st.markdown('<div id="pulse-origins" class="pulse-anchor"></div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">\U0001F30E Visitor Origins &amp; Spend</div>', unsafe_allow_html=True)
+
+spend_trend_df = load_datafy_spending_trend_df(window_months, start_date=range_start_iso, end_date=range_end_iso)
+if not spend_trend_df.empty:
+    st.markdown(
+        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:4px;">'
+        "Datafy Monthly Visitor Spend Trend</div>",
+        unsafe_allow_html=True,
+    )
+    sc1, sc2 = st.columns(2)
+    sc1.metric("Latest Month", spend_trend_df.iloc[-1]["month_label"],
+               f"${spend_trend_df.iloc[-1]['spending_usd']:,.0f}")
+    avg_spend = spend_trend_df["spending_usd"].mean()
+    sc2.metric(f"{period_label_display} Avg.", f"${avg_spend:,.0f}/mo")
+    spend_trend_fig = go.Figure(go.Scatter(
+        x=spend_trend_df["month_label"], y=spend_trend_df["spending_usd"],
+        mode="lines+markers", line=dict(color="#1D6E86", width=3),
+        marker=dict(size=6),
+    ))
+    spend_trend_fig.update_layout(
+        height=260, margin=dict(l=10, r=10, t=20, b=10),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
+        yaxis=dict(title="Visitor spend ($)", showgrid=True, gridcolor="#E2E8F0"),
+    )
+    st.plotly_chart(spend_trend_fig, use_container_width=True, config={"displayModeBar": False})
+    st.caption(
+        f"This one Datafy series is real month-by-month data and does respond to the {period_label_display.lower()} "
+        "window above. The map and category breakdowns below use Datafy's latest available snapshot pull and do not."
+    )
+    st.divider()
+
+try:
+    datafy_periods = pd.read_sql_query(
+        "SELECT report_period_start, report_period_end FROM datafy_overview_spending_by_market "
+        "ORDER BY report_period_start DESC LIMIT 1",
+        get_connection(),
+    )
+except Exception:
+    datafy_periods = pd.DataFrame()
+datafy_period_str = (
+    f"{datafy_periods.iloc[0]['report_period_start']} to {datafy_periods.iloc[0]['report_period_end']}"
+    if not datafy_periods.empty else "period unavailable"
+)
+st.markdown(
+    f"""
+    <div style="background:#FFFBEB; border:1px solid #FDE68A; border-left:4px solid #D97706;
+                border-radius:10px; padding:10px 16px; margin-bottom:14px; font-size:12.5px;
+                color:#78350F; line-height:1.5;">
+      <b>\U0001F4CC Datafy Visitor Economy:</b> the map and charts below cover
+      <b>{datafy_period_str}</b>, the most recent period Datafy has published. Datafy releases
+      new visitor-origin and spending data periodically, not daily, so this section always shows
+      its latest available pull no matter which date window is selected above. The STR chart and
+      Performance Snapshot above it do follow the date window.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+markets_df = load_datafy_markets_df()
+if not markets_df.empty:
+    top_row = markets_df.iloc[0]
+    mc1, mc2 = st.columns(2)
+    mc1.metric("Top Market", top_row["dma"])
+    mc2.metric(top_row["metric"], f"{top_row['share_pct']:.1f}%")
+    map_fig = build_markets_map_figure(markets_df)
+    if map_fig is not None:
+        st.plotly_chart(map_fig, use_container_width=True, config={"displayModeBar": False})
+    mkt_fig = go.Figure(go.Bar(
+        x=markets_df["share_pct"], y=markets_df["dma"], orientation="h",
+        marker=dict(color="#1D6E86"),
+    ))
+    mkt_fig.update_layout(
+        height=280, margin=dict(l=10, r=10, t=34, b=10),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
+        xaxis=dict(title=f"{top_row['metric']} (%)", showgrid=True, gridcolor="#E2E8F0"),
+        yaxis=dict(autorange="reversed"),
+        title="Top Visitor Origin Markets",
+    )
+    st.plotly_chart(mkt_fig, use_container_width=True, config={"displayModeBar": False})
+else:
+    st.info("Datafy visitor origin data is not available yet.")
+
+spend_df = load_datafy_spending_df()
+if not spend_df.empty:
+    top_row = spend_df.iloc[0]
+    sc1, sc2 = st.columns(2)
+    sc1.metric("Top Category", top_row["category"])
+    sc2.metric("Spend Share", f"{top_row['spend_share_pct'] * 100:.1f}%")
+    spend_fig = go.Figure(go.Pie(
+        labels=spend_df["category"], values=spend_df["spend_share_pct"], hole=0.55,
+        marker=dict(colors=["#1D6E86", "#123C4A", "#B45309", "#1D9E6F", "#7FD6C4", "#475569", "#94A3B8", "#CBD9DE"]),
+    ))
+    spend_fig.update_layout(
+        height=280, margin=dict(l=10, r=10, t=34, b=10),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
+        title="Visitor Spend by Category",
+    )
+    st.plotly_chart(spend_fig, use_container_width=True, config={"displayModeBar": False})
+else:
+    st.info("Datafy spending data is not available yet.")
+
+st.divider()
+
+# ---------------------------------------------------------------------------
 # Intelligence Brief — an AI assistant answering questions against this
 # week's live STR, CoStar, and Datafy data, plus a free-form follow-up
 # question box. Distinct from the "Summarize" button above: Summarize reads
@@ -889,9 +1540,8 @@ with dl_center:
 # the PDF snapshot alone cannot.
 # ---------------------------------------------------------------------------
 
-brain_months = (
-    max((date_range[1] - date_range[0]).days, 1) / 30.0 if len(date_range) == 2 else 24.0
-)
+st.markdown('<div id="pulse-brain" class="pulse-anchor"></div>', unsafe_allow_html=True)
+brain_months = window_months
 
 st.markdown(
     f"""
@@ -946,6 +1596,8 @@ with st.expander("\U0001F50D Ask a follow-up question about this data"):
 
 st.divider()
 
+st.markdown('<div id="pulse-fullreport" class="pulse-anchor"></div>', unsafe_allow_html=True)
+
 section_pages = _split_pdf_pages(pdf_bytes)
 available_sections = [s for s in SECTIONS if s["page"] < len(section_pages)]
 
@@ -999,16 +1651,22 @@ if open_idx is not None and 0 <= open_idx < len(available_sections):
 
     _section_dialog()
 
-st.markdown("#### Full Report")
-b64 = base64.b64encode(pdf_bytes).decode("utf-8")
-st.markdown(
-    f"""
-    <iframe src="data:application/pdf;base64,{b64}"
-            width="100%" height="900px" style="border:1px solid #E2E8F0; border-radius:8px;">
-    </iframe>
-    """,
-    unsafe_allow_html=True,
-)
+st.markdown("#### Flip Through the Full Report")
+st.caption("Browse the report page by page, just like flipping through Issuu. Use the arrows, the thumbnail strip, or the left and right arrow keys.")
+with st.spinner("Rendering pages..."):
+    page_images = _render_page_images(pdf_bytes)
+components.html(_flipbook_html(page_images), height=800, scrolling=False)
+
+with st.expander("View the full report as one continuous scroll instead"):
+    b64 = base64.b64encode(pdf_bytes).decode("utf-8")
+    st.markdown(
+        f"""
+        <iframe src="data:application/pdf;base64,{b64}"
+                width="100%" height="900px" style="border:1px solid #E2E8F0; border-radius:8px;">
+        </iframe>
+        """,
+        unsafe_allow_html=True,
+    )
 
 st.markdown("---")
 
@@ -1017,6 +1675,7 @@ st.markdown("---")
 # browsable archive of every past generated PDF.
 # ---------------------------------------------------------------------------
 
+st.markdown('<div id="pulse-notes" class="pulse-anchor"></div>', unsafe_allow_html=True)
 st.markdown("#### Notes & Report Repository")
 render_notes_block("general", "General Notes")
 render_report_archive()
