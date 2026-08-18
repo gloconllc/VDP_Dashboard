@@ -1001,6 +1001,17 @@ HELP_HTML = """
   itself, then select "Close, return to full report" when you are finished.
 </div>
 <div class="pulse-help-item">
+  <b>Notes.</b> Scroll to the Notes and Report Repository section near the bottom of the page to
+  add commentary on the data, such as an explanation for a dip in occupancy or context behind a
+  spending trend. Every note saved there carries automatically into page nine of the PDF, titled
+  Notes and Commentary, the next time the report is generated or regenerated. No separate step is
+  needed to get a note into the report.
+</div>
+<div class="pulse-help-item">
+  <b>Report Repository.</b> Once a report has been generated more than once, this same section
+  keeps a dated copy of each past PDF, so earlier versions stay available for comparison.
+</div>
+<div class="pulse-help-item">
   Questions about a specific figure are welcome. The Data &amp; Downloads section at the end of
   the full report names the source behind every number.
 </div>
