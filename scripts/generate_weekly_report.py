@@ -305,16 +305,19 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
         occ_by_dow.append(float(row["occ_pct"].mean()) if not row.empty else 0.0)
         adr_by_dow.append(float(row["adr"].mean()) if not row.empty else 0.0)
 
+    # Figsize widened/heightened for the full-page (one-category-per-page)
+    # layout -- these four charts used to share a half-width page with
+    # another category and are now the only visual on their own page.
     chart_occ_dp = _bar_chart(dow_labels, [("Occupancy %", occ_by_dow)], [MAROON], "Occ %",
-                               figsize=(4.8, 4.2), label_fmt=lambda v: f"{v:.0f}%")
+                               figsize=(6.2, 4.6), label_fmt=lambda v: f"{v:.0f}%")
     chart_adr_dp = _bar_chart(dow_labels, [("ADR $", adr_by_dow)], [MAROON], "ADR $",
-                               figsize=(4.8, 4.2), label_fmt=lambda v: f"${v:.0f}")
+                               figsize=(6.2, 4.6), label_fmt=lambda v: f"${v:.0f}")
 
     # comp-set chart: Dana Point (live) + 5 benchmark markets
     compset_labels = ["Dana Pt"] + list(COMPSET_BENCHMARK.keys())
     compset_vals = [round(revpar_avg, 2)] + list(COMPSET_BENCHMARK.values())
     compset_colors = [MAROON] + [SLATE] * len(COMPSET_BENCHMARK)
-    fig, ax = plt.subplots(figsize=(4.8, 4.2))
+    fig, ax = plt.subplots(figsize=(6.2, 4.6))
     compset_bars = ax.bar(compset_labels, compset_vals, color=compset_colors)
     ax.bar_label(compset_bars, labels=[f"${v:,.0f}" for v in compset_vals], fontsize=9,
                  fontweight="bold", color="#1E293B", padding=2)
@@ -335,7 +338,7 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
     chart_compression = _bar_chart(
         q_labels,
         [("80%+ occ", comp_q["days_above_80_occ"].tolist()), ("90%+ occ", comp_q["days_above_90_occ"].tolist())],
-        [MAROON, MAROON_LT], "Days", legend=True, figsize=(4.8, 4.2),
+        [MAROON, MAROON_LT], "Days", legend=True, figsize=(6.2, 4.6),
         label_fmt=lambda v: f"{int(v)}",
     )
     compression_label = comp_q["quarter"].iloc[-1] if not comp_q.empty else "Q-"

@@ -944,18 +944,22 @@ def render_report_archive() -> None:
 # "page" is the 0-based index into the physical PDF (0 = cover, which is
 # intentionally not offered as its own pop-out section).
 SECTIONS = [
-    {"icon": "📊", "title": "Executive Summary & Hotel Performance",
-     "desc": "Headline KPIs, the occupancy trend, and the story behind this week's numbers.", "page": 1},
-    {"icon": "🏨", "title": "Hotel Performance (ADR) & Visitor Origins",
-     "desc": "Average daily rate by day of week and where visitors are traveling from.", "page": 2},
+    {"icon": "📊", "title": "Executive Summary",
+     "desc": "Headline KPIs, YoY change, and this week's top DMO insight.", "page": 1},
+    {"icon": "🏨", "title": "Hotel Performance — Occupancy",
+     "desc": "Occupancy by day of week and the 6-market RevPAR comp set.", "page": 2},
+    {"icon": "💵", "title": "Hotel Performance — ADR & Compression",
+     "desc": "Average daily rate by day of week and compression days by quarter.", "page": 3},
+    {"icon": "🌎", "title": "Visitor Origins",
+     "desc": "Top feeder markets to Dana Point and why visitors choose it.", "page": 4},
     {"icon": "🏢", "title": "Market Segments",
-     "desc": "CoStar chain-scale occupancy and RevPAR by tier for the Newport Beach/Dana Point submarket.", "page": 3},
+     "desc": "CoStar chain-scale occupancy and RevPAR by tier for the Newport Beach/Dana Point submarket.", "page": 5},
     {"icon": "🏬", "title": "Chain-Scale Segment Detail",
-     "desc": "Segment-level performance and the TBID/TOT tax estimate.", "page": 4},
+     "desc": "Segment-level performance and the TBID/TOT tax estimate.", "page": 6},
     {"icon": "🧳", "title": "Visitor Profile & Spend",
-     "desc": "Datafy visitor demographics, category spend, and length of stay.", "page": 5},
+     "desc": "Datafy visitor demographics, category spend, and length of stay.", "page": 7},
     {"icon": "📈", "title": "Forward Outlook & Group Business",
-     "desc": "What's ahead for compression, group bookings, and travel trends.", "page": 6},
+     "desc": "What's ahead for compression, group bookings, and travel trends.", "page": 8},
 ]
 
 

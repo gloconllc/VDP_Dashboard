@@ -54,12 +54,14 @@
   .h-date { font-size:10.5px; color: var(--ink-3); margin-top:2px; }
   .h-date .fresh-tag { color: var(--teal-dk); font-weight:700; margin-left:6px; }
 
-  .market-row { display:flex; gap:16px; margin-top:16px; height: 400px; align-items:center; }
+  /* Sized for a full-page (.half-full) layout now that Hotel Performance
+     Occupancy and ADR each get their own page instead of sharing a half. */
+  .market-row { display:flex; gap:16px; margin-top:16px; height: 470px; align-items:center; }
   .market-col { flex:1; min-width:0; }
   .market-pill { display:inline-block; background: var(--maroon-lt); color: var(--maroon); font-size:12px; font-weight:800; padding:5px 16px; border-radius:6px; margin-bottom:8px; }
   .market-pill.alt { background: rgba(29,110,134,0.10); color: var(--teal-dk); }
   .market-cap { font-size:10px; font-weight:700; color: var(--ink-3); text-transform:uppercase; letter-spacing:.03em; margin-bottom:8px; }
-  .chart-img { display:block; width:100%; height:340px; object-fit:contain; }
+  .chart-img { display:block; width:100%; height:410px; object-fit:contain; }
 
   .exec-table { margin-top:14px; }
   .exec-row { display:grid; grid-template-columns: repeat(4,1fr); }
@@ -166,9 +168,9 @@
     <div class="cover-credit">Prepared by GloCon Solutions LLC for Visit Dana Point &middot; Photography courtesy of Visit Dana Point</div>
   </div>
 
-  <!-- PAGE 1 · EXECUTIVE SUMMARY + HOTEL PERFORMANCE OCCUPANCY -->
+  <!-- PAGE 1 · EXECUTIVE SUMMARY -->
   <div class="slide">
-    <div class="half left">
+    <div class="half-full">
       <div class="h-eyebrow teal"><span class="line"></span>EXECUTIVE SUMMARY</div>
       <div class="h-title teal">Executive Summary</div>
       <div class="h-date">Week of [[WEEK_LABEL]]</div>
@@ -186,13 +188,18 @@
           <div class="exec-cell"><div class="v delta">[[GROUP_DEMAND_SHARE]]</div><div class="l">Group Room Demand Share</div></div>
         </div>
       </div>
-      <div class="panel-cap" style="margin-top:20px;">Group demand share figure is an industry benchmark (STR/CBRE), pending a live STR group-segment export; see Page 6.</div>
+      <div class="panel-cap" style="margin-top:20px;">Group demand share figure is an industry benchmark (STR/CBRE), pending a live STR group-segment export; see Page 8.</div>
       <div class="panel-hd" style="margin-top:22px;">This Week's Headline</div>
 [[EXEC_HEADLINE_CARDS]]
       <div class="h-source">SOURCE: STR</div>
       <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
     </div>
-    <div class="half right">
+    <div class="h-page">1 / 8</div>
+  </div>
+
+  <!-- PAGE 2 · HOTEL PERFORMANCE OCCUPANCY -->
+  <div class="slide">
+    <div class="half-full">
       <div class="h-eyebrow maroon"><span class="line"></span>STR &middot; LAYER 1 TRUTH</div>
       <div class="h-title maroon">Hotel Performance</div>
       <div class="h-subtitle">Occupancy</div>
@@ -212,12 +219,12 @@
       <div class="h-source">SOURCE: STR</div>
       <div class="h-logo maroon"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
     </div>
-    <div class="h-page">1 / 6</div>
+    <div class="h-page">2 / 8</div>
   </div>
 
-  <!-- PAGE 2 · HOTEL PERFORMANCE ADR + VISITOR ORIGINS -->
+  <!-- PAGE 3 · HOTEL PERFORMANCE ADR & COMPRESSION -->
   <div class="slide">
-    <div class="half left">
+    <div class="half-full">
       <div class="h-eyebrow maroon"><span class="line"></span>STR &middot; LAYER 1 TRUTH</div>
       <div class="h-title maroon">Hotel Performance</div>
       <div class="h-subtitle">Average Daily Rate (ADR)</div>
@@ -237,37 +244,42 @@
       <div class="h-source">SOURCE: STR</div>
       <div class="h-logo maroon"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
     </div>
-    <div class="half right">
+    <div class="h-page">3 / 8</div>
+  </div>
+
+  <!-- PAGE 4 · VISITOR ORIGINS -->
+  <div class="slide">
+    <div class="half-full">
       <div class="h-eyebrow teal"><span class="line"></span>DATAFY &middot; LAYER 1 CURRENT</div>
       <div class="h-title teal">Visitor Origins</div>
       <div class="h-subtitle">Top Feeder Markets to Dana Point</div>
       <div class="h-date">[[DATAFY_PERIOD]] <span class="fresh-tag">*most recent Datafy export</span></div>
-      <div style="display:flex; gap:20px; align-items:center; margin-top:14px;">
-        <div style="flex:0 0 220px;"><img class="chart-img" style="height:220px;" src="[[CHART_ORIGINS]]"></div>
+      <div style="display:flex; gap:28px; align-items:center; margin-top:16px;">
+        <div style="flex:0 0 300px;"><img class="chart-img" style="height:300px;" src="[[CHART_ORIGINS]]"></div>
         <div style="flex:1;">
           <div class="panel-hd" style="margin-bottom:8px;">Top Visitation Markets</div>
           <div>[[ORIGINS_LEGEND]]</div>
         </div>
       </div>
-      <div class="panel-hd" style="margin-top:20px;">Why Visitors Choose Dana Point</div>
-      <div class="dp-photo-row">
-        <div class="dp-photo-card"><img src="[[PHOTO_WHALE]]">
+      <div class="panel-hd" style="margin-top:22px;">Why Visitors Choose Dana Point</div>
+      <div class="dp-photo-row" style="height:190px;">
+        <div class="dp-photo-card" style="height:190px;"><img src="[[PHOTO_WHALE]]">
           <div class="dp-photo-stat"><span class="stat-label">Repeat Visitors</span>[[STAT_REPEAT]]</div>
           <div class="dp-photo-cap">Whale &amp; Dolphin Watching</div></div>
-        <div class="dp-photo-card"><img src="[[PHOTO_HARBOR]]">
+        <div class="dp-photo-card" style="height:190px;"><img src="[[PHOTO_HARBOR]]">
           <div class="dp-photo-stat"><span class="stat-label">Share of Visitor Days</span>[[STAT_HARBOR]]</div>
           <div class="dp-photo-cap">Harbor &amp; Coastline</div></div>
-        <div class="dp-photo-card"><img src="[[PHOTO_WOODY]]">
+        <div class="dp-photo-card" style="height:190px;"><img src="[[PHOTO_WOODY]]">
           <div class="dp-photo-stat"><span class="stat-label">Avg. Length of Stay</span>[[STAT_LOS]]</div>
           <div class="dp-photo-cap">Classic Sailing Tours</div></div>
       </div>
       <div class="h-source">SOURCE: DATAFY</div>
       <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
     </div>
-    <div class="h-page">2 / 6</div>
+    <div class="h-page">4 / 8</div>
   </div>
 
-  <!-- PAGE 3 · COSTAR MARKET SEGMENTS (full page) -->
+  <!-- PAGE 5 · COSTAR MARKET SEGMENTS (full page) -->
   <div class="slide">
     <div class="half-full">
       <div class="h-eyebrow teal"><span class="line"></span>COSTAR &middot; LAYER 1 CURRENT</div>
@@ -282,10 +294,10 @@
       <div class="h-source">SOURCE: COSTAR</div>
       <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
     </div>
-    <div class="h-page">3 / 6</div>
+    <div class="h-page">5 / 8</div>
   </div>
 
-  <!-- PAGE 4 · COSTAR LUXURY DETAIL (full page) -->
+  <!-- PAGE 6 · COSTAR LUXURY DETAIL (full page) -->
   <div class="slide">
     <div class="half-full">
       <div class="h-eyebrow teal"><span class="line"></span>COSTAR &middot; LAYER 1 CURRENT</div>
@@ -319,10 +331,10 @@
       <div class="h-source">SOURCE: COSTAR</div>
       <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
     </div>
-    <div class="h-page">4 / 6</div>
+    <div class="h-page">6 / 8</div>
   </div>
 
-  <!-- PAGE 5 · DATAFY VISITOR PROFILE (full page) -->
+  <!-- PAGE 7 · DATAFY VISITOR PROFILE (full page) -->
   <div class="slide">
     <div class="half-full">
       <div class="h-eyebrow teal"><span class="line"></span>DATAFY &middot; LAYER 1 CURRENT</div>
@@ -347,10 +359,10 @@
       <div class="h-source">SOURCE: DATAFY</div>
       <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
     </div>
-    <div class="h-page">5 / 6</div>
+    <div class="h-page">7 / 8</div>
   </div>
 
-  <!-- PAGE 6 · FORWARD OUTLOOK & GROUP (full page) -->
+  <!-- PAGE 8 · FORWARD OUTLOOK & GROUP (full page) -->
   <div class="slide">
     <div class="half-full">
       <div class="h-eyebrow teal"><span class="line"></span>CROSS-DATASET &amp; GROUP INTELLIGENCE</div>
@@ -380,7 +392,7 @@
       <div class="h-source">SOURCE: CROSS-DATASET, GROUP INTELLIGENCE</div>
       <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
     </div>
-    <div class="h-page">6 / 6</div>
+    <div class="h-page">8 / 8</div>
   </div>
 </div>
 </body>
