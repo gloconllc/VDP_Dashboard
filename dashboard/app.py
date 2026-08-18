@@ -18,12 +18,14 @@ import base64
 import html
 import io
 import os
+import re
 import sqlite3
 import sys
 from datetime import date, datetime, timedelta
 
 import pandas as pd
 import plotly.graph_objects as go
+import requests
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -1363,6 +1365,7 @@ with dl_center:
 st.markdown(
     """
     <div class="pulse-jumpnav">
+      <a href="#pulse-upload">\U0001F4E4 Upload Your Data</a>
       <a href="#pulse-snapshot">\U0001F4CA Performance Snapshot</a>
       <a href="#pulse-origins">\U0001F30E Visitor Origins &amp; Spend</a>
       <a href="#pulse-brain">\U0001F9E0 Intelligence Brief</a>
@@ -1372,6 +1375,133 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# ---------------------------------------------------------------------------
+# Upload Your Data -- lets Heather (or anyone with the link) add a new STR,
+# Datafy, CoStar, or Later.com export directly, no IT ticket or shared
+# drive setup required. The file is always saved into the correct
+# canonical data/<source>/ folder (see CLAUDE.md's Standard Process). When
+# GITHUB_TOKEN and GITHUB_REPO are configured on this Railway service, the
+# upload is also committed straight to VDP_Dashboard main and the existing
+# Weekly STR Sync workflow is dispatched, so the pipeline reloads it and
+# the dashboard updates on its own within a few minutes. Without that
+# secret configured, the file is still saved for this running instance,
+# but will not survive the next redeploy -- see CLAUDE.md Lessons Learned.
+# ---------------------------------------------------------------------------
+
+UPLOAD_SOURCE_FOLDERS = {
+    "STR Daily/Monthly Export": "data/str",
+    "Datafy Export": "data/datafy",
+    "CoStar Report": "data/costar",
+    "Later.com Social Export": "data/later",
+    "Other / Not Sure": "data/uploads_pending",
+}
+ALLOWED_UPLOAD_EXTENSIONS = {".csv", ".xlsx", ".xls", ".pdf"}
+MAX_UPLOAD_MB = 25
+
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "gloconllc/VDP_Dashboard")
+GITHUB_WORKFLOW_FILE = os.environ.get("GITHUB_WORKFLOW_FILE", "str_weekly_sync.yml")
+
+
+def _safe_upload_filename(original_name: str) -> str:
+    """Timestamp-prefixed and character-sanitized so two uploads never
+    collide and a crafted filename can't escape the target folder."""
+    base = os.path.basename(original_name or "upload").strip().replace(" ", "_")
+    base = re.sub(r"[^A-Za-z0-9._-]", "", base) or "upload"
+    stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    return f"{stamp}_{base}"
+
+
+def _commit_upload_to_github(local_path: str, repo_relative_path: str, message: str) -> tuple[bool, str]:
+    """Commits one uploaded file straight to VDP_Dashboard main via
+    GitHub's Contents API, then dispatches the existing Weekly STR Sync
+    workflow so the pipeline actually reloads it. Both steps are skipped
+    cleanly when GITHUB_TOKEN isn't set -- see the section note above."""
+    if not GITHUB_TOKEN:
+        return False, "not_configured"
+    try:
+        with open(local_path, "rb") as f:
+            content_b64 = base64.b64encode(f.read()).decode("ascii")
+        headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
+        put_resp = requests.put(
+            f"https://api.github.com/repos/{GITHUB_REPO}/contents/{repo_relative_path}",
+            headers=headers, timeout=30,
+            json={"message": message, "content": content_b64, "branch": "main"},
+        )
+        if put_resp.status_code not in (200, 201):
+            return False, f"GitHub commit failed ({put_resp.status_code})"
+        dispatch_resp = requests.post(
+            f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/{GITHUB_WORKFLOW_FILE}/dispatches",
+            headers=headers, timeout=30, json={"ref": "main"},
+        )
+        if dispatch_resp.status_code != 204:
+            return True, "committed_but_dispatch_failed"
+        return True, "ok"
+    except Exception as e:
+        return False, str(e)
+
+
+st.markdown('<div id="pulse-upload" class="pulse-anchor"></div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">\U0001F4E4 Upload Your Data</div>', unsafe_allow_html=True)
+st.caption(
+    "Add a new STR, Datafy, CoStar, or Later.com export directly here, no IT ticket or shared "
+    "drive setup required."
+)
+
+up_col1, up_col2 = st.columns([1, 2])
+with up_col1:
+    upload_source = st.selectbox(
+        "What kind of file is this?", list(UPLOAD_SOURCE_FOLDERS.keys()), key="upload_source_select",
+    )
+with up_col2:
+    uploaded_file = st.file_uploader(
+        "Choose a file (.csv, .xlsx, .xls, or .pdf)",
+        type=["csv", "xlsx", "xls", "pdf"], key="upload_file_widget",
+    )
+
+if uploaded_file is not None:
+    ext = os.path.splitext(uploaded_file.name)[1].lower()
+    size_mb = uploaded_file.size / (1024 * 1024)
+    if ext not in ALLOWED_UPLOAD_EXTENSIONS:
+        st.error(f"'{ext}' files aren't supported here. Use .csv, .xlsx, .xls, or .pdf.")
+    elif size_mb > MAX_UPLOAD_MB:
+        st.error(f"That file is {size_mb:.1f} MB. The limit here is {MAX_UPLOAD_MB} MB.")
+    elif st.button("Upload this file", key="upload_submit_btn", type="primary"):
+        target_dir = UPLOAD_SOURCE_FOLDERS[upload_source]
+        safe_name = _safe_upload_filename(uploaded_file.name)
+        local_full_dir = os.path.join(PROJECT_ROOT, target_dir)
+        os.makedirs(local_full_dir, exist_ok=True)
+        local_full_path = os.path.join(local_full_dir, safe_name)
+        with open(local_full_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+
+        committed, status = _commit_upload_to_github(
+            local_full_path, f"{target_dir}/{safe_name}",
+            f"Add {upload_source} upload: {safe_name} [via dashboard]",
+        )
+        if committed and status == "ok":
+            st.success(
+                "Received. This has been added to the data pipeline, and the dashboard and report "
+                "will refresh automatically within a few minutes."
+            )
+        elif committed:
+            st.success(
+                "Received and added to the repository. The next scheduled sync will pick it up."
+            )
+        elif status == "not_configured":
+            st.info(
+                "File received and saved for this session. Automatic sync is not yet turned on "
+                "for this deployment, so please also let your GloCon contact know this was "
+                "uploaded, to be sure it is not lost on the next update."
+            )
+        else:
+            st.warning(
+                f"File received and saved, but automatic sync could not confirm it reached the "
+                f"repository ({status}). Please let your GloCon contact know."
+            )
+
+st.divider()
 
 # ---------------------------------------------------------------------------
 # Performance Snapshot -- KPI tiles and a trend chart read straight from the
