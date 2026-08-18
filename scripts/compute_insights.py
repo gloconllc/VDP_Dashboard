@@ -265,15 +265,39 @@ def load_str_revenue(conn: sqlite3.Connection, days: int = 90) -> pd.DataFrame:
 
 
 def load_datafy_overview(conn: sqlite3.Connection) -> dict[str, Any]:
-    """Return the most recent Datafy overview KPI row as a dict."""
+    """Return the most recent Datafy overview KPI row as a dict.
+
+    total_trips and avg_length_of_stay_days are overlaid with the freshest
+    row from datafy_overview_total_kpis (currently 2026-01-01 to 2026-07-31)
+    when available, since that table gets fresher trip-volume pulls than
+    datafy_overview_kpis. Every other field (day_trips_pct, overnight_trips_pct,
+    out_of_state_vd_pct, etc.) still comes from datafy_overview_kpis, since no
+    fresher breakdown of those ratios exists yet. See CLAUDE.md Lessons
+    Learned, 2026-08-16/17: this is the fix for insights quoting a stale
+    2025-only total_trips figure (3,551,929) instead of the current 2026 YTD
+    figure (1,888,637).
+    """
     try:
         df = pd.read_sql_query(
             "SELECT * FROM datafy_overview_kpis ORDER BY report_period_end DESC LIMIT 1",
             conn,
         )
-        if df.empty:
-            return {}
-        return df.iloc[0].to_dict()
+        overview: dict[str, Any] = {} if df.empty else df.iloc[0].to_dict()
+        try:
+            fresh = pd.read_sql_query(
+                "SELECT total_trips, avg_los_days, report_period_start, report_period_end "
+                "FROM datafy_overview_total_kpis ORDER BY report_period_start DESC LIMIT 1",
+                conn,
+            )
+            if not fresh.empty:
+                f = fresh.iloc[0]
+                overview["total_trips"] = f["total_trips"]
+                overview["avg_length_of_stay_days"] = f["avg_los_days"]
+                overview["total_trips_period_start"] = f["report_period_start"]
+                overview["total_trips_period_end"] = f["report_period_end"]
+        except Exception:
+            pass
+        return overview
     except Exception:
         return {}
 
