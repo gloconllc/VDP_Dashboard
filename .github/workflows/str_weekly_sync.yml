@@ -2,15 +2,20 @@
 # VDP Analytics — Weekly STR Sync (GitHub Actions)
 # ============================================================================
 #
-# Runs every Thursday morning. Checks the Dropbox shared "2026" STR folder for
-# new weekly .xls exports, downloads any new ones into data/str/weekly/,
-# reloads STR data + KPIs + insights, and pushes the updated database straight
-# to main. Railway auto-redeploys from main, so this is the mechanism that
-# keeps the live app's numbers current without anyone touching a keyboard.
+# SUPERSEDED (2026-08-19): the automatic schedule below has been disabled.
+# STR now gets refreshed by the broader "Full Source Sync (STR + CoStar +
+# Datafy)" workflow (.github/workflows/full_sync.yml), which runs on demand
+# plus every Sunday night and covers all three of Heather's data sources
+# instead of just STR. This file is kept only so an STR-only sync can still
+# be triggered manually from the Actions tab if that's ever useful — it will
+# not run on its own anymore.
 #
-# This is intentionally a smaller, faster job than the monthly full-source
-# pipeline in pipeline.yml — it only touches the STR-related loaders, not
-# CoStar/Datafy/Zartico/Later/etc.
+# Original behavior (for reference): ran every Thursday morning, checked the
+# Dropbox shared "2026" STR folder for new weekly .xls exports, downloaded
+# any new ones into data/str/weekly/, reloaded STR data + KPIs + insights,
+# and pushed the updated database straight to main. Railway auto-redeploys
+# from main, so this was the mechanism that kept the live app's numbers
+# current without anyone touching a keyboard.
 #
 # SECRETS USED (already configured for pipeline.yml, reused here):
 #   ANTHROPIC_API_KEY  — used by compute_insights.py
@@ -22,15 +27,11 @@
 #
 # ============================================================================
 
-name: Weekly STR Sync
+name: Weekly STR Sync (manual only — see note above)
 
 on:
-  # Thursday mornings, 8:00 AM Pacific (15:00 UTC covers PDT, Mar-Nov;
-  # during PST, Nov-Mar, this lands at 7:00 AM Pacific instead).
-  schedule:
-    - cron: "0 15 * * 4"
-
-  # Allow manual trigger from the Actions tab for testing
+  # Manual trigger only. The automatic Thursday schedule that used to live
+  # here has moved to full_sync.yml, which also covers CoStar and Datafy.
   workflow_dispatch: {}
 
 jobs:
@@ -101,7 +102,7 @@ jobs:
             echo "No changes to commit — STR data is already up to date."
           else
             RUN_DATE=$(date -u +"%Y-%m-%d")
-            git commit -m "chore: weekly STR sync ${RUN_DATE} [automated]"
+            git commit -m "chore: manual STR sync ${RUN_DATE} [automated]"
             git push origin main
             echo "Changes committed and pushed to main."
           fi
