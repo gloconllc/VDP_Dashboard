@@ -8,6 +8,18 @@ Saves files to:
   data/str/weekly/   ← STR weekly (daily-grain) exports
   data/str/monthly/  ← STR monthly-grain exports
 
+Folder URLs are overridable via STR_DROPBOX_WEEKLY_URL / STR_DROPBOX_MONTHLY_URL env
+vars (see SKELETON note below) — the hardcoded values are just the current known-good
+"2026" Dropbox folder and are used as the default when those env vars are unset.
+
+SKELETON (2026-08-19): Heather may move off this Dropbox folder onto a SharePoint
+folder under Visit Dana Point's own tenant (per her ownership request). If that
+happens, setting STR_DROPBOX_WEEKLY_URL/STR_DROPBOX_MONTHLY_URL alone will NOT be
+enough — SharePoint requires Microsoft Graph API auth, a different mechanism
+entirely, and would need a new fetch_str_sharepoint.py alongside this file, not a
+same-script env var swap. The env vars above only help if she stays on Dropbox but
+the folder link itself changes.
+
 Usage:
   python scripts/fetch_str_dropbox.py
 """
@@ -27,15 +39,18 @@ PROJECT_ROOT = BASE_DIR.parent
 WEEKLY_DIR  = PROJECT_ROOT / "data" / "str" / "weekly"
 MONTHLY_DIR = PROJECT_ROOT / "data" / "str" / "monthly"
 
-# Public shared folder links — no token needed
-WEEKLY_FOLDER_URL  = (
+# Public shared folder links — no token needed. Overridable via env vars once
+# Heather's actual folder is confirmed; see SKELETON note in the module docstring.
+WEEKLY_FOLDER_URL = os.environ.get(
+    "STR_DROPBOX_WEEKLY_URL",
     "https://www.dropbox.com/scl/fo/ua6phm862g2dhlivuhhzh/ANKnc0sSWvtvF2TTcT4_j1w/2026"
-    "?rlkey=mmhmwkgp0qcyoop3szrz8xtdx&dl=0"
-)
-MONTHLY_FOLDER_URL = (
+    "?rlkey=mmhmwkgp0qcyoop3szrz8xtdx&dl=0",
+).strip()
+MONTHLY_FOLDER_URL = os.environ.get(
+    "STR_DROPBOX_MONTHLY_URL",
     "https://www.dropbox.com/scl/fo/ua6phm862g2dhlivuhhzh/APCDmFO0BYYCJhG7y8cPLWk/2026/2026%20Monthly"
-    "?rlkey=mmhmwkgp0qcyoop3szrz8xtdx&dl=0"
-)
+    "?rlkey=mmhmwkgp0qcyoop3szrz8xtdx&dl=0",
+).strip()
 
 # Dropbox API for listing shared folders (no auth needed for public links)
 DROPBOX_LIST_SHARED_URL = "https://api.dropboxapi.com/2/sharing/list_folder"
