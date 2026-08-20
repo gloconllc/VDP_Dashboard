@@ -1732,3 +1732,63 @@ if st.query_params.get("admin", "").lower() == "true":
                     st.success(f"Sent to {n} recipient(s).")
                 except Exception as exc:  # noqa: BLE001
                     st.error(f"Send failed: {exc}")
+
+    # -------------------------------------------------------------------
+    # Admin: on-demand STR sync. Dispatches the existing str_weekly_sync.yml
+    # GitHub Actions workflow (Dropbox → loaders → commit → push) instead of
+    # running the pipeline inside this container: the live Railway container
+    # has no git push credentials and its own local sqlite would just get
+    # overwritten on the next redeploy, so triggering the CI job is the
+    # actual persistent path. Takes 1-2 minutes; Railway auto-redeploys once
+    # the workflow pushes to main.
+    #
+    # STR only, on purpose (2026-08-19): this is a stopgap for as long as
+    # Heather is on the Dropbox folder — once she moves to SharePoint this
+    # needs a different fetch mechanism (see full_sync.yml's OPEN ITEM note).
+    # CoStar and Datafy are staying manual (local folder, John will specify
+    # the path later), so no button for those yet.
+    # -------------------------------------------------------------------
+    st.markdown("---")
+    st.markdown("#### Admin: STR Data Sync")
+    st.caption(
+        "Triggers the STR Dropbox sync + reload workflow on GitHub Actions "
+        "(str_weekly_sync.yml). Takes 1-2 minutes to run — the dashboard "
+        "shows fresh numbers once it finishes and Railway redeploys. "
+        "CoStar and Datafy stay manual for now (local folder upload), no "
+        "button here yet."
+    )
+    _github_token = os.environ.get("GITHUB_TOKEN", "")
+    _github_repo = os.environ.get("GITHUB_REPO", "gloconllc/VDP_Dashboard")
+    if not _github_token:
+        st.warning(
+            "GITHUB_TOKEN is not configured on this deployment. Set a "
+            "fine-grained GitHub PAT (actions:write scope on "
+            f"{_github_repo}) as the GITHUB_TOKEN env var on Railway to "
+            "enable this button."
+        )
+    else:
+        st.caption(f"Will dispatch str_weekly_sync.yml on {_github_repo}@main.")
+        if st.button("Sync STR from Dropbox Now"):
+            with st.spinner("Triggering STR sync workflow…"):
+                try:
+                    import requests
+                    _resp = requests.post(
+                        f"https://api.github.com/repos/{_github_repo}/actions/workflows/str_weekly_sync.yml/dispatches",
+                        headers={
+                            "Authorization": f"Bearer {_github_token}",
+                            "Accept": "application/vnd.github+json",
+                        },
+                        json={"ref": "main"},
+                        timeout=15,
+                    )
+                    if _resp.status_code == 204:
+                        st.success(
+                            "STR sync triggered. It runs on GitHub Actions "
+                            "and takes 1-2 minutes; the live dashboard will "
+                            "update automatically once it finishes and "
+                            "Railway redeploys."
+                        )
+                    else:
+                        st.error(f"GitHub API returned {_resp.status_code}: {_resp.text[:300]}")
+                except Exception as exc:  # noqa: BLE001
+                    st.error(f"Trigger failed: {exc}")

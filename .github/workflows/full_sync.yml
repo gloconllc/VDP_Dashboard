@@ -2,11 +2,23 @@
 # VDP Analytics — Full Source Sync (STR + CoStar + Datafy)
 # ============================================================================
 #
+# STATUS: SKELETON, PAUSED (2026-08-19). The automatic Sunday schedule is
+# commented out on purpose until Heather's actual upload folder(s) are
+# confirmed (Dropbox vs. a new SharePoint folder under Visit Dana Point's own
+# tenant — see OPEN ITEM below). workflow_dispatch (manual "Run workflow")
+# still works right now against the CURRENT known Dropbox/Drive folders, so
+# it's safe to test with. Once the real folder is confirmed:
+#   1. Point STR_DROPBOX_WEEKLY_URL / STR_DROPBOX_MONTHLY_URL (or a new
+#      SharePoint mechanism, see below) at the right folder.
+#   2. Confirm/set DRIVE_FOLDER_COSTAR / DRIVE_FOLDER_DATAFY.
+#   3. Uncomment the `schedule:` block below.
+# No other code changes should be needed for a same-mechanism folder change.
+#
 # Purpose: keep the live dashboard current with whatever Heather (or her team)
 # drops into the shared data folder, without waiting for a Thursday-only STR
 # check or the once-a-month full pipeline run.
 #
-# Trigger:
+# Trigger (once unpaused):
 #   - On demand: from the Actions tab, open "Full Source Sync (STR + CoStar +
 #     Datafy)" and click "Run workflow" any time new files have gone in.
 #   - Automatically every Sunday night, Pacific time, so nothing is ever more
@@ -21,15 +33,20 @@
 # with Heather — is she still using the Dropbox "2026" folder already wired
 # into fetch_str_dropbox.py, or has she moved to a SharePoint folder under
 # Visit Dana Point's own tenant (per her ownership request in her email)?
-# This workflow syncs STR from Dropbox and CoStar/Datafy from Google Drive
-# because those are the mechanisms already built in this repo. If she has
-# moved to SharePoint, a new fetch script using the Microsoft Graph API will
-# be needed in place of one or both sync steps below — do not assume this is
-# fully wired until that's confirmed.
+# fetch_str_dropbox.py now reads STR_DROPBOX_WEEKLY_URL/STR_DROPBOX_MONTHLY_URL
+# env vars (falling back to the current known-good Dropbox folder), so a NEW
+# DROPBOX FOLDER is just a secret away. A move to SHAREPOINT is NOT a same-script
+# swap — SharePoint needs Microsoft Graph API auth, a different mechanism
+# entirely, and would need a new fetch_str_sharepoint.py written and added as
+# its own step below. Do not assume this is fully wired until the folder and
+# mechanism are confirmed.
 #
 # SECRETS USED (Settings → Secrets and variables → Actions):
 #   ANTHROPIC_API_KEY            — used by compute_insights.py
 #   DROPBOX_API_TOKEN            — optional, see fetch_str_dropbox.py
+#   STR_DROPBOX_WEEKLY_URL       — optional override; only needed if the STR
+#                                  Dropbox folder link changes
+#   STR_DROPBOX_MONTHLY_URL      — optional override; same as above
 #   GOOGLE_SERVICE_ACCOUNT_JSON  — needed for the CoStar/Datafy Drive sync step
 #   DRIVE_FOLDER_COSTAR          — Google Drive folder ID for CoStar exports
 #   DRIVE_FOLDER_DATAFY          — Google Drive folder ID for Datafy exports
@@ -43,14 +60,15 @@
 name: Full Source Sync (STR + CoStar + Datafy)
 
 on:
-  # Manual trigger — run this any time right after new files land, instead of
-  # waiting for the Sunday schedule below.
+  # Manual trigger — safe to use right now against the current known folders,
+  # even while the schedule below stays paused.
   workflow_dispatch: {}
 
+  # PAUSED (2026-08-19) — uncomment once Heather's folder is confirmed.
   # Sunday 10:00 PM Pacific = Monday 05:00 UTC during PDT (Mar-Nov).
   # During PST (Nov-Mar) this lands at 9:00 PM Pacific instead.
-  schedule:
-    - cron: "0 5 * * 1"
+  # schedule:
+  #   - cron: "0 5 * * 1"
 
 jobs:
   full-sync:
@@ -82,10 +100,16 @@ jobs:
 
       # -----------------------------------------------------------------------
       # STR: public Dropbox shared folder, no token strictly required.
+      # STR_DROPBOX_WEEKLY_URL / STR_DROPBOX_MONTHLY_URL are optional — if
+      # unset, fetch_str_dropbox.py falls back to the current known-good
+      # Dropbox folder. Set these once Heather's actual folder is confirmed
+      # (if she stays on Dropbox — see OPEN ITEM above for the SharePoint case).
       # -----------------------------------------------------------------------
       - name: Sync STR files from Dropbox
         env:
           DROPBOX_API_TOKEN: ${{ secrets.DROPBOX_API_TOKEN }}
+          STR_DROPBOX_WEEKLY_URL: ${{ secrets.STR_DROPBOX_WEEKLY_URL }}
+          STR_DROPBOX_MONTHLY_URL: ${{ secrets.STR_DROPBOX_MONTHLY_URL }}
         run: python scripts/fetch_str_dropbox.py || echo "No new STR files or sync issue — continuing with existing local files."
 
       # -----------------------------------------------------------------------
