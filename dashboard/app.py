@@ -111,9 +111,17 @@ st.markdown("""
         .stColumn { padding: 0 2px; }
         .stMarkdown > p { font-size: 14px; }
 
-        /* Ensure no horizontal overflow on mobile */
-        .element-container { overflow: hidden; }
-        [data-testid="column"] { overflow: hidden; }
+        /* Ensure no horizontal overflow on mobile -- overflow-x only.
+           A blanket `overflow: hidden` here previously clipped VERTICALLY
+           too, slicing the tops off section-title text on phones: mobile
+           Safari doesn't always finalize a markdown block's height before
+           this rule locked the container's box in, so a title that needed
+           an extra pixel or two of height (web fonts settling, a title
+           wrapping to 2 lines) got its top or bottom sliced off instead of
+           the box growing to fit. overflow-x: hidden still blocks
+           sideways scroll without ever touching the vertical axis. */
+        .element-container { overflow-x: hidden; overflow-y: visible; }
+        [data-testid="column"] { overflow-x: hidden; overflow-y: visible; }
     }
 
     /* Prevent horizontal scroll on all viewport widths */
