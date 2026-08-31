@@ -75,9 +75,34 @@ st.set_page_config(
 st.markdown("""
 <style>
     /* Desktop-first base styles */
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow-x: hidden; }
+    html { overflow-x: hidden; }
+    main { overflow-x: hidden; }
+    .stApp { overflow-x: hidden; }
     .stContainer { max-width: 100%; overflow-x: hidden; }
-    .element-container { overflow: visible; }
+
+    /* Container overflow rules: allow vertical growth, clip horizontal only.
+       This ensures text can wrap and expand containers vertically without
+       ever clipping content at the top or bottom on any viewport. */
+    .element-container {
+        overflow-x: hidden;
+        overflow-y: visible;
+        word-wrap: break-word;
+        word-break: break-word;
+    }
+    [data-testid="column"] {
+        overflow-x: hidden;
+        overflow-y: visible;
+        word-wrap: break-word;
+        word-break: break-word;
+    }
+
+    /* Markdown text in all containers should wrap cleanly */
+    .stMarkdown {
+        overflow-x: hidden;
+        word-wrap: break-word;
+        word-break: break-word;
+    }
 
     /* Metric and value typography scales */
     .metric-large { font-size: 42px; font-weight: 800; line-height: 1.1; color: #0B2530; }
@@ -90,7 +115,14 @@ st.markdown("""
     .js-plotly-plot { width: 100% !important; }
 
     /* Section titles responsive */
-    .section-title { font-size: 18px; font-weight: 700; color: #0B2530; margin: 24px 0 12px 0; }
+    .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0B2530;
+        margin: 24px 0 12px 0;
+        word-wrap: break-word;
+        word-break: break-word;
+    }
 
     /* Tablet optimization (768px and below) */
     @media (max-width: 768px) {
@@ -110,24 +142,7 @@ st.markdown("""
         .section-title { font-size: 14px; margin: 16px 0 8px 0; }
         .stColumn { padding: 0 2px; }
         .stMarkdown > p { font-size: 14px; }
-
-        /* Ensure no horizontal overflow on mobile -- overflow-x only.
-           A blanket `overflow: hidden` here previously clipped VERTICALLY
-           too, slicing the tops off section-title text on phones: mobile
-           Safari doesn't always finalize a markdown block's height before
-           this rule locked the container's box in, so a title that needed
-           an extra pixel or two of height (web fonts settling, a title
-           wrapping to 2 lines) got its top or bottom sliced off instead of
-           the box growing to fit. overflow-x: hidden still blocks
-           sideways scroll without ever touching the vertical axis. */
-        .element-container { overflow-x: hidden; overflow-y: visible; }
-        [data-testid="column"] { overflow-x: hidden; overflow-y: visible; }
     }
-
-    /* Prevent horizontal scroll on all viewport widths */
-    body, html { overflow-x: hidden; }
-    main { overflow-x: hidden; }
-    .stApp { overflow-x: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
