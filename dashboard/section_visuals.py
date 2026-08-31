@@ -150,8 +150,9 @@ def _fig_compression(conn, quarters: int = 8, height: int = 190):
     if height > 220:
         # _mini_layout's t=6 top margin has no room for the horizontal
         # legend this size turns on; give it real headroom instead of
-        # letting the legend clip against the card border.
-        fig.update_layout(margin=dict(l=4, r=8, t=34, b=4))
+        # letting the legend clip against the card border. t=40 (up from
+        # 34) adds a bit more buffer for narrow/portrait mobile widths.
+        fig.update_layout(margin=dict(l=4, r=8, t=40, b=4))
     fig.update_xaxes(tickfont=dict(size=9 if height <= 220 else 11), tickangle=-35)
     fig.update_yaxes(showticklabels=True, tickfont=dict(size=9 if height <= 220 else 11),
                      showgrid=True, gridcolor=GRID)

@@ -730,10 +730,18 @@ def build_markets_map_figure(markets_df: pd.DataFrame) -> go.Figure | None:
         bgcolor="rgba(0,0,0,0)",
     )
     fig.update_layout(
-        height=340, margin=dict(l=0, r=0, t=30, b=0),
+        # No in-plot title: the caller already renders "Where Dana Point's
+        # Visitors Come From" as a markdown heading above this chart. A
+        # second, plotly-native title here used to double up on it, and its
+        # small fixed top margin (t=30) had no room for that title text to
+        # wrap on narrow/portrait mobile widths -- the wrapped second line
+        # clipped straight into the map. Markdown wraps naturally with the
+        # container, so keeping the title there instead of in the figure
+        # sidesteps the problem entirely.
+        height=340, margin=dict(l=0, r=0, t=10, b=0),
         paper_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
-        showlegend=False, title="Where Dana Point's Visitors Come From",
+        showlegend=False,
     )
     return fig
 
@@ -1533,7 +1541,12 @@ if not trend_df.empty:
     trend_fig.add_trace(go.Bar(x=trend_df["month"], y=trend_df["adr"], name="ADR ($)",
                                 marker=dict(color="#B45309"), opacity=0.55, yaxis="y2"))
     trend_fig.update_layout(
-        height=340, margin=dict(l=10, r=10, t=40, b=10),
+        # t=56 (up from 40): the 2-item horizontal legend above the plot
+        # (y=1.02) can wrap to two rows on narrow/portrait mobile widths,
+        # and the old margin only had room for one -- the second legend row
+        # clipped into the chart. This gives it enough headroom to wrap
+        # without overlapping.
+        height=340, margin=dict(l=10, r=10, t=56, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
@@ -1676,17 +1689,25 @@ if not markets_df.empty:
          for i in range(len(markets_df))]
         if section_visuals is not None else "#1D6E86"
     )
+    st.markdown(
+        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:4px;">'
+        "Top Visitor Origin Markets</div>",
+        unsafe_allow_html=True,
+    )
     mkt_fig = go.Figure(go.Bar(
         x=markets_df["share_pct"], y=markets_df["dma"], orientation="h",
         marker=dict(color=_mkt_colors),
     ))
     mkt_fig.update_layout(
-        height=280, margin=dict(l=10, r=10, t=34, b=10),
+        # Title moved to the markdown heading above -- a plotly-native title
+        # here needed 2 lines on narrow/portrait widths and this chart's
+        # small top margin clipped the wrap. Markdown text reflows with the
+        # container instead of clipping.
+        height=280, margin=dict(l=10, r=10, t=16, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
         xaxis=dict(title=f"{top_row['metric']} (%)", showgrid=True, gridcolor="#E2E8F0"),
         yaxis=dict(autorange="reversed"),
-        title="Top Visitor Origin Markets",
     )
     st.plotly_chart(mkt_fig, use_container_width=True, config={"displayModeBar": False})
 else:
@@ -1705,15 +1726,22 @@ if not spend_df.empty:
             unsafe_allow_html=True
         )
     sc2.metric("Spend Share", f"{top_row['spend_share_pct'] * 100:.1f}%")
+    st.markdown(
+        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:4px;">'
+        "Visitor Spend by Category</div>",
+        unsafe_allow_html=True,
+    )
     spend_fig = go.Figure(go.Pie(
         labels=spend_df["category"], values=spend_df["spend_share_pct"], hole=0.55,
         marker=dict(colors=["#1D6E86", "#123C4A", "#B45309", "#1D9E6F", "#7FD6C4", "#475569", "#94A3B8", "#CBD9DE"]),
     ))
     spend_fig.update_layout(
-        height=280, margin=dict(l=10, r=10, t=34, b=10),
+        # Title moved to the markdown heading above -- see mkt_fig comment
+        # a few lines up for why: same wrap-and-clip failure on portrait
+        # mobile widths, same fix.
+        height=280, margin=dict(l=10, r=10, t=16, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
-        title="Visitor Spend by Category",
     )
     st.plotly_chart(spend_fig, use_container_width=True, config={"displayModeBar": False})
 else:
