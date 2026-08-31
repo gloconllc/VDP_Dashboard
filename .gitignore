@@ -39,3 +39,8 @@ data/report_archive/
 **/.DS_Store
 logs/*.pdf
 logs/*.html
+
+# Transient FUSE lock artifacts and this session's scratch/trash folder -- never real
+# project data, sometimes swept in by an unrelated automated commit.
+_to_delete/
+data/.fuse_hidden*
