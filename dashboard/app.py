@@ -71,6 +71,58 @@ st.set_page_config(
     layout="wide",
 )
 
+# Global responsive styles for entire app
+st.markdown("""
+<style>
+    /* Desktop-first base styles */
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .stContainer { max-width: 100%; overflow-x: hidden; }
+    .element-container { overflow: visible; }
+
+    /* Metric and value typography scales */
+    .metric-large { font-size: 42px; font-weight: 800; line-height: 1.1; color: #0B2530; }
+    .metric-medium { font-size: 32px; font-weight: 800; line-height: 1.1; color: #0B2530; }
+    .metric-label { font-size: 13px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-delta { font-size: 13px; font-weight: 600; color: #059669; }
+
+    /* Chart and visualization responsive sizing */
+    .plotly-graph-div { width: 100% !important; overflow-x: auto; }
+    .js-plotly-plot { width: 100% !important; }
+
+    /* Section titles responsive */
+    .section-title { font-size: 18px; font-weight: 700; color: #0B2530; margin: 24px 0 12px 0; }
+
+    /* Tablet optimization (768px and below) */
+    @media (max-width: 768px) {
+        .metric-large { font-size: 32px; }
+        .metric-medium { font-size: 26px; }
+        .metric-label { font-size: 12px; letter-spacing: 0.3px; }
+        .section-title { font-size: 16px; margin: 20px 0 10px 0; }
+        .stColumn { padding: 0 4px; }
+    }
+
+    /* Mobile optimization (480px and below) */
+    @media (max-width: 480px) {
+        .metric-large { font-size: 28px; }
+        .metric-medium { font-size: 22px; }
+        .metric-label { font-size: 11px; margin-bottom: 4px; }
+        .metric-delta { font-size: 12px; }
+        .section-title { font-size: 14px; margin: 16px 0 8px 0; }
+        .stColumn { padding: 0 2px; }
+        .stMarkdown > p { font-size: 14px; }
+
+        /* Ensure no horizontal overflow on mobile */
+        .element-container { overflow: hidden; }
+        [data-testid="column"] { overflow: hidden; }
+    }
+
+    /* Prevent horizontal scroll on all viewport widths */
+    body, html { overflow-x: hidden; }
+    main { overflow-x: hidden; }
+    .stApp { overflow-x: hidden; }
+</style>
+""", unsafe_allow_html=True)
+
 
 def _file_data_uri(path: str, mime: str) -> str:
     try:
@@ -1160,19 +1212,31 @@ def _flipbook_html(page_images: list[str], height: int = 760) -> str:
         position:absolute; top:50%; transform:translateY(-50%); z-index:5; }}
       .pf-arrow:hover {{ background:rgba(255,255,255,0.28); }}
       .pf-arrow:disabled {{ opacity:0.35; cursor:default; }}
-      .pf-prev {{ left:10px; }}
-      .pf-next {{ right:10px; }}
-      .pf-bar {{ text-align:center; padding:10px 0 4px 0; color:#0B2530; font-weight:700; font-size:13px; }}
-      .pf-thumbs {{ display:flex; gap:8px; overflow-x:auto; padding:8px 4px 4px 4px; }}
+      .pf-prev {{ left:8px; }}
+      .pf-next {{ right:8px; }}
+      .pf-bar {{ text-align:center; padding:12px 0 6px 0; color:#0B2530; font-weight:700; font-size:13px; }}
+      .pf-thumbs {{ display:flex; gap:8px; overflow-x:auto; padding:8px 4px 4px 4px; -webkit-overflow-scrolling:touch; }}
       .pf-thumb {{ height:64px; border-radius:5px; border:2px solid transparent; cursor:pointer;
         opacity:0.6; transition:opacity 0.15s ease, border-color 0.15s ease; flex-shrink:0; }}
       .pf-thumb:hover {{ opacity:0.9; }}
       .pf-thumb.pf-active {{ opacity:1; border-color:#1D6E86; }}
-      @media (max-width: 640px) {{
-        .pf-stage {{ min-height:{max(320, int(height * 0.55))}px; padding:10px; }}
-        .pf-book, .pf-page {{ max-height:{max(280, int((height - 36) * 0.55))}px; }}
-        .pf-arrow {{ width:36px; height:36px; font-size:13px; }}
-        .pf-thumb {{ height:46px; }}
+      @media (max-width: 768px) {{
+        .pf-stage {{ min-height:{max(280, int(height * 0.50))}px; padding:8px; gap:0; }}
+        .pf-book, .pf-page {{ max-height:{max(240, int((height - 36) * 0.50))}px; }}
+        .pf-arrow {{ width:32px; height:32px; font-size:12px; left:4px !important; right:auto; }}
+        .pf-next {{ right:4px !important; left:auto; }}
+        .pf-bar {{ padding:10px 0 4px 0; font-size:12px; }}
+        .pf-thumbs {{ padding:6px 2px 2px 2px; gap:6px; }}
+        .pf-thumb {{ height:48px; }}
+      }}
+      @media (max-width: 480px) {{
+        .pf-stage {{ min-height:{max(220, int(height * 0.42))}px; padding:6px; gap:0; }}
+        .pf-book, .pf-page {{ max-height:{max(200, int((height - 36) * 0.42))}px; }}
+        .pf-arrow {{ width:28px; height:28px; font-size:11px; left:2px !important; right:auto; }}
+        .pf-next {{ right:2px !important; left:auto; }}
+        .pf-bar {{ padding:8px 0 3px 0; font-size:11px; }}
+        .pf-thumbs {{ padding:4px 2px 2px 2px; gap:4px; }}
+        .pf-thumb {{ height:40px; }}
       }}
     </style>
     <script>
@@ -1407,12 +1471,41 @@ st.caption(f"Showing {period_label_display.lower()}. Change the data window abov
 period_kpi = load_kpi_period_stats(window_months, start_date=range_start_iso, end_date=range_end_iso)
 kpi_c1, kpi_c2, kpi_c3 = st.columns(3)
 if period_kpi:
-    kpi_c1.metric("Occupancy", f"{period_kpi['occ_pct']:.1f}%",
-                  delta=f"{period_kpi['occ_yoy']:+.1f} pts YoY" if pd.notna(period_kpi.get("occ_yoy")) else None)
-    kpi_c2.metric("ADR", f"${period_kpi['adr']:,.0f}",
-                  delta=f"{period_kpi['adr_yoy']:+.1f}% YoY" if pd.notna(period_kpi.get("adr_yoy")) else None)
-    kpi_c3.metric("RevPAR", f"${period_kpi['revpar']:,.0f}",
-                  delta=f"{period_kpi['revpar_yoy']:+.1f}% YoY" if pd.notna(period_kpi.get("revpar_yoy")) else None)
+    # Performance Snapshot - Large, bold metrics
+    occ_delta = f"{period_kpi['occ_yoy']:+.1f} pts YoY" if pd.notna(period_kpi.get("occ_yoy")) else None
+    adr_delta = f"{period_kpi['adr_yoy']:+.1f}% YoY" if pd.notna(period_kpi.get("adr_yoy")) else None
+    revpar_delta = f"{period_kpi['revpar_yoy']:+.1f}% YoY" if pd.notna(period_kpi.get("revpar_yoy")) else None
+
+    with kpi_c1:
+        st.markdown(
+            f'<div style="text-align:center; padding:20px 12px;">'
+            f'<div style="font-size:13px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Occupancy</div>'
+            f'<div style="font-size:42px; color:#0B2530; font-weight:800; line-height:1.1;">{period_kpi["occ_pct"]:.1f}%</div>'
+            f'<div style="font-size:13px; color:#059669; margin-top:8px; font-weight:600;">'
+            f'{"↑" if occ_delta and float(occ_delta.split()[0]) > 0 else "↓"} {occ_delta if occ_delta else "—"}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+    with kpi_c2:
+        st.markdown(
+            f'<div style="text-align:center; padding:20px 12px;">'
+            f'<div style="font-size:13px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">ADR</div>'
+            f'<div style="font-size:42px; color:#0B2530; font-weight:800; line-height:1.1;">${period_kpi["adr"]:,.0f}</div>'
+            f'<div style="font-size:13px; color:#059669; margin-top:8px; font-weight:600;">'
+            f'{"↑" if adr_delta and float(adr_delta.split()[0]) > 0 else "↓"} {adr_delta if adr_delta else "—"}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+    with kpi_c3:
+        st.markdown(
+            f'<div style="text-align:center; padding:20px 12px;">'
+            f'<div style="font-size:13px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">RevPAR</div>'
+            f'<div style="font-size:42px; color:#0B2530; font-weight:800; line-height:1.1;">${period_kpi["revpar"]:,.0f}</div>'
+            f'<div style="font-size:13px; color:#059669; margin-top:8px; font-weight:600;">'
+            f'{"↑" if revpar_delta and float(revpar_delta.split()[0]) > 0 else "↓"} {revpar_delta if revpar_delta else "—"}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
     st.caption(
         f"Averaged over {period_kpi['n_days']} STR-reported days, "
         f"{period_kpi['period_start']} to {period_kpi['period_end']}."
@@ -1463,10 +1556,28 @@ if not spend_trend_df.empty:
         unsafe_allow_html=True,
     )
     sc1, sc2 = st.columns(2)
-    sc1.metric("Latest Month", spend_trend_df.iloc[-1]["month_label"],
-               f"${spend_trend_df.iloc[-1]['spending_usd']:,.0f}")
+    latest_month = spend_trend_df.iloc[-1]["month_label"]
+    latest_spend = spend_trend_df.iloc[-1]["spending_usd"]
     avg_spend = spend_trend_df["spending_usd"].mean()
-    sc2.metric(f"{period_label_display} Avg.", f"${avg_spend:,.0f}/mo")
+
+    with sc1:
+        st.markdown(
+            f'<div style="text-align:center; padding:16px 12px;">'
+            f'<div style="font-size:12px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Latest Month</div>'
+            f'<div style="font-size:32px; color:#0B2530; font-weight:800; line-height:1.1;">{latest_month}</div>'
+            f'<div style="font-size:13px; color:#059669; margin-top:6px; font-weight:600;">✓ ${latest_spend:,.0f}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+    with sc2:
+        st.markdown(
+            f'<div style="text-align:center; padding:16px 12px;">'
+            f'<div style="font-size:12px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">{period_label_display} Avg.</div>'
+            f'<div style="font-size:32px; color:#0B2530; font-weight:800; line-height:1.1;">${avg_spend:,.0f}</div>'
+            f'<div style="font-size:12px; color:#6B7280; margin-top:6px; font-weight:500;">/month</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
     spend_trend_fig = go.Figure(go.Scatter(
         x=spend_trend_df["month_label"], y=spend_trend_df["spending_usd"],
         mode="lines+markers", line=dict(color="#1D6E86", width=3),
@@ -1515,8 +1626,15 @@ st.markdown(
 markets_df = load_datafy_markets_df()
 if not markets_df.empty:
     top_row = markets_df.iloc[0]
-    mc1, mc2 = st.columns(2)
-    mc1.metric("Top Market", top_row["dma"])
+    mc1, mc2 = st.columns([1.3, 1])
+    with mc1:
+        st.markdown(
+            f'<div style="border-left:4px solid #1D6E86; padding-left:12px;">'
+            f'<div style="font-size:11px; color:#6B7280; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Top Market</div>'
+            f'<div style="font-size:14px; color:#0B2530; font-weight:700; line-height:1.4; word-wrap:break-word;">{top_row["dma"]}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
     mc2.metric(top_row["metric"], f"{top_row['share_pct']:.1f}%")
     # Tiled-basemap flow map (bubbles graduated and connected to Dana Point).
     # build_markets_map_figure below is the previous flat Scattergeo outline,
@@ -1570,8 +1688,15 @@ else:
 spend_df = load_datafy_spending_df()
 if not spend_df.empty:
     top_row = spend_df.iloc[0]
-    sc1, sc2 = st.columns(2)
-    sc1.metric("Top Category", top_row["category"])
+    sc1, sc2 = st.columns([1.4, 1])
+    with sc1:
+        st.markdown(
+            f'<div style="border-left:4px solid #1D6E86; padding-left:12px;">'
+            f'<div style="font-size:11px; color:#6B7280; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Top Category</div>'
+            f'<div style="font-size:14px; color:#0B2530; font-weight:700; line-height:1.4; word-wrap:break-word;">{top_row["category"]}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
     sc2.metric("Spend Share", f"{top_row['spend_share_pct'] * 100:.1f}%")
     spend_fig = go.Figure(go.Pie(
         labels=spend_df["category"], values=spend_df["spend_share_pct"], hole=0.55,
@@ -1678,13 +1803,28 @@ else:
     _fo_compression = pd.DataFrame()
     _fo_group = pd.DataFrame()
 
-fo_c1, fo_c2, fo_c3 = st.columns(3)
+fo_c1, fo_c2, fo_c3 = st.columns([1.2, 1, 1])
 if not _fo_events.empty:
     _ev = _fo_events.iloc[0]
     _days_out = (pd.to_datetime(_ev["event_date"]) - pd.Timestamp.now().normalize()).days
-    fo_c1.metric("Next Major Event", _ev["event_name"], delta=f"in {_days_out} days")
+    with fo_c1:
+        st.markdown(
+            f'<div style="border-left:4px solid #1D6E86; padding-left:12px;">'
+            f'<div style="font-size:11px; color:#6B7280; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Next Major Event</div>'
+            f'<div style="font-size:15px; color:#0B2530; font-weight:700; line-height:1.4; word-wrap:break-word;">{_ev["event_name"]}</div>'
+            f'<div style="font-size:12px; color:#059669; margin-top:6px;">↑ in {_days_out} days</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
 else:
-    fo_c1.metric("Next Major Event", "None scheduled")
+    with fo_c1:
+        st.markdown(
+            f'<div style="border-left:4px solid #9CA3AF; padding-left:12px;">'
+            f'<div style="font-size:11px; color:#6B7280; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Next Major Event</div>'
+            f'<div style="font-size:14px; color:#6B7280; font-weight:500;">None scheduled</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
 if not _fo_compression.empty:
     _cq = _fo_compression.iloc[0]
     fo_c2.metric(f"{_cq['quarter']} Compression", f"{int(_cq['days_above_80_occ'])} days 80%+",
