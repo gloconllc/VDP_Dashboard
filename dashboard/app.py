@@ -1384,6 +1384,8 @@ st.markdown(
     <div class="pulse-jumpnav">
       <a href="#pulse-snapshot">\U0001F4CA Performance Snapshot</a>
       <a href="#pulse-origins">\U0001F30E Visitor Origins &amp; Spend</a>
+      <a href="#pulse-market">\U0001F3E2 Market Performance</a>
+      <a href="#pulse-forward">\U0001F4C8 Forward Outlook &amp; Group Business</a>
       <a href="#pulse-brain">\U0001F9E0 Intelligence Brief</a>
       <a href="#pulse-fullreport">\U0001F4C4 Full Report</a>
       <a href="#pulse-notes">\U00002B07 Notes &amp; Downloads</a>
@@ -1541,9 +1543,17 @@ if not markets_df.empty:
             "connector carries the same value, so the heaviest lines are the markets sending "
             "the most spend into the destination. Hover any bubble for its exact share."
         )
+    # markets_df is already ranked largest-share-first and the y-axis below
+    # is reversed, so row order and top-to-bottom draw order match: index 0
+    # (the leading market) gets the first palette color, no reversal needed.
+    _mkt_colors = (
+        [section_visuals.CATEGORY_COLORS[i % len(section_visuals.CATEGORY_COLORS)]
+         for i in range(len(markets_df))]
+        if section_visuals is not None else "#1D6E86"
+    )
     mkt_fig = go.Figure(go.Bar(
         x=markets_df["share_pct"], y=markets_df["dma"], orientation="h",
-        marker=dict(color="#1D6E86"),
+        marker=dict(color=_mkt_colors),
     ))
     mkt_fig.update_layout(
         height=280, margin=dict(l=10, r=10, t=34, b=10),
@@ -1576,6 +1586,162 @@ if not spend_df.empty:
     st.plotly_chart(spend_fig, use_container_width=True, config={"displayModeBar": False})
 else:
     st.info("Datafy spending data is not available yet.")
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# Market Performance -- CoStar submarket KPIs and the tier-level RevPAR and
+# room-inventory figures also used on the Market Segments / Chain-Scale
+# Segment Detail section cards, shown here at full size with a multi-year
+# trend for context. All from real, parsed CoStar submarket PDFs.
+# ---------------------------------------------------------------------------
+
+st.markdown('<div id="pulse-market" class="pulse-anchor"></div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">\U0001F3E2 Market Performance</div>', unsafe_allow_html=True)
+
+if section_visuals is not None:
+    _mkt_kpis = section_visuals.costar_overall_kpis(get_connection())
+else:
+    _mkt_kpis = None
+
+if _mkt_kpis:
+    mp_c1, mp_c2, mp_c3 = st.columns(3)
+    mp_c1.metric("Submarket Occupancy (YTD)", f"{_mkt_kpis['occupancy_pct']:.1f}%",
+                 delta=f"{_mkt_kpis['occ_yoy_pct']:+.1f} pts YoY" if pd.notna(_mkt_kpis.get('occ_yoy_pct')) else None)
+    mp_c2.metric("Submarket ADR (YTD)", f"${_mkt_kpis['adr_usd']:,.0f}",
+                 delta=f"{_mkt_kpis['adr_yoy_pct']:+.1f}% YoY" if pd.notna(_mkt_kpis.get('adr_yoy_pct')) else None)
+    mp_c3.metric("Submarket RevPAR (YTD)", f"${_mkt_kpis['revpar_usd']:,.0f}",
+                 delta=f"{_mkt_kpis['revpar_yoy_pct']:+.1f}% YoY" if pd.notna(_mkt_kpis.get('revpar_yoy_pct')) else None)
+    st.caption(f"Newport Beach/Dana Point submarket, Overall scope. Source: CoStar, {_mkt_kpis['report_date']}.")
+
+    mp_col1, mp_col2 = st.columns(2)
+    with mp_col1:
+        st.markdown(
+            '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:2px;">'
+            "RevPAR by Chain-Scale Tier</div>", unsafe_allow_html=True,
+        )
+        tier_result = section_visuals._fig_costar_tiers(get_connection(), height=300)
+        if tier_result is not None:
+            tier_fig, tier_caption = tier_result
+            st.plotly_chart(tier_fig, use_container_width=True, config={"displayModeBar": False}, key="market_tier_fig")
+            st.caption(tier_caption)
+        else:
+            st.info("CoStar chain-scale tier data is not available yet.")
+    with mp_col2:
+        st.markdown(
+            '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:2px;">'
+            "Room Inventory by Tier</div>", unsafe_allow_html=True,
+        )
+        room_result = section_visuals._fig_room_split(get_connection(), height=300)
+        if room_result is not None:
+            room_fig, room_caption = room_result
+            st.plotly_chart(room_fig, use_container_width=True, config={"displayModeBar": False}, key="market_room_fig")
+            st.caption(room_caption)
+        else:
+            st.info("CoStar room inventory data is not available yet.")
+
+    trend_result = section_visuals.fig_costar_overall_trend(get_connection(), height=260)
+    if trend_result is not None:
+        trend_fig2, trend_caption2 = trend_result
+        st.markdown(
+            '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:2px;">'
+            "Multi-Year RevPAR Trend</div>", unsafe_allow_html=True,
+        )
+        st.plotly_chart(trend_fig2, use_container_width=True, config={"displayModeBar": False}, key="market_trend_fig")
+        st.caption(trend_caption2)
+else:
+    st.info("CoStar submarket data is not available yet.")
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# Forward Outlook & Group Business -- built entirely from real, live sources:
+# STR's own group-segment occupancy mix, the STR compression history, the
+# seeded VDP events calendar, and the pipeline's own generated insights.
+# Deliberately does not surface group_intelligence's dollar projections,
+# since that table is derived from costar_chain_scale_breakdown /
+# costar_competitive_set, both documented as hardcoded baseline data rather
+# than a parsed CoStar export. See section_visuals.py and CLAUDE.md Lessons
+# Learned for the full reasoning.
+# ---------------------------------------------------------------------------
+
+st.markdown('<div id="pulse-forward" class="pulse-anchor"></div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">\U0001F4C8 Forward Outlook &amp; Group Business</div>', unsafe_allow_html=True)
+
+if section_visuals is not None:
+    _fo_conn = get_connection()
+    _fo_events = section_visuals.upcoming_events_df(_fo_conn, limit=1)
+    _fo_compression = section_visuals._compression(_fo_conn, quarters=1)
+    _fo_group = section_visuals._group_mix(_fo_conn)
+else:
+    _fo_events = pd.DataFrame()
+    _fo_compression = pd.DataFrame()
+    _fo_group = pd.DataFrame()
+
+fo_c1, fo_c2, fo_c3 = st.columns(3)
+if not _fo_events.empty:
+    _ev = _fo_events.iloc[0]
+    _days_out = (pd.to_datetime(_ev["event_date"]) - pd.Timestamp.now().normalize()).days
+    fo_c1.metric("Next Major Event", _ev["event_name"], delta=f"in {_days_out} days")
+else:
+    fo_c1.metric("Next Major Event", "None scheduled")
+if not _fo_compression.empty:
+    _cq = _fo_compression.iloc[0]
+    fo_c2.metric(f"{_cq['quarter']} Compression", f"{int(_cq['days_above_80_occ'])} days 80%+",
+                 delta=f"{int(_cq['days_above_90_occ'])} days 90%+")
+else:
+    fo_c2.metric("Compression This Quarter", "N/A")
+if not _fo_group.empty and _fo_group["occ_pct"].sum() > 0:
+    _grp_row = _fo_group[_fo_group["segment"] == "Grp."]
+    _grp_pct = (_grp_row["occ_pct"].iloc[0] / _fo_group["occ_pct"].sum() * 100) if not _grp_row.empty else None
+    fo_c3.metric("Group Share of Occupancy", f"{_grp_pct:.0f}%" if _grp_pct is not None else "N/A")
+else:
+    fo_c3.metric("Group Share of Occupancy", "N/A")
+st.caption("Event calendar and STR sources, current as of this page's most recent data load.")
+
+fo_col1, fo_col2 = st.columns(2)
+with fo_col1:
+    st.markdown(
+        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:2px;">'
+        "Occupancy Mix, Latest STR Week</div>", unsafe_allow_html=True,
+    )
+    gm_result = section_visuals._fig_group_mix(get_connection(), height=180) if section_visuals is not None else None
+    if gm_result is not None:
+        gm_fig, gm_caption = gm_result
+        st.plotly_chart(gm_fig, use_container_width=True, config={"displayModeBar": False}, key="forward_group_fig")
+        st.caption(gm_caption)
+    else:
+        st.info("STR group-segment data is not available yet.")
+with fo_col2:
+    st.markdown(
+        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:2px;">'
+        "Compression Days by Quarter</div>", unsafe_allow_html=True,
+    )
+    cq_result = section_visuals._fig_compression(get_connection(), quarters=8, height=280) if section_visuals is not None else None
+    if cq_result is not None:
+        cq_fig, cq_caption = cq_result
+        st.plotly_chart(cq_fig, use_container_width=True, config={"displayModeBar": False}, key="forward_compression_fig")
+        st.caption(cq_caption)
+    else:
+        st.info("STR compression data is not available yet.")
+
+if section_visuals is not None:
+    _top_insight = section_visuals.top_forward_insight(get_connection())
+else:
+    _top_insight = None
+if _top_insight:
+    st.markdown(
+        f"""
+        <div class="pulse-summary-card">
+          <div class="pulse-summary-label">What's Ahead: {html.escape(_top_insight['category'].replace('_', ' ').title())}</div>
+          <div class="pulse-summary-body">{html.escape(_top_insight['body'] or _top_insight['headline'])}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.caption("Source: today's generated insight, drawn from live STR and Datafy data.")
+
+st.divider()
 
 st.divider()
 
@@ -1728,9 +1894,53 @@ if open_idx is not None and 0 <= open_idx < len(available_sections):
     _section_dialog()
 
 st.markdown("#### Flip Through the Full Report")
-st.caption("Browse the report page by page, just like flipping through Issuu. Use the arrows, the thumbnail strip, or the left and right arrow keys.")
-page_images = _section_preview_images
+st.caption(
+    "Browse the report page by page, just like flipping through Issuu. Use the arrows, the "
+    "thumbnail strip, or the left and right arrow keys. Choose which sections to include below; "
+    "the flipbook and the export button both follow your choice, and the full report is included "
+    "by default."
+)
+
+_all_section_titles = [s["title"] for s in available_sections]
+selected_section_titles = st.multiselect(
+    "Sections to include",
+    options=_all_section_titles,
+    default=_all_section_titles,
+    key="flipbook_section_picker",
+    label_visibility="collapsed",
+)
+if not selected_section_titles:
+    st.caption("No sections selected, showing the full report instead.")
+    selected_section_titles = _all_section_titles
+
+# The cover page (index 0) is not one of the pop-out SECTIONS entries but is
+# always kept, so a filtered flipbook or export still opens on a real cover
+# rather than jumping straight to Executive Summary.
+_selected_pages = sorted(
+    {0} | {sec["page"] for sec in available_sections if sec["title"] in selected_section_titles}
+)
+_is_full_selection = len(selected_section_titles) == len(_all_section_titles)
+
+page_images = [
+    _section_preview_images[i] for i in _selected_pages if i < len(_section_preview_images)
+]
+if not _is_full_selection:
+    st.caption(f"Showing {len(page_images)} of {len(_section_preview_images)} pages.")
 components.html(_flipbook_html(page_images), height=800, scrolling=False)
+
+if section_visuals is not None and not _is_full_selection and page_images:
+    try:
+        subset_pdf_bytes = section_visuals.build_subset_pdf(pdf_bytes, _selected_pages)
+    except Exception:
+        subset_pdf_bytes = None
+    if subset_pdf_bytes:
+        st.download_button(
+            "⬇ Download Selected Sections as PDF",
+            data=subset_pdf_bytes,
+            file_name=f"Visit Dana Point PULSE - Selected Sections - {datetime.now().strftime('%Y-%m-%d')}.pdf",
+            mime="application/pdf",
+            key="download_selected_sections_pdf",
+        )
 
 with st.expander("View the full report as one continuous scroll instead"):
     b64 = base64.b64encode(pdf_bytes).decode("utf-8")
