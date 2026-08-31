@@ -75,34 +75,9 @@ st.set_page_config(
 st.markdown("""
 <style>
     /* Desktop-first base styles */
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow-x: hidden; }
-    html { overflow-x: hidden; }
-    main { overflow-x: hidden; }
-    .stApp { overflow-x: hidden; }
-    .stContainer { max-width: 100%; overflow-x: hidden; }
-
-    /* Container overflow rules: allow vertical growth, clip horizontal only.
-       This ensures text can wrap and expand containers vertically without
-       ever clipping content at the top or bottom on any viewport. */
-    .element-container {
-        overflow-x: hidden;
-        overflow-y: visible;
-        word-wrap: break-word;
-        word-break: break-word;
-    }
-    [data-testid="column"] {
-        overflow-x: hidden;
-        overflow-y: visible;
-        word-wrap: break-word;
-        word-break: break-word;
-    }
-
-    /* Markdown text in all containers should wrap cleanly */
-    .stMarkdown {
-        overflow-x: hidden;
-        word-wrap: break-word;
-        word-break: break-word;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .stContainer { max-width: 100%; }
+    .element-container { overflow: visible; }
 
     /* Metric and value typography scales */
     .metric-large { font-size: 42px; font-weight: 800; line-height: 1.1; color: #0B2530; }
@@ -115,14 +90,12 @@ st.markdown("""
     .js-plotly-plot { width: 100% !important; }
 
     /* Section titles responsive */
-    .section-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: #0B2530;
-        margin: 24px 0 12px 0;
-        word-wrap: break-word;
-        word-break: break-word;
-    }
+    .section-title { font-size: 18px; font-weight: 700; color: #0B2530; margin: 24px 0 12px 0; }
+
+    /* Prevent horizontal scroll on all viewport widths */
+    body, html { overflow-x: hidden; }
+    main { overflow-x: hidden; }
+    .stApp { overflow-x: hidden; }
 
     /* Tablet optimization (768px and below) */
     @media (max-width: 768px) {
@@ -131,6 +104,11 @@ st.markdown("""
         .metric-label { font-size: 12px; letter-spacing: 0.3px; }
         .section-title { font-size: 16px; margin: 20px 0 10px 0; }
         .stColumn { padding: 0 4px; }
+
+        /* Allow text to wrap freely on tablets */
+        .element-container { word-wrap: break-word; word-break: break-word; }
+        [data-testid="column"] { word-wrap: break-word; word-break: break-word; }
+        .stMarkdown { word-wrap: break-word; word-break: break-word; }
     }
 
     /* Mobile optimization (480px and below) */
@@ -142,6 +120,22 @@ st.markdown("""
         .section-title { font-size: 14px; margin: 16px 0 8px 0; }
         .stColumn { padding: 0 2px; }
         .stMarkdown > p { font-size: 14px; }
+
+        /* Prevent horizontal overflow on mobile only: overflow-x hidden
+           without affecting vertical. This allows text to wrap and containers
+           to expand vertically without clipping. */
+        .element-container {
+            overflow-x: hidden;
+            overflow-y: visible;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+        [data-testid="column"] {
+            overflow-x: hidden;
+            overflow-y: visible;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
