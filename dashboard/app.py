@@ -1482,7 +1482,7 @@ if period_kpi:
             f'<div style="font-size:13px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Occupancy</div>'
             f'<div style="font-size:42px; color:#0B2530; font-weight:800; line-height:1.1;">{period_kpi["occ_pct"]:.1f}%</div>'
             f'<div style="font-size:13px; color:#059669; margin-top:8px; font-weight:600;">'
-            f'{"↑" if occ_delta and float(occ_delta.split()[0]) > 0 else "↓"} {occ_delta if occ_delta else "—"}</div>'
+            f'{"↑" if occ_delta and occ_delta.startswith("+") else "↓"} {occ_delta if occ_delta else "—"}</div>'
             f'</div>',
             unsafe_allow_html=True
         )
@@ -1492,7 +1492,7 @@ if period_kpi:
             f'<div style="font-size:13px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">ADR</div>'
             f'<div style="font-size:42px; color:#0B2530; font-weight:800; line-height:1.1;">${period_kpi["adr"]:,.0f}</div>'
             f'<div style="font-size:13px; color:#059669; margin-top:8px; font-weight:600;">'
-            f'{"↑" if adr_delta and float(adr_delta.split()[0]) > 0 else "↓"} {adr_delta if adr_delta else "—"}</div>'
+            f'{"↑" if adr_delta and adr_delta.startswith("+") else "↓"} {adr_delta if adr_delta else "—"}</div>'
             f'</div>',
             unsafe_allow_html=True
         )
@@ -1502,7 +1502,7 @@ if period_kpi:
             f'<div style="font-size:13px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">RevPAR</div>'
             f'<div style="font-size:42px; color:#0B2530; font-weight:800; line-height:1.1;">${period_kpi["revpar"]:,.0f}</div>'
             f'<div style="font-size:13px; color:#059669; margin-top:8px; font-weight:600;">'
-            f'{"↑" if revpar_delta and float(revpar_delta.split()[0]) > 0 else "↓"} {revpar_delta if revpar_delta else "—"}</div>'
+            f'{"↑" if revpar_delta and revpar_delta.startswith("+") else "↓"} {revpar_delta if revpar_delta else "—"}</div>'
             f'</div>',
             unsafe_allow_html=True
         )
