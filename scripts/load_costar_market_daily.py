@@ -12,6 +12,8 @@ and (monthly only) capital-markets fields.
 """
 
 import os
+import re
+import glob
 import sqlite3
 from datetime import datetime
 
@@ -22,8 +24,39 @@ PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
 COSTAR_DIR = os.path.join(PROJECT_ROOT, "data", "costar")
 
-DAILY_FILE = os.path.join(COSTAR_DIR, "daily_costar.xlsx")
-MONTHLY_FILE = os.path.join(COSTAR_DIR, "monhtly_costar.xlsx")
+
+def _latest_costar_export(dated_patterns, legacy_name):
+    """CoStar's export naming drifted from the fixed 'daily_costar.xlsx' /
+    'monhtly_costar.xlsx' to dated drops like 'Daily_08_26_26.xlsx'. Pick
+    whichever candidate is actually newest by the date embedded in its
+    filename (MM_DD_YY), falling back to file mtime, so a fresh dated
+    export is picked up automatically without renaming it by hand first.
+    Falls back to the legacy fixed filename if no dated file is present.
+    """
+    candidates = []
+    for pat in dated_patterns:
+        candidates += glob.glob(os.path.join(COSTAR_DIR, pat))
+    legacy_path = os.path.join(COSTAR_DIR, legacy_name)
+    if os.path.exists(legacy_path):
+        candidates.append(legacy_path)
+    if not candidates:
+        return legacy_path  # let the loader report [SKIP] not found
+
+    def _sort_key(path):
+        m = re.search(r"(\d{2})_(\d{2})_(\d{2})", os.path.basename(path))
+        if m:
+            mm, dd, yy = (int(x) for x in m.groups())
+            try:
+                return datetime(2000 + yy, mm, dd)
+            except ValueError:
+                pass
+        return datetime.fromtimestamp(os.path.getmtime(path))
+
+    return max(candidates, key=_sort_key)
+
+
+DAILY_FILE = _latest_costar_export(["Daily_*.xlsx", "Daily_*.XLSX"], "daily_costar.xlsx")
+MONTHLY_FILE = _latest_costar_export(["Monthly_*.xlsx", "Monthly_*.XLSX"], "monhtly_costar.xlsx")
 
 DDL = """
 CREATE TABLE IF NOT EXISTS costar_market_daily (
@@ -227,11 +260,11 @@ def main():
 
     n_daily = load_daily(conn)
     print(f"{ts()} [{'OK  ' if n_daily else 'WARN'}] costar_market_daily: {n_daily} rows")
-    log_load(conn, "daily", "daily_costar.xlsx", n_daily)
+    log_load(conn, "daily", os.path.basename(DAILY_FILE), n_daily)
 
     n_monthly = load_monthly(conn)
     print(f"{ts()} [{'OK  ' if n_monthly else 'WARN'}] costar_market_monthly: {n_monthly} rows")
-    log_load(conn, "monthly", "monhtly_costar.xlsx", n_monthly)
+    log_load(conn, "monthly", os.path.basename(MONTHLY_FILE), n_monthly)
 
     conn.close()
     print(f"{ts()} [DONE] load_costar_market_daily.py complete")

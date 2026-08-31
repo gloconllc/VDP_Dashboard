@@ -27,6 +27,14 @@ import plotly.graph_objects as go
 import streamlit as st
 import streamlit.components.v1 as components
 
+# Card-sized live figures for the "View a Section" cards, plus the tiled-basemap
+# feeder-market map. Guarded so a missing module degrades to the previous
+# PDF-thumbnail behavior rather than taking the whole page down.
+try:
+    import section_visuals
+except Exception:  # pragma: no cover - defensive on deploy
+    section_visuals = None
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 sys.path.insert(0, os.path.join(PROJECT_ROOT, "scripts"))
@@ -1508,9 +1516,31 @@ if not markets_df.empty:
     mc1, mc2 = st.columns(2)
     mc1.metric("Top Market", top_row["dma"])
     mc2.metric(top_row["metric"], f"{top_row['share_pct']:.1f}%")
-    map_fig = build_markets_map_figure(markets_df)
+    # Tiled-basemap flow map (bubbles graduated and connected to Dana Point).
+    # build_markets_map_figure below is the previous flat Scattergeo outline,
+    # kept as the fallback for any environment where the newer map traces or
+    # their basemap tiles are unavailable.
+    map_fig = None
+    if section_visuals is not None:
+        try:
+            map_fig = section_visuals.build_feeder_market_map(markets_df, DMA_COORDS)
+        except Exception:
+            map_fig = None
+    if map_fig is None:
+        map_fig = build_markets_map_figure(markets_df)
     if map_fig is not None:
+        st.markdown(
+            '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:4px;">'
+            "Where Dana Point&rsquo;s Visitors Come From</div>",
+            unsafe_allow_html=True,
+        )
         st.plotly_chart(map_fig, use_container_width=True, config={"displayModeBar": False})
+        st.caption(
+            "Dana Point is the amber marker on the coast. Every teal bubble is an origin "
+            "market, sized and shaded by its share of visitor spend, and the weight of each "
+            "connector carries the same value, so the heaviest lines are the markets sending "
+            "the most spend into the destination. Hover any bubble for its exact share."
+        )
     mkt_fig = go.Figure(go.Bar(
         x=markets_df["share_pct"], y=markets_df["dma"], orientation="h",
         marker=dict(color="#1D6E86"),
@@ -1636,10 +1666,29 @@ if available_sections:
     for i, section in enumerate(available_sections):
         with grid_cols[i % 3]:
             with st.container(border=True):
-                if section["page"] < len(_section_preview_images):
-                    st.image(_section_preview_images[section["page"]], use_container_width=True)
                 st.markdown(f"**{section['icon']} {section['title']}**")
-                st.caption(section["desc"])
+                # A live figure read from analytics.sqlite beats a rasterized
+                # picture of the PDF page: it carries the current number and
+                # it can be hovered. The thumbnail stays as the fallback for
+                # sections with no chart of their own (Executive Summary,
+                # Notes) and for any section whose source table is empty.
+                visual = (
+                    section_visuals.build_section_visual(section["title"], get_connection())
+                    if section_visuals is not None else None
+                )
+                if visual is not None:
+                    sec_fig, sec_caption = visual
+                    st.plotly_chart(
+                        sec_fig, use_container_width=True,
+                        config={"displayModeBar": False},
+                        key=f"section_visual_{i}",
+                    )
+                    st.caption(sec_caption)
+                elif section["page"] < len(_section_preview_images):
+                    st.image(_section_preview_images[section["page"]], use_container_width=True)
+                    st.caption(section["desc"])
+                else:
+                    st.caption(section["desc"])
                 if st.button("View section", key=f"open_section_{i}", use_container_width=True):
                     st.session_state["open_section"] = i
                     st.rerun()
