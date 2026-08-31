@@ -211,12 +211,15 @@ st.markdown(
       div[data-testid="stButton"] > button:hover { background:#123C4A; color:#FFFFFF; border-color:#123C4A; }
       div[data-testid="stButton"] > button:active { background:#0E4B5C; color:#FFFFFF; }
 
-      /* Main "Download PDF" CTA: bigger, centered, brand teal. Download
-         buttons render under a different testid than regular buttons, so
-         they need their own rule rather than inheriting stButton's. */
+      /* "Download PDF" CTA: grouped with Summarize/Regenerate in the header
+         row, so it matches their height/padding but keeps a bit more
+         weight (bolder text, subtle shadow) as the primary action of the
+         three. Download buttons render under a different testid than
+         regular buttons, so they need their own rule rather than
+         inheriting stButton's. */
       div[data-testid="stDownloadButton"] > button {
-        background:#1D6E86; color:#FFFFFF; border:1px solid #123C4A; border-radius:10px;
-        font-weight:700; font-size:16px; padding:14px 0; transition: background 0.15s ease;
+        background:#1D6E86; color:#FFFFFF; border:1px solid #123C4A; border-radius:8px;
+        font-weight:700; transition: background 0.15s ease;
         box-shadow: 0 2px 8px rgba(18,60,74,0.25);
       }
       div[data-testid="stDownloadButton"] > button:hover { background:#123C4A; color:#FFFFFF; border-color:#123C4A; }
@@ -1308,7 +1311,7 @@ def _header_html(status_text: str, ok: bool = True) -> str:
         """
 
 
-col1, col2, col3, col4 = st.columns([4, 1, 1, 0.5])
+col1, col2, col3, col4, col5 = st.columns([3.3, 1, 1, 1.2, 0.5])
 with col1:
     header_slot = st.empty()
     # Shown immediately, before this run's report generation has actually
@@ -1320,6 +1323,12 @@ with col2:
 with col3:
     regenerate = st.button("Regenerate", use_container_width=True)
 with col4:
+    # Reserved now, filled in below once pdf_bytes exists -- keeps Download
+    # PDF grouped with Summarize/Regenerate instead of stranded lower on
+    # the page, even though the file itself isn't ready until after this
+    # row renders.
+    download_slot = st.empty()
+with col5:
     with st.popover("❓", use_container_width=True):
         st.markdown(HELP_HTML, unsafe_allow_html=True)
 
@@ -1428,15 +1437,13 @@ if st.session_state["show_summary"]:
     else:
         st.info("A summary is not available right now. Check that ANTHROPIC_API_KEY is configured.")
 
-dl_left, dl_center, dl_right = st.columns([1, 2, 1])
-with dl_center:
-    st.download_button(
-        "⬇ Download PDF",
-        data=pdf_bytes,
-        file_name=f"Visit Dana Point PULSE Report {datetime.now().strftime('%Y-%m-%d')}.pdf",
-        mime="application/pdf",
-        use_container_width=True,
-    )
+download_slot.download_button(
+    "⬇ Download PDF",
+    data=pdf_bytes,
+    file_name=f"Visit Dana Point PULSE Report {datetime.now().strftime('%Y-%m-%d')}.pdf",
+    mime="application/pdf",
+    use_container_width=True,
+)
 
 # ---------------------------------------------------------------------------
 # Jump-to-section nav -- lets anyone see everything this page offers at a
