@@ -384,6 +384,138 @@ def _load_costar_monthly() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+@st.cache_data(ttl=CACHE_TTL_GROUP)
+def _load_costar_segment_mix() -> pd.DataFrame:
+    """Load costar_market_daily_segment: monthly Transient/Group/Contract
+    average daily demand for the submarket comp set, trailing 12 months.
+    Same segmented CoStar export behind the Business Mix visuals added to
+    app.py's Classic View and pages.py's page_costar_segmentation
+    (2026-09-10); distinct from _load_str_group_metrics below, which is
+    STR's property-level group-segment export, not CoStar's submarket one."""
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        cur = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='costar_market_daily_segment'"
+        )
+        if not cur.fetchone():
+            conn.close()
+            return pd.DataFrame()
+        latest = conn.execute("SELECT MAX(as_of_date) FROM costar_market_daily_segment").fetchone()[0]
+        if not latest:
+            conn.close()
+            return pd.DataFrame()
+        cutoff = (pd.to_datetime(latest) - pd.Timedelta(days=365)).strftime("%Y-%m-%d")
+        df = pd.read_sql_query(
+            """
+            SELECT strftime('%Y-%m', as_of_date) AS month, segment,
+                   ROUND(AVG(demand), 0) AS avg_demand
+            FROM costar_market_daily_segment
+            WHERE as_of_date >= ? AND as_of_date <= ?
+            GROUP BY month, segment
+            ORDER BY month
+            """,
+            conn, params=(cutoff, latest),
+        )
+        conn.close()
+        return df
+    except Exception as exc:
+        import logging; logging.getLogger("vdp_dashboard").debug("_load_costar_segment_mix failed: %s", exc)
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=CACHE_TTL_NATIONAL)
+def _load_costar_participation() -> Optional[dict]:
+    """Load costar_participation: the property/room roster behind the
+    segmented comp set above, pinned to the latest snapshot_date AND the
+    latest period_month within it. The table carries one row per property
+    per historical month, so both must be pinned together or counts double
+    up across months for the same property."""
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        cur = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='costar_participation'"
+        )
+        if not cur.fetchone():
+            conn.close()
+            return None
+        snap = conn.execute("SELECT MAX(snapshot_date) FROM costar_participation").fetchone()[0]
+        if not snap:
+            conn.close()
+            return None
+        period = conn.execute(
+            "SELECT MAX(period_month) FROM costar_participation WHERE snapshot_date = ?", (snap,)
+        ).fetchone()[0]
+        if not period:
+            conn.close()
+            return None
+        row = conn.execute(
+            "SELECT COUNT(DISTINCT building_name), SUM(rooms) FROM costar_participation "
+            "WHERE snapshot_date = ? AND period_month = ? AND participating = 1",
+            (snap, period),
+        ).fetchone()
+        conn.close()
+        if not row or not row[0]:
+            return None
+        return {
+            "snapshot_date": snap, "period_month": period,
+            "n_properties": int(row[0]), "n_rooms": int(row[1]) if row[1] is not None else None,
+        }
+    except Exception as exc:
+        import logging; logging.getLogger("vdp_dashboard").debug("_load_costar_participation failed: %s", exc)
+        return None
+
+
+@st.cache_data(ttl=CACHE_TTL_GROUP)
+def _load_datafy_advertising() -> tuple[dict, pd.DataFrame, pd.DataFrame]:
+    """Load Datafy's separate paid-media campaign export: the
+    datafy_advertising_kpis + datafy_advertising_overview snapshot (merged
+    into one dict, both one-row tables keyed by snapshot_date),
+    datafy_advertising_top_markets (trip share by DMA), and
+    datafy_advertising_tactic_performance (attribution rate by tactic).
+    Distinct from _load_attribution_groups above, which is the
+    website/media group-attribution export, not paid-media campaign data."""
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        ads_kpis: dict = {}
+        for tbl in ("datafy_advertising_kpis", "datafy_advertising_overview"):
+            cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (tbl,))
+            if cur.fetchone():
+                row_df = pd.read_sql_query(f"SELECT * FROM {tbl} ORDER BY snapshot_date DESC LIMIT 1", conn)
+                if not row_df.empty:
+                    ads_kpis.update(row_df.iloc[0].to_dict())
+
+        df_markets = pd.DataFrame()
+        cur = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='datafy_advertising_top_markets'"
+        )
+        if cur.fetchone():
+            snap = conn.execute("SELECT MAX(snapshot_date) FROM datafy_advertising_top_markets").fetchone()[0]
+            if snap:
+                df_markets = pd.read_sql_query(
+                    "SELECT dma, trip_share_pct FROM datafy_advertising_top_markets "
+                    "WHERE snapshot_date = ? ORDER BY trip_share_pct DESC LIMIT 8",
+                    conn, params=(snap,),
+                )
+
+        df_tactics = pd.DataFrame()
+        cur = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='datafy_advertising_tactic_performance'"
+        )
+        if cur.fetchone():
+            snap2 = conn.execute("SELECT MAX(snapshot_date) FROM datafy_advertising_tactic_performance").fetchone()[0]
+            if snap2:
+                df_tactics = pd.read_sql_query(
+                    "SELECT tactic, attribution_rate_pct FROM datafy_advertising_tactic_performance "
+                    "WHERE snapshot_date = ? ORDER BY attribution_rate_pct DESC",
+                    conn, params=(snap2,),
+                )
+        conn.close()
+        return ads_kpis, df_markets, df_tactics
+    except Exception as exc:
+        import logging; logging.getLogger("vdp_dashboard").debug("_load_datafy_advertising failed: %s", exc)
+        return {}, pd.DataFrame(), pd.DataFrame()
+
+
 # ── Chart builders ────────────────────────────────────────────────────────────
 
 def _chart_tbid_bar(g: dict) -> go.Figure:
@@ -1039,6 +1171,90 @@ def _chart_costar_occ_overlay(df_costar: pd.DataFrame, web_df: pd.DataFrame) -> 
     return _themed(fig)
 
 
+def _chart_costar_segment_mix(df_seg: pd.DataFrame) -> go.Figure:
+    """Stacked bar, monthly avg daily demand by CoStar Transient/Group/
+    Contract segment for the submarket comp set."""
+    if df_seg.empty:
+        return _dark_fig()
+
+    seg_colors = {"Transient": _COLORWAY[0], "Group": _COLORWAY[1], "Contract": _COLORWAY[3]}
+    fig = _dark_fig(height=320)
+    for seg in ("Transient", "Group", "Contract"):
+        seg_slice = df_seg[df_seg["segment"] == seg]
+        if seg_slice.empty:
+            continue
+        fig.add_trace(go.Bar(
+            x=seg_slice["month"].tolist(),
+            y=seg_slice["avg_demand"].tolist(),
+            name=seg,
+            marker=dict(color=seg_colors.get(seg, _COLORWAY[0]), opacity=0.90),
+            hovertemplate=f"<b>{seg}</b><br>%{{x}}<br>Avg demand: <b>%{{y:,.0f}}</b><extra></extra>",
+        ))
+    fig.update_layout(
+        title=dict(text="CoStar Business Mix, Transient / Group / Contract Demand",
+                   font=dict(size=12.5, color="#0F172A")),
+        barmode="stack",
+        yaxis=dict(title="Avg. Daily Demand (Room-Nights)", gridcolor="rgba(148,163,184,0.12)"),
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
+                    font=dict(size=10, color=_FONT_CLR)),
+        margin=dict(l=14, r=14, t=64, b=14),
+    )
+    return _themed(fig)
+
+
+def _chart_ads_markets(df_markets: pd.DataFrame) -> go.Figure:
+    """Horizontal bar, Datafy Advertising trip share by top DMA."""
+    if df_markets.empty:
+        return _dark_fig()
+    plot_df = df_markets.sort_values("trip_share_pct", ascending=True)
+    fig = _dark_fig(height=300)
+    fig.add_trace(go.Bar(
+        y=plot_df["dma"].tolist(),
+        x=plot_df["trip_share_pct"].tolist(),
+        orientation="h",
+        marker=dict(color=_COLORWAY[0], opacity=0.90),
+        text=[f"<b>{v:.1f}%</b>" for v in plot_df["trip_share_pct"]],
+        textposition="outside",
+        textfont=dict(size=10.5, color=_FONT_CLR),
+        hovertemplate="<b>%{y}</b><br>Trip share: <b>%{x:.1f}%</b><extra></extra>",
+    ))
+    fig.update_layout(
+        title=dict(text="Ad Campaign, Top Markets by Trip Share",
+                   font=dict(size=12.5, color="#0F172A")),
+        xaxis=dict(title="% of Trips", gridcolor="rgba(148,163,184,0.12)"),
+        showlegend=False,
+        margin=dict(l=14, r=44, t=52, b=14),
+    )
+    return _themed(fig)
+
+
+def _chart_ads_tactics(df_tactics: pd.DataFrame) -> go.Figure:
+    """Bar, Datafy Advertising attribution rate by tactic."""
+    if df_tactics.empty:
+        return _dark_fig()
+    plot_df = df_tactics.sort_values("attribution_rate_pct", ascending=False)
+    colors = [_COLORWAY[(i + 1) % len(_COLORWAY)] for i in range(len(plot_df))]
+    fig = _dark_fig(height=300)
+    fig.add_trace(go.Bar(
+        x=plot_df["tactic"].tolist(),
+        y=plot_df["attribution_rate_pct"].tolist(),
+        marker=dict(color=colors, opacity=0.90),
+        text=[f"<b>{v:.2f}%</b>" for v in plot_df["attribution_rate_pct"]],
+        textposition="outside",
+        textfont=dict(size=10.5, color=_FONT_CLR),
+        hovertemplate="<b>%{x}</b><br>Attribution rate: <b>%{y:.2f}%</b><extra></extra>",
+    ))
+    fig.update_layout(
+        title=dict(text="Ad Campaign, Attribution Rate by Tactic",
+                   font=dict(size=12.5, color="#0F172A")),
+        yaxis=dict(title="Attribution Rate %", gridcolor="rgba(148,163,184,0.12)"),
+        showlegend=False,
+        margin=dict(l=14, r=14, t=52, b=14),
+    )
+    return _themed(fig)
+
+
 def _render_shoulder_alignment(df_types: pd.DataFrame, comp: pd.DataFrame) -> None:
     """Heatmap table: traveler types × quarters, Safe/Caution/Risk by occ threshold."""
     if df_types.empty or comp.empty:
@@ -1505,6 +1721,20 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
     # Load STR group segment data
     df_group = _load_str_group_metrics()
 
+    # Load CoStar segmented submarket data and the Datafy Advertising
+    # campaign export (both added 2026-09-10). Loaded here, inside the
+    # render function, the same way df_group is loaded just above, rather
+    # than threaded through render_group_tab's existing parameter list, so
+    # this section needs no other call site in this module touched, only
+    # this function and render_group_tab's own module-level import. Note
+    # this whole module is not currently imported by app.py (see
+    # DASHBOARD_RESTRUCTURING.md and pages.py's render_page() docstring for
+    # the same situation there), so nothing here is live in the deployed
+    # app yet; it is ready for whenever render_group_tab() is wired in.
+    df_costar_seg = _load_costar_segment_mix()
+    costar_participation = _load_costar_participation()
+    ads_kpis, df_ads_markets, df_ads_tactics = _load_datafy_advertising()
+
     # ── Executive Brief ───────────────────────────────────────────────────────
     tbid_low   = g.get("estimated_group_tbid_rev_low",  3_603_940)
     tbid_high  = g.get("estimated_group_tbid_rev_high", 4_613_043)
@@ -1826,6 +2056,107 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
             appear here automatically once the latest group-segment data has been loaded.
             Run the pipeline to populate live <strong>group demand rooms</strong>, <strong>group ADR actuals</strong>,
             and <strong>segment composition</strong> analyses.
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
+
+    # ── F. Datafy Ad Performance ──────────────────────────────────────────────
+    st.markdown("""
+    <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
+                letter-spacing:.06em;margin:14px 0 10px;">
+    F. DATAFY AD PERFORMANCE, Paid-Media Campaign Snapshot
+    </div>
+    """, unsafe_allow_html=True)
+    if ads_kpis:
+        _imp = ads_kpis.get("total_impressions")
+        _clk = ads_kpis.get("total_clicks")
+        _spend = ads_kpis.get("total_spend_usd")
+        _roas = ads_kpis.get("est_roas")
+        _snap = ads_kpis.get("snapshot_date", "the latest snapshot")
+        cols = st.columns(4)
+        for col, lbl, val, note, color in [
+            (cols[0], "Impressions", f"{_imp:,.0f}" if pd.notna(_imp) else "–", f"as of {_snap}", "#0891B2"),
+            (cols[1], "Clicks", f"{_clk:,.0f}" if pd.notna(_clk) else "–", f"as of {_snap}", "#10B981"),
+            (cols[2], "Spend", f"${_spend:,.0f}" if pd.notna(_spend) else "–", f"as of {_snap}", "#F5B940"),
+            (cols[3], "Est. ROAS", f"${_roas:.2f} : $1" if pd.notna(_roas) else "–", "campaign-wide", "#A78BFA"),
+        ]:
+            with col:
+                st.markdown(_metric_box(lbl, val, note, color), unsafe_allow_html=True)
+        st.markdown("<div style='margin:10px 0;'></div>", unsafe_allow_html=True)
+        col_mkt, col_tac = st.columns(2)
+        with col_mkt:
+            st.plotly_chart(_chart_ads_markets(df_ads_markets), use_container_width=True, key="gt_ads_markets")
+        with col_tac:
+            st.plotly_chart(_chart_ads_tactics(df_ads_tactics), use_container_width=True, key="gt_ads_tactics")
+    else:
+        st.markdown("""
+        <div style="background:rgba(8,145,178,0.04);border:1px dashed rgba(8,145,178,0.30);
+                    border-radius:8px;padding:14px 18px;margin:14px 0;">
+          <div style="color:#38BDF8;font-weight:700;font-size:11.5px;margin-bottom:6px;">
+            🔜 DATAFY AD PERFORMANCE, READY TO LOAD
+          </div>
+          <div style="color:#94A3B8;font-size:11px;line-height:1.7;">
+            Datafy's paid-media campaign export has been configured for live ingestion.
+            Visualizations will appear here automatically once impressions, clicks, spend and
+            attribution-by-tactic data has been loaded.
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ── G. CoStar Business Mix ────────────────────────────────────────────────
+    st.markdown("""
+    <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
+                letter-spacing:.06em;margin:14px 0 10px;">
+    G. COSTAR BUSINESS MIX, Transient / Group / Contract Submarket Demand
+    </div>
+    """, unsafe_allow_html=True)
+    if not df_costar_seg.empty:
+        seg_latest_month = df_costar_seg["month"].max()
+        latest_mix = df_costar_seg[df_costar_seg["month"] == seg_latest_month].sort_values(
+            "avg_demand", ascending=False
+        )
+        total_demand = latest_mix["avg_demand"].sum()
+        if total_demand:
+            mix_cols = st.columns(len(latest_mix) + (1 if costar_participation else 0))
+            _seg_box_colors = {"Transient": "#0891B2", "Group": "#D97706", "Contract": "#059669"}
+            for col, row in zip(mix_cols, latest_mix.itertuples()):
+                pct = f"{row.avg_demand / total_demand * 100:.0f}%"
+                with col:
+                    st.markdown(_metric_box(
+                        row.segment, pct, f"of demand, {seg_latest_month}",
+                        _seg_box_colors.get(row.segment, "#0891B2"),
+                    ), unsafe_allow_html=True)
+            if costar_participation:
+                with mix_cols[-1]:
+                    _rooms_note = (
+                        f"{costar_participation['n_rooms']:,} rooms, {costar_participation['period_month']}"
+                        if costar_participation.get("n_rooms") else costar_participation["period_month"]
+                    )
+                    st.markdown(_metric_box(
+                        "Comp Set", f"{costar_participation['n_properties']} properties",
+                        _rooms_note, "#475569",
+                    ), unsafe_allow_html=True)
+        st.markdown("<div style='margin:10px 0;'></div>", unsafe_allow_html=True)
+        st.plotly_chart(_chart_costar_segment_mix(df_costar_seg), use_container_width=True, key="gt_costar_seg_mix")
+        st.markdown("""
+        <div style="color:#64748B;font-size:11px;margin-top:8px;line-height:1.6;">
+        📊 <strong>Data Source:</strong> CoStar's segmented submarket export (costar_market_daily_segment),
+        Transient/Group/Contract, distinct from the STR property-level segment analytics in Section E above.
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style="background:rgba(8,145,178,0.04);border:1px dashed rgba(8,145,178,0.30);
+                    border-radius:8px;padding:14px 18px;margin:14px 0;">
+          <div style="color:#38BDF8;font-weight:700;font-size:11.5px;margin-bottom:6px;">
+            🔜 COSTAR BUSINESS MIX, READY TO LOAD
+          </div>
+          <div style="color:#94A3B8;font-size:11px;line-height:1.7;">
+            CoStar's segmented submarket export has been configured for live ingestion.
+            Visualizations will appear here automatically once Transient/Group/Contract demand
+            data has been loaded.
           </div>
         </div>
         """, unsafe_allow_html=True)
