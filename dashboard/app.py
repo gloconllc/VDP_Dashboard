@@ -479,10 +479,35 @@ def load_costar_summary(
         if df.empty:
             return "No CoStar submarket history available."
         header = f"Real CoStar daily feed, most recent report date {latest_date}:\n"
-        return header + "\n".join(
+        summary = header + "\n".join(
             f"{r.month}: Occupancy {r.avg_occ}%, ADR ${r.avg_adr:,.0f}, RevPAR ${r.avg_revpar:,.0f}"
             for r in df.itertuples()
         )
+        # Light-touch addition (2026-09-08): segment mix from CoStar's companion
+        # Transient/Group/Contract export, when that table has data for this window.
+        # Isolated in its own try/except so a missing/not-yet-loaded table can
+        # never break the existing occupancy/ADR/RevPAR summary above.
+        try:
+            seg_df = pd.read_sql_query(
+                """
+                SELECT segment, ROUND(AVG(demand), 0) AS avg_demand
+                FROM costar_market_daily_segment
+                WHERE as_of_date >= ? AND as_of_date <= ?
+                GROUP BY segment
+                """,
+                conn, params=(cutoff, latest_date),
+            )
+            total_demand = seg_df["avg_demand"].sum()
+            if not seg_df.empty and total_demand:
+                seg_df["share_pct"] = seg_df["avg_demand"] / total_demand * 100
+                seg_line = ", ".join(
+                    f"{r.segment} {r.share_pct:.0f}%"
+                    for r in seg_df.sort_values("share_pct", ascending=False).itertuples()
+                )
+                summary += f"\nSegment mix (Transient/Group/Contract demand share): {seg_line}"
+        except Exception:
+            pass
+        return summary
     except Exception:
         return "CoStar history unavailable."
 

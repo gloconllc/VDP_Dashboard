@@ -2259,6 +2259,24 @@ def find_new_handler(filename_lower: str):
     return None, None
 
 
+def _infer_subfolder(table: str) -> str | None:
+    """Map a target table name back to a FOLDER_DEFAULT_PERIODS key.
+
+    Used only for files sitting directly in data/datafy/ (top level) instead
+    of inside one of the real subfolders — there's no real subfolder name to
+    key period defaults off of, so this recovers the same default period a
+    same-category file would get if it were filed correctly."""
+    if table.startswith("datafy_attribution_website_"):
+        return "attribution_website"
+    if table.startswith("datafy_attribution_media_") or table.startswith("datafy_campaign_"):
+        return "attribution_media"
+    if table.startswith("datafy_social_"):
+        return "social"
+    if table.startswith("datafy_overview_") or table.startswith("datafy_advanced_spending_"):
+        return "overview"
+    return None
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -2272,6 +2290,73 @@ def main():
     total_rows    = 0
     skipped_files = 0
 
+    def _process_one(csv_path: str, subfolder: str, *, top_level: bool = False) -> None:
+        nonlocal total_files, total_rows, skipped_files
+
+        filename      = os.path.basename(csv_path)
+        name_stem     = filename.rsplit(".", 1)[0]
+        name_stem_lc  = name_stem.lower()
+
+        # ── 1. Explicit skip list ─────────────────────────────────────────
+        if name_stem_lc in SKIP_STEMS:
+            print(f"  SKIP  {filename} (in skip list)")
+            skipped_files += 1
+            return
+
+        # ── 2. Try new-format handlers ────────────────────────────────────
+        table, parser = find_new_handler(name_stem_lc)
+        if table is not None:
+            period_subfolder = _infer_subfolder(table) if top_level else subfolder
+            ps, pe = _extract_period(filename, period_subfolder or subfolder)
+            try:
+                n = parser(csv_path, cur, ps, pe)
+                if n > 0:
+                    print(f"  OK    {filename} → {table} ({n} rows)")
+                    total_files += 1
+                    total_rows  += n
+                else:
+                    # Parser already printed its own SKIP/WARN; just count as skipped
+                    skipped_files += 1
+            except Exception as exc:
+                print(f"  ERR   {filename}: {exc}")
+                skipped_files += 1
+            return
+
+        # ── 3. Legacy FILE_TABLE_MAP (period columns in CSV) ──────────────
+        if top_level:
+            # Legacy resolution needs a real subfolder name to key
+            # FILE_TABLE_MAP off of — a stray top-level file with no
+            # new-format handler match can't be mapped reliably, so flag it
+            # instead of guessing wrong.
+            print(f"  WARN  {filename}: sitting in data/datafy/ (top level) with no "
+                  f"recognized report-type match — move it into overview/, "
+                  f"attribution_website/, attribution_media/, or social/, or add a "
+                  f"NEW_FILE_HANDLERS entry for it, then re-run")
+            skipped_files += 1
+            return
+
+        parts  = name_stem.split("_")
+        legacy_table = None
+        for i in range(len(parts), 0, -1):
+            prefix = "_".join(parts[:i])
+            legacy_table = resolve_table(subfolder, prefix)
+            if legacy_table:
+                break
+
+        if legacy_table is None:
+            print(f"  WARN  {filename}: no table mapping found, skipping")
+            skipped_files += 1
+            return
+
+        try:
+            n = load_csv_into_table(cur, csv_path, legacy_table)
+            print(f"  OK    {filename} → {legacy_table} ({n} rows)")
+            total_files += 1
+            total_rows  += n
+        except Exception as exc:
+            print(f"  ERR   {filename}: {exc}")
+            skipped_files += 1
+
     for subfolder in sorted(os.listdir(DATAFY_DIR)):
         subfolder_path = os.path.join(DATAFY_DIR, subfolder)
         if not os.path.isdir(subfolder_path):
@@ -2282,58 +2367,17 @@ def main():
             continue
 
         print(f"Loading {subfolder}/…")
-
         for csv_path in csv_files:
-            filename      = os.path.basename(csv_path)
-            name_stem     = filename.rsplit(".", 1)[0]
-            name_stem_lc  = name_stem.lower()
+            _process_one(csv_path, subfolder)
 
-            # ── 1. Explicit skip list ─────────────────────────────────────────
-            if name_stem_lc in SKIP_STEMS:
-                print(f"  SKIP  {filename} (in skip list)")
-                skipped_files += 1
-                continue
-
-            # ── 2. Try new-format handlers ────────────────────────────────────
-            table, parser = find_new_handler(name_stem_lc)
-            if table is not None:
-                ps, pe = _extract_period(filename, subfolder)
-                try:
-                    n = parser(csv_path, cur, ps, pe)
-                    if n > 0:
-                        print(f"  OK    {filename} → {table} ({n} rows)")
-                        total_files += 1
-                        total_rows  += n
-                    else:
-                        # Parser already printed its own SKIP/WARN; just count as skipped
-                        skipped_files += 1
-                except Exception as exc:
-                    print(f"  ERR   {filename}: {exc}")
-                    skipped_files += 1
-                continue
-
-            # ── 3. Legacy FILE_TABLE_MAP (period columns in CSV) ──────────────
-            parts  = name_stem.split("_")
-            legacy_table = None
-            for i in range(len(parts), 0, -1):
-                prefix = "_".join(parts[:i])
-                legacy_table = resolve_table(subfolder, prefix)
-                if legacy_table:
-                    break
-
-            if legacy_table is None:
-                print(f"  WARN  {filename}: no table mapping found, skipping")
-                skipped_files += 1
-                continue
-
-            try:
-                n = load_csv_into_table(cur, csv_path, legacy_table)
-                print(f"  OK    {filename} → {legacy_table} ({n} rows)")
-                total_files += 1
-                total_rows  += n
-            except Exception as exc:
-                print(f"  ERR   {filename}: {exc}")
-                skipped_files += 1
+    # Some months' exports land directly in data/datafy/ instead of a dated
+    # subfolder (e.g. a Datafy_MM_DD_YY/ drop) — scan those too so they
+    # aren't silently skipped just because of where they were saved.
+    top_level_csvs = sorted(glob.glob(os.path.join(DATAFY_DIR, "*.csv")))
+    if top_level_csvs:
+        print("Loading data/datafy/ (top level)…")
+        for csv_path in top_level_csvs:
+            _process_one(csv_path, subfolder="", top_level=True)
 
     conn.commit()
 

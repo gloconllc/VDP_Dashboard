@@ -1081,6 +1081,23 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
     ("costar_market_monthly",        "kpi_daily_summary",            "cross_ref",     "report_period→as_of_date",
      "CoStar submarket OCC/ADR/RevPAR benchmarks VDP's own STR-reported performance"),
 
+    # ── CoStar Segmentation (Transient/Group/Contract) + Participation roster ──
+    # (added 2026-09-08, alongside load_costar_segmentation.py)
+    ("costar_market_daily_segment",  "costar_market_daily",          "enriches",      "as_of_date",
+     "Transient/Group/Contract business-mix breakdown enriches the aggregate CoStar submarket daily figures with a demand-segment split"),
+
+    ("costar_market_daily_segment",  "costar_market_monthly_segment", "same_source",   "as_of_date→report_period",
+     "costar_market_daily_segment rolls up into costar_market_monthly_segment — same CoStar segmented export, daily vs. monthly grain"),
+
+    ("costar_market_monthly_segment","costar_market_monthly",        "enriches",      "report_period",
+     "Transient/Group/Contract business-mix breakdown enriches the aggregate CoStar submarket monthly figures with a demand-segment split"),
+
+    ("costar_market_daily_segment",  "fact_str_metrics",             "cross_ref",     "as_of_date",
+     "CoStar's segmented daily demand mix (Transient/Group/Contract) benchmarks VDP's own STR-reported group vs. transient business mix"),
+
+    ("costar_participation",         "costar_market_daily",          "context",       "snapshot_date→as_of_date",
+     "The property participation roster identifies which and how many properties make up the submarket comp set behind the aggregate CoStar daily figures"),
+
     # ── Visit California Resident Sentiment ─────────────────────────────────
     ("visit_ca_resident_sentiment",  "kpi_daily_summary",            "context",       "area/report_period",
      "Orange County resident sentiment on tourism benefits/costs contextualizes community support for VDP visitor growth"),
@@ -1137,6 +1154,31 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("datafy_campaign_pixel_fires_daily",    "kpi_daily_summary",                "cross_ref", "fire_date→as_of_date",
      "Daily campaign pixel activity cross-referenced against same-day STR demand to gauge campaign-to-booking lag"),
+
+    # ── Datafy Advertising campaign-performance family (added 2026-09-08) ──
+    # Separate CSV export family from the paid-media/ad side of Datafy (impressions, clicks,
+    # spend, CTR, ROAS, DMA-level trip attribution) vs. the visitor-economy geo-fencing tables
+    # above. Snapshot-dated (no report_period in the source data), so joins use snapshot_date.
+    ("datafy_advertising_kpis",       "datafy_advertising_overview",      "enriches",   "snapshot_date",
+     "Campaign-wide impressions/clicks/spend/reach/CTR/VCR enrich the same-day estimated campaign impact, ROAS, and cost-per-visitor-day summary"),
+
+    ("datafy_advertising_overview",   "datafy_attribution_media_kpis",    "cross_ref",  "snapshot_date→report_period",
+     "Datafy's campaign-level Est. ROAS and Est. Campaign Impact benchmark against the visitor-economy media attribution KPIs for the same paid-media effort"),
+
+    ("datafy_advertising_top_markets","datafy_attribution_media_top_markets","cross_ref","dma→market_name",
+     "Advertising campaign trip share/impact by DMA is a paid-media-specific cut of the same feeder-market concept as the attribution media top markets table"),
+
+    ("datafy_advertising_tactic_performance","datafy_advertising_kpis",   "context",    "snapshot_date",
+     "Per-tactic (VIDEO/NATIVE/BANNER) attribution rate explains which creative tactics are driving the same-day campaign-wide KPI totals"),
+
+    ("datafy_advertising_line_item_performance","datafy_advertising_tactic_performance","enriches","snapshot_date",
+     "Per-line-item impressions/clicks/spend/CTR enrich the tactic-level attribution-rate rollup with campaign line-item detail"),
+
+    ("datafy_advertising_attribution_groups","datafy_attribution_media_groups","same_source","snapshot_date→report_period",
+     "Est. trips/visitor-days/impact by attribution group (Destination/Hotels/Resorts) is the Advertising-side counterpart to the visitor-economy attribution media groups table"),
+
+    ("datafy_advertising_overview",   "kpi_daily_summary",                "cross_ref",  "snapshot_date→as_of_date",
+     "Estimated campaign impact and cost-per-visitor-day benchmark against same-day STR demand to gauge paid-media spend efficiency"),
 ]
 
 

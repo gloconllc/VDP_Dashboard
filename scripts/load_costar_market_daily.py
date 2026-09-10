@@ -27,11 +27,22 @@ COSTAR_DIR = os.path.join(PROJECT_ROOT, "data", "costar")
 
 def _latest_costar_export(dated_patterns, legacy_name):
     """CoStar's export naming drifted from the fixed 'daily_costar.xlsx' /
-    'monhtly_costar.xlsx' to dated drops like 'Daily_08_26_26.xlsx'. Pick
-    whichever candidate is actually newest by the date embedded in its
+    'monhtly_costar.xlsx' to dated drops like 'Daily_08_26_26.xlsx' — and
+    CoStar is inconsistent even about the capitalization of that: it has
+    since sent 'daily_09_07_26.xlsx' (lowercase) too. glob.glob() is
+    case-sensitive on every OS this pipeline runs on (including the Linux
+    container it's deployed to), so dated_patterns below covers both cases
+    explicitly rather than relying on filesystem case-insensitivity.
+
+    Pick whichever candidate is actually newest by the date embedded in its
     filename (MM_DD_YY), falling back to file mtime, so a fresh dated
     export is picked up automatically without renaming it by hand first.
     Falls back to the legacy fixed filename if no dated file is present.
+
+    Patterns are digit-anchored (e.g. 'Daily_[0-9]*.xlsx') so this never
+    matches the companion segmentation export (e.g. 'daily_seg_09_07_26.xlsx',
+    handled separately by load_costar_segmentation.py) — 'seg' doesn't start
+    with a digit.
     """
     candidates = []
     for pat in dated_patterns:
@@ -55,8 +66,14 @@ def _latest_costar_export(dated_patterns, legacy_name):
     return max(candidates, key=_sort_key)
 
 
-DAILY_FILE = _latest_costar_export(["Daily_*.xlsx", "Daily_*.XLSX"], "daily_costar.xlsx")
-MONTHLY_FILE = _latest_costar_export(["Monthly_*.xlsx", "Monthly_*.XLSX"], "monhtly_costar.xlsx")
+DAILY_FILE = _latest_costar_export(
+    ["Daily_[0-9]*.xlsx", "Daily_[0-9]*.XLSX", "daily_[0-9]*.xlsx", "daily_[0-9]*.XLSX"],
+    "daily_costar.xlsx",
+)
+MONTHLY_FILE = _latest_costar_export(
+    ["Monthly_[0-9]*.xlsx", "Monthly_[0-9]*.XLSX", "monthly_[0-9]*.xlsx", "monthly_[0-9]*.XLSX"],
+    "monhtly_costar.xlsx",
+)
 
 DDL = """
 CREATE TABLE IF NOT EXISTS costar_market_daily (
