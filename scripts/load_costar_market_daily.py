@@ -13,7 +13,6 @@ and (monthly only) capital-markets fields.
 
 import os
 import re
-import glob
 import sqlite3
 from datetime import datetime
 
@@ -25,33 +24,31 @@ DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
 COSTAR_DIR = os.path.join(PROJECT_ROOT, "data", "costar")
 
 
-def _latest_costar_export(dated_patterns, legacy_name):
+def _latest_costar_export(name_regex, legacy_name):
     """CoStar's export naming drifted from the fixed 'daily_costar.xlsx' /
-    'monhtly_costar.xlsx' to dated drops like 'Daily_08_26_26.xlsx' — and
-    CoStar is inconsistent even about the capitalization of that: it has
-    since sent 'daily_09_07_26.xlsx' (lowercase) too. glob.glob() is
-    case-sensitive on every OS this pipeline runs on (including the Linux
-    container it's deployed to), so dated_patterns below covers both cases
-    explicitly rather than relying on filesystem case-insensitivity.
+    'monhtly_costar.xlsx' to dated drops like 'Daily_08_26_26.xlsx', and its
+    own capitalization is inconsistent from month to month ('Daily_' one
+    month, 'daily_' the next). Matches case-insensitively via regex
+    (mirroring load_costar_segmentation.py's approach) rather than a
+    case-sensitive glob, so a differently-cased dated export is picked up
+    automatically without renaming it by hand first — the old glob silently
+    dropped any lowercase 'daily_*'/'monthly_*' file, which is how the
+    2026-09-07 exports went unloaded.  The regex excludes '_seg' files so
+    this never collides with the segmentation exports handled separately by
+    load_costar_segmentation.py.
 
-    Pick whichever candidate is actually newest by the date embedded in its
-    filename (MM_DD_YY), falling back to file mtime, so a fresh dated
-    export is picked up automatically without renaming it by hand first.
-    Falls back to the legacy fixed filename if no dated file is present.
-
-    Patterns are digit-anchored (e.g. 'Daily_[0-9]*.xlsx') so this never
-    matches the companion segmentation export (e.g. 'daily_seg_09_07_26.xlsx',
-    handled separately by load_costar_segmentation.py) — 'seg' doesn't start
-    with a digit.
+    Any file with an MM_DD_YY date embedded in its name is preferred over an
+    undated one (this is what actually orders "newest" reliably — file mtime
+    is a weak fallback since a re-synced or re-copied file can carry a
+    misleading mtime). Falls back to the exact legacy fixed filename only
+    when nothing else matches at all.
     """
     candidates = []
-    for pat in dated_patterns:
-        candidates += glob.glob(os.path.join(COSTAR_DIR, pat))
-    legacy_path = os.path.join(COSTAR_DIR, legacy_name)
-    if os.path.exists(legacy_path):
-        candidates.append(legacy_path)
-    if not candidates:
-        return legacy_path  # let the loader report [SKIP] not found
+    if os.path.isdir(COSTAR_DIR):
+        rx = re.compile(name_regex, re.IGNORECASE)
+        candidates = [
+            os.path.join(COSTAR_DIR, f) for f in os.listdir(COSTAR_DIR) if rx.match(f)
+        ]
 
     def _sort_key(path):
         m = re.search(r"(\d{2})_(\d{2})_(\d{2})", os.path.basename(path))
@@ -63,17 +60,16 @@ def _latest_costar_export(dated_patterns, legacy_name):
                 pass
         return datetime.fromtimestamp(os.path.getmtime(path))
 
-    return max(candidates, key=_sort_key)
+    dated = [c for c in candidates if re.search(r"\d{2}_\d{2}_\d{2}", os.path.basename(c))]
+    if dated:
+        return max(dated, key=_sort_key)
+    if candidates:
+        return max(candidates, key=_sort_key)
+    return os.path.join(COSTAR_DIR, legacy_name)  # let the loader report [SKIP] not found
 
 
-DAILY_FILE = _latest_costar_export(
-    ["Daily_[0-9]*.xlsx", "Daily_[0-9]*.XLSX", "daily_[0-9]*.xlsx", "daily_[0-9]*.XLSX"],
-    "daily_costar.xlsx",
-)
-MONTHLY_FILE = _latest_costar_export(
-    ["Monthly_[0-9]*.xlsx", "Monthly_[0-9]*.XLSX", "monthly_[0-9]*.xlsx", "monthly_[0-9]*.XLSX"],
-    "monhtly_costar.xlsx",
-)
+DAILY_FILE = _latest_costar_export(r"^daily(?!_?seg).*\.xlsx$", "daily_costar.xlsx")
+MONTHLY_FILE = _latest_costar_export(r"^monthly(?!_?seg).*\.xlsx$", "monhtly_costar.xlsx")
 
 DDL = """
 CREATE TABLE IF NOT EXISTS costar_market_daily (

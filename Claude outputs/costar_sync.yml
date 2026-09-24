@@ -1,0 +1,92 @@
+# ============================================================================
+# VDP Analytics — CoStar Sync (GitHub Actions)
+# ============================================================================
+#
+# ADDED 2026-09-19, mirroring str_weekly_sync.yml's shape exactly.
+#
+# Purpose: reload the dashboard's CoStar tables from whatever is currently
+# sitting in data/costar/ and push the result to main. This workflow does
+# NOT fetch anything itself — CoStar has no email/API option, so a file
+# still has to land in data/costar/ first. That part is handled outside
+# this workflow: John saves the export from the CoStar portal into
+# data/costar/ (OneDrive-synced), and a Power Automate cloud flow watching
+# that folder calls this workflow's dispatch endpoint the same way the
+# "Sync CoStar Now" button in the dashboard does (dashboard/app.py, Admin
+# section) — same GITHUB_TOKEN/GITHUB_REPO pattern already used for STR.
+#
+# Triggered by:
+#   - The "Sync CoStar Now" admin button in the live dashboard.
+#   - The Power Automate flow watching data/costar/ for new files.
+#   - Manually, from the Actions tab ("Run workflow").
+#
+# SECRETS USED (already configured for pipeline.yml / str_weekly_sync.yml):
+#   ANTHROPIC_API_KEY  — used by compute_insights.py
+#
+# ============================================================================
+
+name: CoStar Sync
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  costar-sync:
+    name: CoStar Reload
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # -----------------------------------------------------------------------
+      # Reload CoStar data (PDF-parsed reports, raw daily/monthly HospitalityDataGrid
+      # export, and segment/participation export) and recompute insights, which
+      # depend on CoStar being loaded first. Same step order as full_sync.yml,
+      # plus load_costar_segmentation.py, which full_sync.yml is still missing.
+      # -----------------------------------------------------------------------
+      - name: Reload CoStar data + insights
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python scripts/load_costar_reports.py || true
+          python scripts/load_costar_market_daily.py || true
+          python scripts/load_costar_segmentation.py || true
+          python scripts/compute_insights.py
+          python scripts/optimize_db.py || true
+          python scripts/build_table_relationships.py || true
+
+      # -----------------------------------------------------------------------
+      # Commit and push straight to main — Railway auto-redeploys from main,
+      # so this is the step that puts fresh numbers on the live app.
+      # -----------------------------------------------------------------------
+      - name: Commit updated data to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/analytics.sqlite
+          git add data/costar/ 2>/dev/null || true
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit — CoStar data is already up to date."
+          else
+            RUN_DATE=$(date -u +"%Y-%m-%d")
+            git commit -m "chore: CoStar sync ${RUN_DATE} [automated]"
+            git push origin main
+            echo "Changes committed and pushed to main."
+          fi

@@ -1,0 +1,351 @@
+"""
+fetch_costar_portal.py
+-----------------------
+Headless CoStar portal automation, built 2026-09-21 for the "click a button
+and it fetches new data" workflow.
+
+Adapted from scripts/str_playwright_automation.py, the prior interactive
+version (headed browser, meant to be watched, or run through Claude in
+Chrome against an already-logged-in session). This version is meant to run
+unattended in CI (GitHub Actions), so it logs in itself using stored
+credentials rather than relying on someone's live browser session.
+
+STATUS AS OF THIS BUILD:
+  Daily and Monthly  — ported from the prior script's mapped navigation
+                        (Properties tab -> Save drawer -> "VDP Select" saved
+                        search -> Analytics -> Data -> period combobox ->
+                        Export -> Data Export). NOT yet run against the live
+                        site from this environment (this session's cloud
+                        container has no network path to costar.com at all,
+                        confirmed by a direct connection test, and no one's
+                        live Chrome was available to verify it either) so
+                        treat the selectors as carried over, not re-verified.
+  Daily/Monthly segmentation, Participation, PDF market report
+                     — NOT implemented. The prior script never covered these
+                        and guessing at selectors for screens nobody has
+                        actually looked at is exactly how the earlier
+                        attempt produced 24-byte corrupt files
+                        (_to_delete/costar_VisitDanaPoint_*.xls.24byte-corrupt
+                        in the repo). Left as a clearly-marked follow-up.
+
+Every step takes a screenshot into SCREENSHOT_DIR regardless of outcome, so
+a run can be debugged from its GitHub Actions artifact alone, without
+anyone needing to be at a keyboard watching it live.
+
+Credentials:
+  Reads STR_USERNAME/STR_PASSWORD first (that's what's already sitting in
+  the project's local .env), falls back to COSTAR_USER/COSTAR_PASS if those
+  aren't set, so this runs correctly regardless of which name ends up in
+  GitHub's secrets. Never commit real credentials to git.
+
+Output:
+  Saves into OUTPUT_DIR (default: downloads/) as daily_<MM_DD_YY>.xlsx and
+  monthly_<MM_DD_YY>.xlsx, matching the case-insensitive, date-aware pattern
+  scripts/load_costar_market_daily.py already looks for. A separate step
+  (not this script) is responsible for moving these into data/costar/ and
+  triggering the reload pipeline.
+
+Run:
+    pip install playwright && playwright install chromium
+    python fetch_costar_portal.py
+"""
+
+from __future__ import annotations
+
+import asyncio
+import os
+import sys
+from datetime import datetime
+from pathlib import Path
+
+from playwright.async_api import async_playwright, Locator, Page
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+
+LOGIN_URL = "https://product.costar.com"
+
+USERNAME = os.getenv("STR_USERNAME") or os.getenv("COSTAR_USER") or ""
+PASSWORD = os.getenv("STR_PASSWORD") or os.getenv("COSTAR_PASS") or ""
+
+OUTPUT_DIR = Path(os.getenv("COSTAR_OUTPUT_DIR", "downloads"))
+SCREENSHOT_DIR = Path(os.getenv("COSTAR_SCREENSHOT_DIR", "logs/costar_fetch_screens"))
+HEADLESS = os.getenv("COSTAR_HEADLESS", "true").strip().lower() not in ("0", "false", "no")
+
+TODAY_TAG = datetime.now().strftime("%m_%d_%y")
+
+# The live app pulls its data straight from data/costar/ on every push to
+# main, so a bad download here is not a cosmetic problem, it is one commit
+# away from being live. The prior attempt at this (see
+# _to_delete/costar_VisitDanaPoint_*.xls.24byte-corrupt in the repo) failed
+# silently and produced 24-byte files that were not real exports. This
+# floor (real exports run well into six figures of bytes) plus an actual
+# "can pandas open this as an Excel file" check exist so that failure mode
+# raises loudly here, inside this script, rather than reaching
+# data/costar/ and the live app.
+MIN_VALID_EXPORT_BYTES = 20_000
+
+
+def _validate_export(path: Path) -> None:
+    """Raise if the downloaded file is not a real, readable Excel export.
+
+    Two checks: a size floor (catches the exact 24-byte-corrupt failure
+    mode seen before) and an actual attempt to open it with pandas (catches
+    a same-size-but-wrong file, e.g. an HTML error/login page saved with an
+    .xlsx extension).
+    """
+    if not path.exists():
+        raise RuntimeError(f"Export validation failed: {path} does not exist.")
+    size = path.stat().st_size
+    if size < MIN_VALID_EXPORT_BYTES:
+        raise RuntimeError(
+            f"Export validation failed: {path} is only {size} bytes "
+            f"(expected at least {MIN_VALID_EXPORT_BYTES}). This is the same "
+            f"failure mode as the corrupt downloads already in _to_delete/, "
+            f"treating this as a failed fetch rather than saving it."
+        )
+    try:
+        import pandas as pd  # local import: only needed for this check
+
+        df = pd.read_excel(path, sheet_name=0, nrows=5)
+    except Exception as exc:
+        raise RuntimeError(
+            f"Export validation failed: {path} is {size} bytes but pandas "
+            f"could not read it as an Excel file ({exc}). Not a real export."
+        ) from exc
+    if df.empty:
+        raise RuntimeError(
+            f"Export validation failed: {path} opened but has no rows."
+        )
+    print(f"    [validated] {path} ({size:,} bytes, {len(df.columns)} columns readable)")
+
+
+def _fail_if_no_credentials() -> None:
+    if not USERNAME or not PASSWORD:
+        print(
+            "[FATAL] No CoStar credentials found. Set STR_USERNAME/STR_PASSWORD "
+            "(preferred, matches the project's .env) or COSTAR_USER/COSTAR_PASS "
+            "as environment variables / GitHub Actions secrets.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+
+# ---------------------------------------------------------------------------
+# Selectors — carried over from scripts/str_playwright_automation.py,
+# "sourced from live DOM inspection" per that script's own comments as of
+# its last update. NOT re-verified against the live site by this build.
+# If a run fails, the screenshot immediately before the failing step is the
+# fastest way to see what actually changed.
+# ---------------------------------------------------------------------------
+
+class Sel:
+    USERNAME_INPUT = "input[type='email'], input[name='username'], input[name='email']"
+    PASSWORD_INPUT = "input[type='password']"
+    SUBMIT_BTN = "button[type='submit']"
+    POST_LOGIN_MARK = "span[role='tab'][content='Properties']"
+
+    PROPERTIES_TAB = "span[role='tab'][content='Properties']"
+    SAVE_BTN = "span.placeholder-normal"  # filter has_text="Save"
+    VDP_SELECT_LINK = "a.placards-alley__survey-name--G63Pv"  # filter has_text="VDP Select"
+    OK_GOT_IT_BTN = "button.csg-tui-button"  # filter has inner span "Okay, got it"
+    ANALYTICS_TAB = "[role='tab']:has-text('Analytics')"
+    DATA_TAB = "[role='tab']:has-text('Data')"
+    PERIOD_COMBOBOX = "input#autocomplete[role='combobox']"
+    EXPORT_BTN = "span.placeholder-normal"  # filter has_text="Export"
+    DATA_EXPORT_ITEM = "div.more-menu__item--drqqC[role='menuitem']"  # filter has_text="Data Export"
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+async def _click_span_with_text(page: Page, selector: str, text: str, timeout: int = 15_000) -> None:
+    loc: Locator = page.locator(selector).filter(has_text=text).first
+    await loc.wait_for(state="visible", timeout=timeout)
+    await loc.click()
+
+
+async def _screenshot(page: Page, name: str) -> None:
+    SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    path = SCREENSHOT_DIR / f"{name}.png"
+    try:
+        await page.screenshot(path=str(path), full_page=True)
+        print(f"    [screenshot] {path}")
+    except Exception as exc:
+        print(f"    [screenshot FAILED] {name}: {exc}")
+
+
+# ---------------------------------------------------------------------------
+# Step functions
+# ---------------------------------------------------------------------------
+
+async def login(page: Page) -> None:
+    print("[1] Navigating to CoStar login...")
+    await page.goto(LOGIN_URL, wait_until="networkidle", timeout=45_000)
+    await _screenshot(page, "01_login_page")
+
+    await page.fill(Sel.USERNAME_INPUT, USERNAME)
+    await page.fill(Sel.PASSWORD_INPUT, PASSWORD)
+    await _screenshot(page, "02_login_filled")
+    await page.click(Sel.SUBMIT_BTN)
+
+    try:
+        await page.wait_for_selector(Sel.POST_LOGIN_MARK, timeout=30_000)
+    except Exception:
+        await _screenshot(page, "02b_login_stuck")
+        # Common cause: an MFA / new-device / "verify it's you" challenge.
+        # Surface the page text so a failed CI run's log says WHY, not just
+        # that a selector timed out.
+        text_preview = (await page.inner_text("body"))[:800]
+        print(f"[FATAL] Did not reach the dashboard after login. Page text follows:\n{text_preview}")
+        raise
+    print("    Logged in, dashboard loaded.")
+    await _screenshot(page, "03_dashboard")
+
+
+async def navigate_to_vdp_select(page: Page) -> None:
+    print("[2] Clicking Properties tab...")
+    await page.wait_for_selector(Sel.PROPERTIES_TAB, timeout=15_000)
+    await page.click(Sel.PROPERTIES_TAB)
+    await _screenshot(page, "04_properties_tab")
+
+    print("[3] Opening Save drawer...")
+    await _click_span_with_text(page, Sel.SAVE_BTN, "Save")
+    await _screenshot(page, "05_save_drawer")
+
+    print("[4] Selecting 'VDP Select' saved search...")
+    vdp_link: Locator = page.locator(Sel.VDP_SELECT_LINK).filter(has_text="VDP Select").first
+    await vdp_link.wait_for(state="visible", timeout=15_000)
+    await vdp_link.click()
+    await _screenshot(page, "06_vdp_select_loaded")
+
+
+async def dismiss_popup(page: Page) -> None:
+    print("[5] Checking for composite popup...")
+    try:
+        ok_btn: Locator = page.locator(Sel.OK_GOT_IT_BTN).filter(
+            has=page.locator("span", has_text="Okay, got it")
+        ).first
+        await ok_btn.wait_for(state="visible", timeout=5_000)
+        await ok_btn.click()
+        print("    Popup dismissed.")
+    except Exception:
+        print("    No popup found, continuing.")
+
+
+async def navigate_to_analytics_data(page: Page) -> None:
+    print("[6] Clicking Analytics tab...")
+    await page.wait_for_selector(Sel.ANALYTICS_TAB, timeout=15_000)
+    await page.click(Sel.ANALYTICS_TAB)
+
+    print("[7] Clicking Data sub-tab...")
+    await page.wait_for_selector(Sel.DATA_TAB, timeout=15_000)
+    await page.click(Sel.DATA_TAB)
+    await _screenshot(page, "07_analytics_data_tab")
+
+
+async def export_for_period(page: Page, period: str, output_path: Path) -> None:
+    print(f"    Setting period to '{period}'...")
+    combobox: Locator = page.locator(Sel.PERIOD_COMBOBOX)
+    await combobox.wait_for(state="visible", timeout=10_000)
+    await combobox.triple_click()
+    await combobox.fill(period)
+    await page.locator(f"[role='option']:has-text('{period}')").first.click()
+    await _screenshot(page, f"08_{period.lower()}_period_set")
+
+    print(f"    Clicking Export for {period}...")
+    await _click_span_with_text(page, Sel.EXPORT_BTN, "Export")
+
+    print("    Clicking 'Data Export' menu item...")
+    data_export: Locator = page.locator(Sel.DATA_EXPORT_ITEM).filter(has_text="Data Export").first
+    await data_export.wait_for(state="visible", timeout=10_000)
+
+    async with page.expect_download(timeout=60_000) as dl_info:
+        await data_export.click()
+
+    download = await dl_info.value
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    await download.save_as(str(output_path))
+    print(f"    Saved -> {output_path}")
+    _validate_export(output_path)
+
+
+# ---------------------------------------------------------------------------
+# Not yet implemented — placeholders so this file stays the single source
+# of truth for "what covers what," rather than scattering TODOs elsewhere.
+# ---------------------------------------------------------------------------
+
+async def export_daily_segmentation(page: Page) -> None:
+    raise NotImplementedError(
+        "Daily segmentation export navigation has not been observed live yet. "
+        "Needs a walkthrough (Chrome, with John logged in) before this can be written."
+    )
+
+
+async def export_monthly_segmentation(page: Page) -> None:
+    raise NotImplementedError(
+        "Monthly segmentation export navigation has not been observed live yet."
+    )
+
+
+async def export_participation(page: Page) -> None:
+    raise NotImplementedError(
+        "Participation export navigation has not been observed live yet."
+    )
+
+
+async def export_market_report_pdf(page: Page) -> None:
+    raise NotImplementedError(
+        "Newport Beach/Dana Point Hospitality Submarket Report PDF is almost "
+        "certainly generated from a different part of the site than the "
+        "Analytics > Data grid (a Reports library, most likely), not yet located."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Main orchestrator
+# ---------------------------------------------------------------------------
+
+async def main() -> None:
+    _fail_if_no_credentials()
+
+    print("=" * 60)
+    print("  CoStar Portal Fetch (headless) — Daily + Monthly")
+    print("=" * 60)
+
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=HEADLESS)
+        context = await browser.new_context(accept_downloads=True)
+        page = await context.new_page()
+
+        try:
+            await login(page)
+            await navigate_to_vdp_select(page)
+            await dismiss_popup(page)
+            await navigate_to_analytics_data(page)
+
+            print("\n-- Daily Export --")
+            await export_for_period(page, "Daily", OUTPUT_DIR / f"daily_{TODAY_TAG}.xlsx")
+
+            print("\n-- Monthly Export --")
+            await export_for_period(page, "Monthly", OUTPUT_DIR / f"monthly_{TODAY_TAG}.xlsx")
+
+            print("\n" + "=" * 60)
+            print("  Daily and Monthly exports complete.")
+            print("  Segmentation, participation, and the PDF market report")
+            print("  were NOT attempted (navigation not yet mapped).")
+            print("=" * 60)
+
+        except Exception as exc:
+            print(f"\n[ERROR] {exc}")
+            await _screenshot(page, "99_error_final_state")
+            raise
+        finally:
+            await context.close()
+            await browser.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

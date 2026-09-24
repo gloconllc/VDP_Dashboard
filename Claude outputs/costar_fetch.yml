@@ -1,0 +1,149 @@
+# ============================================================================
+# VDP Analytics — CoStar Fetch (GitHub Actions)
+# ============================================================================
+#
+# ADDED 2026-09-21. This is the piece str_playwright_automation.py/
+# fetch_costar_data.py never had: an unattended run that logs into CoStar
+# itself (headless Playwright, scripts/fetch_costar_portal.py), rather than
+# reading whatever John already dropped into data/costar/. costar_sync.yml
+# stays as-is for "reload whatever is already there"; this workflow is the
+# new "go get new data first" step upstream of it.
+#
+# SCOPE AS OF THIS BUILD: Daily and Monthly only. Daily/monthly
+# segmentation, participation, and the PDF market report are not yet
+# implemented (see fetch_costar_portal.py's docstring for why) — running
+# this now will not fetch those four, only reload whatever old copies of
+# them already sit in data/costar/, same as costar_sync.yml always did.
+#
+# Every step of the fetch takes a screenshot, uploaded as a build artifact
+# on every run (success or failure), so a failed run can be debugged from
+# its GitHub Actions artifact without anyone needing to be at a keyboard.
+#
+# Triggered by:
+#   - Manually, from the Actions tab ("Run workflow"), for now.
+#   - A future "Fetch CoStar Data Now" admin button, once this is proven
+#     working end to end (deliberately not built yet — sequenced after
+#     this).
+#
+# SECRETS USED:
+#   STR_USERNAME / STR_PASSWORD   — CoStar portal login (same credential
+#                                    already in the project's local .env;
+#                                    add these two as repo secrets with the
+#                                    same names). COSTAR_USER / COSTAR_PASS
+#                                    also works if that's what you named them.
+#   ANTHROPIC_API_KEY             — used by compute_insights.py
+#
+# ============================================================================
+
+name: CoStar Fetch
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  costar-fetch:
+    name: Fetch new CoStar data, reload, redeploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install playwright
+          playwright install --with-deps chromium
+
+      # -----------------------------------------------------------------------
+      # Fetch: log into CoStar and pull the exports that are mapped so far
+      # (Daily, Monthly). Screenshots always saved, uploaded below regardless
+      # of whether this step succeeds.
+      # -----------------------------------------------------------------------
+      - name: Fetch Daily + Monthly from CoStar portal
+        id: fetch
+        continue-on-error: true
+        env:
+          STR_USERNAME: ${{ secrets.STR_USERNAME }}
+          STR_PASSWORD: ${{ secrets.STR_PASSWORD }}
+          COSTAR_USER: ${{ secrets.COSTAR_USER }}
+          COSTAR_PASS: ${{ secrets.COSTAR_PASS }}
+          COSTAR_OUTPUT_DIR: fetched
+          COSTAR_SCREENSHOT_DIR: logs/costar_fetch_screens
+          COSTAR_HEADLESS: "true"
+        run: python scripts/fetch_costar_portal.py
+
+      - name: Upload fetch screenshots (always, for remote debugging)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: costar-fetch-screenshots
+          path: logs/costar_fetch_screens/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Stop here if the fetch failed
+        if: steps.fetch.outcome == 'failure'
+        run: |
+          echo "::error::CoStar fetch failed. Download the costar-fetch-screenshots artifact from this run to see where it stopped. Nothing was moved or reloaded."
+          exit 1
+
+      # -----------------------------------------------------------------------
+      # Move the freshly-fetched files into data/costar/ where the loaders
+      # look for them, same naming convention as a manual export.
+      # -----------------------------------------------------------------------
+      - name: Move fetched files into data/costar/
+        run: |
+          mkdir -p data/costar
+          if [ -d fetched ] && [ "$(ls -A fetched 2>/dev/null)" ]; then
+            mv fetched/* data/costar/
+            echo "Moved: $(ls fetched 2>/dev/null || true)"
+          else
+            echo "::warning::No fetched files found to move."
+          fi
+
+      # -----------------------------------------------------------------------
+      # Reload CoStar data and recompute insights, same steps costar_sync.yml
+      # already runs, kept inline here so this workflow is self-contained.
+      # -----------------------------------------------------------------------
+      - name: Reload CoStar data + insights
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python scripts/load_costar_reports.py || true
+          python scripts/load_costar_market_daily.py || true
+          python scripts/load_costar_segmentation.py || true
+          python scripts/compute_insights.py
+          python scripts/optimize_db.py || true
+          python scripts/build_table_relationships.py || true
+
+      # -----------------------------------------------------------------------
+      # Commit and push straight to main — Railway auto-redeploys from main.
+      # -----------------------------------------------------------------------
+      - name: Commit updated data to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/analytics.sqlite
+          git add data/costar/ 2>/dev/null || true
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit — CoStar data is already up to date."
+          else
+            RUN_DATE=$(date -u +"%Y-%m-%d")
+            git commit -m "chore: CoStar fetch ${RUN_DATE} [automated]"
+            git push origin main
+            echo "Changes committed and pushed to main."
+          fi

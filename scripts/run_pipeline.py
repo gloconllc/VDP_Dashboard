@@ -17,10 +17,9 @@ Pipeline steps:
    2. load_str_monthly_sqlite.py  — ingest STR monthly export   → fact_str_metrics
    3. compute_kpis.py             — pivot STR                   → kpi_daily_summary, kpi_compression_quarterly
    4. load_datafy_reports.py      — Datafy visitor economy CSVs → 17 datafy_* tables (skip-safe)
-   4a. load_datafy_advertising.py — Datafy Advertising campaign performance CSVs → 6 datafy_advertising_* tables (skip-safe)
    5. load_costar_reports.py      — CoStar market data          → 7 costar_* tables (skip-safe)
    5a. load_costar_market_daily.py — CoStar raw submarket export (daily_costar.xlsx/monhtly_costar.xlsx) → costar_market_daily, costar_market_monthly (skip-safe)
-   5b. load_costar_segmentation.py — CoStar Transient/Group/Contract segment export + Participation roster → costar_market_daily_segment, costar_market_monthly_segment, costar_participation (skip-safe)
+   5b. load_costar_segmentation.py — CoStar segment (Transient/Group/Contract) + participation roster → costar_market_daily_segment, costar_market_monthly_segment, costar_participation (skip-safe)
    6. compute_insights.py         — AI insights engine          → insights_daily (FAIL-FAST)
    7. load_zartico_reports.py     — Zartico historical PDFs     → 8 zartico_* tables (skip-safe)
    8. fetch_vdp_events.py         — VDP event calendar scraper  → vdp_events (skip-safe)
@@ -128,17 +127,14 @@ STEPS = [
     ("load_str_translation", os.path.join(BASE_DIR, "load_str_translation_table.py"), False),
     ("compute_kpis",      os.path.join(BASE_DIR, "compute_kpis.py"),            True),
     ("load_datafy",       os.path.join(BASE_DIR, "load_datafy_reports.py"),     False),
-    # Datafy's separate "Advertising" campaign-performance export family (impressions, clicks,
-    # spend, CTR, ROAS, attribution groups, top markets, tactic + line-item performance).
-    # Independent tables from load_datafy_reports.py; order between them doesn't matter (added 2026-09-08).
-    ("load_datafy_advertising", os.path.join(BASE_DIR, "load_datafy_advertising.py"), False),
     ("load_costar",           os.path.join(BASE_DIR, "load_costar_reports.py"),     False),
     # CoStar's raw submarket HospitalityDataGrid export (daily_costar.xlsx / monhtly_costar.xlsx)
     # — current, higher-frequency than the PDF-parsed costar_monthly_performance table above.
     ("load_costar_market_daily", os.path.join(BASE_DIR, "load_costar_market_daily.py"), False),
-    # CoStar's companion Transient/Group/Contract segment export + Participation roster
-    # (added 2026-09-08). Must run after load_costar_market_daily since both read the
-    # same data/costar/ drop; independent tables so ordering between them doesn't matter.
+    # CoStar segment (Transient/Group/Contract) breakdown + property participation roster.
+    # Added 2026-09-08 but never wired into this STEPS list until now (2026-09-19) — it feeds
+    # costar_market_daily_segment / costar_participation, which the CoStar Segmentation page
+    # (dashboard/pages.py) and Group tab (dashboard/components_group.py) both read from.
     ("load_costar_segmentation", os.path.join(BASE_DIR, "load_costar_segmentation.py"), False),
     # U.S. Travel Association national benchmarks (group + business travel + traveler types)
     # Seeds hardcoded 2024 benchmarks + parses any PDFs in data/us_travel/.

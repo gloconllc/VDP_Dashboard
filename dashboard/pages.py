@@ -63,20 +63,14 @@ ICONS = {
     "intelligence": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 6h6v6"/></svg>',
     "stakeholder": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16.5 11.5l1.6 1.6 3-3.2"/></svg>',
     "brain_status": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 7 4-14 2 7h6"/></svg>',
-    "advertising": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4a1 1 0 0 0 1 1h3l5 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M16 8a4 4 0 0 1 0 8"/><path d="M19 5a8 8 0 0 1 0 14"/></svg>',
-    "costar_segmentation": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>',
 }
 
 # Which of the 12 topic pages belongs to which of the 4 top-level nav items,
 # in display order. "overview" is a standalone 5th item with no sub-pages.
-# "advertising" and "costar_segmentation" (added 2026-09-10) are not yet
-# reachable from a live entry point, see render_page()'s docstring, but are
-# kept in this same structure so they pick up top-nav/sub-nav/breadcrumb
-# wiring automatically once something does call render_page() for them.
 PAGE_CATEGORIES = {
     "hotel_operations": ["occupancy", "rate_strategy", "revenue", "compression"],
-    "visitor_economy": ["visitor_markets", "spend", "stay", "group", "advertising"],
-    "strategic_planning": ["events", "intelligence", "stakeholder", "brain_status", "costar_segmentation"],
+    "visitor_economy": ["visitor_markets", "spend", "stay", "group"],
+    "strategic_planning": ["events", "intelligence", "stakeholder", "brain_status"],
 }
 PAGE_TO_CATEGORY = {p: cat for cat, plist in PAGE_CATEGORIES.items() for p in plist}
 CATEGORY_LABELS = {
@@ -97,8 +91,6 @@ PAGE_LABELS = {
     "intelligence": "Market Intelligence",
     "stakeholder": "Stakeholder Brief",
     "brain_status": "Brain Status",
-    "advertising": "Ad Performance",
-    "costar_segmentation": "Business Mix",
 }
 ALL_PAGE_KEYS = ["overview"] + list(PAGE_TO_CATEGORY.keys())
 
@@ -1069,104 +1061,6 @@ def page_visitor_markets(df_dfy: pd.DataFrame, df_dma: pd.DataFrame) -> None:
     ])
 
 
-def page_datafy_advertising(ads_kpis: dict | None, df_markets: pd.DataFrame, df_tactics: pd.DataFrame) -> None:
-    """Page: Ad Performance. Source: Datafy's separate paid-media campaign
-    export, distinct from the visitor-economy geo-fencing tables the rest of
-    this tier uses. datafy_advertising_kpis + datafy_advertising_overview
-    (load_datafy_advertising_kpis) for the impressions/clicks/spend/ROAS
-    snapshot, datafy_advertising_top_markets (load_datafy_advertising_markets_df)
-    for trip-share by DMA, datafy_advertising_tactic_performance
-    (load_datafy_advertising_tactics_df) for attribution rate by tactic.
-    Added 2026-09-10 alongside the six new datafy_advertising_* tables; not
-    yet reachable from a live entry point, see render_page()'s docstring."""
-    _hero("Ad <span>Performance</span>",
-          "Visitor Economy &nbsp;·&nbsp; Datafy Advertising Campaign Performance")
-    _framing(
-        "Visitor Markets shows where trips are already coming from. This page shows what the paid-media "
-        "campaign is doing to grow that base, which markets it is reaching, which tactics are actually "
-        "driving attributed trips, and whether the spend is paying for itself."
-    )
-
-    if not ads_kpis:
-        st.warning("No Datafy Advertising campaign data loaded yet (datafy_advertising_kpis).")
-        return
-
-    snapshot = ads_kpis.get("snapshot_date", "the latest snapshot")
-    impressions = ads_kpis.get("total_impressions")
-    clicks = ads_kpis.get("total_clicks")
-    spend = ads_kpis.get("total_spend_usd")
-    roas = ads_kpis.get("est_roas")
-
-    imp_str = f"{impressions:,.0f}" if pd.notna(impressions) else "N/A"
-    clk_str = f"{clicks:,.0f}" if pd.notna(clicks) else "N/A"
-    spend_str = _fmt_money(spend)
-    roas_str = f"${roas:.2f} : $1" if pd.notna(roas) else "N/A"
-
-    top_market_str, top_market_share = "N/A", "N/A"
-    if not df_markets.empty:
-        top_row = df_markets.sort_values("trip_share_pct", ascending=False).iloc[0]
-        top_market_str = top_row["dma"]
-        top_market_share = f"{top_row['trip_share_pct']:.1f}%"
-
-    top_tactic_str, top_tactic_rate = "N/A", "N/A"
-    if not df_tactics.empty:
-        top_tac_row = df_tactics.sort_values("attribution_rate_pct", ascending=False).iloc[0]
-        top_tactic_str = top_tac_row["tactic"]
-        top_tactic_rate = f"{top_tac_row['attribution_rate_pct']:.2f}%"
-
-    _headline(
-        "advertising", "Ad Performance", roas_str,
-        f"estimated ROAS, campaign as of {snapshot}",
-        f"The campaign delivered {imp_str} impressions and {clk_str} clicks against {spend_str} in spend. "
-        f"{top_market_str} leads trip share at {top_market_share}, and {top_tactic_str} leads attribution "
-        f"rate by tactic at {top_tactic_rate}.",
-    )
-
-    _kpis([
-        ("Impressions", imp_str, "", "advertising", f"Datafy Advertising, {snapshot}"),
-        ("Clicks", clk_str, "", "advertising", f"Datafy Advertising, {snapshot}"),
-        ("Spend", spend_str, "", "advertising", f"Datafy Advertising, {snapshot}"),
-        ("Est. ROAS", roas_str, "", "advertising", f"Datafy Advertising, {snapshot}"),
-    ])
-
-    c1, c2 = st.columns(2)
-    with c1:
-        st.subheader("Top Markets by Trip Share")
-        if not df_markets.empty:
-            mkt_plot = df_markets.sort_values("trip_share_pct", ascending=True)
-            fig = go.Figure([go.Bar(y=mkt_plot["dma"], x=mkt_plot["trip_share_pct"],
-                                     orientation="h", marker_color=CATEGORICAL[0])])
-            fig.update_layout(height=300, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="% of Trips")
-            _render_chart(fig)
-        else:
-            st.info("No advertising top-markets data loaded yet (datafy_advertising_top_markets).")
-
-    with c2:
-        st.subheader("Attribution Rate by Tactic")
-        if not df_tactics.empty:
-            tac_plot = df_tactics.sort_values("attribution_rate_pct", ascending=False)
-            colors = [CATEGORICAL[(i + 1) % len(CATEGORICAL)] for i in range(len(tac_plot))]
-            fig = go.Figure([go.Bar(x=tac_plot["tactic"], y=tac_plot["attribution_rate_pct"],
-                                     marker_color=colors)])
-            fig.update_layout(height=300, margin=dict(l=0, r=0, t=10, b=0), yaxis_title="Attribution Rate %")
-            _render_chart(fig)
-        else:
-            st.info("No advertising tactic-performance data loaded yet (datafy_advertising_tactic_performance).")
-
-    st.markdown(f"""
-    **Next Best Actions**
-    1. **Protect budget for {top_market_str}**. It leads trip share at {top_market_share} of attributed trips.
-    2. **Shift creative and budget weight toward {top_tactic_str}**, the top-performing tactic at {top_tactic_rate} attribution.
-    3. **Track ROAS ({roas_str}) alongside Spend Pathways** to see whether campaign-driven visitors are also higher-spend visitors.
-    """)
-
-    _nav_row([
-        ("Visitor Markets", "visitor_markets", "adv_to_mkt"),
-        ("Spend Pathways", "spend", "adv_to_spend"),
-        ("Market Intelligence", "intelligence", "adv_to_intel"),
-    ])
-
-
 def page_spend_pathways(df_dfy: pd.DataFrame, df_spend: pd.DataFrame) -> None:
     """Page 6: Spend Pathways. Source: datafy_overview_category_spending
     (load_datafy_spending) for category share, datafy_overview_kpis for the
@@ -1617,7 +1511,17 @@ def page_market_intelligence(df_costar: pd.DataFrame, df_compset: pd.DataFrame,
     (load_costar_snapshot, filtered to annual report_period rows) for the
     Newport Beach/Dana Point submarket trend. The old "external festival
     calendar" chart had no backing table (no competitor-city attendance data
-    exists in this DB) and is replaced with this real regional trend."""
+    exists in this DB) and is replaced with this real regional trend.
+
+    NOTE (2026-09-19): no real CoStar export carries per-property MPI/ARI/RGI
+    data (full audit: vdp_costar_data_audit.md). Whichever loader eventually
+    populates the df_costar argument for this page must NOT query
+    costar_competitive_set, that table is a documented hardcoded placeholder
+    (see load_costar_reports.py). Pass an empty DataFrame instead, matching
+    components_group.py's _load_competitive_set, the rgi_avg block below
+    already degrades to "N/A" on an empty df, no fabricated RGI is shown.
+    Per Heather, only Newport Beach/Dana Point CoStar data is ever shown on
+    this page, never Orange County or United States."""
     _hero("Market <span>Intelligence</span>",
           "Strategic Planning &nbsp;·&nbsp; CoStar Comp Set &nbsp;·&nbsp; STR 6-Market Comparison")
     _framing(
@@ -1718,112 +1622,6 @@ def page_market_intelligence(df_costar: pd.DataFrame, df_compset: pd.DataFrame,
         ("Rate Strategy", "rate_strategy", "intel_to_rate"),
         ("Visitor Markets", "visitor_markets", "intel_to_mkt"),
         ("Compression Calendar", "compression", "intel_to_comp"),
-    ])
-
-
-def page_costar_segmentation(df_seg: pd.DataFrame, participation: dict | None) -> None:
-    """Page: Business Mix. Source: CoStar's companion segmented submarket
-    export, costar_market_daily_segment (load_costar_segment_mix_df),
-    averaged to a month-by-segment Transient/Group/Contract series, plus the
-    property participation roster behind the comp set, costar_participation
-    (load_costar_participation_summary, pinned to the latest snapshot AND
-    period_month so property/room counts don't double up across the table's
-    per-property-per-month rows). Complements Group Demand, which benchmarks
-    group mix against a regional standard; this page shows the comp set's
-    own real segment mix and how it has moved month to month. Added
-    2026-09-10 alongside the new costar_market_daily_segment/
-    costar_market_monthly_segment/costar_participation tables; not yet
-    reachable from a live entry point, see render_page()'s docstring."""
-    _hero("Business <span>Mix</span>",
-          "Strategic Planning &nbsp;·&nbsp; CoStar Transient / Group / Contract Segmentation")
-    _framing(
-        "RGI and occupancy say how the comp set is doing overall. This page splits that demand into "
-        "Transient, Group and Contract business so a shift in mix, not just a shift in rate, shows up "
-        "before it reaches the group-displacement conversation on Group Demand."
-    )
-
-    if df_seg.empty:
-        st.warning("No CoStar segmentation data loaded yet (costar_market_daily_segment).")
-        return
-
-    seg_colors = {"Transient": CATEGORICAL[0], "Group": CATEGORICAL[1], "Contract": CATEGORICAL[3]}
-    latest_month = df_seg["month"].max()
-    latest_mix = df_seg[df_seg["month"] == latest_month].sort_values("avg_demand", ascending=False)
-    total_demand = latest_mix["avg_demand"].sum()
-
-    lead_seg, lead_pct = "N/A", "N/A"
-    if total_demand and not latest_mix.empty:
-        lead_row = latest_mix.iloc[0]
-        lead_seg = lead_row["segment"]
-        lead_pct = f"{lead_row['avg_demand'] / total_demand * 100:.0f}%"
-
-    roster_sentence = ""
-    if participation:
-        roster_sentence = (
-            f" The comp set behind this reading is {participation['n_properties']} participating properties"
-            + (f", {participation['n_rooms']:,} rooms" if participation.get("n_rooms") else "")
-            + f", as of the {participation['period_month']} reporting month."
-        )
-
-    _headline(
-        "costar_segmentation", "Business Mix", lead_pct,
-        f"{lead_seg} share of demand, {latest_month}",
-        f"{lead_seg} leads the comp set's business mix at {lead_pct} of average daily demand in {latest_month}."
-        f"{roster_sentence}",
-    )
-
-    if total_demand:
-        kpi_cards = []
-        for row in latest_mix.itertuples():
-            pct = f"{row.avg_demand / total_demand * 100:.0f}%"
-            kpi_cards.append((row.segment, pct, "of demand", "costar_segmentation", f"CoStar, {latest_month}"))
-        while len(kpi_cards) < 3:
-            kpi_cards.append(("", "", "", "", ""))
-        if participation:
-            rooms_str = f", {participation['n_rooms']:,} rooms" if participation.get("n_rooms") else ""
-            kpi_cards.append((
-                "Comp Set", f"{participation['n_properties']} properties", rooms_str.strip(", "),
-                "costar_segmentation", f"CoStar, {participation['period_month']}",
-            ))
-        _kpis(kpi_cards)
-
-    c1, c2 = st.columns(2)
-    with c1:
-        st.subheader("Business Mix Trend")
-        fig = go.Figure()
-        for seg in ("Transient", "Group", "Contract"):
-            seg_slice = df_seg[df_seg["segment"] == seg]
-            if seg_slice.empty:
-                continue
-            fig.add_trace(go.Bar(x=seg_slice["month"], y=seg_slice["avg_demand"], name=seg,
-                                  marker_color=seg_colors.get(seg)))
-        fig.update_layout(barmode="stack", height=300, margin=dict(l=0, r=0, t=10, b=0),
-                           yaxis_title="Avg. Daily Demand (Room-Nights)")
-        _render_chart(fig)
-
-    with c2:
-        st.subheader(f"Latest Month Mix, {latest_month}")
-        if total_demand:
-            fig = go.Figure([go.Pie(
-                labels=latest_mix["segment"], values=latest_mix["avg_demand"], hole=0.55,
-                marker=dict(colors=[seg_colors.get(s, CATEGORICAL[0]) for s in latest_mix["segment"]]),
-            )])
-            fig.update_layout(height=300, margin=dict(l=0, r=0, t=10, b=0))
-            _render_chart(fig)
-        else:
-            st.info("No demand recorded for the latest segmented month.")
-
-    st.markdown(f"""
-    **Next Best Actions**
-    1. **Watch {lead_seg}'s {lead_pct} share of demand** for month-over-month drift, a mix shift usually shows up here before it shows up in rate.
-    2. **Cross-check this comp-set mix against Group Demand's regional benchmark** to see whether Dana Point is tracking the broader market or diverging from it.
-    3. **Confirm the roster stays current**{f" ({participation['n_properties']} properties tracked as of {participation['period_month']})" if participation else ""}, a shrinking comp set changes what this mix actually represents.
-    """)
-
-    _nav_row([
-        ("Group Demand", "group", "seg_to_group"),
-        ("Market Intelligence", "intelligence", "seg_to_intel"),
-        ("Rate Strategy", "rate_strategy", "seg_to_rate"),
     ])
 
 
@@ -2303,20 +2101,7 @@ def render_page(page_name: str, data: dict) -> None:
     short name (see the call site in app.py, just above `render_page(...)`):
         kpi, dfy, comp, str, dma, spend, group, events, zfe, zartico_impact,
         costar, compset, costar_snap, table_counts, log, insights,
-        travel_types, los, ads_kpis, ads_markets, ads_tactics, costar_seg,
-        costar_participation
-
-    ads_kpis/ads_markets/ads_tactics and costar_seg/costar_participation
-    (added 2026-09-10, for the "advertising" and "costar_segmentation" pages)
-    have no such call site yet: no code in this repo currently builds this
-    `data` dict or calls render_page() at all (see DASHBOARD_RESTRUCTURING.md,
-    this multi-page layout has not shipped; app.py's live Classic View renders
-    its own charts directly and never imports this module). These two pages
-    are wired into PAGE_CATEGORIES/render_page() now so they are ready the
-    day something does call render_page(), using app.py's
-    load_datafy_advertising_kpis/_markets_df/_tactics_df and
-    load_costar_segment_mix_df/load_costar_participation_summary as the
-    source for these five keys.
+        travel_types, los
     """
     global _CURRENT_PAGE
     _CURRENT_PAGE = page_name if page_name in ALL_PAGE_KEYS else "overview"
@@ -2339,11 +2124,6 @@ def render_page(page_name: str, data: dict) -> None:
     df_insights = data.get("insights", pd.DataFrame())
     df_travel_types = data.get("travel_types", pd.DataFrame())
     df_los = data.get("los", pd.DataFrame())
-    ads_kpis = data.get("ads_kpis")
-    df_ads_markets = data.get("ads_markets", pd.DataFrame())
-    df_ads_tactics = data.get("ads_tactics", pd.DataFrame())
-    df_costar_seg = data.get("costar_seg", pd.DataFrame())
-    costar_participation = data.get("costar_participation")
 
     # Main-page period filter: rendered above the hero on the three pages
     # whose trend charts it actually re-slices (see _PERIOD_PAGES). Owner
@@ -2380,10 +2160,6 @@ def render_page(page_name: str, data: dict) -> None:
         page_stakeholder_brief(df_kpi, df_comp, df_dfy, df_spend, df_group, df_zfe)
     elif page_name == "brain_status":
         page_brain_status(table_counts, df_log, df_kpi, df_dfy)
-    elif page_name == "advertising":
-        page_datafy_advertising(ads_kpis, df_ads_markets, df_ads_tactics)
-    elif page_name == "costar_segmentation":
-        page_costar_segmentation(df_costar_seg, costar_participation)
     else:
         st.title("Dana Point PULSE")
         st.markdown("Select a page from the menu.")

@@ -95,10 +95,13 @@ def _photo_data_uri(filename: str) -> str:
 # brand hex values, so this palette is grounded in their real imagery instead.
 TEAL = "#1D6E86"
 TEAL_DK = "#123C4A"
+TEAL_DEEP = "#0E4B5C"
 TEAL_LT = "#8FC4D6"
 MAROON = "#A8461F"
 MAROON_LT = "#E08A54"
 SLATE = "#9C9186"
+INK_BODY = "#1E293B"
+INK_4 = "#94A3B8"
 
 # Benchmark figures (industry STR/CBRE benchmarks; no live STR group-segment
 # feed exists yet -- see CLAUDE.md "Group Business Estimate" methodology).
@@ -146,7 +149,7 @@ def _bar_chart(labels, series, colors, ylabel, figsize=(4.6, 2.4), legend=False,
         bars = ax.bar(offs, vals, width=width, color=color, label=name)
         if label_fmt:
             ax.bar_label(bars, labels=[label_fmt(v) for v in vals],
-                          fontsize=9, fontweight="bold", color="#1E293B", padding=2)
+                          fontsize=9, fontweight="bold", color=INK_BODY, padding=2)
     ax.set_xticks(list(x))
     ax.set_xticklabels(labels, fontsize=10.5)
     ax.set_ylabel(ylabel, fontsize=10.5)
@@ -167,7 +170,7 @@ def _dual_axis_bar(labels, occ_vals, revpar_vals):
     width = 0.35
     bars1 = ax1.bar([xi - width / 2 for xi in x], occ_vals, width=width, color=TEAL, label="Occupancy %")
     ax1.bar_label(bars1, labels=[f"{v:.1f}%" for v in occ_vals], fontsize=9, fontweight="bold",
-                   color="#0E4B5C", padding=2)
+                   color=TEAL_DEEP, padding=2)
     ax1.set_ylabel("Occupancy %", fontsize=10.5)
     ax1.set_xticks(list(x))
     ax1.set_xticklabels(labels, fontsize=11)
@@ -175,7 +178,7 @@ def _dual_axis_bar(labels, occ_vals, revpar_vals):
     ax2 = ax1.twinx()
     bars2 = ax2.bar([xi + width / 2 for xi in x], revpar_vals, width=width, color=TEAL_LT, label="RevPAR $")
     ax2.bar_label(bars2, labels=[f"${v:,.0f}" for v in revpar_vals], fontsize=9, fontweight="bold",
-                   color="#0E4B5C", padding=2)
+                   color=TEAL_DEEP, padding=2)
     ax2.set_ylabel("RevPAR $", fontsize=10.5)
     ax2.set_ylim(0, max(revpar_vals, default=0) * 1.25 if revpar_vals else 1)
     ax1.tick_params(labelsize=9.5)
@@ -221,7 +224,7 @@ def _donut_chart(labels, values, colors, figsize=(3, 3)):
         values, colors=colors, startangle=90,
         wedgeprops={"width": 0.42, "linewidth": 1, "edgecolor": "white"},
         autopct="%1.0f%%", pctdistance=0.80,
-        textprops={"fontsize": 9.5, "fontweight": "bold", "color": "#1E293B"},
+        textprops={"fontsize": 9.5, "fontweight": "bold", "color": INK_BODY},
     )
     ax.legend(wedges, labels, loc="lower center", bbox_to_anchor=(0.5, -0.25),
               fontsize=9, frameon=False, ncol=1)
@@ -236,7 +239,7 @@ def _hbar_chart(labels, values, color, xlabel, figsize=(6.4, 3.6), label_fmt=Non
     bars = ax.barh(list(y), values, color=color)
     fmt = label_fmt or (lambda v: f"{v:.1f}%")
     ax.bar_label(bars, labels=[fmt(v) for v in values], fontsize=9, fontweight="bold",
-                 color="#1E293B", padding=3)
+                 color=INK_BODY, padding=3)
     ax.set_yticks(list(y))
     ax.set_yticklabels(labels, fontsize=10)
     ax.invert_yaxis()
@@ -380,7 +383,7 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
     fig, ax = plt.subplots(figsize=(6.2, 4.6))
     compset_bars = ax.bar(compset_labels, compset_vals, color=compset_colors)
     ax.bar_label(compset_bars, labels=[f"${v:,.0f}" for v in compset_vals], fontsize=9,
-                 fontweight="bold", color="#1E293B", padding=2)
+                 fontweight="bold", color=INK_BODY, padding=2)
     ax.set_ylabel("RevPAR $", fontsize=10.5)
     ax.tick_params(labelsize=9.5)
     ax.set_xticklabels(compset_labels, fontsize=10, rotation=30, ha="right")
@@ -489,7 +492,7 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
             f'<td class="num strong">${r["revpar_usd"]:,.0f}</td></tr>\n'
         )
     if not property_rows:
-        property_rows = '<tr><td colspan="5" style="text-align:center; color:#94A3B8;">No CoStar segment data for this period</td></tr>'
+        property_rows = f'<tr><td colspan="5" style="text-align:center; color:{INK_4};">No CoStar segment data for this period</td></tr>'
 
     tax_rows = ""
     total_rev = seg["room_revenue_usd"].sum() if not seg.empty else 0
@@ -505,7 +508,7 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
             f'<td class="num">${tbid/1e6:,.2f}M</td><td class="num strong">${tot/1e6:,.2f}M</td></tr>\n'
         )
     if not tax_rows:
-        tax_rows = '<tr><td colspan="5" style="text-align:center; color:#94A3B8;">No CoStar segment data for this period</td></tr>'
+        tax_rows = f'<tr><td colspan="5" style="text-align:center; color:{INK_4};">No CoStar segment data for this period</td></tr>'
 
     # Datafy visitor profile -- prefer the freshest export for each metric.
     # The August 2026 "DynamicHomePage" export set covers 2026-01-01 to

@@ -35,6 +35,11 @@ try:
 except Exception:  # pragma: no cover - defensive on deploy
     section_visuals = None
 
+# Visit Dana Point brand tokens (colors, fonts), local and dependency-free,
+# so unlike section_visuals it's imported unguarded, same as pandas/plotly/
+# streamlit are above.
+import brand_tokens as bt
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 sys.path.insert(0, os.path.join(PROJECT_ROOT, "scripts"))
@@ -802,6 +807,181 @@ def load_datafy_spending_df(limit: int = 8) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+# ---------------------------------------------------------------------------
+# New visuals (added 2026-09-10): CoStar Transient/Group/Contract segmentation
+# + participation roster, and Datafy's separate Advertising campaign export.
+# Loaders follow the same @st.cache_data / get_connection() / try-except
+# pattern as every other loader in this file.
+# ---------------------------------------------------------------------------
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_costar_segment_mix_df(
+    months: float = 12, start_date: str | None = None, end_date: str | None = None
+) -> pd.DataFrame:
+    """Monthly Transient/Group/Contract demand mix from CoStar's companion
+    segmented submarket export (costar_market_daily_segment), averaged to a
+    month-by-segment series so it plots as a clean trend rather than a noisy
+    daily one. Same submarket comp set as the KPIs/tier charts above this,
+    just split by business-mix segment."""
+    try:
+        conn = get_connection()
+        if start_date and end_date:
+            cutoff, latest_date = start_date, end_date
+        else:
+            latest_row = pd.read_sql_query("SELECT MAX(as_of_date) AS d FROM costar_market_daily_segment", conn)
+            latest_date = latest_row.iloc[0]["d"]
+            if not latest_date:
+                return pd.DataFrame()
+            cutoff = (pd.to_datetime(latest_date) - pd.Timedelta(days=30 * months)).strftime("%Y-%m-%d")
+        return pd.read_sql_query(
+            """
+            SELECT strftime('%Y-%m', as_of_date) AS month, segment,
+                   ROUND(AVG(demand), 0) AS avg_demand
+            FROM costar_market_daily_segment
+            WHERE as_of_date >= ? AND as_of_date <= ?
+            GROUP BY month, segment
+            ORDER BY month
+            """,
+            conn, params=(cutoff, latest_date),
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_costar_participation_summary() -> dict | None:
+    """Latest CoStar participation-roster snapshot: how many properties and
+    rooms make up the submarket comp set behind the aggregate CoStar figures
+    above, for the most recent reporting month in that snapshot. The roster
+    table carries one row per property per historical month, so both the
+    snapshot date AND the latest period_month within it must be pinned, or
+    counts double up across months for the same property."""
+    try:
+        conn = get_connection()
+        snap = pd.read_sql_query("SELECT MAX(snapshot_date) AS d FROM costar_participation", conn).iloc[0]["d"]
+        if not snap:
+            return None
+        latest_period = pd.read_sql_query(
+            "SELECT MAX(period_month) AS m FROM costar_participation WHERE snapshot_date = ?",
+            conn, params=(snap,),
+        ).iloc[0]["m"]
+        if not latest_period:
+            return None
+        row = pd.read_sql_query(
+            "SELECT COUNT(DISTINCT building_name) AS n_properties, SUM(rooms) AS n_rooms "
+            "FROM costar_participation WHERE snapshot_date = ? AND period_month = ? AND participating = 1",
+            conn, params=(snap, latest_period),
+        ).iloc[0]
+        if pd.isna(row["n_properties"]) or not row["n_properties"]:
+            return None
+        return {
+            "snapshot_date": snap,
+            "period_month": latest_period,
+            "n_properties": int(row["n_properties"]),
+            "n_rooms": int(row["n_rooms"]) if pd.notna(row["n_rooms"]) else None,
+        }
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_datafy_advertising_kpis() -> dict | None:
+    """Latest snapshot from Datafy's separate Advertising campaign-performance
+    export (paid-media impressions/clicks/spend/ROAS, distinct from the
+    visitor-economy geo-fencing tables above). Merges the campaign-wide KPI
+    snapshot with the ROAS/impact/cost-per-visitor-day overview snapshot;
+    both are point-in-time, one-row tables keyed by snapshot_date."""
+    try:
+        conn = get_connection()
+        kpis = pd.read_sql_query(
+            "SELECT * FROM datafy_advertising_kpis ORDER BY snapshot_date DESC LIMIT 1", conn
+        )
+        overview = pd.read_sql_query(
+            "SELECT * FROM datafy_advertising_overview ORDER BY snapshot_date DESC LIMIT 1", conn
+        )
+        if kpis.empty and overview.empty:
+            return None
+        out: dict = {}
+        if not kpis.empty:
+            out.update(kpis.iloc[0].to_dict())
+        if not overview.empty:
+            out.update(overview.iloc[0].to_dict())
+        return out
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_datafy_advertising_markets_df(limit: int = 8) -> pd.DataFrame:
+    try:
+        conn = get_connection()
+        snap = pd.read_sql_query("SELECT MAX(snapshot_date) AS d FROM datafy_advertising_top_markets", conn).iloc[0]["d"]
+        if not snap:
+            return pd.DataFrame()
+        return pd.read_sql_query(
+            "SELECT dma, trip_share_pct FROM datafy_advertising_top_markets "
+            "WHERE snapshot_date = ? ORDER BY trip_share_pct DESC LIMIT ?",
+            conn, params=(snap, limit),
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_datafy_advertising_tactics_df() -> pd.DataFrame:
+    try:
+        conn = get_connection()
+        snap = pd.read_sql_query(
+            "SELECT MAX(snapshot_date) AS d FROM datafy_advertising_tactic_performance", conn
+        ).iloc[0]["d"]
+        if not snap:
+            return pd.DataFrame()
+        return pd.read_sql_query(
+            "SELECT tactic, attribution_rate_pct FROM datafy_advertising_tactic_performance "
+            "WHERE snapshot_date = ? ORDER BY attribution_rate_pct DESC",
+            conn, params=(snap,),
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_datafy_advertising_summary() -> str:
+    """Plain-text digest of the Datafy paid-media export (impressions, clicks,
+    spend, ROAS, top markets by trip share, attribution by tactic), in the
+    same style as load_datafy_summary() above, so the AI assistant can relate
+    advertising performance to visitor-origin and spending patterns rather
+    than treating it as an unrelated table."""
+    try:
+        kpis = load_datafy_advertising_kpis()
+        if not kpis:
+            return "No Datafy advertising data available."
+        parts = [f"Snapshot date: {kpis.get('snapshot_date', 'unknown')}"]
+        _imp, _clk = kpis.get("total_impressions"), kpis.get("total_clicks")
+        _spend, _roas = kpis.get("total_spend_usd"), kpis.get("est_roas")
+        parts.append(
+            f"Impressions {_imp:,.0f}" if pd.notna(_imp) else "Impressions N/A"
+        )
+        parts.append(f"Clicks {_clk:,.0f}" if pd.notna(_clk) else "Clicks N/A")
+        parts.append(f"Spend ${_spend:,.0f}" if pd.notna(_spend) else "Spend N/A")
+        parts.append(f"Est. ROAS ${_roas:.2f}:$1" if pd.notna(_roas) else "Est. ROAS N/A")
+        markets = load_datafy_advertising_markets_df()
+        if not markets.empty:
+            parts.append(
+                "Top markets by trip share: "
+                + ", ".join(f"{r.dma} {r.trip_share_pct:.1f}%" for r in markets.itertuples())
+            )
+        tactics = load_datafy_advertising_tactics_df()
+        if not tactics.empty:
+            parts.append(
+                "Attribution rate by tactic: "
+                + ", ".join(f"{r.tactic} {r.attribution_rate_pct:.1f}%" for r in tactics.itertuples())
+            )
+        return "\n".join(parts)
+    except Exception:
+        return "Datafy advertising summary unavailable."
+
+
 _MONTH_ABBR_TO_NUM = {
     "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
     "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12,
@@ -851,8 +1031,18 @@ def load_datafy_spending_trend_df(
 
 
 def ask_hotel_partner_ai(
-    question: str, months: float = 24, start_date: str | None = None, end_date: str | None = None
+    question: str, months: float = 24, start_date: str | None = None, end_date: str | None = None,
+    focus: str | None = None,
 ) -> str:
+    """Shared AI-answer engine behind the Intelligence Brief and every
+    per-section "Ask about this data" card. Every call gets the same full
+    context (STR, CoStar submarket + segment mix, Datafy visitor economy,
+    Datafy advertising, recent insights) regardless of which section asked,
+    so an answer scoped to one section can still draw on relationships in
+    the others (e.g. an origins-section question can cite advertising
+    attribution, or a market-performance question can cite visitor spend).
+    `focus` only changes which section the prompt tells Claude to foreground
+    in its answer; it never narrows what data Claude can see."""
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
         return (
@@ -865,22 +1055,37 @@ def ask_hotel_partner_ai(
         return "The AI assistant is temporarily unavailable."
 
     window_desc = f"{start_date} to {end_date}" if start_date and end_date else f"trailing {months} months"
+    focus_line = (
+        f"The question below was asked from the '{focus}' section of the report, so lead with "
+        f"what is most relevant there, but you may and should cite any other table below when it "
+        f"helps explain the answer, since these datasets describe the same destination and are "
+        f"related (e.g. spend by category relates to submarket performance, advertising markets "
+        f"relate to visitor origins, segment mix relates to occupancy).\n\n"
+        if focus else ""
+    )
     system_prompt = f"""You are a helpful tourism data assistant for Dana Point hotel partners \
 and Visit Dana Point staff. Answer using ONLY the data provided below, which \
-covers STR (hotel performance), CoStar (submarket benchmarking), and Datafy \
-(visitor economy) history for Dana Point over the {window_desc}. If \
-the data below does not answer the question, say so plainly rather than \
-guessing or inventing figures. Keep answers concise, specific, and in plain, \
-non-technical language.
+covers STR (hotel performance), CoStar (submarket benchmarking and business-mix \
+segmentation), Datafy (visitor economy and advertising performance) for Dana \
+Point over the {window_desc}. These tables describe one destination, so treat \
+them as related: connect patterns across tables (for example, a spend or \
+occupancy shift alongside a matching advertising or visitor-origin shift) \
+whenever the data supports it, rather than answering from a single table in \
+isolation. If the data below does not answer the question, say so plainly \
+rather than guessing or inventing figures. Keep answers concise, specific, \
+and in plain, non-technical language.
 
-=== STR Monthly History (Occupancy / ADR / RevPAR) ===
+{focus_line}=== STR Monthly History (Occupancy / ADR / RevPAR) ===
 {load_str_monthly_summary(months)}
 
-=== CoStar Submarket History (Newport Beach/Dana Point) ===
+=== CoStar Submarket History (Newport Beach/Dana Point, incl. business-mix segmentation) ===
 {load_costar_summary(months, start_date=start_date, end_date=end_date)}
 
-=== Datafy Visitor Economy Summary ===
+=== Datafy Visitor Economy Summary (origin markets, spending by category) ===
 {load_datafy_summary()}
+
+=== Datafy Advertising Performance (paid media, top markets, tactic attribution) ===
+{load_datafy_advertising_summary()}
 
 === Recent Forward-Looking Insights ===
 {load_recent_insights_summary()}
@@ -896,6 +1101,32 @@ non-technical language.
         return resp.content[0].text if resp.content else "No answer returned."
     except Exception as e:
         return f"The assistant could not answer right now ({type(e).__name__}). Please try again shortly."
+
+
+def render_section_ai_answer(
+    key: str, label: str, question: str, months: float,
+    start_date: str | None, end_date: str | None,
+) -> None:
+    """A small, self-contained 'ask about this section' card, reusing the
+    same ask_hotel_partner_ai() engine and .ai-answer-box styling as the
+    Intelligence Brief lower on the page. Click-to-generate, same as the
+    existing Intelligence Brief pattern: nothing here calls the AI, or
+    changes anything else on the page, until the person clicks the button
+    for this specific section. `question` is shown to the person so they
+    can see exactly what is being asked before they click."""
+    with st.expander(f"\U0001F50D Ask about {label}"):
+        st.caption(f"Question: {question}")
+        if st.button("Get insight for this section", key=f"section_ai_{key}"):
+            with st.spinner("Reading STR, CoStar, and Datafy data..."):
+                answer = ask_hotel_partner_ai(
+                    question, months=months, start_date=start_date, end_date=end_date,
+                    focus=label,
+                )
+            st.markdown(f'<div class="ai-answer-box">{html.escape(answer)}</div>', unsafe_allow_html=True)
+        st.caption(
+            "Draws on STR, CoStar (incl. segmentation), and Datafy (incl. advertising) together, "
+            "for the data window selected above."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1579,9 +1810,9 @@ if not trend_df.empty:
     )
     trend_fig = go.Figure()
     trend_fig.add_trace(go.Scatter(x=trend_df["month"], y=trend_df["occ"], name="Occupancy %",
-                                    line=dict(color="#1D6E86", width=3), yaxis="y1"))
+                                    line=dict(color=bt.TEAL, width=3), yaxis="y1"))
     trend_fig.add_trace(go.Bar(x=trend_df["month"], y=trend_df["adr"], name="ADR ($)",
-                                marker=dict(color="#B45309"), opacity=0.55, yaxis="y2"))
+                                marker=dict(color=bt.AMBER), opacity=0.55, yaxis="y2"))
     trend_fig.update_layout(
         # t=56 (up from 40): the 2-item horizontal legend above the plot
         # (y=1.02) can wrap to two rows on narrow/portrait mobile widths,
@@ -1590,14 +1821,21 @@ if not trend_df.empty:
         # without overlapping.
         height=340, margin=dict(l=10, r=10, t=56, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
+        font=dict(color=bt.INK, family=bt.FONT_SANS),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        yaxis=dict(title="Occupancy %", showgrid=True, gridcolor="#E2E8F0"),
+        yaxis=dict(title="Occupancy %", showgrid=True, gridcolor=bt.BORDER),
         yaxis2=dict(title="ADR ($)", overlaying="y", side="right", showgrid=False),
     )
     st.plotly_chart(trend_fig, use_container_width=True, config={"displayModeBar": False})
 else:
     st.info("STR monthly trend data is not available yet.")
+
+render_section_ai_answer(
+    key="snapshot",
+    label="Performance Snapshot",
+    question="What do occupancy, ADR, and RevPAR show for the selected window, and why?",
+    months=window_months, start_date=range_start_iso, end_date=range_end_iso,
+)
 
 st.divider()
 
@@ -1642,14 +1880,14 @@ if not spend_trend_df.empty:
         )
     spend_trend_fig = go.Figure(go.Scatter(
         x=spend_trend_df["month_label"], y=spend_trend_df["spending_usd"],
-        mode="lines+markers", line=dict(color="#1D6E86", width=3),
+        mode="lines+markers", line=dict(color=bt.TEAL, width=3),
         marker=dict(size=6),
     ))
     spend_trend_fig.update_layout(
         height=260, margin=dict(l=10, r=10, t=20, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
-        yaxis=dict(title="Visitor spend ($)", showgrid=True, gridcolor="#E2E8F0"),
+        font=dict(color=bt.INK, family=bt.FONT_SANS),
+        yaxis=dict(title="Visitor spend ($)", showgrid=True, gridcolor=bt.BORDER),
     )
     st.plotly_chart(spend_trend_fig, use_container_width=True, config={"displayModeBar": False})
     st.caption(
@@ -1723,13 +1961,10 @@ if not markets_df.empty:
             "connector carries the same value, so the heaviest lines are the markets sending "
             "the most spend into the destination. Hover any bubble for its exact share."
         )
-    # markets_df is already ranked largest-share-first and the y-axis below
-    # is reversed, so row order and top-to-bottom draw order match: index 0
-    # (the leading market) gets the first palette color, no reversal needed.
     _mkt_colors = (
         [section_visuals.CATEGORY_COLORS[i % len(section_visuals.CATEGORY_COLORS)]
          for i in range(len(markets_df))]
-        if section_visuals is not None else "#1D6E86"
+        if section_visuals is not None else bt.TEAL
     )
     st.markdown(
         '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:4px;">'
@@ -1747,8 +1982,8 @@ if not markets_df.empty:
         # container instead of clipping.
         height=280, margin=dict(l=10, r=10, t=16, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
-        xaxis=dict(title=f"{top_row['metric']} (%)", showgrid=True, gridcolor="#E2E8F0"),
+        font=dict(color=bt.INK, family=bt.FONT_SANS),
+        xaxis=dict(title=f"{top_row['metric']} (%)", showgrid=True, gridcolor=bt.BORDER),
         yaxis=dict(autorange="reversed"),
     )
     st.plotly_chart(mkt_fig, use_container_width=True, config={"displayModeBar": False})
@@ -1775,7 +2010,7 @@ if not spend_df.empty:
     )
     spend_fig = go.Figure(go.Pie(
         labels=spend_df["category"], values=spend_df["spend_share_pct"], hole=0.55,
-        marker=dict(colors=["#1D6E86", "#123C4A", "#B45309", "#1D9E6F", "#7FD6C4", "#475569", "#94A3B8", "#CBD9DE"]),
+        marker=dict(colors=[bt.TEAL, bt.TEAL_DK, bt.AMBER, bt.GREEN, bt.TEAL_LT_CHART, bt.SLATE, bt.INK_4, bt.RULE]),
     ))
     spend_fig.update_layout(
         # Title moved to the markdown heading above -- see mkt_fig comment
@@ -1783,11 +2018,89 @@ if not spend_df.empty:
         # mobile widths, same fix.
         height=280, margin=dict(l=10, r=10, t=16, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#0B2530", family="-apple-system, Segoe UI, sans-serif"),
+        font=dict(color=bt.INK, family=bt.FONT_SANS),
     )
     st.plotly_chart(spend_fig, use_container_width=True, config={"displayModeBar": False})
 else:
     st.info("Datafy spending data is not available yet.")
+
+# ---------------------------------------------------------------------------
+# Advertising Campaign Performance -- Datafy's separate paid-media export
+# (added 2026-09-10). Distinct source file family from the visitor-origin
+# and spending data above: impressions/clicks/spend/ROAS/attribution, not
+# geo-fencing visitor counts, so it always shows its own latest snapshot
+# rather than following the data-window filter above.
+# ---------------------------------------------------------------------------
+
+adv_kpis = load_datafy_advertising_kpis()
+if adv_kpis:
+    st.markdown(
+        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin: 14px 0 2px;">'
+        "Advertising Campaign Performance</div>", unsafe_allow_html=True,
+    )
+    st.caption(
+        f"Datafy's paid-media campaign export, as of {adv_kpis.get('snapshot_date', 'the latest snapshot')}."
+    )
+    ac1, ac2, ac3, ac4 = st.columns(4)
+    _imp, _clk = adv_kpis.get("total_impressions"), adv_kpis.get("total_clicks")
+    _spend, _roas = adv_kpis.get("total_spend_usd"), adv_kpis.get("est_roas")
+    ac1.metric("Impressions", f"{_imp:,.0f}" if pd.notna(_imp) else "N/A")
+    ac2.metric("Clicks", f"{_clk:,.0f}" if pd.notna(_clk) else "N/A")
+    ac3.metric("Spend", f"${_spend:,.0f}" if pd.notna(_spend) else "N/A")
+    ac4.metric("Est. ROAS", f"${_roas:.2f} : $1" if pd.notna(_roas) else "N/A")
+
+    adv_markets_df = load_datafy_advertising_markets_df()
+    adv_tactics_df = load_datafy_advertising_tactics_df()
+    adv_col1, adv_col2 = st.columns(2)
+    with adv_col1:
+        if not adv_markets_df.empty:
+            st.markdown(
+                '<div style="font-weight:700; font-size:13.5px; color:#0B2530; margin-bottom:2px;">'
+                "Top Markets by Trip Share</div>", unsafe_allow_html=True,
+            )
+            adv_mkt_fig = go.Figure(go.Bar(
+                x=adv_markets_df["trip_share_pct"], y=adv_markets_df["dma"], orientation="h",
+                marker=dict(color=bt.TEAL),
+            ))
+            adv_mkt_fig.update_layout(
+                height=260, margin=dict(l=10, r=10, t=16, b=10),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color=bt.INK, family=bt.FONT_SANS),
+                xaxis=dict(title="Trip share (%)", showgrid=True, gridcolor=bt.BORDER),
+                yaxis=dict(autorange="reversed"),
+            )
+            st.plotly_chart(adv_mkt_fig, use_container_width=True, config={"displayModeBar": False}, key="adv_markets_fig")
+        else:
+            st.info("Advertising top-markets data is not available yet.")
+    with adv_col2:
+        if not adv_tactics_df.empty:
+            st.markdown(
+                '<div style="font-weight:700; font-size:13.5px; color:#0B2530; margin-bottom:2px;">'
+                "Attribution Rate by Tactic</div>", unsafe_allow_html=True,
+            )
+            _tac_colors = [bt.TEAL, bt.AMBER, bt.GREEN, bt.SLATE]
+            adv_tac_fig = go.Figure(go.Bar(
+                x=adv_tactics_df["tactic"], y=adv_tactics_df["attribution_rate_pct"],
+                marker=dict(color=_tac_colors[:len(adv_tactics_df)]),
+            ))
+            adv_tac_fig.update_layout(
+                height=260, margin=dict(l=10, r=10, t=16, b=10),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color=bt.INK, family=bt.FONT_SANS),
+                yaxis=dict(title="Attribution rate (%)", showgrid=True, gridcolor=bt.BORDER),
+            )
+            st.plotly_chart(adv_tac_fig, use_container_width=True, config={"displayModeBar": False}, key="adv_tactics_fig")
+        else:
+            st.info("Advertising tactic-performance data is not available yet.")
+else:
+    st.info("Datafy Advertising campaign data is not available yet.")
+
+render_section_ai_answer(
+    key="origins",
+    label="Visitor Origins & Spend",
+    question="Where are visitors coming from, what are they spending on, and how does advertising performance relate?",
+    months=window_months, start_date=range_start_iso, end_date=range_end_iso,
+)
 
 st.divider()
 
@@ -1853,6 +2166,64 @@ if _mkt_kpis:
         st.caption(trend_caption2)
 else:
     st.info("CoStar submarket data is not available yet.")
+
+# ---------------------------------------------------------------------------
+# CoStar Segmentation -- Transient/Group/Contract business-mix breakdown
+# from CoStar's companion segmented submarket export, plus the property
+# participation roster behind it (added 2026-09-10).
+# ---------------------------------------------------------------------------
+
+seg_df = load_costar_segment_mix_df(window_months, start_date=range_start_iso, end_date=range_end_iso)
+if not seg_df.empty:
+    st.markdown(
+        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin: 14px 0 2px;">'
+        "Business Mix: Transient / Group / Contract</div>", unsafe_allow_html=True,
+    )
+    _seg_colors = {"Transient": bt.TEAL, "Group": bt.AMBER, "Contract": bt.GREEN}
+    seg_latest_month = seg_df["month"].max()
+    latest_mix = seg_df[seg_df["month"] == seg_latest_month]
+    total_demand = latest_mix["avg_demand"].sum()
+    if total_demand:
+        mix_cols = st.columns(len(latest_mix))
+        for col, row in zip(mix_cols, latest_mix.sort_values("avg_demand", ascending=False).itertuples()):
+            col.metric(row.segment, f"{row.avg_demand / total_demand * 100:.0f}% of demand")
+
+    seg_fig = go.Figure()
+    for seg in ("Transient", "Group", "Contract"):
+        seg_slice = seg_df[seg_df["segment"] == seg]
+        if seg_slice.empty:
+            continue
+        seg_fig.add_trace(go.Bar(
+            x=seg_slice["month"], y=seg_slice["avg_demand"], name=seg,
+            marker=dict(color=_seg_colors[seg]),
+        ))
+    seg_fig.update_layout(
+        barmode="stack", height=280, margin=dict(l=10, r=10, t=16, b=10),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color=bt.INK, family=bt.FONT_SANS),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        yaxis=dict(title="Avg. daily demand (room-nights)", showgrid=True, gridcolor=bt.BORDER),
+    )
+    st.plotly_chart(seg_fig, use_container_width=True, config={"displayModeBar": False}, key="costar_seg_mix_fig")
+    st.caption(f"CoStar Transient/Group/Contract segment export, {period_label_display.lower()}, monthly average daily demand by segment.")
+
+    _participation = load_costar_participation_summary()
+    if _participation:
+        st.caption(
+            f"Comp set behind this data: {_participation['n_properties']} participating properties"
+            + (f", {_participation['n_rooms']:,} rooms" if _participation.get("n_rooms") else "")
+            + f", as of the {_participation['period_month']} reporting month "
+            f"(snapshot {_participation['snapshot_date']})."
+        )
+else:
+    st.info("CoStar segmentation data is not available yet.")
+
+render_section_ai_answer(
+    key="market",
+    label="Market Performance",
+    question="How does Dana Point's submarket performance and business mix compare, and what stands out?",
+    months=window_months, start_date=range_start_iso, end_date=range_end_iso,
+)
 
 st.divider()
 
@@ -1957,6 +2328,13 @@ if _top_insight:
         unsafe_allow_html=True,
     )
     st.caption("Source: today's generated insight, drawn from live STR and Datafy data.")
+
+render_section_ai_answer(
+    key="forward",
+    label="Forward Outlook & Group Business",
+    question="What does the forward outlook and group business mix suggest for the weeks ahead?",
+    months=window_months, start_date=range_start_iso, end_date=range_end_iso,
+)
 
 st.divider()
 
@@ -2221,17 +2599,13 @@ if st.query_params.get("admin", "").lower() == "true":
     # STR only, on purpose (2026-08-19): this is a stopgap for as long as
     # Heather is on the Dropbox folder — once she moves to SharePoint this
     # needs a different fetch mechanism (see full_sync.yml's OPEN ITEM note).
-    # CoStar and Datafy are staying manual (local folder, John will specify
-    # the path later), so no button for those yet.
     # -------------------------------------------------------------------
     st.markdown("---")
     st.markdown("#### Admin: STR Data Sync")
     st.caption(
         "Triggers the STR Dropbox sync + reload workflow on GitHub Actions "
         "(str_weekly_sync.yml). Takes 1-2 minutes to run — the dashboard "
-        "shows fresh numbers once it finishes and Railway redeploys. "
-        "CoStar and Datafy stay manual for now (local folder upload), no "
-        "button here yet."
+        "shows fresh numbers once it finishes and Railway redeploys."
     )
     _github_token = os.environ.get("GITHUB_TOKEN", "")
     _github_repo = os.environ.get("GITHUB_REPO", "gloconllc/VDP_Dashboard")
@@ -2263,6 +2637,54 @@ if st.query_params.get("admin", "").lower() == "true":
                             "and takes 1-2 minutes; the live dashboard will "
                             "update automatically once it finishes and "
                             "Railway redeploys."
+                        )
+                    else:
+                        st.error(f"GitHub API returned {_resp.status_code}: {_resp.text[:300]}")
+                except Exception as exc:  # noqa: BLE001
+                    st.error(f"Trigger failed: {exc}")
+
+    # -------------------------------------------------------------------
+    # Admin: on-demand CoStar sync (added 2026-09-19). Same mechanism as the
+    # STR button above, dispatching costar_sync.yml instead — reloads
+    # whatever is currently in data/costar/ (the export drop the Power
+    # Automate flow lands there) rather than fetching from anywhere itself.
+    # -------------------------------------------------------------------
+    st.markdown("---")
+    st.markdown("#### Admin: CoStar Data Sync")
+    st.caption(
+        "Triggers the CoStar reload workflow on GitHub Actions "
+        "(costar_sync.yml) — reloads whatever files are currently in "
+        "data/costar/, recomputes insights, and pushes to main. Takes "
+        "1-2 minutes to run."
+    )
+    if not _github_token:
+        st.warning(
+            "GITHUB_TOKEN is not configured on this deployment. Set a "
+            "fine-grained GitHub PAT (actions:write scope on "
+            f"{_github_repo}) as the GITHUB_TOKEN env var on Railway to "
+            "enable this button."
+        )
+    else:
+        st.caption(f"Will dispatch costar_sync.yml on {_github_repo}@main.")
+        if st.button("Sync CoStar Now"):
+            with st.spinner("Triggering CoStar sync workflow…"):
+                try:
+                    import requests
+                    _resp = requests.post(
+                        f"https://api.github.com/repos/{_github_repo}/actions/workflows/costar_sync.yml/dispatches",
+                        headers={
+                            "Authorization": f"Bearer {_github_token}",
+                            "Accept": "application/vnd.github+json",
+                        },
+                        json={"ref": "main"},
+                        timeout=15,
+                    )
+                    if _resp.status_code == 204:
+                        st.success(
+                            "CoStar sync triggered. It runs on GitHub "
+                            "Actions and takes 1-2 minutes; the live "
+                            "dashboard will update automatically once it "
+                            "finishes and Railway redeploys."
                         )
                     else:
                         st.error(f"GitHub API returned {_resp.status_code}: {_resp.text[:300]}")

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  com.glocon.costar-sync.plist
+
+  Weekly CoStar refresh for VDP Analytics (Dana Point PULSE).
+  Thursday 08:00 America/Los_Angeles, matching the cadence of the existing
+  .github/workflows/str_weekly_sync.yml so STR and CoStar move together.
+
+  launchd uses LOCAL time, so no UTC conversion is needed here (unlike the
+  GitHub Actions cron, which is UTC and therefore reads as 15:00).
+
+  If the Mac is asleep at 08:00, launchd runs the job at next wake. That is
+  the intended behaviour: check_costar_freshness.py tolerates 10 days on the
+  daily tables, so a late run is fine and a missed week is still caught.
+
+  Install:
+      cp deploy/com.glocon.costar-sync.plist ~/Library/LaunchAgents/
+      launchctl load  ~/Library/LaunchAgents/com.glocon.costar-sync.plist
+  Run it once by hand:
+      launchctl start com.glocon.costar-sync
+  Remove:
+      launchctl unload ~/Library/LaunchAgents/com.glocon.costar-sync.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.glocon.costar-sync</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>"$HOME/Library/CloudStorage/OneDrive-VisitAnaheim/Documents/GitHub/VDP_Dashboard/scripts/run_costar_sync.sh"</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>4</integer>
+        <key>Hour</key>
+        <integer>8</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/costar-sync.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/costar-sync.err.log</string>
+</dict>
+</plist>

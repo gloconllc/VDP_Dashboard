@@ -24,17 +24,28 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-TEAL = "#1D6E86"
-TEAL_DK = "#123C4A"
-TEAL_LT = "#7FD6C4"
-AMBER = "#B45309"
-GREEN = "#1D9E6F"
-SLATE = "#475569"
-GRID = "#E2E8F0"
-INK = "#0B2530"
-FONT = "-apple-system, Segoe UI, sans-serif"
+from brand_tokens import (
+    TEAL,
+    TEAL_DK,
+    TEAL_LT_CHART as TEAL_LT,
+    AMBER,
+    GREEN,
+    SLATE,
+    BORDER as GRID,
+    INK,
+    INK_4,
+    RULE,
+    WHITE,
+    FONT_SANS as FONT,
+)
 
-CATEGORY_COLORS = [TEAL, TEAL_DK, AMBER, GREEN, TEAL_LT, SLATE, "#94A3B8", "#CBD9DE"]
+# Brand-token colors reused directly as a categorical set for these small,
+# no-legend section cards (design intent documented in _mini_layout below).
+# Not the same thing as chart_theme.CATEGORICAL, which is validated for
+# contrast/CVD separation as a full-page, legend-carrying chart palette;
+# see chart_theme.py's docstring. Values are unchanged from before this
+# file started importing from brand_tokens.
+CATEGORY_COLORS = [TEAL, TEAL_DK, AMBER, GREEN, TEAL_LT, SLATE, INK_4, RULE]
 
 
 def _mini_layout(fig: go.Figure, height: int = 190) -> go.Figure:
@@ -48,7 +59,7 @@ def _mini_layout(fig: go.Figure, height: int = 190) -> go.Figure:
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color=INK, family=FONT, size=10.5),
         showlegend=False,
-        hoverlabel=dict(bgcolor="#FFFFFF", font_size=11, font_family=FONT),
+        hoverlabel=dict(bgcolor=WHITE, font_size=11, font_family=FONT),
     )
     fig.update_xaxes(showgrid=False, zeroline=False, title=None)
     fig.update_yaxes(showgrid=False, zeroline=False, title=None)
@@ -303,8 +314,8 @@ def _fig_room_split(conn, height: int = 190):
         return None
     fig = go.Figure(go.Pie(
         labels=labels, values=values, hole=0.58, sort=False,
-        marker=dict(colors=[TEAL_DK, TEAL, TEAL_LT], line=dict(color="#FFFFFF", width=1.5)),
-        textinfo="percent", textfont=dict(size=9.5, color="#FFFFFF"),
+        marker=dict(colors=[TEAL_DK, TEAL, TEAL_LT], line=dict(color=WHITE, width=1.5)),
+        textinfo="percent", textfont=dict(size=9.5, color=WHITE),
         hovertemplate="%{label}<br>%{value:,.0f} rooms (%{percent})<extra></extra>",
     ))
     total = row["total_rooms"]
@@ -529,10 +540,10 @@ def _fig_group_mix(conn, height: int = 160):
     fig = go.Figure(go.Bar(
         x=df["occ_pct"], y=["Occupancy mix"] * len(df), orientation="h",
         marker=dict(color=[TEAL_DK, AMBER, TEAL_LT][: len(df)],
-                    line=dict(color="#FFFFFF", width=1)),
+                    line=dict(color=WHITE, width=1)),
         text=[f"{r.label}<br>{r.occ_pct:.1f} pts" for r in df.itertuples()],
         textposition="inside", insidetextanchor="middle",
-        textfont=dict(size=9.5, color="#FFFFFF"),
+        textfont=dict(size=9.5, color=WHITE),
         hovertemplate="%{text}<extra></extra>",
     ))
     fig.update_layout(barmode="stack")
@@ -663,7 +674,7 @@ def build_feeder_market_map(
     # reason: dark ink on a dark teal bubble is unreadable.
     fig.add_trace(ScatterCls(
         lon=[dp_lon], lat=[dp_lat], mode="markers",
-        marker=dict(size=22, color="#FFFFFF"),
+        marker=dict(size=22, color=WHITE),
         hoverinfo="skip", showlegend=False,
     ))
     fig.add_trace(ScatterCls(
@@ -687,7 +698,7 @@ def build_feeder_market_map(
         "paper_bgcolor": "rgba(0,0,0,0)",
         "font": dict(color=INK, family=FONT),
         "showlegend": False,
-        "hoverlabel": dict(bgcolor="#FFFFFF", font_size=12, font_family=FONT),
+        "hoverlabel": dict(bgcolor=WHITE, font_size=12, font_family=FONT),
     }
     fig.update_layout(**layout)
     return fig
