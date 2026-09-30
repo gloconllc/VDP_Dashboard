@@ -15,6 +15,9 @@ Builds two KPI tables from fact_str_metrics (grain='daily', source='STR'):
         is_occ_90    1 if occ_pct >= 90, else 0
       Rows where no prior-year date exists get NULL in the YOY columns.
 
+      data_source  'STR', or 'CoStar' for dates after the newest STR row,
+                   filled from costar_market_daily (same comp set).
+
   kpi_compression_quarterly
       One row per calendar quarter (YYYY-Qn).
       Counts how many days in each quarter exceeded 80% and 90% occupancy.
@@ -64,6 +67,9 @@ MIGRATION_COLUMNS = [
     ("revpar_yoy","REAL"),
     ("is_occ_80", "INTEGER"),
     ("is_occ_90", "INTEGER"),
+    # Which feed each row came from: 'STR' (fact_str_metrics) or 'CoStar'
+    # (costar_market_daily, same comp set, used only past STR's newest date).
+    ("data_source", "TEXT"),
 ]
 
 DDL_KPI_COMPRESSION_QUARTERLY = """
@@ -128,6 +134,71 @@ ORDER BY b.as_of_date;
 """
 
 
+# Same build, but extended FORWARD with CoStar's daily HospitalityDataGrid
+# export (costar_market_daily) for any date after the newest STR daily row.
+#
+# Why this is safe (verified 2026-09-25 against the live DB): CoStar owns STR,
+# and costar_market_daily is the same "VDP Select" comp set delivered through
+# CoStar's portal. On the 738 dates both feeds cover, occupancy matches to
+# 0.1 pt on 733, ADR to $0.50 on 730, RevPAR to $0.50 on 731. The STR daily
+# file on hand stops at 2026-08-01 while the CoStar pull of 2026-09-07 runs to
+# 2026-08-29, so without this the dashboard, the PDF, and the insights engine
+# were all four weeks staler than the data the pipeline had already loaded.
+#
+# Rules: STR always wins. CoStar rows are only used for dates strictly after
+# STR's newest date (never to overwrite or fill interior STR gaps), and every
+# row records which feed it came from in data_source.
+INSERT_KPI_DAILY_SUMMARY_WITH_COSTAR = """
+INSERT INTO kpi_daily_summary (
+    as_of_date, occ_pct, adr, revpar,
+    occ_yoy, adr_yoy, revpar_yoy,
+    is_occ_80, is_occ_90, data_source
+)
+WITH str_base AS (
+    SELECT
+        as_of_date,
+        MAX(CASE WHEN metric_name = 'occ'    THEN metric_value * 100 END) AS occ_pct,
+        MAX(CASE WHEN metric_name = 'adr'    THEN metric_value END)        AS adr,
+        MAX(CASE WHEN metric_name = 'revpar' THEN metric_value END)        AS revpar
+    FROM  fact_str_metrics
+    WHERE grain  = 'daily'
+      AND source = 'STR'
+    GROUP BY as_of_date
+),
+costar_ext AS (
+    SELECT as_of_date, occupancy_pct AS occ_pct, adr_usd AS adr, revpar_usd AS revpar
+    FROM   costar_market_daily
+    WHERE  occupancy_pct IS NOT NULL
+      AND  as_of_date > (SELECT COALESCE(MAX(as_of_date), '0000-00-00') FROM str_base)
+),
+base AS (
+    SELECT as_of_date, occ_pct, adr, revpar, 'STR'    AS data_source FROM str_base
+    UNION ALL
+    SELECT as_of_date, occ_pct, adr, revpar, 'CoStar' AS data_source FROM costar_ext
+)
+SELECT
+    b.as_of_date,
+    b.occ_pct,
+    b.adr,
+    b.revpar,
+    CASE WHEN ly.occ_pct > 0
+         THEN ROUND((b.occ_pct - ly.occ_pct) / ly.occ_pct * 100, 2)
+         END                                         AS occ_yoy,
+    CASE WHEN ly.adr > 0
+         THEN ROUND((b.adr    - ly.adr)    / ly.adr    * 100, 2)
+         END                                         AS adr_yoy,
+    CASE WHEN ly.revpar > 0
+         THEN ROUND((b.revpar - ly.revpar) / ly.revpar * 100, 2)
+         END                                         AS revpar_yoy,
+    CASE WHEN b.occ_pct >= 80 THEN 1 ELSE 0 END     AS is_occ_80,
+    CASE WHEN b.occ_pct >= 90 THEN 1 ELSE 0 END     AS is_occ_90,
+    b.data_source
+FROM  base b
+LEFT  JOIN base ly ON ly.as_of_date = date(b.as_of_date, '-1 year')
+ORDER BY b.as_of_date;
+"""
+
+
 # ---------------------------------------------------------------------------
 # DML — kpi_compression_quarterly
 # ---------------------------------------------------------------------------
@@ -141,8 +212,10 @@ INSERT INTO kpi_compression_quarterly (quarter, days_above_80_occ, days_above_90
 SELECT
     strftime('%Y', as_of_date) || '-Q' ||
         CAST((CAST(strftime('%m', as_of_date) AS INTEGER) + 2) / 3 AS TEXT) AS quarter,
-    SUM(CASE WHEN occ_pct > 80 THEN 1 ELSE 0 END) AS days_above_80_occ,
-    SUM(CASE WHEN occ_pct > 90 THEN 1 ELSE 0 END) AS days_above_90_occ
+    -- >= to match is_occ_80 / is_occ_90 on kpi_daily_summary and the "80%+"
+    -- wording used everywhere these counts are shown (was >, 2026-09-25).
+    SUM(CASE WHEN occ_pct >= 80 THEN 1 ELSE 0 END) AS days_above_80_occ,
+    SUM(CASE WHEN occ_pct >= 90 THEN 1 ELSE 0 END) AS days_above_90_occ
 FROM  kpi_daily_summary
 WHERE occ_pct IS NOT NULL
 GROUP BY quarter
@@ -186,9 +259,25 @@ def build_kpi_daily_summary(cur: sqlite3.Cursor) -> int:
     cur.execute(DELETE_KPI_DAILY_SUMMARY)
     print(f"  [daily 1/2] Deleted {cur.rowcount} existing row(s).")
 
-    cur.execute(INSERT_KPI_DAILY_SUMMARY)
-    inserted = cur.rowcount
-    print(f"  [daily 2/2] Inserted {inserted} row(s) with YOY deltas and compression flags.")
+    has_costar = cur.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='costar_market_daily'"
+    ).fetchone() is not None
+    if has_costar:
+        cur.execute(INSERT_KPI_DAILY_SUMMARY_WITH_COSTAR)
+        inserted = cur.rowcount
+        n_costar = cur.execute(
+            "SELECT COUNT(*), MIN(as_of_date), MAX(as_of_date) FROM kpi_daily_summary "
+            "WHERE data_source = 'CoStar'"
+        ).fetchone()
+        print(f"  [daily 2/2] Inserted {inserted} row(s) with YOY deltas and compression flags.")
+        if n_costar and n_costar[0]:
+            print(f"              {n_costar[0]} of them extend STR forward from CoStar's daily "
+                  f"export ({n_costar[1]} to {n_costar[2]}).")
+    else:
+        cur.execute(INSERT_KPI_DAILY_SUMMARY)
+        inserted = cur.rowcount
+        cur.execute("UPDATE kpi_daily_summary SET data_source = 'STR'")
+        print(f"  [daily 2/2] Inserted {inserted} row(s) with YOY deltas and compression flags.")
 
     return inserted
 

@@ -40,6 +40,31 @@ except Exception:  # pragma: no cover - defensive on deploy
 # streamlit are above.
 import brand_tokens as bt
 
+# The redesigned board view (2026-09-25): window-aware data layer, the
+# deterministic insight engine that writes every section's answers, and the
+# Visit Dana Point components and charts. Guarded like section_visuals so a
+# failure here can never take the PDF report, the Intelligence Brief, notes,
+# or the repository down with it.
+try:
+    import pulse_story
+    import pulse_sections
+    import pulse_ui
+except Exception as _pulse_import_error:  # pragma: no cover - defensive on deploy
+    pulse_story = pulse_sections = pulse_ui = None
+    print(f"[pulse] board view unavailable: {_pulse_import_error}")
+
+# The board surface (2026-09-30): the same Model drawn as one custom component
+# (pulse_board.py + .js + .css) with a photo masthead and hand-built charts.
+# Falls back to the Streamlit-native pulse_sections renderers if the
+# components.v2 API is missing or anything in it fails.
+try:
+    import pulse_board
+    if not pulse_board.available():
+        pulse_board = None
+except Exception as _board_import_error:  # pragma: no cover - defensive on deploy
+    pulse_board = None
+    print(f"[pulse] board surface unavailable: {_board_import_error}")
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 sys.path.insert(0, os.path.join(PROJECT_ROOT, "scripts"))
@@ -74,6 +99,9 @@ st.set_page_config(
     page_title="Dana Point PULSE",
     page_icon="📄",
     layout="wide",
+    # Collapsed so the board uses the full width of a laptop screen; the side
+    # menu is one click away and the brief band carries the data-freshness list.
+    initial_sidebar_state="collapsed",
 )
 
 # Global responsive styles for entire app
@@ -349,6 +377,11 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# Board-view stylesheet: Visit Dana Point tokens as CSS custom properties plus
+# the section, tile, answer, and sidebar components (see pulse_ui.py).
+if pulse_ui is not None:
+    st.markdown(pulse_ui.css(), unsafe_allow_html=True)
 
 _WAVE_SVG = (
     '<svg viewBox="0 0 200 20" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">'
@@ -1032,7 +1065,7 @@ def load_datafy_spending_trend_df(
 
 def ask_hotel_partner_ai(
     question: str, months: float = 24, start_date: str | None = None, end_date: str | None = None,
-    focus: str | None = None,
+    focus: str | None = None, page_context: str | None = None,
 ) -> str:
     """Shared AI-answer engine behind the Intelligence Brief and every
     per-section "Ask about this data" card. Every call gets the same full
@@ -1089,7 +1122,7 @@ and in plain, non-technical language.
 
 === Recent Forward-Looking Insights ===
 {load_recent_insights_summary()}
-"""
+{_page_context_block(page_context)}"""
     try:
         client = anthropic.Anthropic(api_key=api_key)
         resp = client.messages.create(
@@ -1103,9 +1136,25 @@ and in plain, non-technical language.
         return f"The assistant could not answer right now ({type(e).__name__}). Please try again shortly."
 
 
+def _page_context_block(page_context: str | None) -> str:
+    """The board view's own computed answers, handed to the model so an AI
+    read never contradicts the tiles, charts, and summaries on screen. These
+    figures use the page's standard (rooms-weighted, 364-day comparisons) and
+    are the authoritative numbers when they differ from the raw monthly
+    summaries above."""
+    if not page_context:
+        return ""
+    return (
+        "\n=== What the dashboard page currently shows (authoritative; match these numbers) ===\n"
+        + page_context
+        + "\nWhen you cite a figure that appears above, use the page's value exactly. "
+          "Write in plain executive English with no em dashes and no exclamation marks.\n"
+    )
+
+
 def render_section_ai_answer(
     key: str, label: str, question: str, months: float,
-    start_date: str | None, end_date: str | None,
+    start_date: str | None, end_date: str | None, page_context: str | None = None,
 ) -> None:
     """A small, self-contained 'ask about this section' card, reusing the
     same ask_hotel_partner_ai() engine and .ai-answer-box styling as the
@@ -1114,13 +1163,13 @@ def render_section_ai_answer(
     changes anything else on the page, until the person clicks the button
     for this specific section. `question` is shown to the person so they
     can see exactly what is being asked before they click."""
-    with st.expander(f"\U0001F50D Ask about {label}"):
+    with st.expander(f"\U0001F50D Ask about {label}: a deeper AI read"):
         st.caption(f"Question: {question}")
         if st.button("Get insight for this section", key=f"section_ai_{key}"):
             with st.spinner("Reading STR, CoStar, and Datafy data..."):
                 answer = ask_hotel_partner_ai(
                     question, months=months, start_date=start_date, end_date=end_date,
-                    focus=label,
+                    focus=label, page_context=page_context,
                 )
             st.markdown(f'<div class="ai-answer-box">{html.escape(answer)}</div>', unsafe_allow_html=True)
         st.caption(
@@ -1190,7 +1239,7 @@ def render_notes_block(section: str, label: str) -> None:
     notes = load_notes(section)
 
     if IS_EDITOR:
-        with st.expander(f"\U0001F4DD {label} — add or manage notes", expanded=False):
+        with st.expander(f"\U0001F4DD {label}: add or manage notes", expanded=False):
             new_text = st.text_area(
                 "Add a note",
                 key=f"note_input_{section}",
@@ -1208,7 +1257,7 @@ def render_notes_block(section: str, label: str) -> None:
                 for n in notes:
                     c1, c2 = st.columns([6, 1])
                     with c1:
-                        st.markdown(f"**{n['created_at']}** — {html.escape(n['note_text'])}")
+                        st.markdown(f"**{n['created_at']}**: {html.escape(n['note_text'])}")
                     with c2:
                         if st.button("Delete", key=f"note_del_{n['id']}"):
                             delete_note(n["id"])
@@ -1269,7 +1318,7 @@ def render_report_archive() -> None:
         # broken rather than simply new, so show nothing until there's a
         # first report to list.
         return
-    with st.expander(f"\U0001F4C1 Report Repository — Past Issues ({len(reports)})", expanded=False):
+    with st.expander(f"\U0001F4C1 Report Repository: Past Issues ({len(reports)})", expanded=False):
         st.caption(
             "Every generated report is kept here. Moving to a synced SharePoint "
             "folder is next; this local archive is the repository until then."
@@ -1292,9 +1341,9 @@ def render_report_archive() -> None:
 SECTIONS = [
     {"icon": "📊", "title": "Executive Summary",
      "desc": "Headline KPIs, YoY change, and this week's top DMO insight.", "page": 1},
-    {"icon": "🏨", "title": "Hotel Performance — Occupancy",
+    {"icon": "🏨", "title": "Hotel Performance: Occupancy",
      "desc": "Occupancy by day of week and the 6-market RevPAR comp set.", "page": 2},
-    {"icon": "💵", "title": "Hotel Performance — ADR & Compression",
+    {"icon": "💵", "title": "Hotel Performance: ADR and Compression",
      "desc": "Average daily rate by day of week and compression days by quarter.", "page": 3},
     {"icon": "🌎", "title": "Visitor Origins",
      "desc": "Top feeder markets to Dana Point and why visitors choose it.", "page": 4},
@@ -1316,46 +1365,45 @@ SECTIONS = [
 HELP_HTML = """
 <div class="pulse-help-title">How to Use This Report</div>
 <div class="pulse-help-item">
-  This page brings live STR, CoStar, and Datafy data for Dana Point together in one place. Four
-  tools make it easy to work with, and each is described below.
+  This page brings live STR, CoStar, and Datafy data for Dana Point together in one place, organized
+  around the questions a board asks. Each tool is described below.
 </div>
 <div class="pulse-help-item">
-  <b>Report Window.</b> Select a start and end date to rebuild the cover, executive summary, and
-  hotel performance pages around that period. CoStar and Datafy sections keep their own freshest
-  available window, since each source reports on a different schedule.
+  <b>Data window.</b> Choose a preset or a custom range. The KPI tiles, charts, written answers, and the
+  Intelligence Brief all follow it. Datafy feeder markets, categories, and campaign results keep their
+  latest published period, and each chart's source line says which window it uses.
 </div>
 <div class="pulse-help-item">
-  <b>Summarize.</b> Select this for a short, plain-language read of what the current numbers show.
-  It draws directly from the report in front of you, so it always matches your selected window.
+  <b>At a glance.</b> Four answers for the board, one per section. Select a card to jump to its detail.
 </div>
 <div class="pulse-help-item">
-  <b>Regenerate.</b> Rebuilds the report from the latest data in the pipeline. Use this after a
-  fresh STR, CoStar, or Datafy load, or whenever you want to confirm you are looking at the most
-  current figures available.
+  <b>Key questions and written answers.</b> Every section and every chart opens with the question it
+  answers and closes with a plain-language answer calculated from the same data, so the words always
+  match the numbers. "How to read this" under a chart explains what it shows.
 </div>
 <div class="pulse-help-item">
-  <b>Download PDF.</b> Saves the complete report to your computer, named for the day you
-  downloaded it.
+  <b>Ask about this section.</b> An optional, deeper AI read of any section. It is handed the same
+  figures the page shows, so its answer stays consistent with the page.
 </div>
 <div class="pulse-help-item">
-  <b>View a Section.</b> Every major section, from the executive summary through forward outlook,
-  can open on its own. Select "View section" on any card to see, download, or print that page by
-  itself, then select "Close, return to full report" when you are finished.
+  <b>Summarize, Regenerate, Download PDF.</b> Summarize gives a short read of the current report.
+  Regenerate rebuilds the report from the latest data. Download PDF saves the complete report.
 </div>
 <div class="pulse-help-item">
-  <b>Notes.</b> Scroll to the Notes and Report Repository section near the bottom of the page to
-  add commentary on the data, such as an explanation for a dip in occupancy or context behind a
-  spending trend. Every note saved there carries automatically into page nine of the PDF, titled
-  Notes and Commentary, the next time the report is generated or regenerated. No separate step is
-  needed to get a note into the report.
+  <b>View a Section and the flipbook.</b> Open, download, or print any single page of the report, flip
+  through it page by page, or choose sections and export just those.
 </div>
 <div class="pulse-help-item">
-  <b>Report Repository.</b> Once a report has been generated more than once, this same section
-  keeps a dated copy of each past PDF, so earlier versions stay available for comparison.
+  <b>Notes and Report Repository.</b> Add commentary on the data; every note carries into the Notes and
+  Commentary page of the PDF the next time the report is generated. Past reports stay available for
+  comparison.
 </div>
 <div class="pulse-help-item">
-  Questions about a specific figure are welcome. The Data &amp; Downloads section at the end of
-  the full report names the source behind every number.
+  <b>Board brief, side menu, and About this data.</b> The board brief at the top carries the headline
+  numbers and a dot for each source showing how current it is (green is current, amber is due for a
+  refresh). Select any of the four answer cards to jump to its section, and hover or tap any chart for
+  exact values. The side menu (the arrow at the top left) lists every section. About this data, near
+  the bottom, explains every definition and how the three sources connect.
 </div>
 """
 
@@ -1592,26 +1640,27 @@ def _header_html(status_text: str, ok: bool = True) -> str:
         """
 
 
-col1, col2, col3, col4, col5 = st.columns([3.3, 1, 1, 1.2, 0.5])
-with col1:
-    header_slot = st.empty()
-    # Shown immediately, before this run's report generation has actually
-    # happened, so it can't yet reflect a real timestamp. Replaced below
-    # with the true "Last generated" stamp once generation completes.
-    header_slot.markdown(_header_html("Generating latest report&hellip;"), unsafe_allow_html=True)
-with col2:
-    summarize_clicked = st.button("Summarize", use_container_width=True)
-with col3:
-    regenerate = st.button("Regenerate", use_container_width=True)
-with col4:
-    # Reserved now, filled in below once pdf_bytes exists -- keeps Download
-    # PDF grouped with Summarize/Regenerate instead of stranded lower on
-    # the page, even though the file itself isn't ready until after this
-    # row renders.
-    download_slot = st.empty()
-with col5:
-    with st.popover("❓", use_container_width=True):
-        st.markdown(HELP_HTML, unsafe_allow_html=True)
+with st.container(key="pz_head"):
+    col1, col2, col3, col4, col5 = st.columns([3.3, 1, 1, 1.2, 0.5])
+    with col1:
+        header_slot = st.empty()
+        # Shown immediately, before this run's report generation has actually
+        # happened, so it can't yet reflect a real timestamp. Replaced below
+        # with the true "Last generated" stamp once generation completes.
+        header_slot.markdown(_header_html("Generating latest report&hellip;"), unsafe_allow_html=True)
+    with col2:
+        summarize_clicked = st.button("Summarize", use_container_width=True)
+    with col3:
+        regenerate = st.button("Regenerate", use_container_width=True)
+    with col4:
+        # Reserved now, filled in below once pdf_bytes exists -- keeps Download
+        # PDF grouped with Summarize/Regenerate instead of stranded lower on
+        # the page, even though the file itself isn't ready until after this
+        # row renders.
+        download_slot = st.empty()
+    with col5:
+        with st.popover("❓", use_container_width=True):
+            st.markdown(HELP_HTML, unsafe_allow_html=True)
 
 # Data window -- set here, before the report is built, so the KPI tiles,
 # trend charts, Datafy visitor-origins section, and Intelligence Brief below
@@ -1655,18 +1704,20 @@ else:
     window_months = PERIOD_OPTIONS[period_label]
     period_label_display = period_label
 
-st.markdown(
-    f"""
-    <div class="pulse-hero" style="background-image:url('{_hero_photo_data_uri()}');">
-      <div class="pulse-hero-overlay"></div>
-      <div class="pulse-hero-content">
-        <img class="pulse-hero-logo" src="{_logo_nav_data_uri()}">
-        <div class="pulse-hero-tag">Dana Point, California</div>
-      </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+if pulse_board is None:
+    # The board masthead (pulse_board) carries this photo when it is live.
+    st.markdown(
+        f"""
+        <div class="pulse-hero" style="background-image:url('{_hero_photo_data_uri()}');">
+          <div class="pulse-hero-overlay"></div>
+          <div class="pulse-hero-content">
+            <img class="pulse-hero-logo" src="{_logo_nav_data_uri()}">
+            <div class="pulse-hero-tag">Dana Point, California</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 if regenerate:
     _generate.clear()
@@ -1727,616 +1778,136 @@ download_slot.download_button(
 )
 
 # ---------------------------------------------------------------------------
-# Jump-to-section nav -- lets anyone see everything this page offers at a
-# glance and go straight to it, instead of scrolling past every section.
+# Board view (redesigned 2026-09-25). Four live sections, each answering a
+# key question with KPI tiles, a written answer computed from the same data
+# as its charts, question-led visuals, and an optional AI deep dive. The
+# written answers change with the data window above and read across STR,
+# CoStar, and Datafy together (see pulse_story.py). Each renderer is guarded
+# on its own, so one section can never take the rest of the page down.
 # ---------------------------------------------------------------------------
 
+pulse_model = None
+if pulse_story is not None:
+    try:
+        pulse_model = pulse_story.build_model(
+            get_connection(), window_months, range_start_iso, range_end_iso,
+            period_label_display if period_label != "Custom range" else "Custom range",
+            dma_coords=DMA_COORDS,
+        )
+    except Exception as _exc:  # noqa: BLE001
+        print(f"[pulse] model build failed: {_exc}")
+        pulse_model = None
+
+PAGE_CONTEXT = pulse_story.page_context(pulse_model) if (pulse_story and pulse_model) else ""
+
+if pulse_sections is not None:
+    try:
+        pulse_sections.render_sidebar(pulse_model, _logo_data_uri())
+    except Exception as _exc:  # noqa: BLE001
+        print(f"[pulse] sidebar failed: {_exc}")
+
+# Jump-to-section chips: every part of the page at a glance.
 st.markdown(
     """
     <div class="pulse-jumpnav">
-      <a href="#pulse-snapshot">\U0001F4CA Performance Snapshot</a>
-      <a href="#pulse-origins">\U0001F30E Visitor Origins &amp; Spend</a>
-      <a href="#pulse-market">\U0001F3E2 Market Performance</a>
-      <a href="#pulse-forward">\U0001F4C8 Forward Outlook &amp; Group Business</a>
-      <a href="#pulse-brain">\U0001F9E0 Intelligence Brief</a>
-      <a href="#pulse-fullreport">\U0001F4C4 Full Report</a>
-      <a href="#pulse-notes">\U00002B07 Notes &amp; Downloads</a>
+      <a href="#pulse-glance">At a glance</a>
+      <a href="#pulse-snapshot">1 &middot; Performance</a>
+      <a href="#pulse-origins">2 &middot; Visitors and spend</a>
+      <a href="#pulse-market">3 &middot; Market position</a>
+      <a href="#pulse-forward">4 &middot; Forward outlook</a>
+      <a href="#pulse-brain">Intelligence Brief</a>
+      <a href="#pulse-fullreport">Full report</a>
+      <a href="#pulse-notes">Notes and downloads</a>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-# ---------------------------------------------------------------------------
-# Performance Snapshot -- KPI tiles and a trend chart read straight from the
-# database, not the static PDF, so the data window above drives a real
-# chart, not just PDF page selection.
-# ---------------------------------------------------------------------------
 
-st.markdown('<div id="pulse-snapshot" class="pulse-anchor"></div>', unsafe_allow_html=True)
-st.markdown('<div class="section-title">\U0001F4CA Performance Snapshot</div>', unsafe_allow_html=True)
-st.caption(f"Showing {period_label_display.lower()}. Change the data window above to update this section and the Intelligence Brief below.")
-
-period_kpi = load_kpi_period_stats(window_months, start_date=range_start_iso, end_date=range_end_iso)
-kpi_c1, kpi_c2, kpi_c3 = st.columns(3)
-if period_kpi:
-    # Performance Snapshot - Large, bold metrics
-    occ_delta = f"{period_kpi['occ_yoy']:+.1f} pts YoY" if pd.notna(period_kpi.get("occ_yoy")) else None
-    adr_delta = f"{period_kpi['adr_yoy']:+.1f}% YoY" if pd.notna(period_kpi.get("adr_yoy")) else None
-    revpar_delta = f"{period_kpi['revpar_yoy']:+.1f}% YoY" if pd.notna(period_kpi.get("revpar_yoy")) else None
-
-    with kpi_c1:
-        st.markdown(
-            f'<div style="text-align:center; padding:20px 12px;">'
-            f'<div style="font-size:13px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Occupancy</div>'
-            f'<div style="font-size:42px; color:#0B2530; font-weight:800; line-height:1.1;">{period_kpi["occ_pct"]:.1f}%</div>'
-            f'<div style="font-size:13px; color:#059669; margin-top:8px; font-weight:600;">'
-            f'{"↑" if occ_delta and occ_delta.startswith("+") else "↓"} {occ_delta if occ_delta else "—"}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    with kpi_c2:
-        st.markdown(
-            f'<div style="text-align:center; padding:20px 12px;">'
-            f'<div style="font-size:13px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">ADR</div>'
-            f'<div style="font-size:42px; color:#0B2530; font-weight:800; line-height:1.1;">${period_kpi["adr"]:,.0f}</div>'
-            f'<div style="font-size:13px; color:#059669; margin-top:8px; font-weight:600;">'
-            f'{"↑" if adr_delta and adr_delta.startswith("+") else "↓"} {adr_delta if adr_delta else "—"}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    with kpi_c3:
-        st.markdown(
-            f'<div style="text-align:center; padding:20px 12px;">'
-            f'<div style="font-size:13px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">RevPAR</div>'
-            f'<div style="font-size:42px; color:#0B2530; font-weight:800; line-height:1.1;">${period_kpi["revpar"]:,.0f}</div>'
-            f'<div style="font-size:13px; color:#059669; margin-top:8px; font-weight:600;">'
-            f'{"↑" if revpar_delta and revpar_delta.startswith("+") else "↓"} {revpar_delta if revpar_delta else "—"}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    st.caption(
-        f"Averaged over {period_kpi['n_days']} STR-reported days, "
-        f"{period_kpi['period_start']} to {period_kpi['period_end']}."
+def _ask(key: str, label: str, question: str) -> None:
+    render_section_ai_answer(
+        key=key, label=label, question=question, months=window_months,
+        start_date=range_start_iso, end_date=range_end_iso, page_context=PAGE_CONTEXT,
     )
-else:
-    st.info("STR KPI data is not available yet.")
 
-trend_df = load_kpi_trend_df(window_months, start_date=range_start_iso, end_date=range_end_iso)
-if not trend_df.empty:
-    st.markdown(
-        f'<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:2px;">'
-        f"STR Occupancy &amp; ADR Trend &mdash; {html.escape(period_label_display)}</div>",
-        unsafe_allow_html=True,
-    )
-    trend_fig = go.Figure()
-    trend_fig.add_trace(go.Scatter(x=trend_df["month"], y=trend_df["occ"], name="Occupancy %",
-                                    line=dict(color=bt.TEAL, width=3), yaxis="y1"))
-    trend_fig.add_trace(go.Bar(x=trend_df["month"], y=trend_df["adr"], name="ADR ($)",
-                                marker=dict(color=bt.AMBER), opacity=0.55, yaxis="y2"))
-    trend_fig.update_layout(
-        # t=56 (up from 40): the 2-item horizontal legend above the plot
-        # (y=1.02) can wrap to two rows on narrow/portrait mobile widths,
-        # and the old margin only had room for one -- the second legend row
-        # clipped into the chart. This gives it enough headroom to wrap
-        # without overlapping.
-        height=340, margin=dict(l=10, r=10, t=56, b=10),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=bt.INK, family=bt.FONT_SANS),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        yaxis=dict(title="Occupancy %", showgrid=True, gridcolor=bt.BORDER),
-        yaxis2=dict(title="ADR ($)", overlaying="y", side="right", showgrid=False),
-    )
-    st.plotly_chart(trend_fig, use_container_width=True, config={"displayModeBar": False})
-else:
-    st.info("STR monthly trend data is not available yet.")
 
-render_section_ai_answer(
-    key="snapshot",
-    label="Performance Snapshot",
-    question="What do occupancy, ADR, and RevPAR show for the selected window, and why?",
-    months=window_months, start_date=range_start_iso, end_date=range_end_iso,
-)
-
-st.divider()
-
-# ---------------------------------------------------------------------------
-# Visitor Origins & Spend -- Datafy's monthly spend trend (real, responds to
-# the data window above), then the latest snapshot pull: a geographic bubble
-# map of feeder markets alongside a bar chart, and spend by category.
-# ---------------------------------------------------------------------------
-
-st.markdown('<div id="pulse-origins" class="pulse-anchor"></div>', unsafe_allow_html=True)
-st.markdown('<div class="section-title">\U0001F30E Visitor Origins &amp; Spend</div>', unsafe_allow_html=True)
-
-spend_trend_df = load_datafy_spending_trend_df(window_months, start_date=range_start_iso, end_date=range_end_iso)
-if not spend_trend_df.empty:
-    st.markdown(
-        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:4px;">'
-        "Datafy Monthly Visitor Spend Trend</div>",
-        unsafe_allow_html=True,
-    )
-    sc1, sc2 = st.columns(2)
-    latest_month = spend_trend_df.iloc[-1]["month_label"]
-    latest_spend = spend_trend_df.iloc[-1]["spending_usd"]
-    avg_spend = spend_trend_df["spending_usd"].mean()
-
-    with sc1:
-        st.markdown(
-            f'<div style="text-align:center; padding:16px 12px;">'
-            f'<div style="font-size:12px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Latest Month</div>'
-            f'<div style="font-size:32px; color:#0B2530; font-weight:800; line-height:1.1;">{latest_month}</div>'
-            f'<div style="font-size:13px; color:#059669; margin-top:6px; font-weight:600;">✓ ${latest_spend:,.0f}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    with sc2:
-        st.markdown(
-            f'<div style="text-align:center; padding:16px 12px;">'
-            f'<div style="font-size:12px; color:#6B7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">{period_label_display} Avg.</div>'
-            f'<div style="font-size:32px; color:#0B2530; font-weight:800; line-height:1.1;">${avg_spend:,.0f}</div>'
-            f'<div style="font-size:12px; color:#6B7280; margin-top:6px; font-weight:500;">/month</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    spend_trend_fig = go.Figure(go.Scatter(
-        x=spend_trend_df["month_label"], y=spend_trend_df["spending_usd"],
-        mode="lines+markers", line=dict(color=bt.TEAL, width=3),
-        marker=dict(size=6),
-    ))
-    spend_trend_fig.update_layout(
-        height=260, margin=dict(l=10, r=10, t=20, b=10),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=bt.INK, family=bt.FONT_SANS),
-        yaxis=dict(title="Visitor spend ($)", showgrid=True, gridcolor=bt.BORDER),
-    )
-    st.plotly_chart(spend_trend_fig, use_container_width=True, config={"displayModeBar": False})
-    st.caption(
-        f"This one Datafy series is real month-by-month data and does respond to the {period_label_display.lower()} "
-        "window above. The map and category breakdowns below use Datafy's latest available snapshot pull and do not."
-    )
-    st.divider()
-
-try:
-    datafy_periods = pd.read_sql_query(
-        "SELECT report_period_start, report_period_end FROM datafy_overview_spending_by_market "
-        "ORDER BY report_period_start DESC LIMIT 1",
-        get_connection(),
-    )
-except Exception:
-    datafy_periods = pd.DataFrame()
-datafy_period_str = (
-    f"{datafy_periods.iloc[0]['report_period_start']} to {datafy_periods.iloc[0]['report_period_end']}"
-    if not datafy_periods.empty else "period unavailable"
-)
-st.markdown(
-    f"""
-    <div style="background:#FFFBEB; border:1px solid #FDE68A; border-left:4px solid #D97706;
-                border-radius:10px; padding:10px 16px; margin-bottom:14px; font-size:12.5px;
-                color:#78350F; line-height:1.5;">
-      <b>\U0001F4CC Datafy Visitor Economy:</b> the map and charts below cover
-      <b>{datafy_period_str}</b>, the most recent period Datafy has published. Datafy releases
-      new visitor-origin and spending data periodically, not daily, so this section always shows
-      its latest available pull no matter which date window is selected above. The STR chart and
-      Performance Snapshot above it do follow the date window.
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-markets_df = load_datafy_markets_df()
-if not markets_df.empty:
-    top_row = markets_df.iloc[0]
-    mc1, mc2 = st.columns([1.3, 1])
-    with mc1:
-        st.markdown(
-            f'<div style="border-left:4px solid #1D6E86; padding-left:12px;">'
-            f'<div style="font-size:11px; color:#6B7280; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Top Market</div>'
-            f'<div style="font-size:14px; color:#0B2530; font-weight:700; line-height:1.4; word-wrap:break-word;">{top_row["dma"]}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    mc2.metric(top_row["metric"], f"{top_row['share_pct']:.1f}%")
-    # Tiled-basemap flow map (bubbles graduated and connected to Dana Point).
-    # build_markets_map_figure below is the previous flat Scattergeo outline,
-    # kept as the fallback for any environment where the newer map traces or
-    # their basemap tiles are unavailable.
-    map_fig = None
+def _map_builder(markets_df):
+    fig = None
     if section_visuals is not None:
         try:
-            map_fig = section_visuals.build_feeder_market_map(markets_df, DMA_COORDS)
-        except Exception:
-            map_fig = None
-    if map_fig is None:
-        map_fig = build_markets_map_figure(markets_df)
-    if map_fig is not None:
-        st.markdown(
-            '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:4px;">'
-            "Where Dana Point&rsquo;s Visitors Come From</div>",
-            unsafe_allow_html=True,
-        )
-        st.plotly_chart(map_fig, use_container_width=True, config={"displayModeBar": False})
-        st.caption(
-            "Dana Point is the amber marker on the coast. Every teal bubble is an origin "
-            "market, sized and shaded by its share of visitor spend, and the weight of each "
-            "connector carries the same value, so the heaviest lines are the markets sending "
-            "the most spend into the destination. Hover any bubble for its exact share."
-        )
-    _mkt_colors = (
-        [section_visuals.CATEGORY_COLORS[i % len(section_visuals.CATEGORY_COLORS)]
-         for i in range(len(markets_df))]
-        if section_visuals is not None else bt.TEAL
+            fig = section_visuals.build_feeder_market_map(markets_df, DMA_COORDS, height=360)
+        except Exception:  # noqa: BLE001
+            fig = None
+    return fig if fig is not None else build_markets_map_figure(markets_df)
+
+
+if pulse_model is None or pulse_sections is None:
+    st.info(
+        "The live data view is refreshing. The full PDF report, the Intelligence Brief, "
+        "and every download below remain available."
     )
-    st.markdown(
-        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:4px;">'
-        "Top Visitor Origin Markets</div>",
-        unsafe_allow_html=True,
-    )
-    mkt_fig = go.Figure(go.Bar(
-        x=markets_df["share_pct"], y=markets_df["dma"], orientation="h",
-        marker=dict(color=_mkt_colors),
-    ))
-    mkt_fig.update_layout(
-        # Title moved to the markdown heading above -- a plotly-native title
-        # here needed 2 lines on narrow/portrait widths and this chart's
-        # small top margin clipped the wrap. Markdown text reflows with the
-        # container instead of clipping.
-        height=280, margin=dict(l=10, r=10, t=16, b=10),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=bt.INK, family=bt.FONT_SANS),
-        xaxis=dict(title=f"{top_row['metric']} (%)", showgrid=True, gridcolor=bt.BORDER),
-        yaxis=dict(autorange="reversed"),
-    )
-    st.plotly_chart(mkt_fig, use_container_width=True, config={"displayModeBar": False})
 else:
-    st.info("Datafy visitor origin data is not available yet.")
+    def _anchor(anchor_id: str) -> None:
+        st.markdown(f'<div id="{anchor_id}" class="pulse-anchor"></div>', unsafe_allow_html=True)
 
-spend_df = load_datafy_spending_df()
-if not spend_df.empty:
-    top_row = spend_df.iloc[0]
-    sc1, sc2 = st.columns([1.4, 1])
-    with sc1:
-        st.markdown(
-            f'<div style="border-left:4px solid #1D6E86; padding-left:12px;">'
-            f'<div style="font-size:11px; color:#6B7280; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Top Category</div>'
-            f'<div style="font-size:14px; color:#0B2530; font-weight:700; line-height:1.4; word-wrap:break-word;">{top_row["category"]}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    sc2.metric("Spend Share", f"{top_row['spend_share_pct'] * 100:.1f}%")
-    st.markdown(
-        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:4px;">'
-        "Visitor Spend by Category</div>",
-        unsafe_allow_html=True,
+    def _board_brief() -> None:
+        _anchor("pulse-glance")
+        pulse_board.mount(pulse_board.brief(pulse_model), key="pb_brief")
+
+    def _board_snapshot() -> None:
+        _anchor("pulse-snapshot")
+        pulse_board.mount(pulse_board.snapshot(pulse_model), key="pb_snapshot")
+        _ask("snapshot", "Performance Snapshot", pulse_model.text["snapshot"]["question"])
+
+    def _board_visitors() -> None:
+        _anchor("pulse-origins")
+        pulse_board.mount(pulse_board.visitors(pulse_model, DMA_COORDS), key="pb_visitors")
+        _mk = pulse_model.markets
+        if _mk is not None and not _mk.empty:
+            with st.expander("Open the interactive feeder-market map", expanded=False):
+                _fig = _map_builder(_mk)
+                if _fig is not None:
+                    st.plotly_chart(_fig, use_container_width=True, config={"displayModeBar": False}, key="pb_map")
+        _ask("origins", "Visitors and Spend", pulse_model.text["visitors"]["question"])
+
+    def _board_market() -> None:
+        _anchor("pulse-market")
+        _conn = get_connection()
+        _tiers = section_visuals._costar_tiers(_conn) if section_visuals is not None else None
+        _rooms = section_visuals._room_split(_conn) if section_visuals is not None else None
+        pulse_board.mount(pulse_board.market(pulse_model, _tiers, _rooms), key="pb_market")
+        _ask("market", "Market Position", pulse_model.text["market"]["question"])
+
+    def _board_forward() -> None:
+        _anchor("pulse-forward")
+        pulse_board.mount(pulse_board.forward(pulse_model), key="pb_forward")
+        _ask("forward", "Forward Outlook", pulse_model.text["forward"]["question"])
+
+    # Each board chunk falls back to its Streamlit-native renderer on its own,
+    # so one failure can never blank the rest of the page.
+    _plan = (
+        (_board_brief if pulse_board else None,
+         lambda: (pulse_sections.render_freshness(pulse_model), pulse_sections.render_glance(pulse_model))),
+        (_board_snapshot if pulse_board else None, lambda: pulse_sections.render_snapshot(pulse_model, _ask)),
+        (_board_visitors if pulse_board else None, lambda: pulse_sections.render_visitors(pulse_model, _ask, _map_builder)),
+        (_board_market if pulse_board else None,
+         lambda: pulse_sections.render_market(pulse_model, _ask, section_visuals, get_connection())),
+        (_board_forward if pulse_board else None, lambda: pulse_sections.render_forward(pulse_model, _ask)),
     )
-    spend_fig = go.Figure(go.Pie(
-        labels=spend_df["category"], values=spend_df["spend_share_pct"], hole=0.55,
-        marker=dict(colors=[bt.TEAL, bt.TEAL_DK, bt.AMBER, bt.GREEN, bt.TEAL_LT_CHART, bt.SLATE, bt.INK_4, bt.RULE]),
-    ))
-    spend_fig.update_layout(
-        # Title moved to the markdown heading above -- see mkt_fig comment
-        # a few lines up for why: same wrap-and-clip failure on portrait
-        # mobile widths, same fix.
-        height=280, margin=dict(l=10, r=10, t=16, b=10),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=bt.INK, family=bt.FONT_SANS),
-    )
-    st.plotly_chart(spend_fig, use_container_width=True, config={"displayModeBar": False})
-else:
-    st.info("Datafy spending data is not available yet.")
-
-# ---------------------------------------------------------------------------
-# Advertising Campaign Performance -- Datafy's separate paid-media export
-# (added 2026-09-10). Distinct source file family from the visitor-origin
-# and spending data above: impressions/clicks/spend/ROAS/attribution, not
-# geo-fencing visitor counts, so it always shows its own latest snapshot
-# rather than following the data-window filter above.
-# ---------------------------------------------------------------------------
-
-adv_kpis = load_datafy_advertising_kpis()
-if adv_kpis:
-    st.markdown(
-        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin: 14px 0 2px;">'
-        "Advertising Campaign Performance</div>", unsafe_allow_html=True,
-    )
-    st.caption(
-        f"Datafy's paid-media campaign export, as of {adv_kpis.get('snapshot_date', 'the latest snapshot')}."
-    )
-    ac1, ac2, ac3, ac4 = st.columns(4)
-    _imp, _clk = adv_kpis.get("total_impressions"), adv_kpis.get("total_clicks")
-    _spend, _roas = adv_kpis.get("total_spend_usd"), adv_kpis.get("est_roas")
-    ac1.metric("Impressions", f"{_imp:,.0f}" if pd.notna(_imp) else "N/A")
-    ac2.metric("Clicks", f"{_clk:,.0f}" if pd.notna(_clk) else "N/A")
-    ac3.metric("Spend", f"${_spend:,.0f}" if pd.notna(_spend) else "N/A")
-    ac4.metric("Est. ROAS", f"${_roas:.2f} : $1" if pd.notna(_roas) else "N/A")
-
-    adv_markets_df = load_datafy_advertising_markets_df()
-    adv_tactics_df = load_datafy_advertising_tactics_df()
-    adv_col1, adv_col2 = st.columns(2)
-    with adv_col1:
-        if not adv_markets_df.empty:
-            st.markdown(
-                '<div style="font-weight:700; font-size:13.5px; color:#0B2530; margin-bottom:2px;">'
-                "Top Markets by Trip Share</div>", unsafe_allow_html=True,
-            )
-            adv_mkt_fig = go.Figure(go.Bar(
-                x=adv_markets_df["trip_share_pct"], y=adv_markets_df["dma"], orientation="h",
-                marker=dict(color=bt.TEAL),
-            ))
-            adv_mkt_fig.update_layout(
-                height=260, margin=dict(l=10, r=10, t=16, b=10),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color=bt.INK, family=bt.FONT_SANS),
-                xaxis=dict(title="Trip share (%)", showgrid=True, gridcolor=bt.BORDER),
-                yaxis=dict(autorange="reversed"),
-            )
-            st.plotly_chart(adv_mkt_fig, use_container_width=True, config={"displayModeBar": False}, key="adv_markets_fig")
-        else:
-            st.info("Advertising top-markets data is not available yet.")
-    with adv_col2:
-        if not adv_tactics_df.empty:
-            st.markdown(
-                '<div style="font-weight:700; font-size:13.5px; color:#0B2530; margin-bottom:2px;">'
-                "Attribution Rate by Tactic</div>", unsafe_allow_html=True,
-            )
-            _tac_colors = [bt.TEAL, bt.AMBER, bt.GREEN, bt.SLATE]
-            adv_tac_fig = go.Figure(go.Bar(
-                x=adv_tactics_df["tactic"], y=adv_tactics_df["attribution_rate_pct"],
-                marker=dict(color=_tac_colors[:len(adv_tactics_df)]),
-            ))
-            adv_tac_fig.update_layout(
-                height=260, margin=dict(l=10, r=10, t=16, b=10),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color=bt.INK, family=bt.FONT_SANS),
-                yaxis=dict(title="Attribution rate (%)", showgrid=True, gridcolor=bt.BORDER),
-            )
-            st.plotly_chart(adv_tac_fig, use_container_width=True, config={"displayModeBar": False}, key="adv_tactics_fig")
-        else:
-            st.info("Advertising tactic-performance data is not available yet.")
-else:
-    st.info("Datafy Advertising campaign data is not available yet.")
-
-render_section_ai_answer(
-    key="origins",
-    label="Visitor Origins & Spend",
-    question="Where are visitors coming from, what are they spending on, and how does advertising performance relate?",
-    months=window_months, start_date=range_start_iso, end_date=range_end_iso,
-)
-
-st.divider()
-
-# ---------------------------------------------------------------------------
-# Market Performance -- CoStar submarket KPIs and the tier-level RevPAR and
-# room-inventory figures also used on the Market Segments / Chain-Scale
-# Segment Detail section cards, shown here at full size with a multi-year
-# trend for context. All from real, parsed CoStar submarket PDFs.
-# ---------------------------------------------------------------------------
-
-st.markdown('<div id="pulse-market" class="pulse-anchor"></div>', unsafe_allow_html=True)
-st.markdown('<div class="section-title">\U0001F3E2 Market Performance</div>', unsafe_allow_html=True)
-
-if section_visuals is not None:
-    _mkt_kpis = section_visuals.costar_overall_kpis(get_connection())
-else:
-    _mkt_kpis = None
-
-if _mkt_kpis:
-    mp_c1, mp_c2, mp_c3 = st.columns(3)
-    mp_c1.metric("Submarket Occupancy (YTD)", f"{_mkt_kpis['occupancy_pct']:.1f}%",
-                 delta=f"{_mkt_kpis['occ_yoy_pct']:+.1f} pts YoY" if pd.notna(_mkt_kpis.get('occ_yoy_pct')) else None)
-    mp_c2.metric("Submarket ADR (YTD)", f"${_mkt_kpis['adr_usd']:,.0f}",
-                 delta=f"{_mkt_kpis['adr_yoy_pct']:+.1f}% YoY" if pd.notna(_mkt_kpis.get('adr_yoy_pct')) else None)
-    mp_c3.metric("Submarket RevPAR (YTD)", f"${_mkt_kpis['revpar_usd']:,.0f}",
-                 delta=f"{_mkt_kpis['revpar_yoy_pct']:+.1f}% YoY" if pd.notna(_mkt_kpis.get('revpar_yoy_pct')) else None)
-    st.caption(f"Newport Beach/Dana Point submarket, Overall scope. Source: CoStar, {_mkt_kpis['report_date']}.")
-
-    mp_col1, mp_col2 = st.columns(2)
-    with mp_col1:
-        st.markdown(
-            '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:2px;">'
-            "RevPAR by Chain-Scale Tier</div>", unsafe_allow_html=True,
-        )
-        tier_result = section_visuals._fig_costar_tiers(get_connection(), height=300)
-        if tier_result is not None:
-            tier_fig, tier_caption = tier_result
-            st.plotly_chart(tier_fig, use_container_width=True, config={"displayModeBar": False}, key="market_tier_fig")
-            st.caption(tier_caption)
-        else:
-            st.info("CoStar chain-scale tier data is not available yet.")
-    with mp_col2:
-        st.markdown(
-            '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:2px;">'
-            "Room Inventory by Tier</div>", unsafe_allow_html=True,
-        )
-        room_result = section_visuals._fig_room_split(get_connection(), height=300)
-        if room_result is not None:
-            room_fig, room_caption = room_result
-            st.plotly_chart(room_fig, use_container_width=True, config={"displayModeBar": False}, key="market_room_fig")
-            st.caption(room_caption)
-        else:
-            st.info("CoStar room inventory data is not available yet.")
-
-    trend_result = section_visuals.fig_costar_overall_trend(get_connection(), height=260)
-    if trend_result is not None:
-        trend_fig2, trend_caption2 = trend_result
-        st.markdown(
-            '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:2px;">'
-            "Multi-Year RevPAR Trend</div>", unsafe_allow_html=True,
-        )
-        st.plotly_chart(trend_fig2, use_container_width=True, config={"displayModeBar": False}, key="market_trend_fig")
-        st.caption(trend_caption2)
-else:
-    st.info("CoStar submarket data is not available yet.")
-
-# ---------------------------------------------------------------------------
-# CoStar Segmentation -- Transient/Group/Contract business-mix breakdown
-# from CoStar's companion segmented submarket export, plus the property
-# participation roster behind it (added 2026-09-10).
-# ---------------------------------------------------------------------------
-
-seg_df = load_costar_segment_mix_df(window_months, start_date=range_start_iso, end_date=range_end_iso)
-if not seg_df.empty:
-    st.markdown(
-        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin: 14px 0 2px;">'
-        "Business Mix: Transient / Group / Contract</div>", unsafe_allow_html=True,
-    )
-    _seg_colors = {"Transient": bt.TEAL, "Group": bt.AMBER, "Contract": bt.GREEN}
-    seg_latest_month = seg_df["month"].max()
-    latest_mix = seg_df[seg_df["month"] == seg_latest_month]
-    total_demand = latest_mix["avg_demand"].sum()
-    if total_demand:
-        mix_cols = st.columns(len(latest_mix))
-        for col, row in zip(mix_cols, latest_mix.sort_values("avg_demand", ascending=False).itertuples()):
-            col.metric(row.segment, f"{row.avg_demand / total_demand * 100:.0f}% of demand")
-
-    seg_fig = go.Figure()
-    for seg in ("Transient", "Group", "Contract"):
-        seg_slice = seg_df[seg_df["segment"] == seg]
-        if seg_slice.empty:
-            continue
-        seg_fig.add_trace(go.Bar(
-            x=seg_slice["month"], y=seg_slice["avg_demand"], name=seg,
-            marker=dict(color=_seg_colors[seg]),
-        ))
-    seg_fig.update_layout(
-        barmode="stack", height=280, margin=dict(l=10, r=10, t=16, b=10),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=bt.INK, family=bt.FONT_SANS),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        yaxis=dict(title="Avg. daily demand (room-nights)", showgrid=True, gridcolor=bt.BORDER),
-    )
-    st.plotly_chart(seg_fig, use_container_width=True, config={"displayModeBar": False}, key="costar_seg_mix_fig")
-    st.caption(f"CoStar Transient/Group/Contract segment export, {period_label_display.lower()}, monthly average daily demand by segment.")
-
-    _participation = load_costar_participation_summary()
-    if _participation:
-        st.caption(
-            f"Comp set behind this data: {_participation['n_properties']} participating properties"
-            + (f", {_participation['n_rooms']:,} rooms" if _participation.get("n_rooms") else "")
-            + f", as of the {_participation['period_month']} reporting month "
-            f"(snapshot {_participation['snapshot_date']})."
-        )
-else:
-    st.info("CoStar segmentation data is not available yet.")
-
-render_section_ai_answer(
-    key="market",
-    label="Market Performance",
-    question="How does Dana Point's submarket performance and business mix compare, and what stands out?",
-    months=window_months, start_date=range_start_iso, end_date=range_end_iso,
-)
-
-st.divider()
-
-# ---------------------------------------------------------------------------
-# Forward Outlook & Group Business -- built entirely from real, live sources:
-# STR's own group-segment occupancy mix, the STR compression history, the
-# seeded VDP events calendar, and the pipeline's own generated insights.
-# Deliberately does not surface group_intelligence's dollar projections,
-# since that table is derived from costar_chain_scale_breakdown /
-# costar_competitive_set, both documented as hardcoded baseline data rather
-# than a parsed CoStar export. See section_visuals.py and CLAUDE.md Lessons
-# Learned for the full reasoning.
-# ---------------------------------------------------------------------------
-
-st.markdown('<div id="pulse-forward" class="pulse-anchor"></div>', unsafe_allow_html=True)
-st.markdown('<div class="section-title">\U0001F4C8 Forward Outlook &amp; Group Business</div>', unsafe_allow_html=True)
-
-if section_visuals is not None:
-    _fo_conn = get_connection()
-    _fo_events = section_visuals.upcoming_events_df(_fo_conn, limit=1)
-    _fo_compression = section_visuals._compression(_fo_conn, quarters=1)
-    _fo_group = section_visuals._group_mix(_fo_conn)
-else:
-    _fo_events = pd.DataFrame()
-    _fo_compression = pd.DataFrame()
-    _fo_group = pd.DataFrame()
-
-fo_c1, fo_c2, fo_c3 = st.columns([1.2, 1, 1])
-if not _fo_events.empty:
-    _ev = _fo_events.iloc[0]
-    _days_out = (pd.to_datetime(_ev["event_date"]) - pd.Timestamp.now().normalize()).days
-    with fo_c1:
-        st.markdown(
-            f'<div style="border-left:4px solid #1D6E86; padding-left:12px;">'
-            f'<div style="font-size:11px; color:#6B7280; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Next Major Event</div>'
-            f'<div style="font-size:15px; color:#0B2530; font-weight:700; line-height:1.4; word-wrap:break-word;">{_ev["event_name"]}</div>'
-            f'<div style="font-size:12px; color:#059669; margin-top:6px;">↑ in {_days_out} days</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-else:
-    with fo_c1:
-        st.markdown(
-            f'<div style="border-left:4px solid #9CA3AF; padding-left:12px;">'
-            f'<div style="font-size:11px; color:#6B7280; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Next Major Event</div>'
-            f'<div style="font-size:14px; color:#6B7280; font-weight:500;">None scheduled</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-if not _fo_compression.empty:
-    _cq = _fo_compression.iloc[0]
-    fo_c2.metric(f"{_cq['quarter']} Compression", f"{int(_cq['days_above_80_occ'])} days 80%+",
-                 delta=f"{int(_cq['days_above_90_occ'])} days 90%+")
-else:
-    fo_c2.metric("Compression This Quarter", "N/A")
-if not _fo_group.empty and _fo_group["occ_pct"].sum() > 0:
-    _grp_row = _fo_group[_fo_group["segment"] == "Grp."]
-    _grp_pct = (_grp_row["occ_pct"].iloc[0] / _fo_group["occ_pct"].sum() * 100) if not _grp_row.empty else None
-    fo_c3.metric("Group Share of Occupancy", f"{_grp_pct:.0f}%" if _grp_pct is not None else "N/A")
-else:
-    fo_c3.metric("Group Share of Occupancy", "N/A")
-st.caption("Event calendar and STR sources, current as of this page's most recent data load.")
-
-fo_col1, fo_col2 = st.columns(2)
-with fo_col1:
-    st.markdown(
-        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:2px;">'
-        "Occupancy Mix, Latest STR Week</div>", unsafe_allow_html=True,
-    )
-    gm_result = section_visuals._fig_group_mix(get_connection(), height=180) if section_visuals is not None else None
-    if gm_result is not None:
-        gm_fig, gm_caption = gm_result
-        st.plotly_chart(gm_fig, use_container_width=True, config={"displayModeBar": False}, key="forward_group_fig")
-        st.caption(gm_caption)
-    else:
-        st.info("STR group-segment data is not available yet.")
-with fo_col2:
-    st.markdown(
-        '<div style="font-weight:700; font-size:14.5px; color:#0B2530; margin-bottom:2px;">'
-        "Compression Days by Quarter</div>", unsafe_allow_html=True,
-    )
-    cq_result = section_visuals._fig_compression(get_connection(), quarters=8, height=280) if section_visuals is not None else None
-    if cq_result is not None:
-        cq_fig, cq_caption = cq_result
-        st.plotly_chart(cq_fig, use_container_width=True, config={"displayModeBar": False}, key="forward_compression_fig")
-        st.caption(cq_caption)
-    else:
-        st.info("STR compression data is not available yet.")
-
-if section_visuals is not None:
-    _top_insight = section_visuals.top_forward_insight(get_connection())
-else:
-    _top_insight = None
-if _top_insight:
-    st.markdown(
-        f"""
-        <div class="pulse-summary-card">
-          <div class="pulse-summary-label">What's Ahead: {html.escape(_top_insight['category'].replace('_', ' ').title())}</div>
-          <div class="pulse-summary-body">{html.escape(_top_insight['body'] or _top_insight['headline'])}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.caption("Source: today's generated insight, drawn from live STR and Datafy data.")
-
-render_section_ai_answer(
-    key="forward",
-    label="Forward Outlook & Group Business",
-    question="What does the forward outlook and group business mix suggest for the weeks ahead?",
-    months=window_months, start_date=range_start_iso, end_date=range_end_iso,
-)
-
-st.divider()
+    for _board_fn, _native_fn in _plan:
+        _done = False
+        if _board_fn is not None:
+            try:
+                _board_fn()
+                _done = True
+            except Exception as _exc:  # noqa: BLE001
+                print(f"[pulse] board chunk failed, using native view: {_exc}")
+        if not _done:
+            try:
+                _native_fn()
+            except Exception as _exc:  # noqa: BLE001
+                print(f"[pulse] section render failed: {_exc}")
+                st.warning("This section could not be drawn from the current data. The rest of the page is unaffected.")
 
 st.divider()
 
@@ -2383,6 +1954,7 @@ if latest_intel_clicked:
             "how Dana Point compares to its CoStar submarket, and the one or two most "
             "important visitor-economy patterns. Keep it to three or four short paragraphs.",
             months=brain_months, start_date=range_start_iso, end_date=range_end_iso,
+            page_context=PAGE_CONTEXT,
         )
     st.markdown(f'<div class="ai-answer-box">{html.escape(brain_answer)}</div>', unsafe_allow_html=True)
 
@@ -2399,6 +1971,7 @@ with st.expander("\U0001F50D Ask a follow-up question about this data"):
                 answer = ask_hotel_partner_ai(
                     partner_question.strip(), months=brain_months,
                     start_date=range_start_iso, end_date=range_end_iso,
+                    page_context=PAGE_CONTEXT,
                 )
             st.markdown(f'<div class="ai-answer-box">{html.escape(answer)}</div>', unsafe_allow_html=True)
         else:
@@ -2422,7 +1995,9 @@ if "open_section" not in st.session_state:
 
 if available_sections:
     st.markdown("#### View a Section")
-    st.caption("Click any section below to open, view, or print just that part of the report.")
+    st.caption("Click any section below to open, view, or print just that part of the report. "
+               "Report pages and these previews cover the report's own reporting period, which can "
+               "differ from the data window selected at the top of the page.")
     grid_cols = st.columns(3)
     for i, section in enumerate(available_sections):
         with grid_cols[i % 3]:
@@ -2547,6 +2122,12 @@ with st.expander("View the full report as one continuous scroll instead"):
         """,
         unsafe_allow_html=True,
     )
+
+if pulse_sections is not None and pulse_model is not None:
+    try:
+        pulse_sections.render_about(pulse_model)
+    except Exception as _exc:  # noqa: BLE001
+        print(f"[pulse] about panel failed: {_exc}")
 
 st.markdown("---")
 

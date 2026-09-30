@@ -7,6 +7,9 @@ data/str/*.xls
 
 # Logs
 logs/*.png
+# CoStar fetch step screenshots: debugging output that can show the portal
+# account and licensed CoStar screens, never committed to this public repo.
+logs/costar_fetch_screens/
 logs/*.log
 logs/*.json
 

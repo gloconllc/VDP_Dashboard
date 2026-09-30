@@ -9,8 +9,10 @@
 # These values match tokens the app already uses: textColor is chart_theme
 # INK_BODY, primaryColor is the validated palette primary, and
 # secondaryBackgroundColor is the existing tab-bar surface.
+# primaryColor is the Visit Dana Point brand teal (brand_tokens.TEAL, 5.8:1 on
+# white), so radio dots, multiselect chips, and focus rings match the board view.
 base = "light"
-primaryColor = "#0891B2"
+primaryColor = "#1D6E86"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F1F5F9"
 textColor = "#334155"

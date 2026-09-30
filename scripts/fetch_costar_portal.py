@@ -232,7 +232,9 @@ async def login(page: Page) -> None:
 
     await page.fill(Sel.USERNAME_INPUT, USERNAME)
     await page.fill(Sel.PASSWORD_INPUT, PASSWORD)
-    await _screenshot(page, "02_login_filled")
+    # No screenshot here on purpose: a capture of the filled form shows the
+    # account's username, and these screenshots are uploaded as workflow
+    # artifacts on a public repository.
     await page.click(Sel.SUBMIT_BTN)
 
     try:

@@ -17,6 +17,7 @@ Pipeline steps:
    2. load_str_monthly_sqlite.py  — ingest STR monthly export   → fact_str_metrics
    3. compute_kpis.py             — pivot STR                   → kpi_daily_summary, kpi_compression_quarterly
    4. load_datafy_reports.py      — Datafy visitor economy CSVs → 17 datafy_* tables (skip-safe)
+   4a. load_datafy_advertising.py — Datafy Advertising campaign performance CSVs → 6 datafy_advertising_* tables (skip-safe)
    5. load_costar_reports.py      — CoStar market data          → 7 costar_* tables (skip-safe)
    5a. load_costar_market_daily.py — CoStar raw submarket export (daily_costar.xlsx/monhtly_costar.xlsx) → costar_market_daily, costar_market_monthly (skip-safe)
    5b. load_costar_segmentation.py — CoStar segment (Transient/Group/Contract) + participation roster → costar_market_daily_segment, costar_market_monthly_segment, costar_participation (skip-safe)
@@ -127,6 +128,13 @@ STEPS = [
     ("load_str_translation", os.path.join(BASE_DIR, "load_str_translation_table.py"), False),
     ("compute_kpis",      os.path.join(BASE_DIR, "compute_kpis.py"),            True),
     ("load_datafy",       os.path.join(BASE_DIR, "load_datafy_reports.py"),     False),
+    # Datafy's separate "Advertising" campaign-performance export family (impressions, clicks,
+    # spend, CTR, ROAS, attribution groups, top markets, tactic + line-item performance).
+    # Independent tables from load_datafy_reports.py; order between them doesn't matter (added 2026-09-08).
+    # Restored 2026-09-25: an older copy of this file overwrote the newer one in the working
+    # tree and commit 261be57 swept that in, silently dropping this step. Every loader here is
+    # skip-safe, so nothing errored; the six datafy_advertising_* tables just stopped refreshing.
+    ("load_datafy_advertising", os.path.join(BASE_DIR, "load_datafy_advertising.py"), False),
     ("load_costar",           os.path.join(BASE_DIR, "load_costar_reports.py"),     False),
     # CoStar's raw submarket HospitalityDataGrid export (daily_costar.xlsx / monhtly_costar.xlsx)
     # — current, higher-frequency than the PDF-parsed costar_monthly_performance table above.

@@ -27,9 +27,9 @@ import streamlit as st
 from brand_tokens import (
     TEAL,
     TEAL_DK,
-    TEAL_LT_CHART as TEAL_LT,
-    AMBER,
-    GREEN,
+    TEAL_LT,
+    MAROON,
+    SAND,
     SLATE,
     BORDER as GRID,
     INK,
@@ -39,13 +39,12 @@ from brand_tokens import (
     FONT_SANS as FONT,
 )
 
-# Brand-token colors reused directly as a categorical set for these small,
-# no-legend section cards (design intent documented in _mini_layout below).
-# Not the same thing as chart_theme.CATEGORICAL, which is validated for
-# contrast/CVD separation as a full-page, legend-carrying chart palette;
-# see chart_theme.py's docstring. Values are unchanged from before this
-# file started importing from brand_tokens.
-CATEGORY_COLORS = [TEAL, TEAL_DK, AMBER, GREEN, TEAL_LT, SLATE, INK_4, RULE]
+# Visit Dana Point design system, same rules as the board view (pulse_charts):
+# a single measure across categories is one color (teal) with direct labels,
+# Dana Point or the "hotel truth" highlight is terracotta (maroon), and the
+# neutral comparison mark is sand. Rank is never encoded as color.
+HILITE = MAROON
+CATEGORY_COLORS = [TEAL, MAROON, SAND, TEAL_DK, TEAL_LT, SLATE, INK_4, RULE]
 
 
 def _mini_layout(fig: go.Figure, height: int = 190) -> go.Figure:
@@ -108,7 +107,7 @@ def _fig_occupancy_dow(conn):
         return None
     peak = df.loc[df["occ_pct"].idxmax()]
     trough = df.loc[df["occ_pct"].idxmin()]
-    colors = [AMBER if v == peak["occ_pct"] else TEAL for v in df["occ_pct"]]
+    colors = [HILITE if v == peak["occ_pct"] else TEAL for v in df["occ_pct"]]
     fig = go.Figure(go.Bar(
         x=df["label"], y=df["occ_pct"],
         marker=dict(color=colors),
@@ -153,7 +152,7 @@ def _fig_compression(conn, quarters: int = 8, height: int = 190):
     ))
     fig.add_trace(go.Bar(
         x=df["quarter"], y=df["days_above_90_occ"], name="90%+",
-        marker=dict(color=AMBER), width=0.30,
+        marker=dict(color=HILITE), width=0.30,
         hovertemplate="%{x}: %{y} days above 90%<extra></extra>",
     ))
     fig.update_layout(barmode="overlay", bargap=0.3, showlegend=height > 220,
@@ -170,7 +169,7 @@ def _fig_compression(conn, quarters: int = 8, height: int = 190):
     latest = df.iloc[-1]
     caption = (
         f"{latest['quarter']}: {int(latest['days_above_80_occ'])} days above 80% occupancy, "
-        f"{int(latest['days_above_90_occ'])} of them above 90%. The narrow amber bar is the "
+        f"{int(latest['days_above_90_occ'])} of them above 90%. The narrow terracotta bar is the "
         "90%-plus subset of the teal bar. Source: STR."
     )
     return _mini_layout(fig, height=height), caption
@@ -209,12 +208,8 @@ def _fig_feeder_markets(conn, limit: int = 6, height: int = 200):
     if df.empty:
         return None
     df = df.sort_values("share_pct")
-    # One color per bar (cycled from the app's validated categorical set)
-    # instead of a single-hue bar with only the leader picked out. A ranked
-    # bar chart is not a persistent category encoding the way a pie's
-    # categories are, so cycling the palette by rank position is safe here.
-    n = len(df)
-    bar_colors = [CATEGORY_COLORS[i % len(CATEGORY_COLORS)] for i in range(n)][::-1]
+    # One measure across markets, so one color with the value on each bar.
+    bar_colors = [TEAL] * len(df)
     fig = go.Figure(go.Bar(
         x=df["share_pct"], y=df["dma"], orientation="h",
         marker=dict(color=bar_colors),
@@ -266,7 +261,7 @@ def _fig_costar_tiers(conn, height: int = 190):
     df["label"] = df["report_scope"].map(lambda s: _TIER_SHORT.get(s, s))
     fig = go.Figure(go.Bar(
         x=df["label"], y=df["revpar_usd"],
-        marker=dict(color=[TEAL_DK, TEAL, TEAL_LT][: len(df)]),
+        marker=dict(color=[TEAL] * len(df)),
         text=[f"${v:,.0f}" for v in df["revpar_usd"]],
         textposition="outside", textfont=dict(size=9.5 if height <= 220 else 11.5),
         customdata=df[["occupancy_pct", "adr_usd"]].values,
@@ -314,7 +309,7 @@ def _fig_room_split(conn, height: int = 190):
         return None
     fig = go.Figure(go.Pie(
         labels=labels, values=values, hole=0.58, sort=False,
-        marker=dict(colors=[TEAL_DK, TEAL, TEAL_LT], line=dict(color=WHITE, width=1.5)),
+        marker=dict(colors=[TEAL, MAROON, SAND], line=dict(color=WHITE, width=1.5)),
         textinfo="percent", textfont=dict(size=9.5, color=WHITE),
         hovertemplate="%{label}<br>%{value:,.0f} rooms (%{percent})<extra></extra>",
     ))
@@ -324,8 +319,9 @@ def _fig_room_split(conn, height: int = 190):
         showarrow=False, font=dict(size=13, color=INK), x=0.5, y=0.5,
     )
     caption = (
-        f"{int(row['total_properties'])} properties, {total:,.0f} rooms across the submarket. "
-        f"Luxury and upper upscale hold {values[0] / total * 100:.0f}% of inventory. "
+        f"{int(row['total_properties'])} properties, about {total:,.0f} rooms across the submarket. "
+        f"Luxury and upper upscale hold {values[0]:,.0f} rooms, "
+        f"{values[0] / sum(v for v in values if pd.notna(v)) * 100:.0f}% of rooms assigned a tier. "
         f"Source: CoStar, {row['report_date']}."
     )
     return _mini_layout(fig, height=height), caption
@@ -363,7 +359,7 @@ def _fig_spend_categories(conn):
         return None
     fig = go.Figure(go.Bar(
         x=df["share_pct"], y=df["category"], orientation="h",
-        marker=dict(color=CATEGORY_COLORS[: len(df)]),
+        marker=dict(color=[TEAL] * len(df)),
         text=[f"{v:.1f}%" for v in df["share_pct"]],
         textposition="outside", textfont=dict(size=9.5),
         hovertemplate="%{y}: %{x:.1f}% of visitor spend<extra></extra>",
@@ -539,7 +535,7 @@ def _fig_group_mix(conn, height: int = 160):
     total = df["occ_pct"].sum()
     fig = go.Figure(go.Bar(
         x=df["occ_pct"], y=["Occupancy mix"] * len(df), orientation="h",
-        marker=dict(color=[TEAL_DK, AMBER, TEAL_LT][: len(df)],
+        marker=dict(color=[TEAL, MAROON, SAND][: len(df)],
                     line=dict(color=WHITE, width=1)),
         text=[f"{r.label}<br>{r.occ_pct:.1f} pts" for r in df.itertuples()],
         textposition="inside", insidetextanchor="middle",
@@ -567,8 +563,8 @@ def _fig_group_mix(conn, height: int = 160):
 # ---------------------------------------------------------------------------
 
 SECTION_FIGURE_BUILDERS = {
-    "Hotel Performance — Occupancy": _fig_occupancy_dow,
-    "Hotel Performance — ADR & Compression": _fig_compression,
+    "Hotel Performance: Occupancy": _fig_occupancy_dow,
+    "Hotel Performance: ADR and Compression": _fig_compression,
     "Visitor Origins": _fig_feeder_markets,
     "Market Segments": _fig_costar_tiers,
     "Chain-Scale Segment Detail": _fig_room_split,
@@ -668,9 +664,9 @@ def build_feeder_market_map(
     ))
 
     # Dana Point is drawn last, in two stacked markers: a white disc under an
-    # amber one. Los Angeles is by far the largest bubble and sits almost on
+    # terracotta one. Los Angeles is by far the largest bubble and sits almost on
     # top of Dana Point geographically, so without the white ring the
-    # destination marker disappears into it. The label is amber for the same
+    # destination marker disappears into it. The label is terracotta for the same
     # reason: dark ink on a dark teal bubble is unreadable.
     fig.add_trace(ScatterCls(
         lon=[dp_lon], lat=[dp_lat], mode="markers",
@@ -679,9 +675,9 @@ def build_feeder_market_map(
     ))
     fig.add_trace(ScatterCls(
         lon=[dp_lon], lat=[dp_lat], mode="markers+text",
-        marker=dict(size=14, color=AMBER),
+        marker=dict(size=14, color=HILITE),
         text=["Dana Point"], textposition="bottom right",
-        textfont=dict(size=12.5, color=AMBER),
+        textfont=dict(size=12.5, color=HILITE),
         hovertemplate="<b>Dana Point</b><extra></extra>",
         showlegend=False,
     ))

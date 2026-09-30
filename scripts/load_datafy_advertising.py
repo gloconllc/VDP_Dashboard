@@ -26,7 +26,10 @@ mtime since there's no other date signal available. A re-run replaces that
 day's snapshot rather than appending duplicates, so re-exporting the same
 day's numbers twice (as happened with TraditionalKPIsVisual in the first
 batch this loader was written for) is harmless — same day, same content,
-same row.
+same row. A fresh git checkout resets every mtime, so the loader also
+compares content with the newest snapshot already on record and reuses that
+date when nothing changed (see _stable_snapshot); a new snapshot is only
+created when the export's numbers actually differ.
 
 Skip-safe: any file that's missing or fails to parse is logged and skipped
 rather than raising.
@@ -150,8 +153,76 @@ def _int(val):
     return None if f is None else int(round(f))
 
 
+_FILENAME_DATE_RX = [
+    (re.compile(r"(20\d{2})[-_](\d{2})[-_](\d{2})"), "ymd"),   # 2026-09-07
+    (re.compile(r"(?<!\d)(\d{2})_(\d{2})_(\d{2})(?!\d)"), "mdy"),  # 09_07_26
+]
+
+
 def _snapshot_date(path: str) -> str:
+    """Candidate snapshot date for a newly seen export: a date embedded in the
+    filename when there is one, otherwise the file's mtime. The mtime is only
+    trustworthy on the machine the file was saved to; a fresh git checkout
+    (GitHub Actions, Railway, any clone) stamps every file with the checkout
+    time. _stable_snapshot() below guards against that by reusing the date
+    already on record whenever the content has not changed."""
+    name = os.path.basename(path)
+    for rx, order in _FILENAME_DATE_RX:
+        m = rx.search(name)
+        if not m:
+            continue
+        try:
+            if order == "ymd":
+                y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            else:
+                mo, d, y = int(m.group(1)), int(m.group(2)), 2000 + int(m.group(3))
+            return datetime(y, mo, d).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
     return datetime.fromtimestamp(os.path.getmtime(path)).strftime("%Y-%m-%d")
+
+
+def _norm_row(row) -> tuple:
+    out = []
+    for v in row:
+        if isinstance(v, float):
+            out.append(round(v, 6))
+        else:
+            out.append(v)
+    return tuple(out)
+
+
+def _stable_snapshot(cur, table: str, value_cols: list[str], rows: list[tuple], candidate: str) -> str:
+    """Return the snapshot date to write `rows` under.
+
+    If the newest snapshot already in `table` holds exactly the same values,
+    reuse that date, so re-running the loader on an unchanged export (every
+    CI run checks the repo out fresh) never mints a duplicate snapshot dated
+    to the run. Found 2026-09-25: the mtime-only version created a second,
+    identical "2026-09-25" snapshot on a fresh clone, which doubled the rows
+    and made the dashboard claim the campaign data was current as of the run
+    date rather than the export date."""
+    latest = cur.execute(f"SELECT MAX(snapshot_date) FROM {table}").fetchone()[0]
+    if latest:
+        existing = cur.execute(
+            f"SELECT {', '.join(value_cols)} FROM {table} WHERE snapshot_date = ?", (latest,)
+        ).fetchall()
+        if sorted(_norm_row(r) for r in existing) == sorted(_norm_row(r) for r in rows):
+            return latest
+    return candidate
+
+
+def _write_snapshot(cur, table: str, value_cols: list[str], rows: list[tuple], candidate: str) -> str:
+    """Delete-then-insert one snapshot of `rows` (value columns only, without
+    snapshot_date) under a stable snapshot date. Returns the date used."""
+    snap = _stable_snapshot(cur, table, value_cols, rows, candidate)
+    cur.execute(f"DELETE FROM {table} WHERE snapshot_date = ?", (snap,))
+    placeholders = ",".join("?" for _ in range(len(value_cols) + 1))
+    cur.executemany(
+        f"INSERT INTO {table} (snapshot_date, {', '.join(value_cols)}) VALUES ({placeholders})",
+        [(snap, *r) for r in rows],
+    )
+    return snap
 
 
 def _find_file(regex_pattern: str):
@@ -181,25 +252,22 @@ def _read_metric_value_csv(path: str) -> dict:
 
 def load_top_markets(conn, path) -> int:
     df = pd.read_csv(path)
-    snap = _snapshot_date(path)
     cur = conn.cursor()
-    cur.execute("DELETE FROM datafy_advertising_top_markets WHERE snapshot_date=?", (snap,))
     rows = []
     for _, row in df.iterrows():
         dma = str(row.get("DMA", "")).strip()
         if not dma or dma.lower() == "nan":
             continue
         rows.append((
-            snap, dma, _num(row.get("Trip Share")), _int(row.get("Trips")),
+            dma, _num(row.get("Trip Share")), _int(row.get("Trips")),
             _int(row.get("Visitor Days")), _num(row.get("Avg Trip Length")),
             _num(row.get("Est Impact")), _num(row.get("Spend Per Visitor")),
         ))
-    cur.executemany(
-        """INSERT INTO datafy_advertising_top_markets
-           (snapshot_date, dma, trip_share_pct, trips, visitor_days,
-            avg_trip_length_days, est_impact_usd, spend_per_visitor_usd)
-           VALUES (?,?,?,?,?,?,?,?)""",
-        rows,
+    _write_snapshot(
+        cur, "datafy_advertising_top_markets",
+        ["dma", "trip_share_pct", "trips", "visitor_days",
+         "avg_trip_length_days", "est_impact_usd", "spend_per_visitor_usd"],
+        rows, _snapshot_date(path),
     )
     conn.commit()
     return len(rows)
@@ -207,19 +275,16 @@ def load_top_markets(conn, path) -> int:
 
 def load_tactic_performance(conn, path) -> int:
     df = pd.read_csv(path)
-    snap = _snapshot_date(path)
     cur = conn.cursor()
-    cur.execute("DELETE FROM datafy_advertising_tactic_performance WHERE snapshot_date=?", (snap,))
     rows = []
     for _, row in df.iterrows():
         tactic = str(row.get("Tactic", "")).strip()
         if not tactic or tactic.lower() == "nan":
             continue
-        rows.append((snap, tactic, _num(row.get("Attribution Rate"))))
-    cur.executemany(
-        """INSERT INTO datafy_advertising_tactic_performance
-           (snapshot_date, tactic, attribution_rate_pct) VALUES (?,?,?)""",
-        rows,
+        rows.append((tactic, _num(row.get("Attribution Rate"))))
+    _write_snapshot(
+        cur, "datafy_advertising_tactic_performance",
+        ["tactic", "attribution_rate_pct"], rows, _snapshot_date(path),
     )
     conn.commit()
     return len(rows)
@@ -227,24 +292,21 @@ def load_tactic_performance(conn, path) -> int:
 
 def load_attribution_groups(conn, path) -> int:
     df = pd.read_csv(path)
-    snap = _snapshot_date(path)
     cur = conn.cursor()
-    cur.execute("DELETE FROM datafy_advertising_attribution_groups WHERE snapshot_date=?", (snap,))
     rows = []
     for _, row in df.iterrows():
         group = str(row.get("Attribution Group", "")).strip()
         if not group or group.lower() == "nan":
             continue
         rows.append((
-            snap, group, _int(row.get("Est. Trips")), _int(row.get("Est. Visitor Days")),
+            group, _int(row.get("Est. Trips")), _int(row.get("Est. Visitor Days")),
             _num(row.get("Avg. Length of Stay")), _num(row.get("Est. Campaign Impact")),
         ))
-    cur.executemany(
-        """INSERT INTO datafy_advertising_attribution_groups
-           (snapshot_date, attribution_group, est_trips, est_visitor_days,
-            avg_length_of_stay_days, est_campaign_impact_usd)
-           VALUES (?,?,?,?,?,?)""",
-        rows,
+    _write_snapshot(
+        cur, "datafy_advertising_attribution_groups",
+        ["attribution_group", "est_trips", "est_visitor_days",
+         "avg_length_of_stay_days", "est_campaign_impact_usd"],
+        rows, _snapshot_date(path),
     )
     conn.commit()
     return len(rows)
@@ -252,21 +314,19 @@ def load_attribution_groups(conn, path) -> int:
 
 def load_kpis(conn, path) -> int:
     m = _read_metric_value_csv(path)
-    snap = _snapshot_date(path)
     cur = conn.cursor()
-    cur.execute("DELETE FROM datafy_advertising_kpis WHERE snapshot_date=?", (snap,))
-    cur.execute(
-        """INSERT INTO datafy_advertising_kpis
-           (snapshot_date, total_impressions, total_clicks, total_spend_usd,
-            unique_reach, avg_display_ctr_pct, avg_native_ctr_pct,
-            avg_vcr_acr_pct, total_video_audio_completes)
-           VALUES (?,?,?,?,?,?,?,?,?)""",
-        (
-            snap, _int(m.get("Total Impressions")), _int(m.get("Total Clicks")),
+    _write_snapshot(
+        cur, "datafy_advertising_kpis",
+        ["total_impressions", "total_clicks", "total_spend_usd", "unique_reach",
+         "avg_display_ctr_pct", "avg_native_ctr_pct", "avg_vcr_acr_pct",
+         "total_video_audio_completes"],
+        [(
+            _int(m.get("Total Impressions")), _int(m.get("Total Clicks")),
             _num(m.get("Total Spend")), _int(m.get("Unique Reach")),
             _num(m.get("Avg Display CTR")), _num(m.get("Avg Native CTR")),
             _num(m.get("Avg VCR/ACR")), _int(m.get("Total Video/Audio Completes")),
-        ),
+        )],
+        _snapshot_date(path),
     )
     conn.commit()
     return 1
@@ -274,9 +334,7 @@ def load_kpis(conn, path) -> int:
 
 def load_line_item_performance(conn, path) -> int:
     df = pd.read_csv(path)
-    snap = _snapshot_date(path)
     cur = conn.cursor()
-    cur.execute("DELETE FROM datafy_advertising_line_item_performance WHERE snapshot_date=?", (snap,))
     rows = []
     for _, row in df.iterrows():
         name = str(row.get("Line Item Name", "")).strip()
@@ -288,15 +346,14 @@ def load_line_item_performance(conn, path) -> int:
         ctr_frac = _num(row.get("CTR"))
         ctr_pct = round(ctr_frac * 100, 4) if ctr_frac is not None else None
         rows.append((
-            snap, name, _int(row.get("Impressions")), _int(row.get("Clicks")),
+            name, _int(row.get("Impressions")), _int(row.get("Clicks")),
             ctr_pct, _num(row.get("Total Spend")), _num(row.get("VCR/ACR")),
         ))
-    cur.executemany(
-        """INSERT INTO datafy_advertising_line_item_performance
-           (snapshot_date, line_item_name, impressions, clicks, ctr_pct,
-            total_spend_usd, vcr_acr_pct)
-           VALUES (?,?,?,?,?,?,?)""",
-        rows,
+    _write_snapshot(
+        cur, "datafy_advertising_line_item_performance",
+        ["line_item_name", "impressions", "clicks", "ctr_pct",
+         "total_spend_usd", "vcr_acr_pct"],
+        rows, _snapshot_date(path),
     )
     conn.commit()
     return len(rows)
@@ -304,20 +361,18 @@ def load_line_item_performance(conn, path) -> int:
 
 def load_overview(conn, path) -> int:
     m = _read_metric_value_csv(path)
-    snap = _snapshot_date(path)
     cur = conn.cursor()
-    cur.execute("DELETE FROM datafy_advertising_overview WHERE snapshot_date=?", (snap,))
 
     roas_raw = str(m.get("Est. ROAS", "")).strip()
     # "$1.84: $1" → 1.84 (dollars of estimated impact per dollar spent)
     roas_match = re.match(r"\$?\s*([\d.]+)\s*:\s*\$?\s*1", roas_raw)
     roas = float(roas_match.group(1)) if roas_match else _num(roas_raw)
 
-    cur.execute(
-        """INSERT INTO datafy_advertising_overview
-           (snapshot_date, est_campaign_impact_usd, est_roas, cost_per_visitor_day_usd)
-           VALUES (?,?,?,?)""",
-        (snap, _num(m.get("Est. Campaign Impact")), roas, _num(m.get("Cost/Visitor Day"))),
+    _write_snapshot(
+        cur, "datafy_advertising_overview",
+        ["est_campaign_impact_usd", "est_roas", "cost_per_visitor_day_usd"],
+        [(_num(m.get("Est. Campaign Impact")), roas, _num(m.get("Cost/Visitor Day")))],
+        _snapshot_date(path),
     )
     conn.commit()
     return 1

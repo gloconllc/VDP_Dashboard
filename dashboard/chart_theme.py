@@ -234,3 +234,61 @@ def style_fig(fig: go.Figure, height: int | None = None) -> go.Figure:
 def base_fig(height: int = 320) -> go.Figure:
     """An empty figure that already carries the theme, for build-then-add code."""
     return style_fig(go.Figure(), height=height)
+
+
+# ── Visit Dana Point brand layer (added 2026-09-25) ──────────────────────────
+# The board view (pulse_charts.py) draws every chart with brand_fig(). It lives
+# in this module on purpose: CLAUDE.md asks for one chart theme, so this is a
+# second function in the same theme, not a fourth theme. It differs from
+# style_fig() above in three deliberate ways, all from the Visit Dana Point
+# design system and the dataviz method:
+#   * Brand tokens (brand_tokens.py) for ink, grid, and the hover label, and
+#     the system sans stack the rest of the page uses.
+#   * No spline smoothing and no automatic area fills: a line is the data,
+#     not a curve fitted through it.
+#   * Horizontal tick labels, a single recessive y grid, no in-chart title
+#     (the question above each chart is its title).
+try:
+    import brand_tokens as _bt
+except Exception:  # pragma: no cover
+    _bt = None
+
+
+def brand_fig(fig: go.Figure, height: int = 300, legend: bool = True, hover: str = "closest",
+              y_suffix: str | None = None, y_prefix: str | None = None, x_grid: bool = False) -> go.Figure:
+    ink2 = getattr(_bt, "INK_2", INK_BODY)
+    ink3 = getattr(_bt, "INK_3", INK_MUTED)
+    border = getattr(_bt, "BORDER", "#E2E8F0")
+    font = getattr(_bt, "FONT_SANS", FONT_BODY)
+    fig.update_layout(
+        height=height,
+        autosize=True,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family=font, size=12.5, color=ink2),
+        margin=dict(l=6, r=10, t=34 if legend else 10, b=6, autoexpand=True),
+        showlegend=legend,
+        legend=dict(orientation="h", yanchor="bottom", y=1.0, xanchor="left", x=0,
+                    font=dict(size=11.5, color=ink3), bgcolor="rgba(0,0,0,0)",
+                    itemsizing="constant", traceorder="normal"),
+        hovermode=hover,
+        hoverlabel=dict(bgcolor="rgba(20,50,80,0.96)", bordercolor="rgba(20,50,80,0.96)",
+                        font=dict(size=12.5, family=font, color="#FFFFFF"), align="left"),
+        bargap=0.32,
+        bargroupgap=0.12,
+        uniformtext=dict(minsize=10, mode="hide"),
+    )
+    fig.update_xaxes(showgrid=x_grid, gridcolor=border, zeroline=False, showline=True,
+                     linecolor=border, ticks="", tickfont=dict(size=11.5, color=ink3),
+                     automargin=True, tickangle=0, title=None)
+    fig.update_yaxes(showgrid=True, gridcolor=border, gridwidth=1, zeroline=False, showline=False,
+                     ticks="", tickfont=dict(size=11.5, color=ink3), automargin=True, title=None,
+                     ticksuffix=y_suffix or "", tickprefix=y_prefix or "")
+    for tr in fig.data:
+        if type(tr).__name__ == "Bar":
+            try:
+                if not getattr(tr.marker, "cornerradius", None):
+                    tr.marker.cornerradius = 4
+            except Exception:
+                pass
+    return fig

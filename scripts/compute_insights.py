@@ -21,6 +21,7 @@ Run:
 from __future__ import annotations
 
 import json
+import re
 import os
 import sqlite3
 from datetime import date, datetime, timedelta
@@ -165,6 +166,24 @@ def seed_relationships(cur: sqlite3.Cursor) -> int:
     return count
 
 
+_DAY_FIXES = [
+    (re.compile(r"\bin ~?0 days\b"), "today"),
+    (re.compile(r"\bapproximately 0 days away\b"), "happening today"),
+    (re.compile(r"\(~?0 days away\)"), "(today)"),
+    (re.compile(r"\bin ~?1 days\b"), "tomorrow"),
+    (re.compile(r"\bapproximately 1 days away\b"), "one day away"),
+    (re.compile(r"\(~?1 days away\)"), "(tomorrow)"),
+    (re.compile(r"\b1 days\b"), "1 day"),
+]
+
+
+def _tidy_days(text: str) -> str:
+    """Grammar pass for generated timing phrases ("in ~1 days" -> "tomorrow")."""
+    for pat, rep in _DAY_FIXES:
+        text = pat.sub(rep, text)
+    return text
+
+
 def upsert_insight(
     cur: sqlite3.Cursor,
     audience: str,
@@ -193,7 +212,7 @@ def upsert_insight(
         """,
         (
             TODAY, audience, category,
-            headline[:120], body,
+            _tidy_days(headline)[:120], _tidy_days(body),
             json.dumps(metric_basis),
             priority, horizon_days, data_sources,
         ),
@@ -518,6 +537,23 @@ def _seasonal_position() -> tuple[str, str, str]:
     return "Q4", "fall shoulder", "Q1 soft season begins January; defend rate floors now."
 
 
+# Set in main() from vdp_events when the calendar has a dated Ohana Fest row,
+# so every insight counts down to the same date the dashboard's event list uses.
+_OHANA_DATE: date | None = None
+
+
+def _days_to_ohana() -> int:
+    """Days until Ohana Fest. Uses the events calendar date when loaded, and
+    treats the festival's three days (start through start + 2) as 0, "here"."""
+    if _OHANA_DATE is not None:
+        delta = (_OHANA_DATE - date.today()).days
+        if -2 <= delta <= 0:
+            return 0
+        if delta > 0:
+            return delta
+    return _days_to_event(9, 26)
+
+
 def _days_to_event(month: int, day: int) -> int:
     """Days until next occurrence of (month, day)."""
     today = date.today()
@@ -707,21 +743,39 @@ def gen_dmo_compression_outlook(comp: pd.DataFrame, kpi: pd.DataFrame) -> dict:
     cq_90  = int(cq_row["days_above_90_occ"].iloc[0]) if not cq_row.empty else 0
 
     days_to_q3 = _days_to_event(7, 1)   # July 1 = Q3 start proxy
-    headline = (
-        f"{cq} compression: {cq_80} days above 80% occ: "
-        f"Q3 peak ({int(avg_q3_80)}-day avg) starts in ~{days_to_q3} days"
-    )
-    body = (
-        f"Current quarter ({cq}) has logged {cq_80} days above 80% occupancy "
-        f"and {cq_90} days above 90%. "
-        f"Historical Q3 average is {avg_q3_80:.0f} days above 80%: "
-        f"the highest compression window of the year. "
-        f"Q3 peak demand is approximately {days_to_q3} days away; "
-        f"revenue management teams should be implementing BAR increases and "
-        f"closing discount channels for high-demand dates now. "
-        f"Each additional compression day above 90% represents a rate-capture opportunity "
-        f"worth an estimated 10–20% ADR premium over the daily baseline."
-    )
+    if q_lbl == "Q3":
+        # Inside the peak quarter, "Q3 starts in ~280 days" is misleading; report
+        # progress against the historical Q3 average instead.
+        headline = (
+            f"{cq} compression: {cq_80} days above 80% occ so far, "
+            f"against a {int(avg_q3_80)}-day Q3 average"
+        )
+        body = (
+            f"The Q3 peak is underway. {cq} has logged {cq_80} days above 80% occupancy "
+            f"and {cq_90} days above 90%, against a historical Q3 average of "
+            f"{avg_q3_80:.0f} days above 80%, the highest compression window of the year. "
+            f"For the remaining high-demand dates, revenue management teams should hold "
+            f"BAR increases and keep discount channels closed, then carry the same "
+            f"rate discipline into fall weekends. "
+            f"Each additional compression day above 90% represents a rate-capture opportunity "
+            f"worth an estimated 10–20% ADR premium over the daily baseline."
+        )
+    else:
+        headline = (
+            f"{cq} compression: {cq_80} days above 80% occ: "
+            f"Q3 peak ({int(avg_q3_80)}-day avg) starts in ~{days_to_q3} days"
+        )
+        body = (
+            f"Current quarter ({cq}) has logged {cq_80} days above 80% occupancy "
+            f"and {cq_90} days above 90%. "
+            f"Historical Q3 average is {avg_q3_80:.0f} days above 80%: "
+            f"the highest compression window of the year. "
+            f"Q3 peak demand is approximately {days_to_q3} days away; "
+            f"revenue management teams should be implementing BAR increases and "
+            f"closing discount channels for high-demand dates now. "
+            f"Each additional compression day above 90% represents a rate-capture opportunity "
+            f"worth an estimated 10–20% ADR premium over the daily baseline."
+        )
     return dict(
         headline=headline, body=body, priority=1, horizon_days=90,
         data_sources="kpi_compression_quarterly,kpi_daily_summary",
@@ -732,24 +786,49 @@ def gen_dmo_compression_outlook(comp: pd.DataFrame, kpi: pd.DataFrame) -> dict:
 
 
 def gen_dmo_event_roi(media_kpis: dict, web_kpis: dict) -> dict:
-    days_to_ohana = _days_to_event(9, 26)   # Ohana Fest ≈ last weekend Sept
+    days_to_ohana = _days_to_ohana()   # Ohana Fest ≈ last weekend Sept
     roas = media_kpis.get("roas_description", "5.6× return on ad spend (Datafy)")
     camp_impact = media_kpis.get("total_impact_usd") or 0
     web_impact  = web_kpis.get("est_impact_usd") or 0
     total_impact = (camp_impact or 0) + (web_impact or 0)
 
+    # Ohana Fest runs three days, so the two days after the anchor date still
+    # count as event weekend rather than "next year".
+    if days_to_ohana >= 363:
+        days_to_ohana = 0
+    if days_to_ohana <= 1:
+        when_h = "Ohana Fest weekend is here" if days_to_ohana == 0 else "Ohana Fest begins tomorrow"
+        when_b = ("Ohana Fest weekend is here" if days_to_ohana == 0
+                  else "Ohana Fest begins tomorrow")
+        action = ("The campaign window has closed; the focus now is rate integrity on event nights, "
+                  "visitor information on site, and capturing content and attendance data for next "
+                  "year's out-of-state LA and SF campaign.")
+    elif days_to_ohana <= 30:
+        when_h = f"Ohana Fest in ~{days_to_ohana} days"
+        when_b = f"Ohana Fest (annual September music event) is approximately {days_to_ohana} days away"
+        action = ("Campaign activation should already be live; concentrate remaining spend on "
+                  "out-of-state LA and SF feeder markets for highest incremental spend.")
+    elif days_to_ohana <= 90:
+        when_h = f"Ohana Fest in ~{days_to_ohana} days"
+        when_b = f"Ohana Fest (annual September music event) is approximately {days_to_ohana} days away"
+        action = ("The 90-day activation window is open; launch event-specific campaigns now and "
+                  "prioritize out-of-state LA and SF feeder markets for highest incremental spend.")
+    else:
+        when_h = f"Ohana Fest in ~{days_to_ohana} days"
+        when_b = f"Ohana Fest (annual September music event) is approximately {days_to_ohana} days away"
+        action = ("Begin event-specific campaign activation 90 days out; "
+                  "prioritize out-of-state LA and SF feeder markets for highest incremental spend.")
     headline = (
-        f"Ohana Fest in ~{days_to_ohana} days: "
+        f"{when_h}: "
         f"combined marketing impact: {_dollar(total_impact)} est."
     )
     body = (
-        f"Ohana Fest (annual September music event) is approximately {days_to_ohana} days away "
+        f"{when_b} "
         f"and represents the single highest ADR-lift event in the VDP calendar (+$139 ADR vs baseline). "
         f"Verified Datafy benchmarks: $18.4M total destination spend, 68% out-of-state attendees, "
         f"3.2× economic multiplier. "
         f"Combined website + media attribution estimated {_dollar(total_impact)} in visitor impact. "
-        f"Begin event-specific campaign activation 90 days out; "
-        f"prioritize out-of-state LA and SF feeder markets for highest incremental spend."
+        f"{action}"
     )
     return dict(
         headline=headline, body=body, priority=3, horizon_days=days_to_ohana,
@@ -1001,7 +1080,7 @@ def gen_visitor_rate_outlook(kpi: pd.DataFrame) -> dict:
 
 
 def gen_visitor_upcoming_events(media_kpis: dict) -> dict:
-    days_to_ohana    = _days_to_event(9, 26)
+    days_to_ohana    = _days_to_ohana()
     days_to_memorial = _days_to_event(5, 26)
     days_to_fourth   = _days_to_event(7, 4)
     days_to_labor    = _days_to_event(9, 1)
@@ -1015,7 +1094,7 @@ def gen_visitor_upcoming_events(media_kpis: dict) -> dict:
     next_event, next_days, rate_premium = upcoming[0]
 
     headline = (
-        f"Next major event: {next_event[:55]} in ~{next_days} days"
+        f"Next major event: {next_event.split(' (')[0][:55]} in ~{next_days} days"
     )
     body = (
         f"The next major visitor demand event is {next_event}, approximately {next_days} days away. "
@@ -1089,7 +1168,7 @@ def gen_resident_peak_alert(comp: pd.DataFrame) -> dict:
     q_lbl, season, _ = _seasonal_position()
     days_to_memorial = _days_to_event(5, 26)
     days_to_q3       = _days_to_event(7, 1)
-    days_to_ohana    = _days_to_event(9, 26)
+    days_to_ohana    = _days_to_ohana()
     days_to_labor    = _days_to_event(9, 1)
 
     upcoming = sorted([
@@ -3599,6 +3678,15 @@ def main() -> None:
 
         # ── Load data snapshots ──────────────────────────────────────────────
         print(f"\n  Loading data for {TODAY} ...")
+        global _OHANA_DATE
+        try:
+            _row = conn.execute(
+                "SELECT MIN(event_date) FROM vdp_events WHERE event_name LIKE 'Ohana%' "
+                "AND event_date >= date('now', 'localtime', '-2 day')"
+            ).fetchone()
+            _OHANA_DATE = date.fromisoformat(_row[0]) if _row and _row[0] else None
+        except Exception:
+            _OHANA_DATE = None
         kpi_recent   = load_kpi_recent(conn, days=90)
         kpi_all      = load_kpi_all(conn)
         kpi_dow      = load_kpi_with_dow(conn)
