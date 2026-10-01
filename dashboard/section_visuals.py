@@ -184,7 +184,7 @@ def _feeder_markets(_conn, limit: int = 6) -> pd.DataFrame:
     df = _q(
         _conn,
         "SELECT dma, spend_share_pct * 100 AS share_pct FROM datafy_overview_spending_by_market "
-        "WHERE report_period_start = (SELECT MAX(report_period_start) FROM datafy_overview_spending_by_market) "
+        "WHERE (report_period_start, report_period_end) = (SELECT report_period_start, report_period_end FROM datafy_overview_spending_by_market ORDER BY report_period_end DESC, report_period_start DESC LIMIT 1) "
         "ORDER BY spend_share_pct DESC LIMIT ?",
         (limit,),
     )
@@ -194,7 +194,7 @@ def _feeder_markets(_conn, limit: int = 6) -> pd.DataFrame:
     df = _q(
         _conn,
         "SELECT dma, trips_share_pct AS share_pct FROM datafy_overview_top_markets "
-        "WHERE report_period_start = (SELECT MAX(report_period_start) FROM datafy_overview_top_markets) "
+        "WHERE (report_period_start, report_period_end) = (SELECT report_period_start, report_period_end FROM datafy_overview_top_markets ORDER BY report_period_end DESC, report_period_start DESC LIMIT 1) "
         "ORDER BY trips_share_pct DESC LIMIT ?",
         (limit,),
     )
@@ -336,8 +336,9 @@ def _spend_categories(_conn, top_n: int = 5) -> pd.DataFrame:
     df = _q(
         _conn,
         "SELECT category, spend_share_pct FROM datafy_overview_spending_by_category "
-        "WHERE report_period_start = (SELECT MAX(report_period_start) "
-        "                             FROM datafy_overview_spending_by_category) "
+        "WHERE (report_period_start, report_period_end) = (SELECT report_period_start, report_period_end "
+        "    FROM datafy_overview_spending_by_category "
+        "    ORDER BY report_period_end DESC, report_period_start DESC LIMIT 1) "
         "ORDER BY spend_share_pct DESC",
     )
     if df.empty:

@@ -14,6 +14,7 @@ and (monthly only) capital-markets fields.
 import os
 import re
 import sqlite3
+import sys
 from datetime import datetime
 
 import pandas as pd
@@ -22,6 +23,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
 COSTAR_DIR = os.path.join(PROJECT_ROOT, "data", "costar")
+
+sys.path.insert(0, BASE_DIR)
+try:
+    import file_dates as FD          # rank files by DATE ADDED, not by the date in the name
+except Exception:                    # pragma: no cover
+    FD = None
 
 
 def _latest_costar_export(name_regex, legacy_name):
@@ -60,6 +67,10 @@ def _latest_costar_export(name_regex, legacy_name):
                 pass
         return datetime.fromtimestamp(os.path.getmtime(path))
 
+    if candidates and FD is not None:
+        # DATE ADDED decides (2026-10-01): the MM_DD_YY in a name is what CoStar typed, not when the
+        # file reached the repo. In every export to date the two agree.
+        return FD.newest(candidates, PROJECT_ROOT)
     dated = [c for c in candidates if re.search(r"\d{2}_\d{2}_\d{2}", os.path.basename(c))]
     if dated:
         return max(dated, key=_sort_key)

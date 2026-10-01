@@ -31,12 +31,19 @@ raising, so a missing/late CoStar drop never blocks the rest of the pipeline.
 import os
 import re
 import sqlite3
+import sys
 from datetime import datetime
 
 import pandas as pd
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
+
+sys.path.insert(0, BASE_DIR)
+try:
+    import file_dates as FD          # rank files by DATE ADDED, not by the date in the name
+except Exception:                    # pragma: no cover
+    FD = None
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
 COSTAR_DIR = os.path.join(PROJECT_ROOT, "data", "costar")
 
@@ -75,6 +82,8 @@ def _find_latest(regex_pattern: str):
                 pass
         return datetime.fromtimestamp(os.path.getmtime(path))
 
+    if FD is not None:
+        return FD.newest(candidates, PROJECT_ROOT)      # DATE ADDED decides, not the date in the name
     return max(candidates, key=_sort_key)
 
 
@@ -346,6 +355,8 @@ def _snapshot_date_from_filename(path: str) -> str:
             return datetime(2000 + yy, mm, dd).strftime("%Y-%m-%d")
         except ValueError:
             pass
+    if FD is not None:
+        return FD.local_date(path, PROJECT_ROOT)
     return datetime.fromtimestamp(os.path.getmtime(path)).strftime("%Y-%m-%d")
 
 

@@ -35,6 +35,22 @@ _logger = logging.getLogger("load_str_response_sheets")
 
 BASE_DIR     = Path(__file__).parent
 PROJECT_ROOT = BASE_DIR.parent
+
+import sys as _sys
+_sys.path.insert(0, str(BASE_DIR))
+try:
+    import file_dates as FD          # order files by DATE ADDED (oldest first), never by name
+except Exception:                    # pragma: no cover
+    FD = None
+
+
+def _oldest_first(paths):
+    paths = list(paths)
+    if FD is None:
+        return sorted(paths)
+    ordered = FD.sort_oldest_first([str(p) for p in paths], str(PROJECT_ROOT))
+    return [Path(p) for p in ordered]
+
 DB_PATH      = PROJECT_ROOT / "data" / "analytics.sqlite"
 WEEKLY_DIR   = PROJECT_ROOT / "data" / "str" / "weekly"
 MONTHLY_DIR  = PROJECT_ROOT / "data" / "str" / "monthly"
@@ -231,7 +247,7 @@ def load_response_sheets() -> int:
             _logger.warning("Directory not found: %s", directory)
             continue
 
-        files = sorted(directory.glob("*.xls*"))
+        files = _oldest_first(directory.glob("*.xls*"))
         _logger.info("Processing %d %s files from %s", len(files), grain, directory)
 
         for fpath in files:

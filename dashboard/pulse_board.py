@@ -173,7 +173,7 @@ def _fresh(m: ps.Model) -> list[dict]:
         out.append({"label": "CoStar", "text": f"pulled {pdx.fmt_date(pull)}",
                     "ok": (today - pd.Timestamp(pull)).days <= 10})
     if f.get("datafy_end"):
-        out.append({"label": "Datafy", "text": f"{pdx.fmt_month(f['datafy_start'])} to {pdx.fmt_month(f['datafy_end'])}",
+        out.append({"label": "Datafy", "text": pdx.datafy_label(f),
                     "ok": (today - pd.Timestamp(f["datafy_end"])).days <= 62})
     return out
 

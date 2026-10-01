@@ -16,6 +16,14 @@ Two loader paths:
 Re-run safety: every path uses a DELETE + INSERT cycle keyed on
 (report_period_start, report_period_end), so running the pipeline twice is safe.
 
+File order (added 2026-10-01): files are processed OLDEST TO NEWEST BY DATE ADDED (see
+scripts/file_dates.py), not by name. Because each load replaces any earlier rows with the same
+period key, the most recently added file always wins a collision. Names ("Export (8)",
+"marketAnalysis-...") are only the last tiebreaker. Every file is recorded in the
+datafy_file_ingest table (date added, target table, period used, where the period came from,
+rows loaded, status); scripts/audit_latest_files.py reads it to confirm that the newest upload is
+what the board shows.
+
 Folder / file → DB table mapping (legacy prefix-based)
 --------------------------------------------------------
   overview/kpis_*.csv                       → datafy_overview_kpis
@@ -77,8 +85,15 @@ import glob
 import os
 import re
 import sqlite3
+import sys
 from datetime import datetime
 from typing import Optional
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    import file_dates as FD          # date-added ordering shared with the audit step
+except Exception:                    # pragma: no cover - never let ordering break the load
+    FD = None
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))   # …/scripts/
@@ -870,18 +885,24 @@ def _get_table_columns(cur, table: str) -> list:
             if row[1] not in ("id", "loaded_at")]
 
 
-def _extract_period(filename: str, subfolder: str) -> tuple:
+def _extract_period_ex(filename: str, subfolder: str) -> tuple:
     """
-    Try to parse DD-MM-YYYY_to_DD-MM-YYYY from filename.
-    Falls back to FOLDER_DEFAULT_PERIODS[subfolder].
+    (start, end, source). Parses DD-MM-YYYY_to_DD-MM-YYYY from the file name (source
+    "filename"); otherwise falls back to FOLDER_DEFAULT_PERIODS[subfolder] (source
+    "folder_default"), which is an ASSUMED period, not one the file states.
     """
     m = re.search(r"(\d{2})-(\d{2})-(\d{4})_to_(\d{2})-(\d{2})-(\d{4})", filename)
     if m:
         d1, m1, y1, d2, m2, y2 = m.groups()
-        start = f"{y1}-{m1}-{d1}"
-        end   = f"{y2}-{m2}-{d2}"
-        return start, end
-    return FOLDER_DEFAULT_PERIODS.get(subfolder, ("2025-01-01", "2025-12-31"))
+        return f"{y1}-{m1}-{d1}", f"{y2}-{m2}-{d2}", "filename"
+    ps, pe = FOLDER_DEFAULT_PERIODS.get(subfolder, ("2025-01-01", "2025-12-31"))
+    return ps, pe, "folder_default"
+
+
+def _extract_period(filename: str, subfolder: str) -> tuple:
+    """Back-compatible (start, end) wrapper around _extract_period_ex."""
+    ps, pe, _src = _extract_period_ex(filename, subfolder)
+    return ps, pe
 
 
 def _delete_period(cur, table: str, period_start: str, period_end: str) -> None:
@@ -922,6 +943,7 @@ def load_csv_into_table(cur, csv_path: str, table: str) -> int:
         print(f"  WARN  {os.path.basename(csv_path)}: missing period columns, skipping")
         return 0
 
+    load_csv_into_table.last_period = (period_start, period_end)
     _delete_period(cur, table, period_start, period_end)
 
     db_cols = _get_table_columns(cur, table)
@@ -2252,9 +2274,15 @@ NEW_FILE_HANDLERS: list[tuple[str, str, object]] = [
 
 
 def find_new_handler(filename_lower: str):
-    """Return (table, parser_func) for filename, or (None, None) if no match."""
+    """Return (table, parser_func) for filename, or (None, None) if no match.
+
+    A fragment only matches at the start of the name or right after a non-alphanumeric
+    character. Plain substring matching let "visitation_export" claim
+    "AttributionPeakVisitation_Export" and "TopClusterVisitation_Export", which then wiped the
+    local-visitor trips table with a file that is not a visitation export (2026-10-01).
+    """
     for stem_frag, table, func in NEW_FILE_HANDLERS:
-        if stem_frag in filename_lower:
+        if re.search(r"(?<![a-z0-9])" + re.escape(stem_frag), filename_lower):
             return table, func
     return None, None
 
@@ -2277,6 +2305,46 @@ def _infer_subfolder(table: str) -> str | None:
     return None
 
 
+# ─── File ingest log ──────────────────────────────────────────────────────────
+
+INGEST_DDL = """
+CREATE TABLE IF NOT EXISTS datafy_file_ingest (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_at          TEXT,
+    batch_no        INTEGER,   -- upload session, 1 = oldest (files added within 6 hours of each other)
+    file_path       TEXT,      -- relative to data/datafy/
+    file_name       TEXT,
+    family          TEXT,      -- report type: name without copy number, dates, extension
+    date_added      TEXT,      -- naive UTC; see scripts/file_dates.py
+    date_added_src  TEXT,      -- git | mtime
+    target_table    TEXT,
+    period_start    TEXT,
+    period_end      TEXT,
+    period_source   TEXT,      -- filename | csv_columns | folder_default (assumed)
+    rows_loaded     INTEGER,
+    status          TEXT,      -- ok | skipped | skip_list | unmapped | error
+    note            TEXT
+)
+"""
+
+
+def _collect_files() -> list:
+    """Every CSV the loader considers: (path, subfolder, top_level)."""
+    items = []
+    for subfolder in sorted(os.listdir(DATAFY_DIR)):
+        subfolder_path = os.path.join(DATAFY_DIR, subfolder)
+        if not os.path.isdir(subfolder_path):
+            continue
+        for csv_path in sorted(glob.glob(os.path.join(subfolder_path, "*.csv"))):
+            items.append((csv_path, subfolder, False))
+    # Some months' exports land directly in data/datafy/ instead of a dated
+    # subfolder (e.g. a Datafy_MM_DD_YY/ drop) — scan those too so they
+    # aren't silently skipped just because of where they were saved.
+    for csv_path in sorted(glob.glob(os.path.join(DATAFY_DIR, "*.csv"))):
+        items.append((csv_path, "", True))
+    return items
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -2284,43 +2352,64 @@ def main():
     cur  = conn.cursor()
 
     ensure_schemas(cur)
+    cur.executescript(INGEST_DDL)
     conn.commit()
 
     total_files   = 0
     total_rows    = 0
     skipped_files = 0
 
-    def _process_one(csv_path: str, subfolder: str, *, top_level: bool = False) -> None:
+    def _process_one(csv_path: str, subfolder: str, *, top_level: bool = False) -> dict:
+        """Load one file. Returns {table, ps, pe, psrc, rows, status, note} for the ingest log."""
         nonlocal total_files, total_rows, skipped_files
 
         filename      = os.path.basename(csv_path)
         name_stem     = filename.rsplit(".", 1)[0]
         name_stem_lc  = name_stem.lower()
+        res = {"table": None, "ps": None, "pe": None, "psrc": None,
+               "rows": 0, "status": "skipped", "note": ""}
 
         # ── 1. Explicit skip list ─────────────────────────────────────────
         if name_stem_lc in SKIP_STEMS:
             print(f"  SKIP  {filename} (in skip list)")
             skipped_files += 1
-            return
+            res.update(status="skip_list", note="in SKIP_STEMS")
+            return res
 
         # ── 2. Try new-format handlers ────────────────────────────────────
         table, parser = find_new_handler(name_stem_lc)
         if table is not None:
             period_subfolder = _infer_subfolder(table) if top_level else subfolder
-            ps, pe = _extract_period(filename, period_subfolder or subfolder)
+            ps, pe, psrc = _extract_period_ex(filename, period_subfolder or subfolder)
+            res.update(table=table, ps=ps, pe=pe, psrc=psrc)
+            # Every parser deletes the period's old rows before inserting. A SAVEPOINT makes a
+            # file that yields nothing (or fails) leave the earlier load untouched, so a newer
+            # but unusable export can never blank out good data.
+            cur.execute("SAVEPOINT parse_one")
             try:
                 n = parser(csv_path, cur, ps, pe)
                 if n > 0:
+                    cur.execute("RELEASE parse_one")
                     print(f"  OK    {filename} → {table} ({n} rows)")
                     total_files += 1
                     total_rows  += n
+                    res.update(rows=n, status="ok")
                 else:
+                    cur.execute("ROLLBACK TO parse_one")
+                    cur.execute("RELEASE parse_one")
                     # Parser already printed its own SKIP/WARN; just count as skipped
                     skipped_files += 1
+                    res.update(note="parser returned 0 rows; earlier rows kept")
             except Exception as exc:
+                try:
+                    cur.execute("ROLLBACK TO parse_one")
+                    cur.execute("RELEASE parse_one")
+                except Exception:
+                    pass
                 print(f"  ERR   {filename}: {exc}")
                 skipped_files += 1
-            return
+                res.update(status="error", note=str(exc)[:200])
+            return res
 
         # ── 3. Legacy FILE_TABLE_MAP (period columns in CSV) ──────────────
         if top_level:
@@ -2333,7 +2422,9 @@ def main():
                   f"attribution_website/, attribution_media/, or social/, or add a "
                   f"NEW_FILE_HANDLERS entry for it, then re-run")
             skipped_files += 1
-            return
+            res.update(status="unmapped", note="top level, no handler in this loader "
+                                                 "(another datafy loader may own it)")
+            return res
 
         parts  = name_stem.split("_")
         legacy_table = None
@@ -2346,39 +2437,59 @@ def main():
         if legacy_table is None:
             print(f"  WARN  {filename}: no table mapping found, skipping")
             skipped_files += 1
-            return
+            res.update(status="unmapped", note="no table mapping")
+            return res
 
+        res["table"] = legacy_table
         try:
+            load_csv_into_table.last_period = (None, None)
             n = load_csv_into_table(cur, csv_path, legacy_table)
+            lp = getattr(load_csv_into_table, "last_period", (None, None))
+            res.update(ps=lp[0], pe=lp[1], psrc="csv_columns", rows=n,
+                       status="ok" if n else "skipped")
             print(f"  OK    {filename} → {legacy_table} ({n} rows)")
             total_files += 1
             total_rows  += n
         except Exception as exc:
             print(f"  ERR   {filename}: {exc}")
             skipped_files += 1
+            res.update(status="error", note=str(exc)[:200])
+        return res
 
-    for subfolder in sorted(os.listdir(DATAFY_DIR)):
-        subfolder_path = os.path.join(DATAFY_DIR, subfolder)
-        if not os.path.isdir(subfolder_path):
-            continue
+    items = _collect_files()
+    if FD is not None:
+        order = {p: FD.sort_key(p, PROJECT_ROOT) for p, _, _ in items}
+        items.sort(key=lambda it: order[it[0]])
+        batches = FD.group_batches([p for p, _, _ in items], PROJECT_ROOT)
+        batch_of = {p: n + 1 for n, grp in enumerate(batches) for p in grp}
+        print(f"Loading {len(items)} Datafy files, oldest to newest by DATE ADDED "
+              f"({len(batches)} upload batches; newest batch added "
+              f"{FD.date_added(batches[-1][-1], PROJECT_ROOT)[0]:%Y-%m-%d %H:%M} UTC)…" if batches else
+              "Loading Datafy files…")
+    else:
+        batch_of = {}
+        print(f"Loading {len(items)} Datafy files in name order (file_dates unavailable)…")
 
-        csv_files = sorted(glob.glob(os.path.join(subfolder_path, "*.csv")))
-        if not csv_files:
-            continue
+    ingest_rows = []
+    run_at = NOW
+    for csv_path, subfolder, top_level in items:
+        res = _process_one(csv_path, subfolder, top_level=top_level)
+        added, src = FD.date_added(csv_path, PROJECT_ROOT) if FD else (None, None)
+        ingest_rows.append((
+            run_at, batch_of.get(csv_path), os.path.relpath(csv_path, DATAFY_DIR).replace(os.sep, "/"),
+            os.path.basename(csv_path),
+            FD.family_key(csv_path) if FD else None,
+            added.strftime("%Y-%m-%d %H:%M:%S") if added else None, src,
+            res["table"], res["ps"], res["pe"], res["psrc"], res["rows"], res["status"], res["note"],
+        ))
 
-        print(f"Loading {subfolder}/…")
-        for csv_path in csv_files:
-            _process_one(csv_path, subfolder)
-
-    # Some months' exports land directly in data/datafy/ instead of a dated
-    # subfolder (e.g. a Datafy_MM_DD_YY/ drop) — scan those too so they
-    # aren't silently skipped just because of where they were saved.
-    top_level_csvs = sorted(glob.glob(os.path.join(DATAFY_DIR, "*.csv")))
-    if top_level_csvs:
-        print("Loading data/datafy/ (top level)…")
-        for csv_path in top_level_csvs:
-            _process_one(csv_path, subfolder="", top_level=True)
-
+    cur.execute("DELETE FROM datafy_file_ingest")
+    cur.executemany("""
+        INSERT INTO datafy_file_ingest
+            (run_at, batch_no, file_path, file_name, family, date_added, date_added_src,
+             target_table, period_start, period_end, period_source, rows_loaded, status, note)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, ingest_rows)
     conn.commit()
 
     # Audit trail

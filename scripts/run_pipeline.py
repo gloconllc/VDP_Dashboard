@@ -32,6 +32,9 @@ Pipeline steps:
   10. load_later_reports.py       — Later.com social CSVs       → 14 later_* tables (skip-safe)
   11. fetch_event_analytics.py    — Event impact analysis       → 5 events_* tables (skip-safe)
   12. audit_data.py               — data-quality audit; stdout summary (skip-safe)
+  12a. audit_latest_files.py      — FILE AUDIT: "latest" = DATE ADDED, never file name. Confirms the newest file in every
+                                    data folder was read and that the board shows its period; writes logs/file_audit.txt,
+                                    logs/file_audit.json and the file_audit table (skip-safe, never blocks)
   11a. load_us_travel_inbound_profiles.py — ITA Inbound Market Profile xlsx (7 categories) → us_travel_inbound_market_profile (skip-safe)
   12. fetch_fred_data.py          — FRED macro indicators       → fred_economic_indicators (skip-safe, needs FRED_API_KEY)
   13. fetch_google_trends.py      — Google search demand        → google_trends_weekly (skip-safe)
@@ -165,6 +168,11 @@ STEPS = [
     ("load_later",        os.path.join(BASE_DIR, "load_later_reports.py"),      False),
     ("fetch_event_analytics", os.path.join(BASE_DIR, "fetch_event_analytics.py"), False),
     ("audit_data",        os.path.join(BASE_DIR, "audit_data.py"),              False),
+    # FILE AUDIT — "latest" is decided by DATE ADDED (scripts/file_dates.py), not by file name.
+    # Runs after every loader has read its files and before the external feeds. Non-fatal: it reports
+    # newer files that are not on the board, files no loader read, and database freshness
+    # (full text in logs/file_audit.txt, table file_audit). Added 2026-10-01.
+    ("audit_latest_files", os.path.join(BASE_DIR, "audit_latest_files.py"),        False),
     # External live data — skip-safe, run last so core pipeline is never blocked
     ("fetch_fred",        os.path.join(BASE_DIR, "fetch_fred_data.py"),         False),
     ("fetch_trends",      os.path.join(BASE_DIR, "fetch_google_trends.py"),     False),

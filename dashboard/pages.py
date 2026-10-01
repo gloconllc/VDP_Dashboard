@@ -981,7 +981,7 @@ def page_visitor_markets(df_dfy: pd.DataFrame, df_dma: pd.DataFrame) -> None:
         st.warning("No Datafy visitor overview data loaded yet (datafy_overview_kpis).")
         return
 
-    latest = df_dfy.sort_values("report_period_start", ascending=False).iloc[0]
+    latest = df_dfy.sort_values(["report_period_end", "report_period_start"], ascending=False).iloc[0]
     period = f"{latest['report_period_start']} to {latest['report_period_end']}"
     total_trips = latest.get("total_trips")
     oos_pct = latest.get("out_of_state_vd_pct")
@@ -1086,7 +1086,7 @@ def page_spend_pathways(df_dfy: pd.DataFrame, df_spend: pd.DataFrame) -> None:
         "spend_share_pct", ascending=False)
     top_cat = spend_latest.iloc[0] if not spend_latest.empty else None
 
-    dfy_latest = df_dfy.sort_values("report_period_start", ascending=False).iloc[0]
+    dfy_latest = df_dfy.sort_values(["report_period_end", "report_period_start"], ascending=False).iloc[0]
     visitor_spend_pct = dfy_latest.get("visitor_spending_pct")
     local_spend_pct = dfy_latest.get("local_spending_pct")
 
@@ -1166,7 +1166,7 @@ def page_stay_patterns(df_dfy: pd.DataFrame, df_los: pd.DataFrame = None) -> Non
 
     df_los = df_los if df_los is not None else pd.DataFrame()
 
-    latest = df_dfy.sort_values("report_period_start", ascending=False).iloc[0]
+    latest = df_dfy.sort_values(["report_period_end", "report_period_start"], ascending=False).iloc[0]
     avg_los = latest.get("avg_length_of_stay_days")
     los_delta = latest.get("avg_los_vs_compare_days")
     overnight_pct = latest.get("overnight_trips_pct")
@@ -1647,7 +1647,7 @@ def page_stakeholder_brief(df_kpi: pd.DataFrame, df_comp: pd.DataFrame, df_dfy: 
         g = df_group.iloc[0] if not df_group.empty else None
         tbid_low = g.get("estimated_group_tbid_rev_low") if g is not None else np.nan
         tbid_high = g.get("estimated_group_tbid_rev_high") if g is not None else np.nan
-        dfy = df_dfy.sort_values("report_period_start", ascending=False).iloc[0] if not df_dfy.empty else None
+        dfy = df_dfy.sort_values(["report_period_end", "report_period_start"], ascending=False).iloc[0] if not df_dfy.empty else None
         total_trips = dfy.get("total_trips") if dfy is not None else np.nan
         oos_pct = dfy.get("out_of_state_vd_pct") if dfy is not None else np.nan
         tot_est = np.nan
@@ -1721,7 +1721,7 @@ def page_stakeholder_brief(df_kpi: pd.DataFrame, df_comp: pd.DataFrame, df_dfy: 
             spend_latest = df_spend[df_spend["report_period_start"] == latest_period].sort_values(
                 "spend_share_pct", ascending=False)
             top_cat = spend_latest.iloc[0] if not spend_latest.empty else None
-        dfy = df_dfy.sort_values("report_period_start", ascending=False).iloc[0] if not df_dfy.empty else None
+        dfy = df_dfy.sort_values(["report_period_end", "report_period_start"], ascending=False).iloc[0] if not df_dfy.empty else None
         repeat_pct = dfy.get("repeat_visitors_pct") if dfy is not None else np.nan
         top_cat_name = top_cat["category"] if top_cat is not None else "N/A"
         top_cat_share = f"{top_cat['spend_share_pct']:.1f}%" if top_cat is not None else "N/A"
@@ -1793,7 +1793,7 @@ def page_brain_status(table_counts: dict, df_log: pd.DataFrame, df_kpi: pd.DataF
 
     datafy_period = None
     if not df_dfy.empty:
-        datafy_period = df_dfy.sort_values("report_period_start", ascending=False).iloc[0]["report_period_end"]
+        datafy_period = df_dfy.sort_values(["report_period_end", "report_period_start"], ascending=False).iloc[0]["report_period_end"]
 
     last_run = None
     if not df_log.empty:
@@ -1972,7 +1972,7 @@ def page_overview(df_kpi: pd.DataFrame, df_dfy: pd.DataFrame, df_comp: pd.DataFr
     trips_now, trips_period, oos_pct = None, "", None
     top_cat_name, top_cat_share = "N/A", "N/A"
     if not df_dfy.empty:
-        _d = df_dfy.sort_values("report_period_start", ascending=False).iloc[0]
+        _d = df_dfy.sort_values(["report_period_end", "report_period_start"], ascending=False).iloc[0]
         trips_now = _d.get("total_trips")
         oos_pct = _d.get("out_of_state_vd_pct")
         trips_period = f"{_d['report_period_start']} to {_d['report_period_end']}"

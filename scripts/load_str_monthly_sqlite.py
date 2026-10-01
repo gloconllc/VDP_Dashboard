@@ -5,6 +5,13 @@ import pandas as pd
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
+
+import sys
+sys.path.insert(0, BASE_DIR)
+try:
+    import file_dates as FD          # order files by DATE ADDED (oldest first), never by name
+except Exception:                    # pragma: no cover
+    FD = None
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
 STR_DIR = os.path.join(PROJECT_ROOT, "data", "str")
 # Primary file (legacy / manual drop)
@@ -109,7 +116,13 @@ def safe_float(v):
 def _sorted_xlsx_files(directory: str) -> list[str]:
     if not os.path.isdir(directory):
         return []
-    return sorted(f for f in os.listdir(directory) if f.lower().endswith((".xlsx", ".xls")))
+    names = [f for f in os.listdir(directory) if f.lower().endswith((".xlsx", ".xls"))]
+    if FD is not None:
+        # Oldest DATE ADDED first, so the newest export wins any date that appears twice.
+        # Name order is wrong here: "2026-09-02_VisitDanaPoint_..." sorts before "VisitDanaPoint_...".
+        ordered = FD.sort_oldest_first([os.path.join(directory, n) for n in names], PROJECT_ROOT)
+        return [os.path.basename(p) for p in ordered]
+    return sorted(names)
 
 
 def _read_all_sheets(fpath: str) -> list[tuple[str, str, pd.DataFrame]]:

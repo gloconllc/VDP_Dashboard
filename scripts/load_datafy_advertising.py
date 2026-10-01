@@ -38,12 +38,19 @@ rather than raising.
 import os
 import re
 import sqlite3
+import sys
 from datetime import datetime
 
 import pandas as pd
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    import file_dates as FD          # rank files by DATE ADDED, never by name or checkout time
+except Exception:                    # pragma: no cover
+    FD = None
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
 DATAFY_DIR = os.path.join(PROJECT_ROOT, "data", "datafy")
 
@@ -179,6 +186,8 @@ def _snapshot_date(path: str) -> str:
             return datetime(y, mo, d).strftime("%Y-%m-%d")
         except ValueError:
             continue
+    if FD is not None:
+        return FD.local_date(path, PROJECT_ROOT)      # date added (git on CI, file time on a laptop)
     return datetime.fromtimestamp(os.path.getmtime(path)).strftime("%Y-%m-%d")
 
 
@@ -227,7 +236,8 @@ def _write_snapshot(cur, table: str, value_cols: list[str], rows: list[tuple], c
 
 def _find_file(regex_pattern: str):
     """Newest file in DATAFY_DIR (top level only) matching regex_pattern,
-    case-insensitive, by mtime. Returns None if nothing matches."""
+    case-insensitive, by DATE ADDED (scripts/file_dates.py), with the "(N)" copy number and then
+    the name as tiebreakers. Returns None if nothing matches."""
     if not os.path.isdir(DATAFY_DIR):
         return None
     rx = re.compile(regex_pattern, re.IGNORECASE)
@@ -237,6 +247,8 @@ def _find_file(regex_pattern: str):
     ]
     if not candidates:
         return None
+    if FD is not None:
+        return FD.newest(candidates, PROJECT_ROOT)
     return max(candidates, key=os.path.getmtime)
 
 

@@ -103,6 +103,17 @@ def fmt_month(d) -> str:
     return pd.Timestamp(d).strftime("%b %Y")
 
 
+def datafy_label(f: dict) -> str:
+    """"Jan 2026 to Jul 2026" and, when the monthly trend runs further, ", monthly trend to Aug 2026"."""
+    base = f"{fmt_month(f['datafy_start'])} to {fmt_month(f['datafy_end'])}"
+    te = f.get("datafy_trend_end")
+    if te is not None and not pd.isna(te):
+        te, de = pd.Timestamp(te), pd.Timestamp(f["datafy_end"])
+        if (te.year, te.month) > (de.year, de.month):
+            base += f", monthly trend to {fmt_month(te)}"
+    return base
+
+
 def resolve_window(anchor_end, months: float, start_iso: str | None, end_iso: str | None,
                    label: str) -> Window:
     """Presets end on the newest hotel date on file and run back
@@ -591,13 +602,39 @@ def _parse_month(month_val, year_val) -> pd.Timestamp | None:
     return None
 
 
+# Datafy publishes with a lag of about three weeks: a September 30 export carries September only
+# through roughly the 9th. A month counts as complete once it ended this many days before the file
+# was added. Mirrors DATAFY_LAG_DAYS in scripts/audit_latest_files.py.
+DATAFY_LAG_DAYS = 21
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def _datafy_complete_through(_conn) -> pd.Timestamp | None:
+    """First day of the newest COMPLETE month in the newest monthly spend / visitor-day export.
+
+    "Newest" is by date added (datafy_file_ingest, written by load_datafy_reports.py), never by file
+    name. Returns None when the ingest log is unavailable so callers fall back to the period label."""
+    try:
+        r = _q(_conn, "SELECT MAX(date_added) AS d FROM datafy_file_ingest WHERE status = 'ok' AND target_table IN "
+                      "('datafy_overview_spending_by_month', 'datafy_overview_visitation_by_month')")
+    except Exception:
+        return None
+    if r.empty or not r.iloc[0]["d"]:
+        return None
+    cut = pd.Timestamp(r.iloc[0]["d"]) - pd.Timedelta(days=DATAFY_LAG_DAYS)
+    first = cut.replace(day=1).normalize()
+    month_end = first + pd.offsets.MonthEnd(0)
+    return first if month_end.normalize() <= cut.normalize() else first - pd.DateOffset(months=1)
+
+
 @st.cache_data(ttl=1800, show_spinner=False)
 def datafy_monthly(_conn) -> pd.DataFrame:
     """Monthly visitor spend and visitor days. Datafy's two monthly exports
     store the month two different ways ("Mar 2021" in one, "Mar" plus a year
     column in the other); both are parsed here. Zero rows are Datafy's
-    placeholder for months not yet reported and are dropped, and any month
-    past Datafy's newest reported month is treated as partial and excluded."""
+    placeholder for months not yet reported and are dropped. A month Datafy has
+    only partly reported (the export's own month, because of the publishing lag)
+    is excluded; see _datafy_complete_through."""
     sp = _q(_conn, "SELECT id, year, month, spending_usd FROM datafy_overview_spending_by_month")
     vd = _q(_conn, "SELECT id, year, month, visitor_days FROM datafy_overview_visitation_by_month")
     frames = []
@@ -613,9 +650,12 @@ def datafy_monthly(_conn) -> pd.DataFrame:
     if not frames:
         return pd.DataFrame()
     out = pd.concat(frames, axis=1).reset_index().sort_values("period")
-    end = _q(_conn, "SELECT MAX(report_period_end) AS e FROM datafy_overview_spending_by_market")
-    if not end.empty and end.iloc[0]["e"]:
-        cutoff = pd.Timestamp(end.iloc[0]["e"])
+    cutoff = _datafy_complete_through(_conn)
+    if cutoff is None:
+        end = _q(_conn, "SELECT MAX(report_period_end) AS e FROM datafy_overview_spending_by_market")
+        if not end.empty and end.iloc[0]["e"]:
+            cutoff = pd.Timestamp(end.iloc[0]["e"])
+    if cutoff is not None:
         out = out[out["period"] <= cutoff]
     if "spending_usd" in out:
         last_spend = out.dropna(subset=["spending_usd"])["period"].max()
@@ -644,10 +684,23 @@ def datafy_window(dm: pd.DataFrame, w: Window) -> dict | None:
     if len(prior) == len(months):
         ps = prior["spending_usd"].sum(min_count=1) if "spending_usd" in prior else None
         pv = prior["visitor_days"].sum(min_count=1) if "visitor_days" in prior else None
-        out["spend_pct"] = _pct_change(spend, ps)
-        out["vd_pct"] = _pct_change(vdays, pv)
-        out["spvd_pct"] = _pct_change(_safe_div(spend, vdays), _safe_div(ps, pv))
-        out["prior_spend"], out["prior_vd"] = ps, pv
+
+        # A year-over-year change is only like for like when the prior year reports every month the
+        # window does. Datafy's visitor-day export covers about two calendar years while spending
+        # reaches back to 2021, so a window that starts before January of last year would otherwise
+        # compare, for example, 11 months of this year with 8 months of last year.
+        def _same_months(col: str) -> bool:
+            if col not in months or col not in prior:
+                return False
+            return int(months[col].notna().sum()) == int(prior[col].notna().sum()) == len(months)
+
+        full_spend, full_vd = _same_months("spending_usd"), _same_months("visitor_days")
+        out["spend_pct"] = _pct_change(spend, ps) if full_spend else None
+        out["vd_pct"] = _pct_change(vdays, pv) if full_vd else None
+        out["spvd_pct"] = (_pct_change(_safe_div(spend, vdays), _safe_div(ps, pv))
+                           if (full_spend and full_vd) else None)
+        out["prior_spend"] = ps if full_spend else None
+        out["prior_vd"] = pv if full_vd else None
     # Peak month inside the window.
     if spend and "spending_usd" in months:
         pk = months.loc[months["spending_usd"].idxmax()]
@@ -691,7 +744,7 @@ def datafy_markets(_conn, limit: int = 10) -> pd.DataFrame:
     df = _q(_conn, """
         SELECT dma, spend_share_pct * 100 AS share_pct, report_period_start, report_period_end
         FROM datafy_overview_spending_by_market
-        WHERE report_period_start = (SELECT MAX(report_period_start) FROM datafy_overview_spending_by_market)
+        WHERE (report_period_start, report_period_end) = (SELECT report_period_start, report_period_end FROM datafy_overview_spending_by_market ORDER BY report_period_end DESC, report_period_start DESC LIMIT 1)
         ORDER BY spend_share_pct DESC LIMIT ?
     """, (limit,))
     if not df.empty:
@@ -705,7 +758,7 @@ def datafy_categories(_conn) -> pd.DataFrame:
         SELECT category, spend_share_pct * 100 AS share_pct, avg_spend_usd,
                report_period_start, report_period_end
         FROM datafy_overview_spending_by_category
-        WHERE report_period_start = (SELECT MAX(report_period_start) FROM datafy_overview_spending_by_category)
+        WHERE (report_period_start, report_period_end) = (SELECT report_period_start, report_period_end FROM datafy_overview_spending_by_category ORDER BY report_period_end DESC, report_period_start DESC LIMIT 1)
         ORDER BY spend_share_pct DESC
     """)
     return df
@@ -718,13 +771,13 @@ def datafy_profile(_conn) -> dict:
     data means the same export was loaded under two period labels."""
     out: dict = {}
     k = _q(_conn, "SELECT report_period_start, report_period_end, total_trips, avg_los_days "
-                  "FROM datafy_overview_total_kpis ORDER BY report_period_start DESC")
+                  "FROM datafy_overview_total_kpis ORDER BY report_period_end DESC, report_period_start DESC")
     if not k.empty:
         out["trips"] = k.iloc[0]["total_trips"]
         out["avg_los"] = k.iloc[0]["avg_los_days"]
         out["period_start"], out["period_end"] = k.iloc[0]["report_period_start"], k.iloc[0]["report_period_end"]
     io = _q(_conn, "SELECT report_period_start, in_state_pct, out_of_state_pct "
-                   "FROM datafy_overview_instate_outstate ORDER BY report_period_start DESC")
+                   "FROM datafy_overview_instate_outstate ORDER BY report_period_end DESC, report_period_start DESC")
     if not io.empty:
         out["out_of_state_pct"] = float(io.iloc[0]["out_of_state_pct"]) * 100
         out["oos_repeats_prior"] = bool(len(io) > 1 and
@@ -872,11 +925,12 @@ def freshness(_conn) -> dict:
                 f["costar_pull"] = newest
     except Exception:
         pass  # a malformed log row must never break the header badges
-    dp = _q(_conn, "SELECT MIN(report_period_start) AS s, MAX(report_period_end) AS e "
-                   "FROM datafy_overview_spending_by_market WHERE report_period_start = "
-                   "(SELECT MAX(report_period_start) FROM datafy_overview_spending_by_market)")
+    dp = _q(_conn, "SELECT report_period_start AS s, report_period_end AS e "
+                   "FROM datafy_overview_spending_by_market "
+                   "ORDER BY report_period_end DESC, report_period_start DESC LIMIT 1")
     if not dp.empty:
         f["datafy_start"], f["datafy_end"] = dp.iloc[0]["s"], dp.iloc[0]["e"]
+    f["datafy_trend_end"] = _datafy_complete_through(_conn)
     ad = _q(_conn, "SELECT MAX(snapshot_date) AS s FROM datafy_advertising_kpis")
     f["ads_snapshot"] = ad.iloc[0]["s"] if not ad.empty else None
     wk = _q(_conn, "SELECT MAX(as_of_date) AS w FROM fact_str_group_metrics WHERE grain='weekly'")

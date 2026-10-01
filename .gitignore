@@ -47,3 +47,8 @@ logs/*.html
 # project data, sometimes swept in by an unrelated automated commit.
 _to_delete/
 data/.fuse_hidden*
+
+# Weekly Heather recaps (PDFs, drafts, addresses): local only, never in this public repo
+recaps/*
+!recaps/templates/
+_to_delete_local/

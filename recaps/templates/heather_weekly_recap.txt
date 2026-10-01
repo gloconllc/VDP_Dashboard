@@ -1,0 +1,20 @@
+Subject: Dana Point PULSE Weekly Recap | Week Ending {week_end}
+
+Hi {first_name},
+
+Here is this week's Dana Point PULSE recap. The full report is attached, and the live dashboard is here: {app_url}
+
+Week of {week_start} to {week_end}, compared to the same week last year:
+Occupancy: {occ} ({occ_chg})
+ADR: {adr} ({adr_chg})
+RevPAR: {revpar} ({revpar_chg})
+Room revenue: {revenue} ({revenue_chg})
+
+{month_line}
+
+{updated_line} {unchanged_line}
+
+Please let me know if you would like a closer look at anything.
+
+Thank you,
+{signature}

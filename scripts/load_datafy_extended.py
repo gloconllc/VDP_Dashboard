@@ -55,7 +55,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
 from load_datafy_advertising import (  # noqa: E402  (shared parsing + snapshot helpers)
-    DATAFY_DIR, DB_PATH, _int, _num, _snapshot_date, _write_snapshot, log_load, ts,
+    DATAFY_DIR, DB_PATH, FD, PROJECT_ROOT, _int, _num, _snapshot_date, _write_snapshot, log_load, ts,
 )
 
 DDL = """
@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS datafy_spend_market_monthly (
 # ── file discovery ───────────────────────────────────────────────────────────
 
 def _candidates(pattern: str, header_prefix: str | None = None):
-    """Top-level CSVs matching `pattern` (case-insensitive), newest first.
+    """Top-level CSVs matching `pattern` (case-insensitive), newest first by DATE ADDED.
     `header_prefix` additionally requires the first line to start with it, which
     separates same-named exports that carry different reports (Attribution Insights_Export)."""
     if not os.path.isdir(DATAFY_DIR):
@@ -191,6 +191,8 @@ def _candidates(pattern: str, header_prefix: str | None = None):
             if not first.startswith(header_prefix.lower()):
                 continue
         out.append(p)
+    if FD is not None:
+        return sorted(out, key=lambda p: FD.sort_key(p, PROJECT_ROOT), reverse=True)   # newest DATE ADDED first
     return sorted(out, key=os.path.getmtime, reverse=True)
 
 

@@ -81,7 +81,7 @@ def freshness_items(m: ps.Model) -> list[tuple[str, str, bool]]:
         items.append((f"<b>CoStar</b> pulled {pdx.fmt_date(f['costar_pull'] or f['costar_report'])}", "",
                       (today - pd.Timestamp(f["costar_pull"] or f["costar_report"])).days <= 10))
     if f.get("datafy_end"):
-        items.append((f"<b>Datafy</b> {pdx.fmt_month(f['datafy_start'])} to {pdx.fmt_month(f['datafy_end'])}"
+        items.append((f"<b>Datafy</b> {pdx.datafy_label(f)}"
                       + (f", campaigns {pdx.fmt_date(f['ads_snapshot'], False)}" if f.get("ads_snapshot") else ""), "",
                       (today - pd.Timestamp(f["datafy_end"])).days <= 62))
     return items
@@ -98,7 +98,7 @@ def render_sidebar(m: ps.Model | None, logo_uri: str) -> None:
         if f.get("costar_report"):
             rows.append(("CoStar market reports", f"Report dated {pdx.fmt_date(f['costar_report'])}"))
         if f.get("datafy_end"):
-            rows.append(("Datafy visitors", f"{pdx.fmt_month(f['datafy_start'])} to {pdx.fmt_month(f['datafy_end'])}"))
+            rows.append(("Datafy visitors", pdx.datafy_label(f)))
         if f.get("ads_snapshot"):
             rows.append(("Datafy campaigns", f"As of {pdx.fmt_date(f['ads_snapshot'])}"))
         if f.get("insights"):

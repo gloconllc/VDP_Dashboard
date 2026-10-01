@@ -1245,6 +1245,55 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("datafy_spend_market_monthly",   "datafy_advertising_top_markets",   "cross_ref",  "name→dma",
      "Monthly origin-market spend history cross-references the campaign DMA trip share and impact"),
+
+    # ── File audit: "latest" is decided by date added, never by file name ──────
+    ("datafy_file_ingest",            "load_log",                         "audited_by", "run_at",
+     "Every Datafy CSV the visitor-economy loader reads is logged with its date added, period used, period source, rows, and status; the run itself is logged to load_log"),
+
+    ("datafy_overview_total_kpis", "datafy_file_ingest", "audited_by", "target_table,report_period_start→period_start",
+     "datafy_file_ingest records which files fed total_kpis, when each was added, and whether its period came from the file name or was assumed from its folder"),
+
+    ("datafy_overview_spending_by_market", "datafy_file_ingest", "audited_by", "target_table,report_period_start→period_start",
+     "datafy_file_ingest records which files fed spending_by_market, when each was added, and whether its period came from the file name or was assumed from its folder"),
+
+    ("datafy_overview_top_markets", "datafy_file_ingest", "audited_by", "target_table,report_period_start→period_start",
+     "datafy_file_ingest records which files fed top_markets, when each was added, and whether its period came from the file name or was assumed from its folder"),
+
+    ("datafy_overview_spending_by_category", "datafy_file_ingest", "audited_by", "target_table,report_period_start→period_start",
+     "datafy_file_ingest records which files fed spending_by_category, when each was added, and whether its period came from the file name or was assumed from its folder"),
+
+    ("datafy_overview_spending_by_month", "datafy_file_ingest", "audited_by", "target_table,report_period_start→period_start",
+     "datafy_file_ingest records which files fed spending_by_month, when each was added, and whether its period came from the file name or was assumed from its folder"),
+
+    ("datafy_overview_visitation_by_month", "datafy_file_ingest", "audited_by", "target_table,report_period_start→period_start",
+     "datafy_file_ingest records which files fed visitation_by_month, when each was added, and whether its period came from the file name or was assumed from its folder"),
+
+    ("datafy_overview_instate_outstate", "datafy_file_ingest", "audited_by", "target_table,report_period_start→period_start",
+     "datafy_file_ingest records which files fed instate_outstate, when each was added, and whether its period came from the file name or was assumed from its folder"),
+
+    ("datafy_overview_local_visitor_spend", "datafy_file_ingest", "audited_by", "target_table,report_period_start→period_start",
+     "datafy_file_ingest records which files fed local_visitor_spend, when each was added, and whether its period came from the file name or was assumed from its folder"),
+
+    ("datafy_overview_los_distribution", "datafy_file_ingest", "audited_by", "target_table,report_period_start→period_start",
+     "datafy_file_ingest records which files fed los_distribution, when each was added, and whether its period came from the file name or was assumed from its folder"),
+
+    ("datafy_overview_state_origin", "datafy_file_ingest", "audited_by", "target_table,report_period_start→period_start",
+     "datafy_file_ingest records which files fed state_origin, when each was added, and whether its period came from the file name or was assumed from its folder"),
+
+    ("datafy_overview_top_pois", "datafy_file_ingest", "audited_by", "target_table,report_period_start→period_start",
+     "datafy_file_ingest records which files fed top_pois, when each was added, and whether its period came from the file name or was assumed from its folder"),
+
+    ("datafy_overview_demographics", "datafy_file_ingest", "audited_by", "target_table,report_period_start→period_start",
+     "datafy_file_ingest records which files fed demographics, when each was added, and whether its period came from the file name or was assumed from its folder"),
+
+    ("file_audit",                    "datafy_file_ingest",               "derived_from", "subject→target_table",
+     "audit_latest_files.py compares the newest file by date added against the period each Datafy table shows and flags any newer file that is not on the board"),
+
+    ("file_audit",                    "load_log",                         "derived_from", "file_name",
+     "audit_latest_files.py checks the newest file in each data folder against the files the loaders logged"),
+
+    ("file_audit",                    "kpi_daily_summary",                "context",    "as_of_date",
+     "Database freshness findings place the hotel daily series end date next to the newest STR file added"),
 ]
 
 

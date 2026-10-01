@@ -556,7 +556,7 @@ def load_datafy_summary() -> str:
         conn = get_connection()
         markets = pd.read_sql_query(
             "SELECT dma, spend_share_pct FROM datafy_overview_spending_by_market "
-            "ORDER BY report_period_start DESC, spend_share_pct DESC LIMIT 10",
+            "ORDER BY report_period_end DESC, report_period_start DESC, spend_share_pct DESC LIMIT 10",
             conn,
         )
         if not markets.empty:
@@ -565,14 +565,14 @@ def load_datafy_summary() -> str:
         else:
             markets = pd.read_sql_query(
                 "SELECT dma, trips_share_pct FROM datafy_overview_top_markets "
-                "ORDER BY report_period_start DESC, trips_share_pct DESC LIMIT 10",
+                "ORDER BY report_period_end DESC, report_period_start DESC, trips_share_pct DESC LIMIT 10",
                 conn,
             )
             markets_metric = "% of trips"
             markets_line = ", ".join(f"{r.dma} {r.trips_share_pct:.1f}%" for r in markets.itertuples())
         spending = pd.read_sql_query(
             "SELECT category, spend_share_pct FROM datafy_overview_spending_by_category "
-            "ORDER BY report_period_start DESC, spend_share_pct DESC LIMIT 8",
+            "ORDER BY report_period_end DESC, report_period_start DESC, spend_share_pct DESC LIMIT 8",
             conn,
         )
         parts = []
@@ -692,7 +692,7 @@ def load_datafy_markets_df(limit: int = 8) -> pd.DataFrame:
         conn = get_connection()
         df = pd.read_sql_query(
             "SELECT dma, spend_share_pct FROM datafy_overview_spending_by_market "
-            "WHERE report_period_start = (SELECT MAX(report_period_start) FROM datafy_overview_spending_by_market) "
+            "WHERE (report_period_start, report_period_end) = (SELECT report_period_start, report_period_end FROM datafy_overview_spending_by_market ORDER BY report_period_end DESC, report_period_start DESC LIMIT 1) "
             "ORDER BY spend_share_pct DESC LIMIT ?",
             conn, params=(limit,),
         )
@@ -702,7 +702,7 @@ def load_datafy_markets_df(limit: int = 8) -> pd.DataFrame:
             return df[["dma", "share_pct", "metric"]]
         df = pd.read_sql_query(
             "SELECT dma, trips_share_pct FROM datafy_overview_top_markets "
-            "WHERE report_period_start = (SELECT MAX(report_period_start) FROM datafy_overview_top_markets) "
+            "WHERE (report_period_start, report_period_end) = (SELECT report_period_start, report_period_end FROM datafy_overview_top_markets ORDER BY report_period_end DESC, report_period_start DESC LIMIT 1) "
             "ORDER BY trips_share_pct DESC LIMIT ?",
             conn, params=(limit,),
         )
@@ -832,7 +832,7 @@ def load_datafy_spending_df(limit: int = 8) -> pd.DataFrame:
         conn = get_connection()
         return pd.read_sql_query(
             "SELECT category, spend_share_pct FROM datafy_overview_spending_by_category "
-            "ORDER BY report_period_start DESC, spend_share_pct DESC LIMIT ?",
+            "ORDER BY report_period_end DESC, report_period_start DESC, spend_share_pct DESC LIMIT ?",
             conn,
             params=(limit,),
         )
