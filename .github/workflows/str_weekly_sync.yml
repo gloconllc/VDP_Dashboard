@@ -27,11 +27,14 @@
 #
 # ============================================================================
 
-name: Weekly STR Sync (manual only — see note above)
+name: Weekly STR Sync (Thursday 6 AM PT + manual)
 
 on:
-  # Manual trigger only. The automatic Thursday schedule that used to live
-  # here has moved to full_sync.yml, which also covers CoStar and Datafy.
+  # RE-ENABLED 2026-10-01: STR lands in Dropbox every Wednesday, so this runs
+  # Thursday 13:00 UTC (6 AM PDT / 5 AM PST). The Friday Heather recap
+  # (scripts/build_weekly_recap.py) reads the DB this job pushes to main.
+  schedule:
+    - cron: "0 13 * * 4"
   workflow_dispatch: {}
 
 jobs:
