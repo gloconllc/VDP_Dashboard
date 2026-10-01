@@ -163,6 +163,41 @@ def audit_datafy(cur) -> dict:
         f"Newest upload added {fmt(newest_when)} ({newest[0]['src']}): {len(newest)} files, "
         f"{ok_new} read by load_datafy_reports.py (the advertising and extended loaders read the rest).")
 
+    # Undated exports: where did the loader get their window?
+    recorded = [f for f in newest if f["psrc"] == "date_filters"]
+    if recorded:
+        pairs = sorted({f"{f['ps']} to {f['pe']}" for f in recorded})
+        add("Datafy", "NOTE", "WINDOW_FROM_RECORDED_FILTER", f"{len(recorded)} file(s) in the newest upload",
+            f"These exports state no date range, so each is filed under the Datafy date filter written down in "
+            f"data/datafy_date_filters.json ({'; '.join(pairs)}). Putting the range in the file name, for example "
+            f"_01-01-2026_to_30-09-2026, overrides the record and is the permanent fix.")
+    inferred = [f for f in newest if f["psrc"] == "batch_window"]
+    if inferred:
+        m = None
+        for f in inferred:
+            m = re.search(r"read from (.+?) in the same upload", f["note"] or "")
+            if m:
+                break
+        add("Datafy", "NOTE", "WINDOW_READ_FROM_UPLOAD", f"{len(inferred)} file(s) in the newest upload",
+            f"These exports state no date range and no filter was recorded, so the upload's window "
+            f"({inferred[0]['ps']} to {inferred[0]['pe']}) was read from {m.group(1) if m else 'a dated companion file'} "
+            f"in the same upload. Attribution and Advertising can use a narrower filter than the visitation reports, "
+            f"so confirm it against the dashboard or put the range in the file name.")
+    # A recorded filter that no file used points to a wrong 'added' date or pattern.
+    try:
+        import json
+        with open(os.path.join(DATA_DIR, "datafy_date_filters.json"), encoding="utf-8") as fh:
+            rec_filters = json.load(fh).get("filters", [])
+    except (OSError, ValueError, AttributeError):
+        rec_filters = []
+    unused = [e for e in rec_filters
+              if not any(f["psrc"] == "date_filters" and f["ps"] == e.get("start") and f["pe"] == e.get("end")
+                         for f in files)]
+    if unused:
+        add("Datafy", "ATTN", "DATE_FILTER_UNUSED", f"{len(unused)} recorded filter(s)",
+            "data/datafy_date_filters.json has entries that no file used (the 'added' date or the 'match' pattern "
+            "does not fit the repository): " + "; ".join(f"{e.get('match')} added {e.get('added')}" for e in unused[:4]) + ".")
+
     # Files that other Datafy loaders (advertising, extended) own are named in load_log.
     owned: set[str] = set()
     if table_exists(cur, "load_log"):
@@ -177,11 +212,14 @@ def audit_datafy(cur) -> dict:
     def _rank(f: dict):
         return (f["date_added"], FD.copy_number(f["file_name"]), f["file_name"].lower())
 
-    unread, superseded = [], []
+    unread, superseded, other_measure = [], [], []
     for f in newest:
         if f["status"] in ("ok", "skip_list"):
             continue
         if f["file_name"].lower() in owned:
+            continue
+        if "different measure" in (f["note"] or ""):
+            other_measure.append(f)
             continue
         # An older copy of a report type is not a gap when a newer copy of the same type was read.
         if f["family"] and any(g is not f and g["family"] == f["family"] and _read(g) and _rank(g) > _rank(f)
@@ -189,6 +227,11 @@ def audit_datafy(cur) -> dict:
             superseded.append(f)
             continue
         unread.append(f)
+    if other_measure:
+        add("Datafy", "NOTE", "DIFFERENT_MEASURE", f"{len(other_measure)} file(s) in the newest upload",
+            "Read, but each holds a different measure than the table stores (for example Share of Trips where "
+            "Share of Visitor Days is expected), so the earlier rows were kept: "
+            + "; ".join(f["file_name"] for f in other_measure[:6]) + ".")
     if superseded:
         add("Datafy", "NOTE", "OLDER_COPY_SKIPPED", f"{len(superseded)} file(s) in the newest upload",
             "A newer copy of the same report type was read, so these older copies were passed over: "
@@ -250,12 +293,10 @@ def audit_datafy(cur) -> dict:
         shown_periods = sorted({f"{x[4][0]} to {x[4][1]}" for x in stale_board})
         add("Datafy", "ATTN", "NEWER_FILES_NOT_SHOWN", f"{len(stale_board)} board table(s)",
             f"Files added {newest_day} are newer than the data the board shows ({', '.join(shown_periods)}, "
-            f"files added {min(x[5] for x in stale_board)[:10]}), but they state no date range, so the loader "
-            f"filed them under an assumed period ({stale_board[0][3][0]} to {stale_board[0][3][1]}, the folder default) "
-            f"and the board does not use them: {lines}. Their real window cannot be read from the files: the "
-            f"September 30 totals, for example, match a multi-year window, not 2026 year to date. To promote them, "
-            f"add the Datafy date range to each file name, for example TopMarkets_Export (6)_01-01-2026_to_30-09-2026.csv, "
-            f"and re-run.")
+            f"files added {min(x[5] for x in stale_board)[:10]}), but they were filed under a fixed folder default "
+            f"({stale_board[0][3][0]} to {stale_board[0][3][1]}) and the board does not use them: {lines}. "
+            f"Add the Datafy date range to each file name, or record it in data/datafy_date_filters.json, for example "
+            f"TopMarkets_Export (6)_01-01-2026_to_30-09-2026.csv, and re-run.")
     else:
         add("Datafy", "OK", "BOARD_USES_NEWEST", "board tables",
             "For every Datafy table the board reads, the newest file's period is the one shown.")

@@ -1,0 +1,28 @@
+{
+  "about": "The date filter shown on each Datafy dashboard for one download, for exports whose file names carry no date range. Read by scripts/load_datafy_reports.py. 'added' is the Pacific date the files were added to the repository; the first entry whose 'added' date and 'match' pattern fit a file wins. A range typed into a file name (for example _01-01-2026_to_30-09-2026) overrides everything here, and from the next download on the file names carry the range, so no entry is needed.",
+  "filters": [
+    {
+      "added": "2026-10-01",
+      "match": "attribution*",
+      "start": "2026-07-08",
+      "end": "2026-10-01",
+      "source": "Attribution Insights report period 7/8/26 to 10/1/26, as stated by John Picou on 2026-10-01"
+    },
+    {
+      "added": "2026-10-01",
+      "match": "*",
+      "start": "2025-01-01",
+      "end": "2026-09-12",
+      "source": "Datafy date filter 1/1/25 to 9/12/26, as stated by John Picou on 2026-10-01"
+    }
+  ],
+  "recorded_only": [
+    {
+      "added": "2026-10-01",
+      "match": "advertising*",
+      "start": "2026-07-08",
+      "end": "2026-09-30",
+      "source": "Advertising report period 7/8/26 to 9/30/26, as stated by John Picou on 2026-10-01. The advertising tables are campaign-to-date snapshots keyed by snapshot_date and have no period column, so this range is kept for the record only."
+    }
+  ]
+}

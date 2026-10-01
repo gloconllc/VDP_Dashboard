@@ -10,8 +10,13 @@ Two loader paths:
      load_csv_into_table() as before.
 
   2. NEW-FORMAT — April-2026 Datafy export style where period is NOT in the file.
-     Period is injected using FOLDER_DEFAULT_PERIODS.  Each file type has its own
-     parser function registered in NEW_FILE_HANDLERS.
+     The period is, in order: a DD-MM-YYYY_to_DD-MM-YYYY range in the file name; otherwise, for an
+     export dropped at the top of data/datafy/ (or in a dated drop folder), the filter recorded for its
+     upload in data/datafy_date_filters.json, else the window read from the daily or monthly series
+     that came with it (ClusterTrendYOYVisual or VisitationByYear, see _batch_window); otherwise, inside a curated subfolder,
+     FOLDER_DEFAULT_PERIODS, which is an assumed year.  Each file type has its own parser function
+     registered in NEW_FILE_HANDLERS.  A file whose measure the table does not store (all numeric
+     columns NULL after parsing) is skipped so it cannot blank out the good copy.
 
 Re-run safety: every path uses a DELETE + INSERT cycle keyed on
 (report_period_start, report_period_end), so running the pipeline twice is safe.
@@ -905,6 +910,194 @@ def _extract_period(filename: str, subfolder: str) -> tuple:
     return ps, pe
 
 
+# ─── Upload window: the date filter Datafy applied to a download ──────────────
+#
+# Most Datafy exports carry no date range in the file name or the data. The loader used to file
+# those under an ASSUMED calendar year, which hid the newest upload behind older dated files.
+# The window of an undated export now comes from, in order:
+#   1. a DD-MM-YYYY_to_DD-MM-YYYY range typed into the file name (see _extract_period_ex);
+#   2. data/datafy_date_filters.json, where the filter shown on the Datafy dashboard is written
+#      down for one upload (see _load_date_filters);
+#   3. the daily or monthly series that came in the same upload (see _batch_window), which shows
+#      what the filter was when no one recorded it;
+#   4. the folder default of a curated subfolder (an assumed year; the audit flags it).
+# Datafy's modules use different filters in one session, so the dashboards must not be assumed to
+# share a window: the visitation reports, the Attribution Insights module, and the Advertising
+# module each state their own.
+
+DATE_FILTERS_PATH = os.path.join(PROJECT_ROOT, "data", "datafy_date_filters.json")
+
+
+def _load_date_filters() -> list:
+    """Entries of data/datafy_date_filters.json that are well formed, in file order."""
+    import json
+    from datetime import date
+    try:
+        with open(DATE_FILTERS_PATH, encoding="utf-8") as fh:
+            raw = json.load(fh)
+    except (OSError, ValueError):
+        return []
+    out = []
+    for e in raw.get("filters", []) if isinstance(raw, dict) else []:
+        try:
+            date.fromisoformat(e["added"])
+            date.fromisoformat(e["start"])
+            date.fromisoformat(e["end"])
+            e = dict(e, match=str(e.get("match") or "*"))
+        except (KeyError, TypeError, ValueError):
+            continue
+        out.append(e)
+    return out
+
+
+def _filter_for(filters: list, batch_date: str, filename: str):
+    """First recorded filter for an upload added on batch_date whose pattern matches the file."""
+    import fnmatch
+    for e in filters:
+        if e["added"] == batch_date and fnmatch.fnmatch(filename.lower(), e["match"].lower()):
+            return e
+    return None
+
+
+def _num(text) -> float:
+    try:
+        return float(str(text).replace(",", "").replace("$", "").strip() or 0)
+    except ValueError:
+        return 0.0
+
+
+_MONTHS = {m: i for i, m in enumerate(("jan", "feb", "mar", "apr", "may", "jun",
+                                       "jul", "aug", "sep", "oct", "nov", "dec"), start=1)}
+
+
+def _series_span(path: str):
+    """(start, end) of the data in a Datafy daily or monthly series, or None.
+
+    The exports run to the end of the year with zeros after the last day Datafy has published,
+    so the end is the last period with a value above zero, not the last row."""
+    import calendar
+    import csv
+    from datetime import date
+    try:
+        with open(path, newline="", encoding="utf-8-sig") as fh:
+            rows = list(csv.DictReader(fh))
+    except (OSError, UnicodeDecodeError, csv.Error):
+        return None
+    if not rows:
+        return None
+    keys = {k.strip().lower(): k for k in rows[0] if k}
+    value_key = next((keys[k] for k in keys if "visitor days" in k), None)
+    if value_key is None:
+        return None
+    if "date" in keys:                                   # daily: Date, Est. Visitor Days
+        days = []
+        for r in rows:
+            try:
+                days.append((date.fromisoformat(str(r[keys["date"]]).strip()[:10]), _num(r[value_key])))
+            except ValueError:
+                continue
+        live = [d for d, v in days if v > 0]
+        return (days[0][0], live[-1]) if days and live else None
+    if "year" in keys and "month" in keys:               # monthly: Year, Month, Visitor Days
+        months = []
+        for r in rows:
+            m = _MONTHS.get(str(r[keys["month"]]).strip()[:3].lower())
+            try:
+                y = int(str(r[keys["year"]]).strip())
+            except ValueError:
+                continue
+            if m:
+                months.append((y, m, _num(r[value_key])))
+        live = [(y, m) for y, m, v in months if v > 0]
+        if not months or not live:
+            return None
+        y, m = live[-1]
+        return date(months[0][0], months[0][1], 1), date(y, m, calendar.monthrange(y, m)[1])
+    return None
+
+
+# Dated series that travel with an upload, most precise first.
+_WINDOW_ANCHORS = ("clustertrendyoyvisual", "visitationbyyear")
+
+
+def _batch_window(paths: list):
+    """(start, end, anchor file name) for one upload batch, or None when it has no dated series.
+
+    Datafy exports carry no date range, but the date filter on the dashboard applies to every
+    export of one download session. The daily series (ClusterTrendYOYVisual) or the monthly series
+    (VisitationByYear) in the same upload shows what that filter was, so undated exports are filed
+    under it. A range typed into a file name always wins over this."""
+    if not paths:
+        return None
+    for anchor in _WINDOW_ANCHORS:
+        cands = [p for p in paths if os.path.splitext(os.path.basename(p))[0].lower().startswith(anchor)]
+        if FD is not None:
+            cands.sort(key=lambda p: FD.sort_key(p, PROJECT_ROOT), reverse=True)    # newest copy first
+        for p in cands:
+            span = _series_span(p)
+            if span:
+                return span[0].isoformat(), span[1].isoformat(), os.path.basename(p)
+    return None
+
+
+# Rows filed under an assumed period are rebuilt from the files on every run, so they are cleared
+# first. Otherwise an upload that now carries its real window would leave its old copy behind
+# under the assumed year.
+def _assumed_period_pairs() -> set:
+    return set(FOLDER_DEFAULT_PERIODS.values()) | {("2025-01-01", "2025-12-31")}
+
+
+def _purge_assumed_periods(cur) -> int:
+    tables = {t for _, t, _ in NEW_FILE_HANDLERS}
+    removed = 0
+    # Windows assigned by an earlier run are rebuilt too (a run on another machine, or a changed
+    # rule, can give the same upload a slightly different end date). 'ytd_default' is a retired
+    # rule that one run used on 2026-10-01; its rows are cleared the same way.
+    try:
+        prev = cur.execute("SELECT DISTINCT target_table, period_start, period_end FROM datafy_file_ingest "
+                           "WHERE period_source IN ('ytd_default', 'batch_window', 'date_filters') AND target_table IS NOT NULL").fetchall()
+    except sqlite3.Error:
+        prev = []
+    for table, ps, pe in prev:
+        cols = [r[1] for r in cur.execute(f"PRAGMA table_info({table})")]
+        if "report_period_start" in cols and "report_period_end" in cols:
+            cur.execute(f"DELETE FROM {table} WHERE report_period_start=? AND report_period_end=?", (ps, pe))
+            removed += cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+    for table in sorted(tables):
+        cols = [r[1] for r in cur.execute(f"PRAGMA table_info({table})")]
+        if "report_period_start" not in cols or "report_period_end" not in cols:
+            continue
+        for ps, pe in _assumed_period_pairs():
+            cur.execute(f"DELETE FROM {table} WHERE report_period_start=? AND report_period_end=?", (ps, pe))
+            removed += cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+    return removed
+
+
+_NUMERIC_TYPES = ("REAL", "INTEGER", "NUMERIC", "FLOAT", "DOUBLE")
+_NON_DATA_COLS = {"id", "report_period_start", "report_period_end",
+                  "compare_period_start", "compare_period_end", "loaded_at"}
+
+
+def _period_has_values(cur, table: str, ps: str, pe: str) -> bool:
+    """False when every numeric column of the rows just stored for this period is NULL.
+
+    Datafy exports several measures of one report type under the same name (TopPOIs_Export is
+    "Share of Visitor Days" in one copy and "Share of Trips" in another). A parser that does not
+    find its column stores the labels with NULL values, which would overwrite the good copy."""
+    info = cur.execute(f"PRAGMA table_info({table})").fetchall()
+    names = {r[1] for r in info}
+    if not {"report_period_start", "report_period_end"} <= names:
+        return True                      # not keyed by report period (for example a daily log)
+    num = [r[1] for r in info if r[1] not in _NON_DATA_COLS and (r[2] or "").upper() in _NUMERIC_TYPES]
+    if not num:
+        return True
+    cond = " OR ".join(f"{c} IS NOT NULL" for c in num)
+    row = cur.execute(
+        f"SELECT 1 FROM {table} WHERE report_period_start=? AND report_period_end=? AND ({cond}) LIMIT 1",
+        (ps, pe)).fetchone()
+    return row is not None
+
+
 def _delete_period(cur, table: str, period_start: str, period_end: str) -> None:
     cur.execute(
         f"DELETE FROM {table} WHERE report_period_start=? AND report_period_end=?",
@@ -1170,8 +1363,9 @@ def parse_local_visitor_spend(csv_path: str, cur, ps: str, pe: str) -> int:
     rows_out = [{
         "report_period_start": ps,
         "report_period_end":   pe,
-        "local_pct":           _clean_num(row.get("Local", "")),
-        "visitor_pct":         _clean_num(row.get("Visitor", "")),
+        # Newer exports ship percent strings ("76.46%"); older ones bare decimals. Both become 0-1 fractions.
+        "local_pct":           _clean_pct_as_fraction(row.get("Local", "")),
+        "visitor_pct":         _clean_pct_as_fraction(row.get("Visitor", "")),
     }]
     _insert_rows(cur, table, rows_out)
     return len(rows_out)
@@ -1528,7 +1722,8 @@ def parse_attribution_polygons(csv_path: str, cur, ps: str, pe: str) -> int:
         cluster = str(row.get("Cluster", "")).strip()
         if not cluster:
             continue
-        share = _clean_pct(row.get("Share of Total Destination Trips", ""))
+        # The column was renamed "Share of Trips" in the September 30 export; same measure.
+        share = _clean_pct(row.get("Share of Total Destination Trips", row.get("Share of Trips", "")))
         rows_out.append({
             "report_period_start":            ps,
             "report_period_end":              pe,
@@ -2320,7 +2515,7 @@ CREATE TABLE IF NOT EXISTS datafy_file_ingest (
     target_table    TEXT,
     period_start    TEXT,
     period_end      TEXT,
-    period_source   TEXT,      -- filename | csv_columns | folder_default (assumed)
+    period_source   TEXT,      -- filename | date_filters (recorded in datafy_date_filters.json) | batch_window (read from the upload's own series) | csv_columns | folder_default (assumed)
     rows_loaded     INTEGER,
     status          TEXT,      -- ok | skipped | skip_list | unmapped | error
     note            TEXT
@@ -2353,8 +2548,12 @@ def main():
 
     ensure_schemas(cur)
     cur.executescript(INGEST_DDL)
+    purged = _purge_assumed_periods(cur)
     conn.commit()
+    if purged:
+        print(f"Cleared {purged} rows filed under an assumed period; they are rebuilt from the files below.")
 
+    window_for: dict = {}           # file path -> (start, end, note, period_source) for undated exports
     total_files   = 0
     total_rows    = 0
     skipped_files = 0
@@ -2381,6 +2580,13 @@ def main():
         if table is not None:
             period_subfolder = _infer_subfolder(table) if top_level else subfolder
             ps, pe, psrc = _extract_period_ex(filename, period_subfolder or subfolder)
+            # An export that states no dates is filed under the window of its own upload (see
+            # _load_date_filters and _batch_window). Curated subfolders keep their folder default.
+            if psrc == "folder_default" and subfolder not in FOLDER_DEFAULT_PERIODS:
+                win = window_for.get(csv_path)
+                if win:
+                    ps, pe, psrc = win[0], win[1], win[3]
+                    res["note"] = win[2]
             res.update(table=table, ps=ps, pe=pe, psrc=psrc)
             # Every parser deletes the period's old rows before inserting. A SAVEPOINT makes a
             # file that yields nothing (or fails) leave the earlier load untouched, so a newer
@@ -2388,7 +2594,14 @@ def main():
             cur.execute("SAVEPOINT parse_one")
             try:
                 n = parser(csv_path, cur, ps, pe)
-                if n > 0:
+                if n > 0 and not _period_has_values(cur, table, ps, pe):
+                    cur.execute("ROLLBACK TO parse_one")
+                    cur.execute("RELEASE parse_one")
+                    print(f"  SKIP  {filename}: holds a different measure than {table} stores "
+                          f"(no usable values); earlier rows kept")
+                    skipped_files += 1
+                    res.update(note="different measure: no usable values for this table; earlier rows kept")
+                elif n > 0:
                     cur.execute("RELEASE parse_one")
                     print(f"  OK    {filename} → {table} ({n} rows)")
                     total_files += 1
@@ -2462,6 +2675,19 @@ def main():
         items.sort(key=lambda it: order[it[0]])
         batches = FD.group_batches([p for p, _, _ in items], PROJECT_ROOT)
         batch_of = {p: n + 1 for n, grp in enumerate(batches) for p in grp}
+        filters = _load_date_filters()
+        for grp in batches:
+            batch_date = max(FD.local_date(p, PROJECT_ROOT) for p in grp)       # Pacific, YYYY-MM-DD
+            anchor = _batch_window(grp)
+            for p in grp:
+                rec = _filter_for(filters, batch_date, os.path.basename(p))
+                if rec:
+                    window_for[p] = (rec["start"], rec["end"],
+                                     f"date filter recorded in datafy_date_filters.json ({rec.get('source', 'no source given')})",
+                                     "date_filters")
+                elif anchor:
+                    window_for[p] = (anchor[0], anchor[1], f"window read from {anchor[2]} in the same upload",
+                                     "batch_window")
         print(f"Loading {len(items)} Datafy files, oldest to newest by DATE ADDED "
               f"({len(batches)} upload batches; newest batch added "
               f"{FD.date_added(batches[-1][-1], PROJECT_ROOT)[0]:%Y-%m-%d %H:%M} UTC)…" if batches else
