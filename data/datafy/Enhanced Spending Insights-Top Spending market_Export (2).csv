@@ -1,0 +1,622 @@
+Name,Month,Spend Volume
+Los Angeles,2021-01-01,876022
+Los Angeles,2021-02-01,1098987
+Los Angeles,2021-03-01,1185237
+Los Angeles,2021-04-01,1436557
+Los Angeles,2021-05-01,1781283
+Los Angeles,2021-06-01,1924955
+Los Angeles,2021-07-01,1897545
+Los Angeles,2021-08-01,1803697
+Los Angeles,2021-09-01,1662642
+Los Angeles,2021-10-01,1331830
+Los Angeles,2021-11-01,1159234
+Los Angeles,2021-12-01,1004103
+Los Angeles,2022-01-01,991338
+Los Angeles,2022-02-01,965139
+Los Angeles,2022-03-01,1078989
+Los Angeles,2022-04-01,1274749
+Los Angeles,2022-05-01,1506218
+Los Angeles,2022-06-01,1694970
+Los Angeles,2022-07-01,1837428
+Los Angeles,2022-08-01,1736809
+Los Angeles,2022-09-01,1530803
+Los Angeles,2022-10-01,1337471
+Los Angeles,2022-11-01,1093191
+Los Angeles,2022-12-01,883690
+Los Angeles,2023-01-01,886846
+Los Angeles,2023-02-01,988169
+Los Angeles,2023-03-01,1059043
+Los Angeles,2023-04-01,1209954
+Los Angeles,2023-05-01,1458634
+Los Angeles,2023-06-01,1550941
+Los Angeles,2023-07-01,1599430
+Los Angeles,2023-08-01,1534591
+Los Angeles,2023-09-01,1415380
+Los Angeles,2023-10-01,1246752
+Los Angeles,2023-11-01,1107458
+Los Angeles,2023-12-01,988882
+Los Angeles,2024-01-01,970996
+Los Angeles,2024-02-01,1004123
+Los Angeles,2024-03-01,1024337
+Los Angeles,2024-04-01,1090932
+Los Angeles,2024-05-01,1318799
+Los Angeles,2024-06-01,1458078
+Los Angeles,2024-07-01,1484962
+Los Angeles,2024-08-01,1423317
+Los Angeles,2024-09-01,1362361
+Los Angeles,2024-10-01,1151333
+Los Angeles,2024-11-01,1059514
+Los Angeles,2024-12-01,993825
+Los Angeles,2025-01-01,1043459
+Los Angeles,2025-02-01,1111972
+Los Angeles,2025-03-01,1228473
+Los Angeles,2025-04-01,1433743
+Los Angeles,2025-05-01,1659799
+Los Angeles,2025-06-01,1804236
+Los Angeles,2025-07-01,1859477
+Los Angeles,2025-08-01,1738669
+Los Angeles,2025-09-01,1479431
+Los Angeles,2025-10-01,1289570
+Los Angeles,2025-11-01,1081027
+Los Angeles,2025-12-01,936242
+Los Angeles,2026-01-01,1060416
+Los Angeles,2026-02-01,1113376
+Los Angeles,2026-03-01,1224949
+Los Angeles,2026-04-01,1318145
+Los Angeles,2026-05-01,1540889
+Los Angeles,2026-06-01,1618026
+Los Angeles,2026-07-01,1561500
+Los Angeles,2026-08-01,1554754
+Los Angeles,2026-09-01,1623925
+San Diego,2021-01-01,449920
+San Diego,2021-02-01,466751
+San Diego,2021-03-01,461663
+San Diego,2021-04-01,497106
+San Diego,2021-05-01,484016
+San Diego,2021-06-01,502365
+San Diego,2021-07-01,514918
+San Diego,2021-08-01,533108
+San Diego,2021-09-01,573492
+San Diego,2021-10-01,553796
+San Diego,2021-11-01,509542
+San Diego,2021-12-01,482094
+San Diego,2022-01-01,521407
+San Diego,2022-02-01,493043
+San Diego,2022-03-01,533122
+San Diego,2022-04-01,562898
+San Diego,2022-05-01,631870
+San Diego,2022-06-01,642969
+San Diego,2022-07-01,638502
+San Diego,2022-08-01,668952
+San Diego,2022-09-01,669701
+San Diego,2022-10-01,610623
+San Diego,2022-11-01,537972
+San Diego,2022-12-01,548999
+San Diego,2023-01-01,490214
+San Diego,2023-02-01,519185
+San Diego,2023-03-01,514715
+San Diego,2023-04-01,545629
+San Diego,2023-05-01,559840
+San Diego,2023-06-01,630805
+San Diego,2023-07-01,611132
+San Diego,2023-08-01,632418
+San Diego,2023-09-01,625807
+San Diego,2023-10-01,580935
+San Diego,2023-11-01,508743
+San Diego,2023-12-01,488591
+San Diego,2024-01-01,477654
+San Diego,2024-02-01,488913
+San Diego,2024-03-01,501497
+San Diego,2024-04-01,551751
+San Diego,2024-05-01,625869
+San Diego,2024-06-01,642049
+San Diego,2024-07-01,608028
+San Diego,2024-08-01,599628
+San Diego,2024-09-01,564858
+San Diego,2024-10-01,496950
+San Diego,2024-11-01,499207
+San Diego,2024-12-01,485842
+San Diego,2025-01-01,501394
+San Diego,2025-02-01,506228
+San Diego,2025-03-01,518843
+San Diego,2025-04-01,489526
+San Diego,2025-05-01,558034
+San Diego,2025-06-01,565449
+San Diego,2025-07-01,580428
+San Diego,2025-08-01,550538
+San Diego,2025-09-01,544667
+San Diego,2025-10-01,476012
+San Diego,2025-11-01,447196
+San Diego,2025-12-01,394967
+San Diego,2026-01-01,433564
+San Diego,2026-02-01,436329
+San Diego,2026-03-01,471688
+San Diego,2026-04-01,478669
+San Diego,2026-05-01,519856
+San Diego,2026-06-01,540023
+San Diego,2026-07-01,500936
+San Diego,2026-08-01,491670
+San Diego,2026-09-01,493401
+San Francisco-Oak-San Jose,2021-01-01,230590
+San Francisco-Oak-San Jose,2021-02-01,248627
+San Francisco-Oak-San Jose,2021-03-01,237038
+San Francisco-Oak-San Jose,2021-04-01,288768
+San Francisco-Oak-San Jose,2021-05-01,398764
+San Francisco-Oak-San Jose,2021-06-01,483528
+San Francisco-Oak-San Jose,2021-07-01,593553
+San Francisco-Oak-San Jose,2021-08-01,603021
+San Francisco-Oak-San Jose,2021-09-01,580057
+San Francisco-Oak-San Jose,2021-10-01,527233
+San Francisco-Oak-San Jose,2021-11-01,490265
+San Francisco-Oak-San Jose,2021-12-01,400514
+San Francisco-Oak-San Jose,2022-01-01,492883
+San Francisco-Oak-San Jose,2022-02-01,461537
+San Francisco-Oak-San Jose,2022-03-01,495940
+San Francisco-Oak-San Jose,2022-04-01,481778
+San Francisco-Oak-San Jose,2022-05-01,543660
+San Francisco-Oak-San Jose,2022-06-01,653379
+San Francisco-Oak-San Jose,2022-07-01,722080
+San Francisco-Oak-San Jose,2022-08-01,747109
+San Francisco-Oak-San Jose,2022-09-01,785290
+San Francisco-Oak-San Jose,2022-10-01,751347
+San Francisco-Oak-San Jose,2022-11-01,556962
+San Francisco-Oak-San Jose,2022-12-01,508585
+San Francisco-Oak-San Jose,2023-01-01,452384
+San Francisco-Oak-San Jose,2023-02-01,404855
+San Francisco-Oak-San Jose,2023-03-01,435621
+San Francisco-Oak-San Jose,2023-04-01,500645
+San Francisco-Oak-San Jose,2023-05-01,566367
+San Francisco-Oak-San Jose,2023-06-01,556879
+San Francisco-Oak-San Jose,2023-07-01,613509
+San Francisco-Oak-San Jose,2023-08-01,546837
+San Francisco-Oak-San Jose,2023-09-01,492301
+San Francisco-Oak-San Jose,2023-10-01,432632
+San Francisco-Oak-San Jose,2023-11-01,413700
+San Francisco-Oak-San Jose,2023-12-01,337462
+San Francisco-Oak-San Jose,2024-01-01,315794
+San Francisco-Oak-San Jose,2024-02-01,319497
+San Francisco-Oak-San Jose,2024-03-01,323316
+San Francisco-Oak-San Jose,2024-04-01,380333
+San Francisco-Oak-San Jose,2024-05-01,446960
+San Francisco-Oak-San Jose,2024-06-01,523485
+San Francisco-Oak-San Jose,2024-07-01,594951
+San Francisco-Oak-San Jose,2024-08-01,567775
+San Francisco-Oak-San Jose,2024-09-01,502740
+San Francisco-Oak-San Jose,2024-10-01,438438
+San Francisco-Oak-San Jose,2024-11-01,390962
+San Francisco-Oak-San Jose,2024-12-01,303968
+San Francisco-Oak-San Jose,2025-01-01,312813
+San Francisco-Oak-San Jose,2025-02-01,347917
+San Francisco-Oak-San Jose,2025-03-01,393911
+San Francisco-Oak-San Jose,2025-04-01,419269
+San Francisco-Oak-San Jose,2025-05-01,461445
+San Francisco-Oak-San Jose,2025-06-01,497905
+San Francisco-Oak-San Jose,2025-07-01,506334
+San Francisco-Oak-San Jose,2025-08-01,488125
+San Francisco-Oak-San Jose,2025-09-01,451369
+San Francisco-Oak-San Jose,2025-10-01,461313
+San Francisco-Oak-San Jose,2025-11-01,400723
+San Francisco-Oak-San Jose,2025-12-01,373089
+San Francisco-Oak-San Jose,2026-01-01,409498
+San Francisco-Oak-San Jose,2026-02-01,501232
+San Francisco-Oak-San Jose,2026-03-01,592668
+San Francisco-Oak-San Jose,2026-04-01,744787
+San Francisco-Oak-San Jose,2026-05-01,816374
+San Francisco-Oak-San Jose,2026-06-01,820149
+San Francisco-Oak-San Jose,2026-07-01,747083
+San Francisco-Oak-San Jose,2026-08-01,686941
+San Francisco-Oak-San Jose,2026-09-01,597812
+Phoenix -Prescott,2021-01-01,213976
+Phoenix -Prescott,2021-02-01,219710
+Phoenix -Prescott,2021-03-01,230959
+Phoenix -Prescott,2021-04-01,344610
+Phoenix -Prescott,2021-05-01,512399
+Phoenix -Prescott,2021-06-01,594394
+Phoenix -Prescott,2021-07-01,632530
+Phoenix -Prescott,2021-08-01,642668
+Phoenix -Prescott,2021-09-01,549655
+Phoenix -Prescott,2021-10-01,407624
+Phoenix -Prescott,2021-11-01,300874
+Phoenix -Prescott,2021-12-01,265272
+Phoenix -Prescott,2022-01-01,266459
+Phoenix -Prescott,2022-02-01,272084
+Phoenix -Prescott,2022-03-01,332145
+Phoenix -Prescott,2022-04-01,413060
+Phoenix -Prescott,2022-05-01,564836
+Phoenix -Prescott,2022-06-01,607111
+Phoenix -Prescott,2022-07-01,637754
+Phoenix -Prescott,2022-08-01,645619
+Phoenix -Prescott,2022-09-01,624711
+Phoenix -Prescott,2022-10-01,472082
+Phoenix -Prescott,2022-11-01,419097
+Phoenix -Prescott,2022-12-01,362090
+Phoenix -Prescott,2023-01-01,336748
+Phoenix -Prescott,2023-02-01,290612
+Phoenix -Prescott,2023-03-01,390426
+Phoenix -Prescott,2023-04-01,423717
+Phoenix -Prescott,2023-05-01,578627
+Phoenix -Prescott,2023-06-01,616631
+Phoenix -Prescott,2023-07-01,645374
+Phoenix -Prescott,2023-08-01,584480
+Phoenix -Prescott,2023-09-01,558116
+Phoenix -Prescott,2023-10-01,426491
+Phoenix -Prescott,2023-11-01,350157
+Phoenix -Prescott,2023-12-01,339425
+Phoenix -Prescott,2024-01-01,337615
+Phoenix -Prescott,2024-02-01,329121
+Phoenix -Prescott,2024-03-01,346910
+Phoenix -Prescott,2024-04-01,454319
+Phoenix -Prescott,2024-05-01,579955
+Phoenix -Prescott,2024-06-01,616720
+Phoenix -Prescott,2024-07-01,663883
+Phoenix -Prescott,2024-08-01,662732
+Phoenix -Prescott,2024-09-01,562714
+Phoenix -Prescott,2024-10-01,421282
+Phoenix -Prescott,2024-11-01,354416
+Phoenix -Prescott,2024-12-01,303252
+Phoenix -Prescott,2025-01-01,293473
+Phoenix -Prescott,2025-02-01,301238
+Phoenix -Prescott,2025-03-01,334122
+Phoenix -Prescott,2025-04-01,399318
+Phoenix -Prescott,2025-05-01,580353
+Phoenix -Prescott,2025-06-01,626987
+Phoenix -Prescott,2025-07-01,631825
+Phoenix -Prescott,2025-08-01,623237
+Phoenix -Prescott,2025-09-01,559062
+Phoenix -Prescott,2025-10-01,377108
+Phoenix -Prescott,2025-11-01,327339
+Phoenix -Prescott,2025-12-01,287846
+Phoenix -Prescott,2026-01-01,288852
+Phoenix -Prescott,2026-02-01,308731
+Phoenix -Prescott,2026-03-01,391293
+Phoenix -Prescott,2026-04-01,453523
+Phoenix -Prescott,2026-05-01,608709
+Phoenix -Prescott,2026-06-01,634402
+Phoenix -Prescott,2026-07-01,602883
+Phoenix -Prescott,2026-08-01,588751
+Phoenix -Prescott,2026-09-01,580065
+Las Vegas,2021-01-01,146344
+Las Vegas,2021-02-01,194983
+Las Vegas,2021-03-01,211095
+Las Vegas,2021-04-01,484058
+Las Vegas,2021-05-01,544112
+Las Vegas,2021-06-01,552634
+Las Vegas,2021-07-01,538299
+Las Vegas,2021-08-01,578353
+Las Vegas,2021-09-01,316299
+Las Vegas,2021-10-01,253540
+Las Vegas,2021-11-01,212144
+Las Vegas,2021-12-01,188971
+Las Vegas,2022-01-01,122502
+Las Vegas,2022-02-01,177995
+Las Vegas,2022-03-01,217534
+Las Vegas,2022-04-01,250519
+Las Vegas,2022-05-01,308942
+Las Vegas,2022-06-01,337225
+Las Vegas,2022-07-01,327954
+Las Vegas,2022-08-01,306562
+Las Vegas,2022-09-01,295490
+Las Vegas,2022-10-01,242641
+Las Vegas,2022-11-01,216073
+Las Vegas,2022-12-01,193135
+Las Vegas,2023-01-01,200128
+Las Vegas,2023-02-01,204014
+Las Vegas,2023-03-01,240260
+Las Vegas,2023-04-01,324629
+Las Vegas,2023-05-01,415649
+Las Vegas,2023-06-01,420864
+Las Vegas,2023-07-01,437010
+Las Vegas,2023-08-01,394434
+Las Vegas,2023-09-01,310824
+Las Vegas,2023-10-01,212007
+Las Vegas,2023-11-01,182843
+Las Vegas,2023-12-01,129811
+Las Vegas,2024-01-01,198791
+Las Vegas,2024-02-01,207950
+Las Vegas,2024-03-01,208993
+Las Vegas,2024-04-01,243652
+Las Vegas,2024-05-01,361560
+Las Vegas,2024-06-01,301521
+Las Vegas,2024-07-01,332302
+Las Vegas,2024-08-01,342880
+Las Vegas,2024-09-01,318900
+Las Vegas,2024-10-01,261805
+Las Vegas,2024-11-01,292975
+Las Vegas,2024-12-01,278983
+Las Vegas,2025-01-01,278906
+Las Vegas,2025-02-01,293075
+Las Vegas,2025-03-01,290942
+Las Vegas,2025-04-01,309192
+Las Vegas,2025-05-01,364406
+Las Vegas,2025-06-01,387399
+Las Vegas,2025-07-01,414826
+Las Vegas,2025-08-01,417737
+Las Vegas,2025-09-01,362358
+Las Vegas,2025-10-01,296692
+Las Vegas,2025-11-01,268165
+Las Vegas,2025-12-01,234558
+Las Vegas,2026-01-01,242344
+Las Vegas,2026-02-01,297101
+Las Vegas,2026-03-01,314567
+Las Vegas,2026-04-01,335250
+Las Vegas,2026-05-01,393608
+Las Vegas,2026-06-01,409188
+Las Vegas,2026-07-01,365113
+Las Vegas,2026-08-01,376230
+Las Vegas,2026-09-01,399361
+New York,2021-01-01,120369
+New York,2021-02-01,118339
+New York,2021-03-01,133068
+New York,2021-04-01,148491
+New York,2021-05-01,155453
+New York,2021-06-01,156850
+New York,2021-07-01,199131
+New York,2021-08-01,198061
+New York,2021-09-01,230907
+New York,2021-10-01,255235
+New York,2021-11-01,254592
+New York,2021-12-01,227651
+New York,2022-01-01,247237
+New York,2022-02-01,232559
+New York,2022-03-01,208374
+New York,2022-04-01,249588
+New York,2022-05-01,252887
+New York,2022-06-01,282358
+New York,2022-07-01,285425
+New York,2022-08-01,307670
+New York,2022-09-01,398938
+New York,2022-10-01,396040
+New York,2022-11-01,350948
+New York,2022-12-01,323863
+New York,2023-01-01,328662
+New York,2023-02-01,201909
+New York,2023-03-01,217630
+New York,2023-04-01,247111
+New York,2023-05-01,277584
+New York,2023-06-01,266683
+New York,2023-07-01,321590
+New York,2023-08-01,307006
+New York,2023-09-01,366745
+New York,2023-10-01,366014
+New York,2023-11-01,364755
+New York,2023-12-01,323239
+New York,2024-01-01,339710
+New York,2024-02-01,269439
+New York,2024-03-01,257504
+New York,2024-04-01,303010
+New York,2024-05-01,324293
+New York,2024-06-01,367238
+New York,2024-07-01,451477
+New York,2024-08-01,514653
+New York,2024-09-01,516910
+New York,2024-10-01,486651
+New York,2024-11-01,430268
+New York,2024-12-01,340856
+New York,2025-01-01,270879
+New York,2025-02-01,223511
+New York,2025-03-01,230619
+New York,2025-04-01,281622
+New York,2025-05-01,273961
+New York,2025-06-01,337657
+New York,2025-07-01,364378
+New York,2025-08-01,342294
+New York,2025-09-01,303912
+New York,2025-10-01,338906
+New York,2025-11-01,302703
+New York,2025-12-01,294369
+New York,2026-01-01,353532
+New York,2026-02-01,321395
+New York,2026-03-01,295691
+New York,2026-04-01,269228
+New York,2026-05-01,279555
+New York,2026-06-01,276195
+New York,2026-07-01,290341
+New York,2026-08-01,292059
+New York,2026-09-01,326616
+Dallas-Ft. Worth,2021-01-01,151731
+Dallas-Ft. Worth,2021-02-01,153485
+Dallas-Ft. Worth,2021-03-01,154304
+Dallas-Ft. Worth,2021-04-01,200354
+Dallas-Ft. Worth,2021-05-01,189980
+Dallas-Ft. Worth,2021-06-01,182010
+Dallas-Ft. Worth,2021-07-01,170470
+Dallas-Ft. Worth,2021-08-01,212861
+Dallas-Ft. Worth,2021-09-01,172204
+Dallas-Ft. Worth,2021-10-01,177971
+Dallas-Ft. Worth,2021-11-01,169097
+Dallas-Ft. Worth,2021-12-01,180585
+Dallas-Ft. Worth,2022-01-01,149794
+Dallas-Ft. Worth,2022-02-01,192889
+Dallas-Ft. Worth,2022-03-01,193069
+Dallas-Ft. Worth,2022-04-01,205221
+Dallas-Ft. Worth,2022-05-01,274419
+Dallas-Ft. Worth,2022-06-01,294747
+Dallas-Ft. Worth,2022-07-01,284332
+Dallas-Ft. Worth,2022-08-01,300321
+Dallas-Ft. Worth,2022-09-01,317524
+Dallas-Ft. Worth,2022-10-01,258721
+Dallas-Ft. Worth,2022-11-01,275320
+Dallas-Ft. Worth,2022-12-01,246988
+Dallas-Ft. Worth,2023-01-01,247406
+Dallas-Ft. Worth,2023-02-01,228976
+Dallas-Ft. Worth,2023-03-01,216699
+Dallas-Ft. Worth,2023-04-01,187574
+Dallas-Ft. Worth,2023-05-01,221954
+Dallas-Ft. Worth,2023-06-01,227824
+Dallas-Ft. Worth,2023-07-01,258863
+Dallas-Ft. Worth,2023-08-01,273896
+Dallas-Ft. Worth,2023-09-01,249122
+Dallas-Ft. Worth,2023-10-01,226812
+Dallas-Ft. Worth,2023-11-01,204328
+Dallas-Ft. Worth,2023-12-01,330170
+Dallas-Ft. Worth,2024-01-01,344138
+Dallas-Ft. Worth,2024-02-01,371360
+Dallas-Ft. Worth,2024-03-01,410759
+Dallas-Ft. Worth,2024-04-01,455240
+Dallas-Ft. Worth,2024-05-01,373197
+Dallas-Ft. Worth,2024-06-01,355662
+Dallas-Ft. Worth,2024-07-01,339088
+Dallas-Ft. Worth,2024-08-01,312979
+Dallas-Ft. Worth,2024-09-01,383899
+Dallas-Ft. Worth,2024-10-01,343722
+Dallas-Ft. Worth,2024-11-01,335798
+Dallas-Ft. Worth,2024-12-01,344483
+Dallas-Ft. Worth,2025-01-01,338297
+Dallas-Ft. Worth,2025-02-01,252843
+Dallas-Ft. Worth,2025-03-01,216538
+Dallas-Ft. Worth,2025-04-01,240327
+Dallas-Ft. Worth,2025-05-01,265454
+Dallas-Ft. Worth,2025-06-01,259621
+Dallas-Ft. Worth,2025-07-01,225020
+Dallas-Ft. Worth,2025-08-01,213573
+Dallas-Ft. Worth,2025-09-01,217262
+Dallas-Ft. Worth,2025-10-01,170352
+Dallas-Ft. Worth,2025-11-01,158122
+Dallas-Ft. Worth,2025-12-01,171535
+Dallas-Ft. Worth,2026-01-01,172887
+Dallas-Ft. Worth,2026-02-01,135973
+Dallas-Ft. Worth,2026-03-01,179821
+Dallas-Ft. Worth,2026-04-01,171158
+Dallas-Ft. Worth,2026-05-01,174766
+Dallas-Ft. Worth,2026-06-01,203116
+Dallas-Ft. Worth,2026-07-01,194964
+Dallas-Ft. Worth,2026-08-01,159280
+Dallas-Ft. Worth,2026-09-01,187015
+Sacramnto-Stkton-Modesto,2021-01-01,80527
+Sacramnto-Stkton-Modesto,2021-02-01,114080
+Sacramnto-Stkton-Modesto,2021-03-01,112716
+Sacramnto-Stkton-Modesto,2021-04-01,125966
+Sacramnto-Stkton-Modesto,2021-05-01,148895
+Sacramnto-Stkton-Modesto,2021-06-01,179690
+Sacramnto-Stkton-Modesto,2021-07-01,172443
+Sacramnto-Stkton-Modesto,2021-08-01,188725
+Sacramnto-Stkton-Modesto,2021-09-01,200352
+Sacramnto-Stkton-Modesto,2021-10-01,234881
+Sacramnto-Stkton-Modesto,2021-11-01,208932
+Sacramnto-Stkton-Modesto,2021-12-01,201766
+Sacramnto-Stkton-Modesto,2022-01-01,191602
+Sacramnto-Stkton-Modesto,2022-02-01,215530
+Sacramnto-Stkton-Modesto,2022-03-01,171086
+Sacramnto-Stkton-Modesto,2022-04-01,184262
+Sacramnto-Stkton-Modesto,2022-05-01,238235
+Sacramnto-Stkton-Modesto,2022-06-01,255144
+Sacramnto-Stkton-Modesto,2022-07-01,239441
+Sacramnto-Stkton-Modesto,2022-08-01,252608
+Sacramnto-Stkton-Modesto,2022-09-01,263898
+Sacramnto-Stkton-Modesto,2022-10-01,242782
+Sacramnto-Stkton-Modesto,2022-11-01,227599
+Sacramnto-Stkton-Modesto,2022-12-01,203473
+Sacramnto-Stkton-Modesto,2023-01-01,210885
+Sacramnto-Stkton-Modesto,2023-02-01,204756
+Sacramnto-Stkton-Modesto,2023-03-01,193830
+Sacramnto-Stkton-Modesto,2023-04-01,217212
+Sacramnto-Stkton-Modesto,2023-05-01,268081
+Sacramnto-Stkton-Modesto,2023-06-01,269256
+Sacramnto-Stkton-Modesto,2023-07-01,276071
+Sacramnto-Stkton-Modesto,2023-08-01,258013
+Sacramnto-Stkton-Modesto,2023-09-01,244298
+Sacramnto-Stkton-Modesto,2023-10-01,195364
+Sacramnto-Stkton-Modesto,2023-11-01,172419
+Sacramnto-Stkton-Modesto,2023-12-01,154824
+Sacramnto-Stkton-Modesto,2024-01-01,157952
+Sacramnto-Stkton-Modesto,2024-02-01,152474
+Sacramnto-Stkton-Modesto,2024-03-01,164981
+Sacramnto-Stkton-Modesto,2024-04-01,224338
+Sacramnto-Stkton-Modesto,2024-05-01,298255
+Sacramnto-Stkton-Modesto,2024-06-01,310412
+Sacramnto-Stkton-Modesto,2024-07-01,303724
+Sacramnto-Stkton-Modesto,2024-08-01,287377
+Sacramnto-Stkton-Modesto,2024-09-01,238564
+Sacramnto-Stkton-Modesto,2024-10-01,168903
+Sacramnto-Stkton-Modesto,2024-11-01,132660
+Sacramnto-Stkton-Modesto,2024-12-01,127746
+Sacramnto-Stkton-Modesto,2025-01-01,134409
+Sacramnto-Stkton-Modesto,2025-02-01,155210
+Sacramnto-Stkton-Modesto,2025-03-01,160690
+Sacramnto-Stkton-Modesto,2025-04-01,185587
+Sacramnto-Stkton-Modesto,2025-05-01,223297
+Sacramnto-Stkton-Modesto,2025-06-01,260965
+Sacramnto-Stkton-Modesto,2025-07-01,239811
+Sacramnto-Stkton-Modesto,2025-08-01,243903
+Sacramnto-Stkton-Modesto,2025-09-01,250060
+Sacramnto-Stkton-Modesto,2025-10-01,239310
+Sacramnto-Stkton-Modesto,2025-11-01,184943
+Sacramnto-Stkton-Modesto,2025-12-01,179542
+Sacramnto-Stkton-Modesto,2026-01-01,199717
+Sacramnto-Stkton-Modesto,2026-02-01,217512
+Sacramnto-Stkton-Modesto,2026-03-01,237674
+Sacramnto-Stkton-Modesto,2026-04-01,269730
+Sacramnto-Stkton-Modesto,2026-05-01,333781
+Sacramnto-Stkton-Modesto,2026-06-01,312974
+Sacramnto-Stkton-Modesto,2026-07-01,278860
+Sacramnto-Stkton-Modesto,2026-08-01,262315
+Sacramnto-Stkton-Modesto,2026-09-01,268125
+Salt Lake City,2021-01-01,170824
+Salt Lake City,2021-02-01,192749
+Salt Lake City,2021-03-01,192393
+Salt Lake City,2021-04-01,207438
+Salt Lake City,2021-05-01,257600
+Salt Lake City,2021-06-01,280728
+Salt Lake City,2021-07-01,270698
+Salt Lake City,2021-08-01,265353
+Salt Lake City,2021-09-01,275200
+Salt Lake City,2021-10-01,231612
+Salt Lake City,2021-11-01,165839
+Salt Lake City,2021-12-01,157314
+Salt Lake City,2022-01-01,161418
+Salt Lake City,2022-02-01,158567
+Salt Lake City,2022-03-01,177779
+Salt Lake City,2022-04-01,211924
+Salt Lake City,2022-05-01,257228
+Salt Lake City,2022-06-01,254429
+Salt Lake City,2022-07-01,259061
+Salt Lake City,2022-08-01,262790
+Salt Lake City,2022-09-01,248804
+Salt Lake City,2022-10-01,217720
+Salt Lake City,2022-11-01,215493
+Salt Lake City,2022-12-01,199852
+Salt Lake City,2023-01-01,177773
+Salt Lake City,2023-02-01,200691
+Salt Lake City,2023-03-01,198944
+Salt Lake City,2023-04-01,209085
+Salt Lake City,2023-05-01,259385
+Salt Lake City,2023-06-01,285822
+Salt Lake City,2023-07-01,245206
+Salt Lake City,2023-08-01,243156
+Salt Lake City,2023-09-01,238978
+Salt Lake City,2023-10-01,202354
+Salt Lake City,2023-11-01,174823
+Salt Lake City,2023-12-01,195805
+Salt Lake City,2024-01-01,193172
+Salt Lake City,2024-02-01,189428
+Salt Lake City,2024-03-01,187638
+Salt Lake City,2024-04-01,223727
+Salt Lake City,2024-05-01,224672
+Salt Lake City,2024-06-01,259504
+Salt Lake City,2024-07-01,263785
+Salt Lake City,2024-08-01,260302
+Salt Lake City,2024-09-01,231213
+Salt Lake City,2024-10-01,224993
+Salt Lake City,2024-11-01,177631
+Salt Lake City,2024-12-01,165338
+Salt Lake City,2025-01-01,155931
+Salt Lake City,2025-02-01,147985
+Salt Lake City,2025-03-01,152948
+Salt Lake City,2025-04-01,188739
+Salt Lake City,2025-05-01,226328
+Salt Lake City,2025-06-01,242664
+Salt Lake City,2025-07-01,258887
+Salt Lake City,2025-08-01,242810
+Salt Lake City,2025-09-01,206502
+Salt Lake City,2025-10-01,173340
+Salt Lake City,2025-11-01,150805
+Salt Lake City,2025-12-01,131270
+Salt Lake City,2026-01-01,172180
+Salt Lake City,2026-02-01,192525
+Salt Lake City,2026-03-01,212744
+Salt Lake City,2026-04-01,237989
+Salt Lake City,2026-05-01,259600
+Salt Lake City,2026-06-01,220909
+Salt Lake City,2026-07-01,201855
+Salt Lake City,2026-08-01,188843
+Salt Lake City,2026-09-01,173550

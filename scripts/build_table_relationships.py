@@ -1179,6 +1179,72 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("datafy_advertising_overview",   "kpi_daily_summary",                "cross_ref",  "snapshot_date→as_of_date",
      "Estimated campaign impact and cost-per-visitor-day benchmark against same-day STR demand to gauge paid-media spend efficiency"),
+
+    # ── Datafy extended export families (added 2026-09-30, load_datafy_extended.py) ──
+    # Snapshot-dated like the Advertising family; joins use snapshot_date unless a shared
+    # dimension (dma, day of week, month) is the natural key.
+    ("datafy_adrevamp_market_impact", "datafy_advertising_top_markets",   "cross_ref",  "dma",
+     "AdRevamp market impact by attribution segment (Destination/Hotels/Resorts) is the segment-level cut of the campaign-wide DMA impact in advertising top markets"),
+
+    ("datafy_adrevamp_market_impact", "datafy_advertising_attribution_groups", "same_source", "segment→attribution_group",
+     "AdRevamp segments (Destination/Hotels/Resorts) are the same attribution groups summarized in the advertising attribution groups table"),
+
+    ("datafy_advertising_destination_markets", "datafy_advertising_top_markets", "cross_ref", "dma",
+     "Destination-attributed trips, attribution rate, and length of stay by DMA extend the campaign trip share and impact by DMA"),
+
+    ("datafy_advertising_destination_pois", "datafy_advertising_destination_markets", "context", "snapshot_date",
+     "Destination points of interest and geographies visited by attributed trips explain where the DMA-level destination trips go"),
+
+    ("datafy_advertising_audience_performance", "datafy_advertising_attribution_groups", "context", "snapshot_date",
+     "Per-audience-segment trips, attribution rate, and impact break down the group-level attribution summary by targeting audience"),
+
+    ("datafy_ext_visitor_metrics",    "datafy_advertising_overview",      "enriches",   "snapshot_date",
+     "Cost per visitor day and spend per visitor enrich the campaign-level estimated impact and ROAS summary"),
+
+    ("datafy_attribution_vendor_performance", "datafy_advertising_kpis", "cross_ref",  "snapshot_date",
+     "Vendor-level reach, impressions, clicks, and attributed trips cross-reference the campaign-wide advertising KPI totals"),
+
+    ("datafy_ext_visitor_demographics", "datafy_overview_demographics",  "cross_ref",  "category→demographic",
+     "Demographics of advertising-attributed visitors compare against the destination-wide visitor demographic mix"),
+
+    ("datafy_ext_length_of_stay",     "datafy_overview_los_distribution", "cross_ref", "length_of_stay",
+     "Length of stay for campaign-attributed trips compares against the destination-wide length-of-stay distribution"),
+
+    ("datafy_ext_trips_by_weekday",   "datafy_overview_weekday_visitation", "cross_ref", "day",
+     "Weekday distribution of campaign-attributed trips compares against destination-wide weekday visitation"),
+
+    ("datafy_trip_share_by_dma",      "datafy_overview_dma",              "cross_ref",  "dma",
+     "Share of trips by DMA from the trends density map aligns with the visitor-economy DMA origin table"),
+
+    ("datafy_visitor_days_by_year",   "datafy_overview_visitation_by_month", "context", "year",
+     "Annual visitor-day and trip totals with prior-year change frame the monthly visitation series"),
+
+    ("datafy_visitor_days_by_year",   "kpi_daily_summary",                "cross_ref",  "year→as_of_date",
+     "Annual Datafy visitor days and trips cross-reference STR occupancy, ADR, and RevPAR for the same years"),
+
+    ("datafy_spend_by_length_of_stay", "datafy_ext_length_of_stay",       "context",    "length_of_stay",
+     "Share of spend by length of stay pairs with share of trips by length of stay to show spend intensity per stay length"),
+
+    ("datafy_spend_by_weekday",       "datafy_ext_trips_by_weekday",      "context",    "day",
+     "Spend volume by weekday pairs with attributed trips by weekday to show spend per trip-day"),
+
+    ("datafy_spend_repeat_split",     "datafy_overview_repeat_spenders",  "same_source", "snapshot_date",
+     "Repeat versus one-time spender split from Enhanced Spending Insights extends the overview repeat spenders table"),
+
+    ("datafy_visitation_heatmap",     "kpi_daily_summary",                "cross_ref",  "month,day_of_week→as_of_date",
+     "Visitation relative to peak by month and day of week cross-references STR daily occupancy seasonality"),
+
+    ("datafy_spend_category_monthly", "datafy_overview_category_spend_monthly", "same_source", "name,month",
+     "Monthly spend by category history from Enhanced Spending Insights extends the overview category spend series"),
+
+    ("datafy_spend_category_monthly", "kpi_daily_summary",                "cross_ref",  "month→as_of_date",
+     "Monthly visitor spend by category cross-references STR room revenue and demand for the same months"),
+
+    ("datafy_spend_market_monthly",   "datafy_overview_spending_by_market", "same_source", "name,month",
+     "Monthly spend by origin market history from Enhanced Spending Insights extends the overview spending-by-market series"),
+
+    ("datafy_spend_market_monthly",   "datafy_advertising_top_markets",   "cross_ref",  "name→dma",
+     "Monthly origin-market spend history cross-references the campaign DMA trip share and impact"),
 ]
 
 

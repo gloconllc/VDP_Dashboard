@@ -18,6 +18,7 @@ Pipeline steps:
    3. compute_kpis.py             — pivot STR                   → kpi_daily_summary, kpi_compression_quarterly
    4. load_datafy_reports.py      — Datafy visitor economy CSVs → 17 datafy_* tables (skip-safe)
    4a. load_datafy_advertising.py — Datafy Advertising campaign performance CSVs → 6 datafy_advertising_* tables (skip-safe)
+   4b. load_datafy_extended.py    — Datafy AdRevamp / Advertising Destination+Visitor / Enhanced Spending exports → 17 datafy_* tables (skip-safe)
    5. load_costar_reports.py      — CoStar market data          → 7 costar_* tables (skip-safe)
    5a. load_costar_market_daily.py — CoStar raw submarket export (daily_costar.xlsx/monhtly_costar.xlsx) → costar_market_daily, costar_market_monthly (skip-safe)
    5b. load_costar_segmentation.py — CoStar segment (Transient/Group/Contract) + participation roster → costar_market_daily_segment, costar_market_monthly_segment, costar_participation (skip-safe)
@@ -135,7 +136,11 @@ STEPS = [
     # tree and commit 261be57 swept that in, silently dropping this step. Every loader here is
     # skip-safe, so nothing errored; the six datafy_advertising_* tables just stopped refreshing.
     ("load_datafy_advertising", os.path.join(BASE_DIR, "load_datafy_advertising.py"), False),
-    ("load_costar",           os.path.join(BASE_DIR, "load_costar_reports.py"),     False),
+    # Datafy export families added in the 2026-09-30 drop that neither loader above maps
+    # (AdRevamp market impact, Advertising Destination/Visitor visuals, spend-by-day/stay,
+    # visitation heatmap, vendor performance, monthly spend history) → 17 new tables (skip-safe).
+    ("load_datafy_extended", os.path.join(BASE_DIR, "load_datafy_extended.py"), False),
+    ("load_costar",          os.path.join(BASE_DIR, "load_costar_reports.py"),     False),
     # CoStar's raw submarket HospitalityDataGrid export (daily_costar.xlsx / monhtly_costar.xlsx)
     # — current, higher-frequency than the PDF-parsed costar_monthly_performance table above.
     ("load_costar_market_daily", os.path.join(BASE_DIR, "load_costar_market_daily.py"), False),

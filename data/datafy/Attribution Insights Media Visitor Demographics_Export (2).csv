@@ -1,0 +1,13 @@
+Demographic,label,share
+Income,Under 50k,11.33%
+Income,50k-75k,24.90%
+Income,75k-100k,14.51%
+Income,100k-150k,21.51%
+Income,150k+,27.74%
+Age,16-24,7.94%
+Age,25-44,18.12%
+Age,45-64,36.26%
+Age,65+,37.68%
+Household Size,1-2 HH,55.71%
+Household Size,3-5 HH,42.67%
+Household Size,6+ HH,1.62%

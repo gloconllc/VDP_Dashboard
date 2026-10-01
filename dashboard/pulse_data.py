@@ -853,6 +853,25 @@ def freshness(_conn) -> dict:
     f["costar_report"] = pr.iloc[0]["r"] if not pr.empty else None
     pl = _q(_conn, "SELECT MAX(snapshot_date) AS s FROM costar_participation")
     f["costar_pull"] = pl.iloc[0]["s"] if not pl.empty else None
+    # The participation roster is pulled less often than the daily/monthly/segment exports,
+    # so its snapshot date alone made the badge read "pulled Sep 7" after a Sep 30 pull.
+    # Those exports carry their pull date in the file name (daily_09_30_26.xlsx, mm_dd_yy);
+    # load_log records the file each CoStar load used, so take the newest of the two.
+    try:
+        import re
+        ll = _q(_conn, "SELECT DISTINCT file_name AS n FROM load_log WHERE source = 'CoStar' "
+                       "AND grain IN ('daily', 'monthly', 'daily_segment', 'monthly_segment')")
+        dates = []
+        for name in (ll["n"].tolist() if not ll.empty else []):
+            m = re.search(r"(?<!\d)(\d{2})_(\d{2})_(\d{2})(?!\d)", str(name))
+            if m:
+                dates.append(pd.Timestamp(2000 + int(m.group(3)), int(m.group(1)), int(m.group(2))))
+        if dates:
+            newest = max(dates).strftime("%Y-%m-%d")
+            if not f["costar_pull"] or newest > str(f["costar_pull"]):
+                f["costar_pull"] = newest
+    except Exception:
+        pass  # a malformed log row must never break the header badges
     dp = _q(_conn, "SELECT MIN(report_period_start) AS s, MAX(report_period_end) AS e "
                    "FROM datafy_overview_spending_by_market WHERE report_period_start = "
                    "(SELECT MAX(report_period_start) FROM datafy_overview_spending_by_market)")

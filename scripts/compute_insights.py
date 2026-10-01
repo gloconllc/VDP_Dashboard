@@ -765,9 +765,14 @@ def gen_dmo_compression_outlook(comp: pd.DataFrame, kpi: pd.DataFrame) -> dict:
             f"{cq} compression: {cq_80} days above 80% occ: "
             f"Q3 peak ({int(avg_q3_80)}-day avg) starts in ~{days_to_q3} days"
         )
+        if cq_80 == 0 and cq_90 == 0:
+            # Quarter boundary: "has logged 0 days" reads like a miss, not a start.
+            logged = f"The new quarter ({cq}) has not yet logged a day above 80% occupancy. "
+        else:
+            logged = (f"Current quarter ({cq}) has logged {cq_80} days above 80% occupancy "
+                      f"and {cq_90} days above 90%. ")
         body = (
-            f"Current quarter ({cq}) has logged {cq_80} days above 80% occupancy "
-            f"and {cq_90} days above 90%. "
+            f"{logged}"
             f"Historical Q3 average is {avg_q3_80:.0f} days above 80%: "
             f"the highest compression window of the year. "
             f"Q3 peak demand is approximately {days_to_q3} days away; "
