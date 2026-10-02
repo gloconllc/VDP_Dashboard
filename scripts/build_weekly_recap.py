@@ -105,15 +105,25 @@ def markers(con) -> dict:
         "str_daily_end": _one(con, "SELECT MAX(as_of_date) FROM fact_str_metrics WHERE grain='daily'"),
         "str_monthly_end": _one(con, "SELECT MAX(as_of_date) FROM fact_str_metrics WHERE grain='monthly'"),
     }
-    # Datafy: the set of loaded export files changes when a new export lands
-    # (loaded_at changes on every reload, so it is not a change signal).
+    # Datafy: a new export is a new file name or a file with a new date added. load_log keeps only
+    # glob patterns for Datafy (data/datafy/*/*.csv), so it cannot see a new upload; the per-file
+    # ingest log written by load_datafy_reports.py can. Falls back to load_log if that table is absent.
     try:
-        names = sorted({r[0] for r in con.execute(
-            "SELECT DISTINCT file_name FROM load_log WHERE lower(source)='datafy'")})
-        m["datafy_files"] = hashlib.sha1("|".join(names).encode()).hexdigest()[:10] if names else None
-        m["datafy_file_count"] = len(names)
+        rows = sorted(f"{fn}|{added}" for fn, added in con.execute(
+            "SELECT file_name, date_added FROM datafy_file_ingest WHERE status = 'ok'"))
+        if rows:
+            m["datafy_files"] = hashlib.sha1("|".join(rows).encode()).hexdigest()[:10]
+            m["datafy_file_count"] = len(rows)
+        else:
+            raise sqlite3.Error("no ingest rows")
     except sqlite3.Error:
-        m["datafy_files"] = None
+        try:
+            names = sorted({r[0] for r in con.execute(
+                "SELECT DISTINCT file_name FROM load_log WHERE lower(source)='datafy'")})
+            m["datafy_files"] = hashlib.sha1("|".join(names).encode()).hexdigest()[:10] if names else None
+            m["datafy_file_count"] = len(names)
+        except sqlite3.Error:
+            m["datafy_files"] = None
     # CoStar pull date lives in the export filenames (daily_09_30_26.xlsx), per project rule.
     pulls = []
     try:
