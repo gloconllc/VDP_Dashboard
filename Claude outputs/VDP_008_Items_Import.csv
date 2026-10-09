@@ -1,0 +1,6 @@
+Active?,Name*,Type*,Description,Price/Rate,Percentage,Subitem of,Item Subitem of,Expense Account Name,Expense Account Number,Purchase Description,Purchase Cost,Account Name,Account Number,Taxable?,Item ID
+,Power BI Build,Service,Power BI data package and report build,250.00,,,,,,,,,,,
+,Client Meeting,Service,Meeting with Visit Dana Point,250.00,,,,,,,,,,,
+,Planning and Coordination,Service,"Project planning, access, and licensing coordination",250.00,,,,,,,,,,,
+,Data Review,Service,"Data source review, audit, and validation",250.00,,,,,,,,,,,
+,Weekly Report,Service,Weekly PULSE report preparation,250.00,,,,,,,,,,,
