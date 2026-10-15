@@ -17,6 +17,7 @@ persistent Volume or they will not survive the next auto-redeploy.
 import base64
 import html
 import io
+import json
 import os
 import sqlite3
 import sys
@@ -64,6 +65,32 @@ try:
 except Exception as _board_import_error:  # pragma: no cover - defensive on deploy
     pulse_board = None
     print(f"[pulse] board surface unavailable: {_board_import_error}")
+
+# The Insights report (2026-10-13): an added, newspaper-style, section-by-section
+# report (PULSE Summary, key takeaways, questions and short answers, news reports,
+# analysis, appendix, sources, export). Additive only: it sits below the board
+# in its own expander, and a failure here never affects the rest of the page.
+try:
+    import pulse_insights
+except Exception as _ins_import_error:  # pragma: no cover - defensive on deploy
+    pulse_insights = None
+    print(f"[pulse] insights report unavailable: {_ins_import_error}")
+
+# At a glance strips and the PULSE Summary announcement (2026-10-14), drawn
+# under the existing board sections. Additive and guarded like the board.
+try:
+    import pulse_strip
+except Exception as _strip_import_error:  # pragma: no cover - defensive on deploy
+    pulse_strip = None
+    print(f"[pulse] glance strips unavailable: {_strip_import_error}")
+
+# Make something new (2026-10-15): briefing document, one-page dashboard and
+# animated highlights built from the Insights report the reader selected.
+try:
+    import pulse_extras
+except Exception as _extras_import_error:  # pragma: no cover - defensive on deploy
+    pulse_extras = None
+    print(f"[pulse] companion pieces unavailable: {_extras_import_error}")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
@@ -236,6 +263,10 @@ st.markdown(
       .pulse-sub { font-size: 13.5px; color: #475569; margin-top:5px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
       .pulse-sub .pulse-sub-brand { color:#1D6E86; font-weight:600; }
       .pulse-sub .pulse-sub-dot { color:#CBD9DE; }
+      .pulse-sub a.pulse-contact, .pulse-contact-foot a { color:#0E7490; font-weight:600; text-decoration:underline; text-underline-offset:2px; }
+      .pulse-sub a.pulse-contact:hover, .pulse-contact-foot a:hover { color:#123C4A; }
+      .pulse-sub a.pulse-contact:focus-visible, .pulse-contact-foot a:focus-visible { outline:2px solid #1D6E86; outline-offset:2px; border-radius:3px; }
+      .pulse-contact-foot { text-align:center; font-size:13.5px; color:#475569; padding:18px 0 8px; }
       .pulse-sub .pulse-status-pill { display:inline-flex; align-items:center; gap:6px;
         background:#F0F7F9; border:1px solid #CBE3EA; border-radius:20px; padding:3px 10px 3px 8px;
         color:#0E4B5C; font-weight:600; font-size:12.5px; }
@@ -1628,7 +1659,7 @@ def _header_html(status_text: str, ok: bool = True) -> str:
               <div class="pulse-eyebrow">Destination Intelligence Report</div>
               <div class="pulse-title">Dana Point PULSE</div>
               <div class="pulse-sub">
-                <span class="pulse-sub-brand">Prepared by GloCon Solutions LLC for Visit Dana Point</span>
+                <span class="pulse-sub-brand">Prepared by <a class="pulse-contact" href="mailto:john.picou@gloconsolutions.com" title="Contact GloCon Solutions LLC" aria-label="Contact GloCon Solutions LLC by email">GloCon Solutions LLC</a> for Visit Dana Point</span>
                 <span class="pulse-sub-dot">&bull;</span>
                 <span class="pulse-status-pill">
                   <span class="pulse-status-dot" style="background:{dot_color};"></span>{status_text}
@@ -1704,11 +1735,20 @@ else:
     window_months = PERIOD_OPTIONS[period_label]
     period_label_display = period_label
 
+def _hero_bg() -> str:
+    """visitdanapoint.com photo layered over the bundled hero photo (the fallback)."""
+    try:
+        import vdp_site
+        return vdp_site.layered("header_aerial", _hero_photo_data_uri(), 1920, 760)
+    except Exception:  # noqa: BLE001
+        return f"url('{_hero_photo_data_uri()}')"
+
+
 if pulse_board is None:
     # The board masthead (pulse_board) carries this photo when it is live.
     st.markdown(
         f"""
-        <div class="pulse-hero" style="background-image:url('{_hero_photo_data_uri()}');">
+        <div class="pulse-hero" style="background-image:{_hero_bg()};">
           <div class="pulse-hero-overlay"></div>
           <div class="pulse-hero-content">
             <img class="pulse-hero-logo" src="{_logo_nav_data_uri()}">
@@ -1818,6 +1858,7 @@ st.markdown(
       <a href="#pulse-brain">Intelligence Brief</a>
       <a href="#pulse-fullreport">Full report</a>
       <a href="#pulse-notes">Notes and downloads</a>
+      <a href="#pulse-insights">Insights report</a>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1841,6 +1882,86 @@ def _map_builder(markets_df):
     return fig if fig is not None else build_markets_map_figure(markets_df)
 
 
+INS_PERIODS = ("Year to date", "Match the data window above")
+
+
+def _ins_selection() -> tuple:
+    """The reader's Insights report choices (2026-10-15). Read from session
+    state so the strips above the report follow the same selection; the
+    controls themselves sit with the report. Year to date is the default."""
+    mode = st.session_state.get("ins_period", INS_PERIODS[0])
+    if mode not in INS_PERIODS:
+        mode = INS_PERIODS[0]
+    allv = list(getattr(pulse_insights, "VIZ_OPTIONS", {}).keys()) if pulse_insights is not None else []
+    viz = st.session_state.get("ins_viz", allv)
+    viz = tuple(v for v in allv if v in (viz or []))
+    if mode == INS_PERIODS[0]:
+        return mode, None, None, None, None, viz
+    return mode, float(window_months), range_start_iso, range_end_iso, period_label_display, viz
+
+
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=16)
+def _insights_page(db_mtime: float, prepared: str, sel: tuple | None = None) -> tuple | None:
+    """The full Insights report as one self-contained HTML page, rebuilt when
+    analytics.sqlite changes or the reader changes the report period or visuals.
+    Year to date by default; every page states its period."""
+    if pulse_insights is None or pulse_story is None:
+        return None
+    try:
+        import pulse_data as _pdx
+        conn = get_connection()
+        daily = _pdx.hotel_daily(conn)
+        if daily is None or daily.empty:
+            return None
+        end = daily["date"].max()
+        mode, w_months, w_start, w_end, w_label, viz = sel or (INS_PERIODS[0], None, None, None, None, None)
+        if mode == INS_PERIODS[0]:
+            model = pulse_story.build_model(conn, 12, f"{end.year}-01-01", end.strftime("%Y-%m-%d"),
+                                            "Year to date", dma_coords=DMA_COORDS)
+        else:
+            model = pulse_story.build_model(conn, w_months, w_start, w_end,
+                                            w_label if not w_start else "Custom range", dma_coords=DMA_COORDS)
+        report = pulse_insights.build_report(conn, model, DMA_COORDS, date.fromisoformat(prepared))
+        ids = [i for i, _ in pulse_insights.all_section_ids(report)]
+        # Built once per data refresh, never on each click.
+        try:
+            xlsx = pulse_insights.build_xlsx(report, ids)
+        except Exception as _exc:  # noqa: BLE001
+            print(f"[pulse] insights xlsx failed: {_exc}")
+            xlsx = None
+        try:
+            deck = pulse_insights.build_pptx(report, ids)
+        except Exception as _exc:  # noqa: BLE001
+            print(f"[pulse] insights pptx failed: {_exc}")
+            deck = None
+        return pulse_insights.render_html(report, viz_on=list(viz) if viz is not None else None), report, xlsx, deck
+    except Exception as _exc:  # noqa: BLE001
+        print(f"[pulse] insights report failed: {_exc}")
+        return None
+
+
+def _strip(kind: str) -> None:
+    """Mount one At a glance strip (or the announcement) under a board section.
+    Never raises: a failure here leaves the board exactly as it was."""
+    if pulse_strip is None or pulse_insights is None:
+        return
+    try:
+        if not pulse_strip.available():
+            return
+        try:
+            _mt = os.path.getmtime(DB_PATH)
+        except OSError:
+            _mt = 0.0
+        _built = _insights_page(_mt, date.today().isoformat(), _ins_selection())
+        if not _built:
+            return
+        _rep = _built[1]
+        _payload = pulse_strip.announce(_rep) if kind == "announce" else pulse_strip.glance(_rep, kind)
+        pulse_strip.mount(_payload, key=f"ps_{kind}")
+    except Exception as _exc:  # noqa: BLE001
+        print(f"[pulse] glance strip {kind} failed: {_exc}")
+
+
 if pulse_model is None or pulse_sections is None:
     st.info(
         "The live data view is refreshing. The full PDF report, the Intelligence Brief, "
@@ -1853,11 +1974,13 @@ else:
     def _board_brief() -> None:
         _anchor("pulse-glance")
         pulse_board.mount(pulse_board.brief(pulse_model), key="pb_brief")
+        _strip("announce")
 
     def _board_snapshot() -> None:
         _anchor("pulse-snapshot")
         pulse_board.mount(pulse_board.snapshot(pulse_model), key="pb_snapshot")
         _ask("snapshot", "Performance Snapshot", pulse_model.text["snapshot"]["question"])
+        _strip("snapshot")
 
     def _board_visitors() -> None:
         _anchor("pulse-origins")
@@ -1869,6 +1992,7 @@ else:
                 if _fig is not None:
                     st.plotly_chart(_fig, use_container_width=True, config={"displayModeBar": False}, key="pb_map")
         _ask("origins", "Visitors and Spend", pulse_model.text["visitors"]["question"])
+        _strip("visitors")
 
     def _board_market() -> None:
         _anchor("pulse-market")
@@ -1877,11 +2001,13 @@ else:
         _rooms = section_visuals._room_split(_conn) if section_visuals is not None else None
         pulse_board.mount(pulse_board.market(pulse_model, _tiers, _rooms), key="pb_market")
         _ask("market", "Market Position", pulse_model.text["market"]["question"])
+        _strip("market")
 
     def _board_forward() -> None:
         _anchor("pulse-forward")
         pulse_board.mount(pulse_board.forward(pulse_model), key="pb_forward")
         _ask("forward", "Forward Outlook", pulse_model.text["forward"]["question"])
+        _strip("forward")
 
     # Each board chunk falls back to its Streamlit-native renderer on its own,
     # so one failure can never blank the rest of the page.
@@ -1908,6 +2034,136 @@ else:
             except Exception as _exc:  # noqa: BLE001
                 print(f"[pulse] section render failed: {_exc}")
                 st.warning("This section could not be drawn from the current data. The rest of the page is unaffected.")
+
+# ---------------------------------------------------------------------------
+# Insights report (added 2026-10-13). Everything above this line is unchanged.
+# Shown open directly below the board; everything above and below it is
+# unchanged. Section-by-section report, appendix, sources and exports.
+# ---------------------------------------------------------------------------
+
+
+def _render_insights_report() -> None:
+    try:
+        mtime = os.path.getmtime(DB_PATH)
+    except OSError:
+        mtime = 0.0
+    # Reader choices (2026-10-15): report period and which visuals to show.
+    _vopts = getattr(pulse_insights, "VIZ_OPTIONS", {})
+    _c1, _c2 = st.columns([1, 2])
+    with _c1:
+        st.radio("Report period", INS_PERIODS, index=0, key="ins_period",
+                 help="Year to date is the default. Match the data window to follow the selection at the top of the page.")
+    with _c2:
+        if _vopts:
+            st.multiselect("Visuals in the report", list(_vopts.keys()), default=list(_vopts.keys()),
+                           format_func=lambda k: _vopts.get(k, k), key="ins_viz",
+                           help="Anything switched off keeps its original chart, table or text.")
+    built = _insights_page(mtime, date.today().isoformat(), _ins_selection())
+    if not built:
+        st.info("The Insights report is refreshing. The board, the full PDF report and every download remain available.")
+        return
+    page_html, report, xlsx, deck = built
+    st.caption(
+        f"{report.get('period_detail', 'Year to date')}, section by section: PULSE Summary, key takeaways, questions and short answers, "
+        "then each section's news report and analysis, the appendix and sources. Every figure names its source. "
+        "Use the tabs or Previous and Next, switch between One page and All pages, and use Export for PDF, "
+        "PowerPoint, Excel, CSV or a share link."
+    )
+    components.html(page_html, height=1500, scrolling=True)
+    c1, c2, c3 = st.columns(3)
+    stamp = datetime.now().strftime("%Y-%m-%d")
+    with c1:
+        st.download_button("⬇ Open the report full screen (HTML)", data=page_html.encode("utf-8"),
+                           file_name=f"Dana Point PULSE Insights {stamp}.html", mime="text/html",
+                           use_container_width=True, key="ins_dl_html")
+    with c2:
+        if xlsx:
+            st.download_button("⬇ Data tables (Excel)", data=xlsx,
+                               file_name=f"Dana Point PULSE Insights {stamp}.xlsx",
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                               use_container_width=True, key="ins_dl_xlsx")
+    with c3:
+        if deck:
+            st.download_button("⬇ Insights deck (PowerPoint)", data=deck,
+                               file_name=f"Dana Point PULSE Insights {stamp}.pptx",
+                               mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                               use_container_width=True, key="ins_dl_pptx")
+    _render_make_new(report, deck, stamp)
+
+
+def _render_make_new(report: dict, deck: bytes | None, stamp: str) -> None:
+    """Make something new (2026-10-15): one companion piece at a time, built
+    from the report above, so it follows the selected period."""
+    if pulse_extras is None:
+        return
+    try:
+        st.markdown("##### Make something new from this report")
+        opts = list(pulse_extras.OPTIONS.keys())
+        pick = st.selectbox("Choose what to make", opts, format_func=lambda k: pulse_extras.OPTIONS[k], key="ins_make",
+                            help=f"Built from the report above: {report.get('period_detail', '')}.")
+        base = f"Dana Point PULSE {stamp}"
+        if pick == "docx":
+            data = _make_cached("docx", report)
+            if data:
+                st.download_button("⬇ Download the briefing document (Word)", data=data, file_name=f"{base} briefing.docx",
+                                   mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                   use_container_width=True, key="mk_docx")
+            else:
+                st.caption("The briefing document is not available on this server yet.")
+        elif pick == "pptx":
+            if deck:
+                st.download_button("⬇ Download the slide deck (PowerPoint)", data=deck, file_name=f"{base} deck.pptx",
+                                   mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                                   use_container_width=True, key="mk_pptx")
+        else:
+            page = _make_cached(pick, report)
+            if page:
+                components.html(page, height=980 if pick == "dashboard" else 720, scrolling=True)
+                label = "one-page dashboard" if pick == "dashboard" else "animated highlights"
+                st.download_button(f"⬇ Download the {label} (HTML)", data=page.encode("utf-8"),
+                                   file_name=f"{base} {label}.html", mime="text/html",
+                                   use_container_width=True, key=f"mk_{pick}")
+    except Exception as _exc:  # noqa: BLE001
+        print(f"[pulse] make something new failed: {_exc}")
+
+
+def _make_cached(kind: str, report: dict):
+    """Build a companion piece once per report and kind, kept for the session."""
+    key = f"_mk_{kind}_{hash(json.dumps(report, sort_keys=True, default=str))}"
+    if key not in st.session_state:
+        if kind == "docx":
+            st.session_state[key] = pulse_extras.build_docx(report)
+        elif kind == "dashboard":
+            st.session_state[key] = pulse_extras.build_dashboard_html(report)
+        else:
+            st.session_state[key] = pulse_extras.build_highlights_html(report)
+    return st.session_state[key]
+
+
+st.markdown('<div id="pulse-insights" class="pulse-anchor"></div>', unsafe_allow_html=True)
+if pulse_insights is not None:
+    st.divider()
+    st.markdown("#### Insights report: the full story, section by section")
+    st.markdown(
+        """
+        <div class="pulse-jumpnav">
+          <a href="#pulse-brain">Skip to the Intelligence Brief and Ask</a>
+          <a href="#pulse-fullreport">Skip to View a Section and the PDF report</a>
+          <a href="#pulse-notes">Skip to Notes</a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    _render_insights_report()
+    st.markdown(
+        """
+        <div class="pulse-jumpnav">
+          <a href="#pulse-brain">Continue to the Intelligence Brief and Ask</a>
+          <a href="#pulse-fullreport">Continue to View a Section and the PDF report</a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 st.divider()
 
@@ -2140,6 +2396,12 @@ st.markdown('<div id="pulse-notes" class="pulse-anchor"></div>', unsafe_allow_ht
 st.markdown("#### Notes & Report Repository")
 render_notes_block("general", "General Notes")
 render_report_archive()
+
+st.markdown(
+    '<div class="pulse-contact-foot">Dana Point PULSE is built and maintained by GloCon Solutions LLC. '
+    '<a href="mailto:john.picou@gloconsolutions.com">Contact GloCon Solutions LLC</a></div>',
+    unsafe_allow_html=True,
+)
 
 # Admin-only: manual digest send, gated per the project's existing ?admin=true
 # convention. Runs inside this app's own container, which has real outbound

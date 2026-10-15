@@ -160,6 +160,16 @@ def _miles_from_dana_point(coords: dict | None) -> dict:
     return out
 
 
+def _major_first(ev: pd.DataFrame) -> pd.DataFrame:
+    """The board and report read "Next major event" from the first row.
+    Since 2026-10-14 the calendar also holds every dated visitdanapoint.com
+    listing (dinners, markets), so keep the major ones when there are any."""
+    if ev is None or ev.empty or "is_major" not in ev.columns:
+        return ev
+    major = ev[ev["is_major"] == 1]
+    return major.reset_index(drop=True) if not major.empty else ev
+
+
 def build_model(conn, months: float, start_iso: str | None, end_iso: str | None, label: str,
                 dma_coords: dict | None = None) -> Model | None:
     daily = pdx.hotel_daily(conn)
@@ -186,7 +196,7 @@ def build_model(conn, months: float, start_iso: str | None, end_iso: str | None,
         link=pdx.hotel_vs_visitor_spend(monthly, dm),
         markets=markets, categories=pdx.datafy_categories(conn), profile=pdx.datafy_profile(conn),
         ads=ads, ad_mix=pdx.ad_vs_spend_markets(ads, markets),
-        events=pdx.event_last_year(daily, pdx.upcoming_events(conn)),
+        events=pdx.event_last_year(daily, _major_first(pdx.upcoming_events(conn))),
         group=pdx.group_mix_latest(conn), insight=pdx.forward_insight(conn),
         fresh=pdx.freshness(conn),
         miles=_miles_from_dana_point(dma_coords),

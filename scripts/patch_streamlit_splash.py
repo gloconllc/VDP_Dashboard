@@ -78,7 +78,9 @@ def _splash_html(data_uri: str) -> str:
 </style>
 <div id="{MARKER}" style="
   position:fixed;inset:0;z-index:2147483647;
-  background:#050A14;
+  background:linear-gradient(180deg,rgba(5,10,20,.70) 0%,rgba(5,10,20,.86) 100%),
+    url('https://assets.simpleviewinc.com/simpleview/image/upload/c_fill,f_auto,g_auto,h_1000,q_65,w_1600/v1/clients/danapointca/a9d9781aa3a1d8c1324d5706e9d88b608f2fcd08_d0b323b4-304a-4d05-897d-85be02ad7bfc.jpg') center/cover no-repeat,
+    #050A14;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-family:'Inter','Segoe UI',system-ui,sans-serif;
 ">

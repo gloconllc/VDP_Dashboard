@@ -487,20 +487,166 @@ KNOWN_DANA_POINT_EVENTS = [
 ]
 
 
+# ── visitdanapoint.com events feed (master source, added 2026-10-14) ─────────
+# The site runs on Simpleview. Its own events calendar is served by a JSON feed
+# behind a short-lived public token, which is the same data the calendar page
+# renders. This is the first-choice source; the HTML scraper and the seeded list
+# below remain as fallbacks. A dated snapshot of the feed is kept in
+# data/vdp_site/ (raw data rule) and can be loaded with --from-json.
+
+SITE_ROOT = "https://visitdanapoint.com"
+SITE_TOKEN_URL = SITE_ROOT + "/plugins/core/get_simple_token/"
+SITE_FEED_URL = SITE_ROOT + "/includes/rest_v2/plugins_events_events_by_date/find/"
+SITE_SNAPSHOT_DIR = PROJECT_ROOT / "data" / "vdp_site"
+MAJOR_CATEGORIES = {"Signature Events", "Festivals"}
+
+
+def fetch_site_feed(days_ahead: int = 365) -> list[dict]:
+    """Raw event occurrences from the visitdanapoint.com feed, or [] on any failure."""
+    import json
+    from datetime import timedelta, timezone
+    try:
+        token = requests.get(SITE_TOKEN_URL, headers=HEADERS, timeout=20).text.strip()
+        now = datetime.now(timezone.utc)
+        query = {
+            "filter": {"active": True, "date_range": {
+                "start": {"$date": now.strftime("%Y-%m-%dT00:00:00.000Z")},
+                "end": {"$date": (now + timedelta(days=days_ahead)).strftime("%Y-%m-%dT00:00:00.000Z")}}},
+            "options": {"limit": 500, "skip": 0, "count": True, "castDocs": False,
+                        "fields": {"_id": 1, "title": 1, "date": 1, "startDate": 1, "endDate": 1, "location": 1,
+                                   "address1": 1, "city": 1, "url": 1, "categories": 1, "recid": 1, "featured": 1},
+                        "sort": {"date": 1, "rank": 1, "title_sort": 1}},
+        }
+        resp = requests.get(SITE_FEED_URL, params={"json": json.dumps(query), "token": token},
+                            headers={**HEADERS, "Accept": "application/json"}, timeout=30)
+        resp.raise_for_status()
+        docs = resp.json().get("docs", {}).get("docs", [])
+        raw = [{"recid": d.get("recid"), "title": d.get("title"), "date": d.get("date"),
+                "startDate": d.get("startDate"), "endDate": d.get("endDate"), "location": d.get("location"),
+                "address1": d.get("address1"), "city": d.get("city"), "url": d.get("url"),
+                "categories": [c.get("catName") for c in d.get("categories") or [] if c.get("catName")],
+                "featured": bool(d.get("featured"))} for d in docs]
+        if raw:
+            SITE_SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+            snap = SITE_SNAPSHOT_DIR / f"events_feed_{datetime.now().strftime('%Y-%m-%d')}.json"
+            snap.write_text(json.dumps(raw, ensure_ascii=False))
+        return raw
+    except Exception as exc:  # noqa: BLE001
+        log("fetch_vdp_events", "WARN", f"visitdanapoint.com feed unavailable: {exc}")
+        return []
+
+
+def parse_site_feed(raw: list[dict]) -> list[dict]:
+    """Feed occurrences -> vdp_events rows (Pacific dates, one row per event).
+
+    Recurring listings (no end date, or a start date months before the
+    occurrence, such as weekly farmers markets and dining series) are left out:
+    they repeat every week and would crowd the calendar of dated events.
+    """
+    from datetime import timezone
+    from zoneinfo import ZoneInfo
+    pt = ZoneInfo("America/Los_Angeles")
+
+    def local(ts):
+        if not ts:
+            return None
+        return datetime.strptime(ts[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).astimezone(pt).date()
+
+    rows, seen = [], set()
+    for d in raw:
+        start, end = local(d.get("startDate")), local(d.get("endDate"))
+        if not start or not end:
+            continue                      # recurring listing without an end date
+        occ = local(d.get("date"))
+        if occ and (occ - start).days > 14:
+            continue                      # recurring series running for months
+        if (end - start).days > 30:
+            end = start                   # open-ended listing; keep the opening day only
+        key = (d.get("recid"), start)
+        if key in seen:
+            continue
+        seen.add(key)
+        cats = d.get("categories") or []
+        name = (d.get("title") or "").strip()
+        venue = (d.get("location") or d.get("address1") or d.get("city") or "Dana Point").strip()
+        rows.append({
+            "event_name": name,
+            "event_date": start.isoformat(),
+            "event_end_date": end.isoformat(),
+            "category": ", ".join(cats) or None,
+            "venue": venue,
+            "description": "Listed on the visitdanapoint.com events calendar"
+                           + (f" ({', '.join(cats)})." if cats else "."),
+            "url": SITE_ROOT + (d.get("url") or "/events/"),
+            "is_major": 1 if (MAJOR_CATEGORIES & set(cats) or d.get("featured") or is_major_event(name)) else 0,
+        })
+    return rows
+
+
+def retire_seed_duplicates(conn: sqlite3.Connection, events: list[dict]) -> int:
+    """Remove seeded placeholder rows that the site now lists on the same dates
+    (within a day, sharing a key word), so one event does not appear twice.
+    Only rows still pointing at the generic events page are touched."""
+    stop = {"dana", "point", "the", "of", "and", "annual", "2026", "2027", "holiday", "festival", "51st"}
+    removed = 0
+    seeds = conn.execute(
+        "SELECT id, event_name, event_date FROM vdp_events WHERE url = ? AND event_date >= date('now','localtime')",
+        (EVENTS_URL,)).fetchall()
+    for sid, sname, sdate in seeds:
+        sw = {w for w in re.findall(r"[a-z]+", sname.lower()) if w not in stop and len(w) > 3}
+        sd = datetime.strptime(sdate, "%Y-%m-%d").date()
+        for e in events:
+            ew = {w for w in re.findall(r"[a-z]+", e["event_name"].lower()) if w not in stop and len(w) > 3}
+            ed = datetime.strptime(e["event_date"], "%Y-%m-%d").date()
+            if abs((ed - sd).days) <= 1 and sw & ew:
+                conn.execute("DELETE FROM vdp_events WHERE id = ?", (sid,))
+                removed += 1
+                break
+    conn.commit()
+    return removed
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    import json
+    import sys
     log("fetch_vdp_events", "INFO", "Starting VDP events fetch")
 
     conn = get_conn()
     create_table(conn)
 
+    # 1. visitdanapoint.com events feed (or a saved snapshot with --from-json PATH)
+    if "--from-json" in sys.argv:
+        raw = json.loads(Path(sys.argv[sys.argv.index("--from-json") + 1]).read_text())
+    else:
+        raw = fetch_site_feed()
+    site_events = parse_site_feed(raw) if raw else []
+    if site_events:
+        retired = retire_seed_duplicates(conn, site_events)
+        inserted = upsert_events(conn, site_events)
+        write_load_log(conn, inserted)
+        log("fetch_vdp_events", "OK  ",
+            f"visitdanapoint.com feed: {inserted} dated events saved "
+            f"({sum(e['is_major'] for e in site_events)} major); {retired} duplicate seed rows replaced")
+        conn.close()
+        return
+
+    # 2. HTML scraper, then 3. seeded list (unchanged fallbacks)
     events = scrape_events()
 
     if not events:
         log("fetch_vdp_events", "WARN",
             "Live scrape returned 0 events (JS-rendered site) — seeding known major Dana Point events")
         events = KNOWN_DANA_POINT_EVENTS
+        # Once the site's own listings are loaded, never re-seed future dates:
+        # the site rows already cover them and seeds would duplicate events.
+        has_site = conn.execute(
+            "SELECT COUNT(*) FROM vdp_events WHERE url LIKE ?", (SITE_ROOT + "/event/%",)).fetchone()[0]
+        if has_site:
+            today = datetime.now().strftime("%Y-%m-%d")
+            events = [e for e in events if e["event_date"] < today]
+            log("fetch_vdp_events", "INFO", "Site events on file; seeded fallback limited to past dates")
 
     if not events:
         write_load_log(conn, 0)

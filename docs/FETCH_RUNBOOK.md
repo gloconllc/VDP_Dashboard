@@ -165,3 +165,69 @@ Peak Spending sub-tabs (no loaders); the GA visuals that error out.
 After fetching, run `./scripts/refresh_all.sh` (or `--no-push`). It runs the
 STR, CoStar, and Datafy loaders, then KPIs, insights, relationships, DB
 optimize, and audit. It runs no network fetches and opens no portal logins.
+
+## 4. End-to-end weekly sequence (added 2026-10-15)
+
+Run in this order. Claude does steps 1 to 6 in Chrome and on the desktop
+shell. Step 9 happens only after John approves.
+
+1. Ask John whether a fresh CoStar pull is in the SharePoint Costar folder.
+   CoStar comes only from there, never from costar.com.
+2. STR: fetch new weekly or monthly files from SharePoint (section 1).
+3. CoStar: fetch new files from the SharePoint Costar folder (section 0).
+4. Datafy Home dashboard: every card in the card map (section 2).
+5. Datafy apps-grid modules: Analytics Overview, Advanced Spending Overview
+   (Peak Insights, Top Markets, Top Hotel Markets, Spending By Year, Density
+   Map), Spending Insights (Top Spending market and category history, Repeat
+   Spenders, Length of Stay, Spend By Day), Social Analytics GA4 (last 30
+   days), Attribution Insights (four cards), Datafy Advertising Overview
+   (Campaign Impact, Top DMAs, Attribution Groups, Top Tactics). Stamp every
+   file with the window shown on the page.
+6. File from Downloads (see 4a), then run `./scripts/refresh_all.sh --no-push`.
+7. Review the audit output and the insights for all five audiences
+   (city, cross, dmo, resident, visitor).
+8. Open the app and check the visualizations. Reports and any new visual
+   output follow the Visit Dana Point design system (teal and navy with
+   terracotta, Georgia italic titles, no em dashes in user-facing copy).
+9. With John's explicit approval: commit and push to main (the push
+   triggers the Railway redeploy of vdppulse.gloconsolutions.com), or run
+   `./scripts/refresh_all.sh` without `--no-push`. Then send the weekly
+   report and the email to Heather.
+
+### 4a. Downloads to repo to synced SharePoint
+
+Each file moves three places so it works on the desktop and online:
+
+1. `~/Downloads` (browser landing spot) to the repo `data/datafy/...`, renamed
+   with the period stamp or the `_MM_DD_YY` suffix.
+2. The repo copy is what git stores and what Railway deploys.
+3. `refresh_all.sh` then mirrors the batch to the synced Visit Dana Point
+   SharePoint folders (never overwriting): Datafy files to
+   `Business Intelligence - Reports/Datafy/For the Dashboard/Datafy_MM_DD_YY/`
+   (the subfolder files plus the top-level `_MM_DD_YY` files), STR weekly
+   files to the synced STR folder. Set `VDP_SP_DATAFY` and `VDP_SP_STR` to
+   override the default locations.
+
+### 4b. Lessons recorded 2026-10-15
+
+- Downloads can look stale after a remote-devices reconnect. Re-check with
+  `find ~/Downloads -maxdepth 1 -iname "*.csv" -mmin -N`; a bare `ls` or glob
+  in Downloads can hang.
+- The download icon in a card header does an immediate JPG Quick Export. The
+  small arrow beside it opens the export dialog; then use the arrow on
+  "Export JPG" and choose "Export as CSV". The menu opens above or below, so
+  take a screenshot first. Scroll inside tall dialogs.
+- Spending Insights history files come from the "Top Market Spending /
+  Merchant Category" card at the bottom of that tab, not the share tables.
+- Social Analytics date picker can show blank after selecting dates even
+  though data loaded. Record the window used (15-09 to 14-10-2026).
+- Attribution Insights "Top Vendors" is the same table as
+  `AttributionInsightsOverviewMediaBreakdown`.
+- Advertising Overview exports: Campaign Impact is saved as
+  `Overview Dashboard_Export_MM_DD_YY.csv`; Top Tactics exports as
+  `TopPerformersVisual`; Top DMAs as `TopMarketsVisual`.
+- The Enhanced Spending Density Map card has no export menu in a narrow
+  browser window; widen the window to export it.
+- The Datafy loaders print WARN for top-level `_MM_DD_YY` files; that is
+  expected because `load_datafy_advertising` and `load_datafy_extended` read
+  them.

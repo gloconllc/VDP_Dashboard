@@ -66,8 +66,14 @@ def _component():
     # The masthead photo and logo ship with the component's stylesheet rather
     # than with every rerun's data, so they are sent once, not on each filter change.
     photo = _data_uri(_PHOTO, "image/jpeg")
-    if photo:
-        css += "\n.pb-brief { --photo: url('" + photo + "'); }\n"
+    try:  # visitdanapoint.com photo on top; the bundled photo stays underneath as the fallback
+        import vdp_site
+        css += "\n.pb-brief { --photo: " + vdp_site.layered("header_aerial", photo, 1800, 760) + "; }\n"
+        css += ("\n.pb-brief::after { content: '" + vdp_site.PHOTO_CREDIT + "'; position: absolute; right: 14px; bottom: 8px;"
+                " font-size: 10.5px; color: rgba(255,255,255,.72); letter-spacing: .02em; pointer-events: none; }\n")
+    except Exception:  # noqa: BLE001
+        if photo:
+            css += "\n.pb-brief { --photo: url('" + photo + "'); }\n"
     logo = _data_uri(_LOGO, "image/svg+xml")
     if logo:
         css += "\n.pb-logo { background-image: url('" + logo + "'); }\n"
