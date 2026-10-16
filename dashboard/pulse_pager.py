@@ -14,19 +14,40 @@ import os
 import streamlit.components.v1 as components
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-# The Intelligence Brief now sits on the At a glance page, so old links to it land there.
-ALIAS = {"pulse-brain": "pulse-glance"}
+# The Intelligence Brief and the Insights report no longer have pages of their own (2026-10-16):
+# the brief sits on At a glance, and old links to either land on the page that now holds it.
+ALIAS = {"pulse-brain": "pulse-glance", "pulse-insights": "pulse-notes"}
 
-
-# Each Insights report section sits on the page it belongs with (2026-10-16).
+# Every Insights report section sits on the page it belongs with. Pages whose id is not a real
+# anchor are "virtual": they only show their embedded report section(s).
 EMBEDS = {
     "pulse-glance": [["overview", "Summary and overview"]],
-    "pulse-snapshot": [["today", "Dana Point today"], ["city", "City revenue and jobs"]],
-    "pulse-origins": [["who", "Who visits"], ["spend", "Visitor spending"], ["here", "Getting here"], ["mkt", "Marketing reach"]],
+    "pulse-snapshot": [["today", "Dana Point today"]],
+    "pulse-origins": [["spend", "Visitor spending"]],
+    "pulse-who": [["who", "Who visits"]],
+    "pulse-here": [["here", "Getting here"]],
+    "pulse-mkt": [["mkt", "Marketing reach"]],
+    "pulse-city": [["city", "City revenue and jobs"]],
     "pulse-market": [["hotel", "Hotel market"]],
-    "pulse-forward": [["night", "One more night"], ["outlook", "Market outlook"]],
-    "pulse-about": [["appx", "Appendix"], ["sources", "Sources"]],
+    "pulse-night": [["night", "One more night"]],
+    "pulse-forward": [["outlook", "Market outlook"]],
+    "pulse-appx": [["appx", "Appendix"]],
+    "pulse-sources": [["sources", "Sources"]],
 }
+
+# (label, host page it hangs off) for pages that exist only to show a report section.
+VIRTUAL = {
+    "pulse-who": ("Who visits", "pulse-origins"),
+    "pulse-here": ("Getting here", "pulse-origins"),
+    "pulse-mkt": ("Marketing reach", "pulse-origins"),
+    "pulse-city": ("City revenue and jobs", "pulse-snapshot"),
+    "pulse-night": ("One more night", "pulse-market"),
+    "pulse-appx": ("Appendix", "pulse-about"),
+    "pulse-sources": ("Sources", "pulse-about"),
+}
+ORDER = ["pulse-glance", "pulse-snapshot", "pulse-origins", "pulse-who", "pulse-here", "pulse-mkt",
+         "pulse-city", "pulse-market", "pulse-night", "pulse-forward", "pulse-fullreport",
+         "pulse-about", "pulse-appx", "pulse-sources", "pulse-notes"]
 
 
 def mount(links: list[tuple[str, str]]) -> None:
@@ -35,7 +56,14 @@ def mount(links: list[tuple[str, str]]) -> None:
     try:
         with open(os.path.join(_HERE, "pulse_pager.js"), encoding="utf-8") as fh:
             js = fh.read()
-        cfg = json.dumps({"pages": [[a, t] for a, t in links], "alias": ALIAS, "embeds": EMBEDS})
+        real = {a: t for a, t in links}
+        pages = []
+        for pid in ORDER:
+            if pid in VIRTUAL:
+                pages.append([pid, VIRTUAL[pid][0], VIRTUAL[pid][1]])
+            elif pid in real:
+                pages.append([pid, real[pid]])
+        cfg = json.dumps({"pages": pages, "alias": ALIAS, "embeds": EMBEDS})
         components.html(f"<script>window.PZ_CFG={cfg};</script><script>{js}</script>", height=0)
     except Exception as exc:  # noqa: BLE001
         print(f"[pulse] pager skipped: {exc}")

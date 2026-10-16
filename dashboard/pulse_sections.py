@@ -28,13 +28,26 @@ SECTION_LINKS = [
     ("pulse-glance", "At a glance"),
     ("pulse-snapshot", "Performance snapshot"),
     ("pulse-origins", "Visitors and spend"),
+    ("pulse-who", "Who visits"),
+    ("pulse-here", "Getting here"),
+    ("pulse-mkt", "Marketing reach"),
+    ("pulse-city", "City revenue and jobs"),
     ("pulse-market", "Market position"),
+    ("pulse-night", "One more night"),
     ("pulse-forward", "Forward outlook"),
-    ("pulse-insights", "Insights report"),
+    ("", "Behind the numbers"),
     ("pulse-fullreport", "Full report"),
     ("pulse-about", "About this data"),
+    ("pulse-appx", "Appendix"),
+    ("pulse-sources", "Sources"),
     ("pulse-notes", "Notes and downloads"),
 ]
+# The added pages (Visitor spending, Visitor journey, City revenue and jobs, One more night) exist
+# only while the pager is on; with PULSE_PAGER=0 the sidebar lists the original sections only.
+import os as _os
+if _os.environ.get("PULSE_PAGER", "1") == "0":
+    _ADDED = {"pulse-who", "pulse-here", "pulse-mkt", "pulse-city", "pulse-night", "pulse-appx", "pulse-sources"}
+    SECTION_LINKS = [x for x in SECTION_LINKS if x[0] not in _ADDED and x[0]]
 
 
 def _md(s: str) -> None:

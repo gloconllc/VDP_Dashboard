@@ -418,7 +418,14 @@ def node_view() -> str:
 
 
 def sidebar(logo_uri: str, links: list[tuple[str, str]], fresh_rows: list[tuple[str, str]]) -> str:
-    nav = "".join(f'<a href="#{esc(a)}"><span class="n">{i}</span>{esc(t)}</a>' for i, (a, t) in enumerate(links, start=1))
+    nav, _i = "", 0
+    for a, t in links:
+        if not a:   # a group heading, e.g. "Behind the numbers"
+            nav += f'<div class="sb-h" style="margin:14px 0 6px">{esc(t)}</div>'
+            continue
+        _i += 1
+        nav += f'<a href="#{esc(a)}"><span class="n">{_i}</span>{esc(t)}</a>'
+
     fr = "".join(f"<div><b>{esc(k)}</b><br>{esc(v)}</div>" for k, v in fresh_rows)
     return (f'<div class="sb-brand"><div class="sb-badge"><img src="{logo_uri}" alt="Visit Dana Point"></div>'
             f'<div><div class="sb-t">Dana Point PULSE</div><div class="sb-s">Destination intelligence</div></div></div>'

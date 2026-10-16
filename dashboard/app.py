@@ -1861,10 +1861,8 @@ st.markdown(
       <a href="#pulse-origins">2 &middot; Visitors and spend</a>
       <a href="#pulse-market">3 &middot; Market position</a>
       <a href="#pulse-forward">4 &middot; Forward outlook</a>
-      <a href="#pulse-brain">Intelligence Brief</a>
       <a href="#pulse-fullreport">Full report</a>
       <a href="#pulse-notes">Notes and downloads</a>
-      <a href="#pulse-insights">Insights report</a>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1979,7 +1977,7 @@ def _render_brief_block() -> None:
         <div class="brain-banner" style="background-image:url('{_photo_data_uri("drone_aerial.jpg")}');">
           <div class="brain-banner-overlay"></div>
           <div class="brain-banner-content">
-            <div class="brain-eyebrow">Dana Point Intelligence Brief</div>
+            <div class="brain-eyebrow">Ask Dana Point PULSE</div>
             <div class="brain-title">Ask a question about your STR, CoStar &amp; Datafy data</div>
           </div>
         </div>
@@ -2212,7 +2210,7 @@ if pulse_insights is not None:
     st.markdown(
         """
         <div class="pulse-jumpnav">
-          <a href="#pulse-brain">Skip to the Intelligence Brief and Ask</a>
+          <a href="#pulse-brain">Skip to Ask Dana Point PULSE</a>
           <a href="#pulse-fullreport">Skip to View a Section and the PDF report</a>
           <a href="#pulse-notes">Skip to Notes</a>
         </div>
@@ -2223,7 +2221,7 @@ if pulse_insights is not None:
     st.markdown(
         """
         <div class="pulse-jumpnav">
-          <a href="#pulse-brain">Continue to the Intelligence Brief and Ask</a>
+          <a href="#pulse-brain">Continue to Ask Dana Point PULSE</a>
           <a href="#pulse-fullreport">Continue to View a Section and the PDF report</a>
         </div>
         """,

@@ -19,10 +19,11 @@
   var CFG = window.PZ_CFG || { pages: [], alias: {} };
   if (P.__pzPager && P.__pzPager.destroy) { try { P.__pzPager.destroy(); } catch (e) {} }
 
-  var pages = CFG.pages.map(function (p) { return { id: p[0], label: p[1] }; });
+  var allPages = CFG.pages.map(function (p) { return { id: p[0], label: p[1], after: p[2] || null }; });
+  var pages = allPages.slice();
   var alias = CFG.alias || {};
   var embeds = CFG.embeds || {};   // page id -> [[report section id, label], ...]
-  var known = {}; pages.forEach(function (p) { known[p.id] = true; });
+  var known = {}; allPages.forEach(function (p) { known[p.id] = true; });
   function pageOf(id) { var t = alias[id] || id; return known[t] ? t : null; }
   var REDUCE = P.matchMedia && P.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -79,6 +80,10 @@
   function scan() {
     var block = mainBlock();
     if (!block) return false;
+    // pages that exist only as Insights sections need the report on the page
+    var haveReport = !!reportSrc();
+    pages = allPages.filter(function (p) { return !p.after || haveReport; });
+    known = {}; pages.forEach(function (p) { known[p.id] = true; });
     var kids = Array.prototype.slice.call(block.children), cur = null, found = {};
     items = [];
     model = {};
@@ -87,12 +92,17 @@
       try { own = window.frameElement && it.contains(window.frameElement); } catch (e) {}
       var a = it.querySelector(".pulse-anchor[id]");
       if (a && !own) { var t = pageOf(a.id); if (t) { cur = t; found[t] = true; } }
-      var rec = { el: it, page: own ? null : cur, board: null, nav: false, filter: false, embed: it.classList && it.classList.contains("pz-embed") ? it.getAttribute("data-sec") : null, anchorOnly: !!a && !(it.innerText || "").trim() };
+      var rec = { el: it, page: own ? null : cur, board: null, nav: false, filter: false, hide: false, embed: it.classList && it.classList.contains("pz-embed") ? it.getAttribute("data-sec") : null, anchorOnly: !!a && !(it.innerText || "").trim() };
       if (!own && cur) {
         var sr = findBoard(it);
         if (sr) { rec.board = sr; ensureShadowCss(sr); }
         var links = it.querySelectorAll('a[href^="#pulse-"]');
         if (!rec.board && links.length >= 2 && !a && !it.querySelector("iframe")) rec.nav = true;
+        // the full report viewer and its intro are retired as a page: the report now lives in the sections
+        var ifr = it.querySelectorAll("iframe"), isRep = false;
+        for (var q = 0; q < ifr.length; q++) { var sd = ifr[q].srcdoc || ""; if (sd.length > 50000 && sd.indexOf("sectionList") > -1) isRep = true; }
+        var tx = (it.innerText || "");
+        if (isRep || /Insights report: the full story/i.test(tx) || /Use the tabs or Previous and Next/i.test(tx)) rec.hide = true;
       }
       items.push(rec);
     });
@@ -124,14 +134,19 @@
     });
     pages.forEach(function (p) {
       var m = model[p.id];
+      if (p.after) {
+        var vem = embeds[p.id] || [];
+        m.topics = vem.map(function (e) { return { title: e[1], kind: "embed", sec: e[0] }; });
+        if (!m.topics.length) m.topics = [{ title: p.label, kind: "main" }];
+        return;
+      }
       var extras = items.some(function (x) { return x.page === p.id && !x.board && !x.embed && !x.anchorOnly && (x.el.innerText || "").trim() && !x.nav && !x.filter; });
       if (m.cards.length && extras) m.topics.push({ title: "More and ask", kind: "more" });
       else if (!m.cards.length) m.topics = [{ title: p.label, kind: "main" }];
       // the matching Insights sections, each as its own topic, before "More and ask"
       if (reportSrc()) {
-        var em = embeds[p.id] || [], at = m.topics.length;
-        if (m.topics[at - 1] && m.topics[at - 1].kind === "more") at -= 1;
-        var add = em.map(function (e) { return { title: "Insights: " + e[1], kind: "embed", sec: e[0] }; });
+        var em = embeds[p.id] || [], at = 0;   // the report section leads its page
+        var add = em.map(function (e) { return { title: e[1], kind: "embed", sec: e[0] }; });
         Array.prototype.splice.apply(m.topics, [at, 0].concat(add));
       }
     });
@@ -193,7 +208,9 @@
     if (ex) { var fx = ex.querySelector("iframe"); if (fx) fit(fx); return; }
     if (!reportSrc()) return;
     var last = null;
-    for (var i = 0; i < items.length; i++) if (items[i].page === pageId) last = items[i];
+    var hostId = pageId;
+    for (var j = 0; j < pages.length; j++) if (pages[j].id === pageId && pages[j].after) hostId = pages[j].after;
+    for (var i = 0; i < items.length; i++) if (items[i].page === hostId) last = items[i];
     if (!last || !last.el.parentNode) return;
     var box = D.createElement("div");
     box.className = "pz-embed"; box.setAttribute("data-sec", sec);
@@ -234,6 +251,7 @@
     items.forEach(function (x) {
       var off = false;
       if (x.embed) off = all || cur.kind !== "embed" || cur.sec !== x.embed;
+      else if (!all && x.hide) off = true;
       else if (!all) {
         if (x.nav) off = true;
         else if (cur.kind === "embed" && x.page === active) off = !(x.board && m.cards.length) && !x.filter;
@@ -294,7 +312,7 @@
     var multi = m.topics.length > 1;
     bar.querySelector(".pz-n").textContent = all ? "All sections" :
       pages[idx()].label + (multi ? " · " + (topic + 1) + " of " + m.topics.length : "") + " · page " + (pos() + 1) + " of " + steps();
-    bar.querySelector(".pz-t").textContent = all ? "Long scroll" : (multi && topic > 0 ? t.title : pages[idx()].label);
+    bar.querySelector(".pz-t").textContent = all ? "Long scroll" : ((multi && topic > 0) || t.kind === "embed" ? t.title : pages[idx()].label);
     bar.querySelector(".pz-b").disabled = all || pos() === 0;
     bar.querySelector(".pz-f").disabled = all || pos() === steps() - 1;
     bar.querySelector(".pz-q").textContent = all ? "One page at a time" : "Show all sections";
