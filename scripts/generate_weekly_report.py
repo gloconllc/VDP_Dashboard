@@ -370,6 +370,27 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
     adr_yoy_avg = week_df["adr_yoy"].mean() if "adr_yoy" in week_df else None
     revpar_yoy_avg = week_df["revpar_yoy"].mean() if "revpar_yoy" in week_df else None
 
+    # Weekly headline KPIs from CoStar daily supply, demand and revenue (rooms-weighted), the same
+    # method the Friday recap email uses, so the PDF and the email always show the same numbers.
+    # A simple average of daily ADR is not the week's ADR, so it is replaced when CoStar covers the week.
+    try:
+        _cw = pd.read_sql_query(
+            "SELECT supply, demand, revenue_usd, supply_yoy_pct, demand_yoy_pct, revenue_yoy_pct "
+            "FROM costar_market_daily WHERE as_of_date >= ? AND as_of_date <= ?",
+            con, params=(str(week_df["as_of_date"].min().date()), str(week_df["as_of_date"].max().date())))
+        if len(_cw) == len(week_df) and _cw["supply"].sum() and _cw["demand"].sum():
+            _s, _d, _r = _cw["supply"].sum(), _cw["demand"].sum(), _cw["revenue_usd"].sum()
+            _sl = (_cw["supply"] / (1 + _cw["supply_yoy_pct"].fillna(0) / 100)).sum()
+            _dl = (_cw["demand"] / (1 + _cw["demand_yoy_pct"].fillna(0) / 100)).sum()
+            _rl = (_cw["revenue_usd"] / (1 + _cw["revenue_yoy_pct"].fillna(0) / 100)).sum()
+            if _sl and _dl and _rl:
+                occ_avg, adr_avg, revpar_avg = _d / _s * 100, _r / _d, _r / _s
+                occ_yoy_avg = ((_d / _s) / (_dl / _sl) - 1) * 100
+                adr_yoy_avg = ((_r / _d) / (_rl / _dl) - 1) * 100
+                revpar_yoy_avg = ((_r / _s) / (_rl / _sl) - 1) * 100
+    except Exception as _exc:  # noqa: BLE001
+        print(f"[report] CoStar weekly KPIs not applied: {_exc}")
+
     if week_start.month == week_end.month:
         week_label = f"{week_start.strftime('%B %-d')} – {week_end.strftime('%-d, %Y')}"
     else:
