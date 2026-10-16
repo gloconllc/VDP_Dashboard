@@ -22,6 +22,7 @@
   var allPages = CFG.pages.map(function (p) { return { id: p[0], label: p[1], after: p[2] || null }; });
   var pages = allPages.slice();
   var alias = CFG.alias || {};
+  var combine = CFG.combine || [];
   var embeds = CFG.embeds || {};   // page id -> [[report section id, label], ...]
   var known = {}; allPages.forEach(function (p) { known[p.id] = true; });
   function pageOf(id) { var t = alias[id] || id; return known[t] ? t : null; }
@@ -148,6 +149,7 @@
         var em = embeds[p.id] || [], at = 0;   // the report section leads its page
         var add = em.map(function (e) { return { title: e[1], kind: "embed", sec: e[0] }; });
         Array.prototype.splice.apply(m.topics, [at, 0].concat(add));
+        if (add.length && combine.indexOf(p.id) > -1 && !m.cards.length) m.topics = add;
       }
     });
     return Object.keys(found).length >= 3;
@@ -223,6 +225,11 @@
       try { new P.ResizeObserver(function () { fit(f); }).observe(f.contentDocument.body); } catch (e) {}
     };
     box.appendChild(f);
+    if (combine.indexOf(hostId) > -1) {
+      var first = null;
+      for (var q = 0; q < items.length; q++) if (items[q].page === hostId && !items[q].nav && !items[q].filter && !items[q].hide && !items[q].anchorOnly) { first = items[q]; break; }
+      if (first && first.el.parentNode) { first.el.parentNode.insertBefore(box, first.el); schedule(); return; }
+    }
     last.el.parentNode.insertBefore(box, last.el.nextSibling);
     schedule();
   }
@@ -254,6 +261,7 @@
       else if (!all && x.hide) off = true;
       else if (!all) {
         if (x.nav) off = true;
+        else if (cur.kind === "embed" && x.page === active && combine.indexOf(active) > -1) off = false;
         else if (cur.kind === "embed" && x.page === active) off = !(x.board && m.cards.length) && !x.filter;
         else if (x.page && x.page !== active) off = true;
         else if (x.page === active && m.cards.length && cur.kind !== "embed") {
@@ -311,7 +319,7 @@
     var m = model[active], t = m.topics[topic] || { title: pages[idx()].label };
     var multi = m.topics.length > 1;
     bar.querySelector(".pz-n").textContent = all ? "All sections" :
-      pages[idx()].label + (multi ? " · " + (topic + 1) + " of " + m.topics.length : "") + " · page " + (pos() + 1) + " of " + steps();
+      pages[idx()].label + (multi ? " · " + (topic + 1) + " of " + m.topics.length : "");
     bar.querySelector(".pz-t").textContent = all ? "Long scroll" : ((multi && topic > 0) || t.kind === "embed" ? t.title : pages[idx()].label);
     bar.querySelector(".pz-b").disabled = all || pos() === 0;
     bar.querySelector(".pz-f").disabled = all || pos() === steps() - 1;

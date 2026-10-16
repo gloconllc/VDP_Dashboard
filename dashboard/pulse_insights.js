@@ -194,9 +194,9 @@
     var S = D.summary, p = [];
     // Photo banner: visitdanapoint.com photo on top, bundled photo underneath as the fallback
     var layers = [PHOTO_SITE, PHOTO].filter(Boolean).map(function (u) { return "url('" + u + "')"; }).join(", ");
-    if (layers) p.push('<div class="hero-photo" role="img" aria-label="Aerial view of the Dana Point headlands and harbor" style="background-image:' + layers + '"><div class="hero-scrim"></div><div class="hero-in"><div class="hero-k">Dana Point PULSE</div><div class="hero-t">' + esc(D.period) + '</div></div>' + (PHOTO_CREDIT ? '<span class="hero-credit">' + esc(PHOTO_CREDIT) + "</span>" : "") + "</div>");
+    if (layers) p.push('<div class="hero-photo ov-a" role="img" aria-label="Aerial view of the Dana Point headlands and harbor" style="background-image:' + layers + '"><div class="hero-scrim"></div><div class="hero-in"><div class="hero-k">Dana Point PULSE</div><div class="hero-t">' + esc(D.period) + '</div></div>' + (PHOTO_CREDIT ? '<span class="hero-credit">' + esc(PHOTO_CREDIT) + "</span>" : "") + "</div>");
     // PULSE Summary announcement
-    p.push('<section class="block reveal" aria-labelledby="ps-h"><div class="tools"><span class="chip">Draft announcement · copy with formatting</span><span><button class="ctl" id="cpt">Copy text</button> <button class="ctl primary" id="cpf">Copy formatted</button></span></div>' +
+    p.push('<section class="block reveal ov-a" aria-labelledby="ps-h"><div class="tools"><span class="chip">Draft announcement · copy with formatting</span><span><button class="ctl" id="cpt">Copy text</button> <button class="ctl primary" id="cpf">Copy formatted</button></span></div>' +
       '<article class="paper" id="paper"><div class="nameplate"><span class="np" id="ps-h">PULSE Summary</span><span class="cap" style="margin:0">Dana Point PULSE · ' + esc(D.period) + " · Prepared " + esc(D.prepared) + "</span></div>" +
       '<div class="release"><span>For immediate release</span></div>' +
       '<div class="hl-label">Highlight: ' + esc(S.highlight) + '</div><h2 class="headline">' + esc(S.headline) + '</h2><p class="subhead">' + bold(S.sub) + "</p>" +
@@ -205,16 +205,20 @@
       '<div class="block"><div class="lbl">Growth vs. a year earlier</div>' + hbars(S.growth.map(function (g) { return { l: g.l, v: g.v, fmt: "pct", hi: false }; }), { signed: true }) + "</div>" +
       '<p class="about">' + esc(S.about) + '</p><div class="endmark">###</div></article></section>');
     // The overview follows the summary
-    p.push('<div class="sec-h" style="margin-top:28px"><h2 class="h1">Overview</h2><span class="chip">' + esc(D.period) + "</span></div>");
+    p.push('<div class="sec-h ov-b" style="margin-top:28px"><h2 class="h1">Overview</h2><span class="chip">' + esc(D.period) + "</span></div>");
     // Key takeaways
-    p.push('<section class="block reveal" aria-labelledby="tk-h"><h3 class="h2" id="tk-h">Key takeaways</h3><p class="cap" style="margin:0 0 12px">The headline number from each section, with its period. Select one to read the full story.</p><div class="tk-grid">' +
+    p.push('<section class="block reveal ov-b" aria-labelledby="tk-h"><h3 class="h2" id="tk-h">Key takeaways</h3><p class="cap" style="margin:0 0 12px">The headline number from each section, with its period. Select one to read the full story.</p><div class="tk-grid">' +
       D.takeaways.map(function (t) { return '<button class="tk" data-go="' + t.id + '"><span class="k">' + esc(t.tab) + '</span><span class="v">' + esc(t.v) + '</span><span class="l">' + esc(t.l) + '</span><span class="hd">' + esc(t.head) + '</span><span class="p">' + esc(t.src) + '</span><span class="go">Read the section →</span></button>'; }).join("") + "</div></section>");
     // About Dana Point sits behind the "i" (collapsed), as clean aligned cards in Visit Dana Point's own words
     if (D.destination && D.destination.length) {
-      p.push('<details class="dest-i"><summary><span class="ic" aria-hidden="true">i</span><span>About Dana Point</span></summary><p class="cap" style="margin:10px 0 12px">In Visit Dana Point\'s own words, from <a class="contact-link" href="https://visitdanapoint.com/" target="_blank" rel="noopener">visitdanapoint.com</a>.</p><ul class="dest-list">' +
+      p.push('<details class="dest-i ov-i"><summary><span class="ic" aria-hidden="true">i</span><span>About Dana Point</span></summary><p class="cap" style="margin:10px 0 12px">In Visit Dana Point\'s own words, from <a class="contact-link" href="https://visitdanapoint.com/" target="_blank" rel="noopener">visitdanapoint.com</a>.</p><ul class="dest-list">' +
         D.destination.map(function (d) { return '<li><span class="dest-t">' + esc(d.text) + '</span><a class="src dest-src" href="' + esc(d.url) + '" target="_blank" rel="noopener">Source: ' + esc(d.src) + "</a></li>"; }).join("") + "</ul></details>");
     }
-    // Questions and short answers now sit inside the section each one belongs to (news-report style).
+    // Questions and short answers: the full list stays on the Overview page, and each section repeats its own in news-report style.
+    p.push('<section class="block reveal ov-b" aria-labelledby="qa-h"><h3 class="h2" id="qa-h">Questions and short answers</h3><p class="cap" style="margin:0 0 12px">Each question with a short answer. Select a question to see the details.</p><div class="qa">' +
+      D.qa.concat([{ id: "appx", q: D.appendix.question, a: "A plain-language guide: " + D.appendix.counts.terms + " terms, " + D.appendix.counts.methods + " methods and " + D.appendix.counts.formulas + " formulas, so every figure in this report can be traced and repeated.", src: "PULSE", v: String(D.appendix.counts.formulas), l: "formulas worked through" }]).map(function (q, i) {
+        return '<div class="qa-i' + (i === 0 ? " open" : "") + '"><button class="qa-q" aria-expanded="' + (i === 0) + '"><span>' + esc(q.q) + '</span><span class="ic" aria-hidden="true">+</span></button><div class="qa-a"><div><p style="margin:0 0 6px">' + bold(q.a) + '</p><p class="cap">Source: ' + esc(q.src) + '</p><button class="ctl" data-go="' + q.id + '" style="margin-top:8px">Read the section →</button></div><div class="ak"><div class="v">' + esc(q.v) + '</div><div class="l">' + esc(q.l) + "</div></div></div></div>";
+      }).join("") + "</div></section>");
     return p.join("");
   }
 
