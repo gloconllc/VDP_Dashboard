@@ -427,7 +427,7 @@ def sidebar(logo_uri: str, links: list[tuple[str, str]], fresh_rows: list[tuple[
         nav += f'<a href="#{esc(a)}"><span class="n">{_i}</span>{esc(t)}</a>'
 
     fr = "".join(f"<div><b>{esc(k)}</b><br>{esc(v)}</div>" for k, v in fresh_rows)
-    return (f'<div class="sb-brand"><div class="sb-badge"><img src="{logo_uri}" alt="Visit Dana Point"></div>'
+    return (f'<div class="sb-brand"><a class="sb-badge" href="#pulse-glance" title="Back to the home page" aria-label="Dana Point PULSE home"><img src="{logo_uri}" alt="Visit Dana Point"></a>'
             f'<div><div class="sb-t">Dana Point PULSE</div><div class="sb-s">Destination intelligence</div></div></div>'
             f'<div class="sb-h">On this page</div><div class="sb-nav">{nav}</div>'
             f'<div class="sb-h">Data on file</div><div class="sb-fresh">{fr}</div>')

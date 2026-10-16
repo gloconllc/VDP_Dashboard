@@ -256,6 +256,7 @@ st.markdown(
       .pulse-hero-tag { color:#FFFFFF; font-size:13px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
         text-shadow: 0 1px 6px rgba(0,0,0,0.55); }
       .pulse-logo-badge img { width:36px; height:auto; }
+      a.pulse-logo-badge, a.sb-badge { text-decoration:none; cursor:pointer; }
       .pulse-eyebrow { font-size: 11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
         color:#1D6E86; margin-bottom:2px; }
       .pulse-title { font-family:Georgia,'DejaVu Serif',serif; font-style:italic; font-size: 28px;
@@ -1654,13 +1655,11 @@ def _header_html(status_text: str, ok: bool = True) -> str:
     return f"""
         <div class="pulse-header">
           <div class="pulse-header-left">
-            <div class="pulse-logo-badge"><img src="{_logo_data_uri()}"></div>
+            <a class="pulse-logo-badge" href="#pulse-glance" title="Back to the home page" aria-label="Dana Point PULSE home"><img src="{_logo_data_uri()}"></a>
             <div>
               <div class="pulse-eyebrow">Destination Intelligence Report</div>
               <div class="pulse-title">Dana Point PULSE</div>
               <div class="pulse-sub">
-                <span class="pulse-sub-brand">Prepared by <a class="pulse-contact" href="mailto:john.picou@gloconsolutions.com" title="Contact GloCon Solutions LLC" aria-label="Contact GloCon Solutions LLC by email">GloCon Solutions LLC</a> for Visit Dana Point</span>
-                <span class="pulse-sub-dot">&bull;</span>
                 <span class="pulse-status-pill">
                   <span class="pulse-status-dot" style="background:{dot_color};"></span>{status_text}
                 </span>
@@ -2099,7 +2098,7 @@ else:
             except Exception as _exc:  # noqa: BLE001
                 print(f"[pulse] section render failed: {_exc}")
                 st.warning("This section could not be drawn from the current data. The rest of the page is unaffected.")
-        if _plan_i == 0:
+        if _plan_i == 1:   # the Ask box lives with Performance snapshot, not on the first page
             _render_brief_block()
 
 # ---------------------------------------------------------------------------
@@ -2412,7 +2411,7 @@ except Exception as _pulse_pager_error:  # pragma: no cover - defensive
     print(f"[pulse] pager skipped: {_pulse_pager_error}")
 
 st.markdown(
-    '<div class="pulse-contact-foot">Dana Point PULSE is built and maintained by GloCon Solutions LLC. '
+    '<div class="pulse-contact-foot">Prepared by GloCon Solutions LLC for Visit Dana Point. Dana Point PULSE is built and maintained by GloCon Solutions LLC. '
     '<a href="mailto:john.picou@gloconsolutions.com">Contact GloCon Solutions LLC</a></div>',
     unsafe_allow_html=True,
 )

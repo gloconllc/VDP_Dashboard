@@ -196,7 +196,7 @@
     var layers = [PHOTO_SITE, PHOTO].filter(Boolean).map(function (u) { return "url('" + u + "')"; }).join(", ");
     if (layers) p.push('<div class="hero-photo ov-a" role="img" aria-label="Aerial view of the Dana Point headlands and harbor" style="background-image:' + layers + '"><div class="hero-scrim"></div><div class="hero-in"><div class="hero-k">Dana Point PULSE</div><div class="hero-t">' + esc(D.period) + '</div></div>' + (PHOTO_CREDIT ? '<span class="hero-credit">' + esc(PHOTO_CREDIT) + "</span>" : "") + "</div>");
     // PULSE Summary announcement
-    p.push('<section class="block reveal ov-a" aria-labelledby="ps-h"><div class="tools"><span class="chip">Draft announcement · copy with formatting</span><span><button class="ctl" id="cpt">Copy text</button> <button class="ctl primary" id="cpf">Copy formatted</button></span></div>' +
+    p.push('<section class="block reveal ov-a" aria-labelledby="ps-h">' +
       '<article class="paper" id="paper"><div class="nameplate"><span class="np" id="ps-h">PULSE Summary</span><span class="cap" style="margin:0">Dana Point PULSE · ' + esc(D.period) + " · Prepared " + esc(D.prepared) + "</span></div>" +
       '<div class="release"><span>For immediate release</span></div>' +
       '<div class="hl-label">Highlight: ' + esc(S.highlight) + '</div><h2 class="headline">' + esc(S.headline) + '</h2><p class="subhead">' + bold(S.sub) + "</p>" +
