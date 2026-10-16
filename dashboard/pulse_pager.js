@@ -22,6 +22,7 @@
   var allPages = CFG.pages.map(function (p) { return { id: p[0], label: p[1], after: p[2] || null }; });
   var pages = allPages.slice();
   var alias = CFG.alias || {};
+  var NOFILTER = CFG.nofilter || [];
   var combine = CFG.combine || [];
   var embedAfter = CFG.embedAfter || [];
   var embeds = CFG.embeds || {};   // page id -> [[report section id, label], ...]
@@ -260,8 +261,12 @@
     if (topic >= m.topics.length) topic = m.topics.length - 1;
     if (topic < 0) topic = 0;
     var cur = m.topics[topic] || { kind: "main" };
+    // The date window only shows where the data on the page can be filtered: not on the newspaper
+    // (report) pages, and not on the fixed pages (Full report, About this data, Notes and downloads).
+    var hideFilter = !all && (cur.kind === "embed" || NOFILTER.indexOf(active) > -1);
     items.forEach(function (x) {
       var off = false;
+      if (x.filter) { x.el.classList.toggle("pz-off", hideFilter); x.el.classList.toggle("pz-filter", !hideFilter); return; }
       if (x.embed) off = all || cur.kind !== "embed" || cur.sec !== x.embed;
       else if (!all && x.hide) off = true;
       else if (!all) {

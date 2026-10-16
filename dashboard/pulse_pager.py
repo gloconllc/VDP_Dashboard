@@ -64,7 +64,7 @@ def mount(links: list[tuple[str, str]]) -> None:
                 pages.append([pid, VIRTUAL[pid][0], VIRTUAL[pid][1]])
             elif pid in real:
                 pages.append([pid, real[pid]])
-        cfg = json.dumps({"pages": pages, "alias": ALIAS, "embeds": EMBEDS, "combine": [], "embedAfter": ["pulse-about"]})
+        cfg = json.dumps({"pages": pages, "alias": ALIAS, "embeds": EMBEDS, "combine": [], "embedAfter": ["pulse-about"], "nofilter": ["pulse-fullreport", "pulse-about", "pulse-notes"]})
         components.html(f"<script>window.PZ_CFG={cfg};</script><script>{js}</script>", height=0)
     except Exception as exc:  # noqa: BLE001
         print(f"[pulse] pager skipped: {exc}")

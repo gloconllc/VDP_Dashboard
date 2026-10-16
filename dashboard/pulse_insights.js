@@ -204,6 +204,7 @@
       '<div class="cols3">' + S.paras.map(function (x, i) { return "<p>" + (i ? bold(x) : dateline(x)) + "</p>"; }).join("") + "</div>" +
       '<div class="block"><div class="lbl">Growth vs. a year earlier</div>' + hbars(S.growth.map(function (g) { return { l: g.l, v: g.v, fmt: "pct", hi: false }; }), { signed: true }) + "</div>" +
       '<p class="about">' + esc(S.about) + '</p><div class="endmark">###</div></article></section>');
+    p.push(qaBlock({ q: "What does the board need to know this period?", a: S.sub, src: "PULSE Summary, " + D.period, v: (S.stats && S.stats[0]) ? S.stats[0].v : "", l: (S.stats && S.stats[0]) ? S.stats[0].l : "" }, "ov-a"));
     // The overview follows the summary
     p.push('<div class="sec-h ov-b" style="margin-top:28px"><h2 class="h1">Overview</h2><span class="chip">' + esc(D.period) + "</span></div>");
     // Key takeaways
@@ -222,6 +223,11 @@
     return p.join("");
   }
 
+  function qaBlock(q, extra) {
+    return '<section class="qa-news reveal ' + (extra || "") + '" aria-label="Question and short answer"><div class="kick"><span class="nr">Question and short answer</span></div>' +
+      '<h3 class="qa-head">' + esc(q.q) + '</h3><div class="lede-grid"><div class="card"><p class="lede">' + bold(q.a) + '</p><p class="cap">Source: ' + esc(q.src) + '</p></div>' +
+      '<div class="keynum" tabindex="0"><span class="v">' + esc(q.v) + '</span><span class="l">' + esc(q.l) + "</span></div></div></section>";
+  }
   function qaNews(id, question) {
     var q = (D.qa || []).filter(function (x) { return x.id === id; })[0];
     if (!q) return '<p class="question">The question: <b>' + esc(question) + "</b></p>";
@@ -267,6 +273,7 @@
   function appendix() {
     var A = D.appendix, p = [];
     p.push('<div class="kick"><span class="nr">Reference</span><span class="sn">Appendix</span></div><h2 class="art-head">' + esc(A.headline) + '</h2><p class="art-dek">' + esc(A.dek) + "</p>");
+    p.push(qaBlock({ q: A.question, a: "A plain-language guide: " + A.counts.terms + " terms, " + A.counts.methods + " methods and " + A.counts.formulas + " formulas, so every figure in this report can be traced and repeated.", src: "PULSE", v: String(A.counts.formulas), l: "formulas worked through" }));
     p.push('<div class="block stats">' + [["Glossary", A.counts.terms, "Terms defined"], ["Methods", A.counts.methods, "Methods explained"], ["Formulas", A.counts.formulas, "Formulas with worked examples"]].map(function (x) { return '<div class="stat"><span class="k">' + x[0] + '</span><span class="v">' + x[1] + '</span><span class="l">' + x[2] + "</span></div>"; }).join("") + "</div>");
     p.push(table({ title: "Formulas", sub: "Each formula with this report's inputs", cols: ["Measure", "Formula", "Worked example"], rows: A.formulas, src: "PULSE calculations from source data" }));
     p.push(table({ title: "Glossary", cols: ["Term", "Definition"], rows: A.glossary, src: "Dana Point PULSE" }));
@@ -278,7 +285,8 @@
   }
   function sourcesPage() {
     var S = D.sources;
-    return '<div class="kick"><span class="nr">Reference</span><span class="sn">Sources</span></div><h2 class="art-head">Sources</h2><p class="art-dek">Prepared ' + esc(S.prepared) + ". Every figure in this report traces to one of these sources.</p>" +
+    var sq = qaBlock({ q: "Where does every figure in this report come from?", a: "Every figure traces to a named source in the register below, with its period, and the known data gaps are listed with it.", src: "Dana Point PULSE", v: String((S.register || []).length), l: "sources in the register" });
+    return sq + '<div class="kick"><span class="nr">Reference</span><span class="sn">Sources</span></div><h2 class="art-head">Sources</h2><p class="art-dek">Prepared ' + esc(S.prepared) + ". Every figure in this report traces to one of these sources.</p>" +
       (S.graph ? '<figure class="cf reveal"><h3>Which source feeds which section</h3><p class="cs">Each line links a source to a report section that cites it. Drag to explore; hover for names.</p><div class="body viz-box viz-graph"' + vizSlot("graph", S.graph) + '>' + table({ cols: ["Source", "Sections"], rows: S.graph.nodes.filter(function (n) { return n.kind === "source"; }).map(function (n) { return [n.label, S.graph.edges.filter(function (e) { return e.source === n.id; }).map(function (e) { var t = S.graph.nodes.filter(function (m) { return m.id === e.target; })[0]; return t ? t.label : ""; }).join(", ")]; }) }) + '</div><p class="cap">Source: Dana Point PULSE, from each section\'s source lines</p></figure>' : "") +
       table({ title: "Source register", cols: S.cols, rows: S.register, src: "Dana Point PULSE" }) +
       '<div class="block mist"><div class="lbl">Known data gaps</div><ul class="notes">' + S.recs.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul></div>" +
