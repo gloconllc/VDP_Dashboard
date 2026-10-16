@@ -39,10 +39,10 @@
   css.id = "pz-pager-css";
   css.textContent =
     ".pz-off{display:none !important}" +
-    ".pz-embed{margin:4px 0 24px}.pz-embed iframe{width:100%;border:0;display:block;background:transparent}" +
-    ".pz-filter{position:sticky;top:0;z-index:60;background:#fff;transition:transform .22s ease;padding:6px 0 2px;border-bottom:1px solid #e2e8f0}" +
-    ".pz-filter.pz-hide{transform:translateY(-130%);box-shadow:none;pointer-events:none}" +
-    ".pz-filter.pz-stuck{box-shadow:0 4px 14px rgba(11,37,48,.10)}" +
+    ".pz-embed{margin:4px 0 110px}.pz-embed iframe{width:100%;border:0;display:block;background:transparent}" +
+    ".pz-filter{position:static;order:90;background:#fff;padding:10px 0 2px;border-top:1px solid #e2e8f0;margin-top:8px}" +
+    ".pz-filter.pz-hide{transform:none}" +
+    ".pz-filter.pz-stuck{box-shadow:none}" +
     "@media (prefers-reduced-motion: reduce){.pz-filter{transition:none}}" +
     "#pz-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:999;display:flex;align-items:center;gap:10px;" +
     "background:#fff;border:1px solid #cbe3ea;border-radius:14px;padding:8px 10px;box-shadow:0 6px 24px rgba(11,37,48,.16);" +
@@ -115,7 +115,7 @@
         var links = x.el.querySelectorAll('a[href^="#pulse-"]');
         if (links.length >= 5) x.nav = true;
         var rd = x.el.querySelector('[data-testid="stRadio"]');
-        if (rd && /data window/i.test(rd.innerText || "")) x.filter = true;
+        if (rd && (/data window|date range for the charts/i.test(rd.innerText || "") || (x.el.className || "").indexOf("st-key-pulse_period") > -1)) x.filter = true;
       }
     });
     // the custom range pickers belong to the filter bar
@@ -188,11 +188,12 @@
     var css_ = "<style id=\"pz-embed-css\">.hdr-l,.tabs-bar,.pageline,#prev,#next,#one,#allp,#fs,.skip,.upnext{display:none !important}" +
       ".hdr{justify-content:flex-end !important;padding-block:6px !important}</style>";
     var tabId = sec.indexOf("overview") === 0 ? "overview" : sec;
-    var part = sec === "overview-a" ? ".ov-b,.ov-i" : sec === "overview" ? ".ov-a,.ov-i" : sec === "overview-i" ? ".ov-a,.ov-b" : "";
+    var part = sec === "overview-a" ? ".ov-b" : sec === "overview" ? ".ov-a" : "";
     if (part) css_ = css_.replace("</style>", part + "{display:none !important}</style>");
     var js_ = "<script>(function(){var S=" + JSON.stringify(tabId) + ";" +
       (sec === "overview-i" ? "var dd=document.querySelector('.dest-i');if(dd)dd.open=true;" : "") +
       "function sel(){var t=document.querySelector('.tab[data-s=\"'+S+'\"]');if(t)t.click();}sel();" +
+      "document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('#totop');if(t){e.preventDefault();e.stopPropagation();try{parent.postMessage({pzTop:1},'*');}catch(x){}}},true);" +
       "document.addEventListener('click',function(e){var g=e.target.closest&&e.target.closest('[data-go]');" +
       "if(g){e.preventDefault();e.stopPropagation();try{parent.postMessage({pzSection:g.getAttribute('data-go')},'*');}catch(x){}}},true);" +
       "document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('#exp')){setTimeout(function(){var d=document.querySelector('dialog[open]');" +
@@ -361,6 +362,7 @@
   }
   function onMsg(e) {
     var d = e.data;
+    if (d && d.pzTop) { try { P.scrollTo({ top: 0, behavior: REDUCE ? "auto" : "smooth" }); } catch (e2) {} }
     if (d && typeof d.pzGo === "string" && enabled) go(d.pzGo);
     if (d && typeof d.pzSection === "string" && enabled) goSection(d.pzSection);
   }
