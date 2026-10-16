@@ -24,6 +24,10 @@
     X6: "@antv/x6@3.1.8/dist/x6.min.js",
     AntVInfographic: "@antv/infographic@0.2.20/dist/infographic.min.js"
   };
+  // Local copies ship with the app (dashboard/static/antv, served at /app/static/antv/ when
+  // enableStaticServing is on), so the visuals no longer depend on a public CDN. The CDNs stay
+  // as the second and third choice. (added 2026-10-15)
+  var LOCAL = { G2: "g2.min.js", T8: "t8.min.js", G6: "g6.min.js", X6: "x6.min.js", AntVInfographic: "infographic.min.js" };
   var CDNS = ["https://cdn.jsdelivr.net/npm/", "https://unpkg.com/"];
   var pending = {};
 
@@ -31,11 +35,12 @@
     if (window[name]) return Promise.resolve(window[name]);
     if (pending[name]) return pending[name];
     pending[name] = new Promise(function (resolve, reject) {
+      var urls = (LOCAL[name] ? ["/app/static/antv/" + LOCAL[name]] : []).concat(CDNS.map(function (c) { return c + LIBS[name]; }));
       var i = 0;
       (function next() {
-        if (i >= CDNS.length) { reject(new Error(name + " unavailable")); return; }
+        if (i >= urls.length) { reject(new Error(name + " unavailable")); return; }
         var s = document.createElement("script");
-        s.src = CDNS[i++] + LIBS[name];
+        s.src = urls[i++];
         s.async = true;
         s.onload = function () { window[name] ? resolve(window[name]) : next(); };
         s.onerror = function () { s.remove(); next(); };

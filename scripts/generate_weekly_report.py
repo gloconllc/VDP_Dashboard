@@ -306,6 +306,24 @@ def _fmt_usd(v, decimals=0):
         return "N/A"
 
 
+def _spark_svg(values, color: str = "#1D6E86", w: int = 86, h: int = 20) -> str:
+    """Inline SVG trend line for the Executive Summary cells (added 2026-10-15).
+    Returns an empty string when fewer than two usable points exist, so the cell
+    simply renders as it did before."""
+    vals = [float(v) for v in (values or []) if v is not None and v == v]
+    if len(vals) < 2:
+        return ""
+    lo, hi = min(vals), max(vals)
+    span = (hi - lo) or 1.0
+    step = (w - 4) / (len(vals) - 1)
+    pts = [(2 + i * step, 2 + (h - 4) * (1 - (v - lo) / span)) for i, v in enumerate(vals)]
+    line = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+    lx, ly = pts[-1]
+    return (f'<svg class="spark" width="{w}" height="{h}" viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg">'
+            f'<polyline points="{line}" fill="none" stroke="{color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>'
+            f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="2.2" fill="{color}"/></svg>')
+
+
 def build_report(date_range: tuple[str, str] | None = None) -> str:
     """Returns path to the generated PDF.
 
@@ -689,6 +707,9 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
         "OCC_PCT": _fmt_pct(occ_avg),
         "ADR": _fmt_usd(adr_avg),
         "REVPAR": _fmt_usd(revpar_avg),
+        "SPARK_OCC": _spark_svg(week_df["occ_pct"].tolist(), TEAL),
+        "SPARK_ADR": _spark_svg(week_df["adr"].tolist(), TEAL),
+        "SPARK_REVPAR": _spark_svg(week_df["revpar"].tolist(), TEAL),
         "COMPRESSION_DAYS": compression_days,
         "COMPRESSION_LABEL": compression_label,
         "OCC_YOY": _fmt_pct(occ_yoy_avg, sign=True) if occ_yoy_avg is not None else "N/A",

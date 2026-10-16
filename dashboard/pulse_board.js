@@ -750,6 +750,7 @@ function renderBrief(root, d) {
       <div class="pb-gcs">${cards}</div>
     </section>`);
   root.querySelectorAll('.pb-gc').forEach((b) => b.addEventListener('click', () => {
+    try { window.parent.postMessage({ pzGo: b.dataset.anchor }, '*'); } catch (e) { /* pager optional */ }
     const t = document.getElementById(b.dataset.anchor);
     if (t) t.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' });
   }));

@@ -2397,6 +2397,15 @@ st.markdown("#### Notes & Report Repository")
 render_notes_block("general", "General Notes")
 render_report_archive()
 
+# One section per page (2026-10-15): client-side pager, additive and reversible
+# (env PULSE_PAGER=0 turns it off; "Show all sections" restores the full scroll).
+try:
+    import pulse_pager
+    if pulse_sections is not None:
+        pulse_pager.mount(pulse_sections.SECTION_LINKS)
+except Exception as _pulse_pager_error:  # pragma: no cover - defensive
+    print(f"[pulse] pager skipped: {_pulse_pager_error}")
+
 st.markdown(
     '<div class="pulse-contact-foot">Dana Point PULSE is built and maintained by GloCon Solutions LLC. '
     '<a href="mailto:john.picou@gloconsolutions.com">Contact GloCon Solutions LLC</a></div>',

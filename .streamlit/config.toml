@@ -21,6 +21,8 @@ font = "sans serif"
 [server]
 headless = true
 enableXsrfProtection = false
+# Serves dashboard/static/ at /app/static/ so the AntV scripts ship with the app (added 2026-10-15).
+enableStaticServing = true
 
 [browser]
 gatherUsageStats = false

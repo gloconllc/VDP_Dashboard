@@ -272,7 +272,7 @@ def brand_fig(fig: go.Figure, height: int = 300, legend: bool = True, hover: str
                     font=dict(size=11.5, color=ink3), bgcolor="rgba(0,0,0,0)",
                     itemsizing="constant", traceorder="normal"),
         hovermode=hover,
-        hoverlabel=dict(bgcolor="rgba(20,50,80,0.96)", bordercolor="rgba(20,50,80,0.96)",
+        hoverlabel=dict(bgcolor=getattr(_bt, "TEAL_DK", "#123C4A"), bordercolor=getattr(_bt, "TEAL_DK", "#123C4A"),
                         font=dict(size=12.5, family=font, color="#FFFFFF"), align="left"),
         bargap=0.32,
         bargroupgap=0.12,
