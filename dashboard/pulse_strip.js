@@ -82,16 +82,14 @@ function card(n) {
 function renderGlance(root, d) {
   root.innerHTML = '<section class="ps-strip" aria-label="' + esc(d.title) + '">'
     + '<div class="ps-head"><div><div class="ps-eyebrow">At a glance · ' + esc(d.period) + '</div><h2 class="ps-title">' + esc(d.title) + '</h2></div>'
-    + '<a class="ps-more" href="#pulse-insights">Read the full story in the Insights report →</a></div>'
+    + '<a class="ps-more" href="#pulse-glance">Back to the summary →</a></div>'
     + (d.cards && d.cards.length ? '<div class="ps-cards">' + d.cards.map(card).join('') + '</div>' : '')
     + '<div class="ps-grid">' + (d.glance || []).map(ig).join('') + '</div></section>';
 }
 
 function renderAnnounce(root, d) {
-  // One slim line: the PULSE Summary headline and a link to the full report.
-  root.innerHTML = '<a class="ps-ann reveal" href="#pulse-insights" aria-label="PULSE Summary: ' + esc(d.headline) + '. Read the Insights report.">'
-    + '<span class="ps-flag">PULSE Summary</span><span class="ps-ann-h">' + esc(d.headline) + '</span>'
-    + '<span class="ps-date">' + esc(d.period) + '</span><span class="ps-go">Read the report →</span></a>';
+  // The PULSE Summary headline now leads the first page itself, so this link banner is not drawn.
+  root.innerHTML = '';
 }
 
 function grow(el) {

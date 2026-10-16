@@ -56,14 +56,14 @@ def mount(links: list[tuple[str, str]]) -> None:
     try:
         with open(os.path.join(_HERE, "pulse_pager.js"), encoding="utf-8") as fh:
             js = fh.read()
-        real = {a: t for a, t in links}
+        real = {a: t for a, t in links if a}
         pages = []
         for pid in ORDER:
             if pid in VIRTUAL:
                 pages.append([pid, VIRTUAL[pid][0], VIRTUAL[pid][1]])
             elif pid in real:
                 pages.append([pid, real[pid]])
-        cfg = json.dumps({"pages": pages, "alias": ALIAS, "embeds": EMBEDS})
+        cfg = json.dumps({"pages": pages, "alias": ALIAS, "embeds": EMBEDS, "combine": []})
         components.html(f"<script>window.PZ_CFG={cfg};</script><script>{js}</script>", height=0)
     except Exception as exc:  # noqa: BLE001
         print(f"[pulse] pager skipped: {exc}")

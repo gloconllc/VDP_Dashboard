@@ -437,3 +437,16 @@ svg.cal rect[data-tip]:hover,svg.cal rect[data-tip]:focus{stroke:#0B2530;stroke-
 .lede .viz-live .t8-time_desc{font-weight:600}
 .lede .viz-live svg{width:.7em!important;height:.7em!important}
 @media print{.viz-graph .viz-live{height:auto}}
+
+/* Question and short answer, news-report style (2026-10-16) */
+.qa-news{margin:6px 0 22px}
+.qa-head{font-family:var(--serif,Georgia,serif);font-style:italic;font-size:clamp(22px,2.2vw,30px);line-height:1.25;color:var(--ink);margin:6px 0 4px;font-weight:700}
+.qa-news .lede-grid{margin-top:12px}
+.qa-news .card .lede{font-size:clamp(17px,1.3vw,19px)}
+/* About Dana Point behind the "i" */
+.dest-i{border:1px solid var(--border);border-radius:var(--r-card,12px);background:var(--white);padding:0 16px;margin:18px 0}
+.dest-i>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 0;font-weight:700;color:var(--ink)}
+.dest-i>summary::-webkit-details-marker{display:none}
+.dest-i .ic{flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--teal);color:var(--teal);display:inline-flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:14px}
+.dest-i[open] .ic{background:var(--teal);color:#fff}
+.dest-i .dest-list{margin-bottom:16px}

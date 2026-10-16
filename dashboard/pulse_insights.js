@@ -209,17 +209,21 @@
     // Key takeaways
     p.push('<section class="block reveal" aria-labelledby="tk-h"><h3 class="h2" id="tk-h">Key takeaways</h3><p class="cap" style="margin:0 0 12px">The headline number from each section, with its period. Select one to read the full story.</p><div class="tk-grid">' +
       D.takeaways.map(function (t) { return '<button class="tk" data-go="' + t.id + '"><span class="k">' + esc(t.tab) + '</span><span class="v">' + esc(t.v) + '</span><span class="l">' + esc(t.l) + '</span><span class="hd">' + esc(t.head) + '</span><span class="p">' + esc(t.src) + '</span><span class="go">Read the section →</span></button>'; }).join("") + "</div></section>");
-    // About Dana Point, in Visit Dana Point's own published words
+    // About Dana Point sits behind the "i" (collapsed), as clean aligned cards in Visit Dana Point's own words
     if (D.destination && D.destination.length) {
-      p.push('<section class="block reveal dest" aria-labelledby="dest-h"><h3 class="h2" id="dest-h">About Dana Point</h3><p class="cap" style="margin:0 0 12px">In Visit Dana Point\'s own words, from <a class="contact-link" href="https://visitdanapoint.com/" target="_blank" rel="noopener">visitdanapoint.com</a>.</p><div class="viz-info"' + vizSlot("info", D.destination) + '></div><ul class="dest-list">' +
-        D.destination.map(function (d) { return '<li><span class="dest-t">' + esc(d.text) + '</span><a class="src dest-src" href="' + esc(d.url) + '" target="_blank" rel="noopener">Source: ' + esc(d.src) + "</a></li>"; }).join("") + "</ul></section>");
+      p.push('<details class="dest-i"><summary><span class="ic" aria-hidden="true">i</span><span>About Dana Point</span></summary><p class="cap" style="margin:10px 0 12px">In Visit Dana Point\'s own words, from <a class="contact-link" href="https://visitdanapoint.com/" target="_blank" rel="noopener">visitdanapoint.com</a>.</p><ul class="dest-list">' +
+        D.destination.map(function (d) { return '<li><span class="dest-t">' + esc(d.text) + '</span><a class="src dest-src" href="' + esc(d.url) + '" target="_blank" rel="noopener">Source: ' + esc(d.src) + "</a></li>"; }).join("") + "</ul></details>");
     }
-    // Q&A
-    p.push('<section class="block reveal" aria-labelledby="qa-h"><h3 class="h2" id="qa-h">Questions and short answers</h3><p class="cap" style="margin:0 0 12px">Each question with a short answer. Select a question to see the details.</p><div class="qa">' +
-      D.qa.concat([{ id: "appx", q: D.appendix.question, a: "A plain-language guide: " + D.appendix.counts.terms + " terms, " + D.appendix.counts.methods + " methods and " + D.appendix.counts.formulas + " formulas, so every figure in this report can be traced and repeated.", src: "PULSE", v: String(D.appendix.counts.formulas), l: "formulas worked through" }]).map(function (q, i) {
-        return '<div class="qa-i' + (i === 0 ? " open" : "") + '"><button class="qa-q" aria-expanded="' + (i === 0) + '"><span>' + esc(q.q) + '</span><span class="ic" aria-hidden="true">+</span></button><div class="qa-a"><div><p style="margin:0 0 6px">' + bold(q.a) + '</p><p class="cap">Source: ' + esc(q.src) + '</p><button class="ctl" data-go="' + q.id + '" style="margin-top:8px">Read the section →</button></div><div class="ak"><div class="v">' + esc(q.v) + '</div><div class="l">' + esc(q.l) + "</div></div></div></div>";
-      }).join("") + "</div></section>");
+    // Questions and short answers now sit inside the section each one belongs to (news-report style).
     return p.join("");
+  }
+
+  function qaNews(id, question) {
+    var q = (D.qa || []).filter(function (x) { return x.id === id; })[0];
+    if (!q) return '<p class="question">The question: <b>' + esc(question) + "</b></p>";
+    return '<section class="qa-news reveal" aria-label="Question and short answer"><div class="kick"><span class="nr">Question and short answer</span></div>' +
+      '<h3 class="qa-head">' + esc(q.q) + '</h3><div class="lede-grid"><div class="card"><p class="lede">' + bold(q.a) + '</p><p class="cap">Source: ' + esc(q.src) + '</p></div>' +
+      '<div class="keynum" tabindex="0"><span class="v">' + esc(q.v) + '</span><span class="l">' + esc(q.l) + "</span></div></div></section>";
   }
 
   function sectionPage(s, idx, total) {
@@ -234,7 +238,7 @@
     p.push(table({ title: "How the key insight is calculated", cols: ["Step", "Calculation", "Result", "Source"], rows: s.calc, num: [], src: "PULSE calculation from the sources named" }));
     var dk = ["who", "what", "when", "where", "why", "how"];
     p.push('<div class="block"><h3 class="h2">The details</h3><p class="cap" style="margin:0 0 12px">Who, what, when, where, why and how, each with its figure, source and date.</p><div class="det">' + dk.map(function (k) { var d = s.details[k]; return '<div class="dc reveal"><span class="k">' + k + '</span><span class="f">' + esc(d.fig) + '</span><span class="fl">' + esc(d.fig_l) + '</span><span class="tx">' + bold(d.text) + '</span><span class="s">Source: ' + esc(d.src) + "</span></div>"; }).join("") + "</div></div>");
-    p.push('<div class="band"><span class="bl">Analysis</span><hr></div><p class="question">The question: <b>' + esc(s.question) + "</b></p>");
+    p.push('<div class="band"><span class="bl">Analysis</span><hr></div>' + qaNews(s.id, s.question));
     if (s.map) p.push(map(s.map));
     if (s.charts && s.charts.length) p.push('<div class="block ' + (s.charts.length > 1 ? "grid2" : "") + '">' + s.charts.map(function (c) { return chart(c, s.charts.length === 1); }).join("") + "</div>");
     if (s.waterfall) p.push('<figure class="cf reveal"><h3>' + esc(s.waterfall.title) + '</h3><p class="cs">' + esc(s.waterfall.sub) + '</p><div class="body viz-box"' + vizSlot("waterfall", s.waterfall) + '>' + table({ cols: ["Step", "Room revenue"], rows: s.waterfall.data.map(function (d) { return [d.category, fmt(d.value, "usd")]; }), num: [1] }) + '</div><p class="calc-line">Calculation: ' + esc(s.waterfall.calc) + '</p><p class="cap">Source: ' + esc(s.waterfall.src) + "</p></figure>");
