@@ -23,6 +23,7 @@
   var pages = allPages.slice();
   var alias = CFG.alias || {};
   var combine = CFG.combine || [];
+  var embedAfter = CFG.embedAfter || [];
   var embeds = CFG.embeds || {};   // page id -> [[report section id, label], ...]
   var known = {}; allPages.forEach(function (p) { known[p.id] = true; });
   function pageOf(id) { var t = alias[id] || id; return known[t] ? t : null; }
@@ -146,7 +147,7 @@
       else if (!m.cards.length) m.topics = [{ title: p.label, kind: "main" }];
       // the matching Insights sections, each as its own topic, before "More and ask"
       if (reportSrc()) {
-        var em = embeds[p.id] || [], at = 0;   // the report section leads its page
+        var em = embeds[p.id] || [], at = embedAfter.indexOf(p.id) > -1 ? 1 : 0;   // the report section leads its page
         var add = em.map(function (e) { return { title: e[1], kind: "embed", sec: e[0] }; });
         Array.prototype.splice.apply(m.topics, [at, 0].concat(add));
         if (add.length && combine.indexOf(p.id) > -1 && !m.cards.length) m.topics = add;
@@ -185,7 +186,11 @@
   function injectFor(sec) {
     var css_ = "<style id=\"pz-embed-css\">.hdr-l,.tabs-bar,.pageline,#prev,#next,#one,#allp,#fs,.skip,.upnext{display:none !important}" +
       ".hdr{justify-content:flex-end !important;padding-block:6px !important}</style>";
-    var js_ = "<script>(function(){var S=" + JSON.stringify(sec) + ";" +
+    var tabId = sec.indexOf("overview") === 0 ? "overview" : sec;
+    var part = sec === "overview-a" ? ".ov-b,.ov-i" : sec === "overview" ? ".ov-a,.ov-i" : sec === "overview-i" ? ".ov-a,.ov-b" : "";
+    if (part) css_ = css_.replace("</style>", part + "{display:none !important}</style>");
+    var js_ = "<script>(function(){var S=" + JSON.stringify(tabId) + ";" +
+      (sec === "overview-i" ? "var dd=document.querySelector('.dest-i');if(dd)dd.open=true;" : "") +
       "function sel(){var t=document.querySelector('.tab[data-s=\"'+S+'\"]');if(t)t.click();}sel();" +
       "document.addEventListener('click',function(e){var g=e.target.closest&&e.target.closest('[data-go]');" +
       "if(g){e.preventDefault();e.stopPropagation();try{parent.postMessage({pzSection:g.getAttribute('data-go')},'*');}catch(x){}}},true);" +

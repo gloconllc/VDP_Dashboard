@@ -16,12 +16,12 @@ import streamlit.components.v1 as components
 _HERE = os.path.dirname(os.path.abspath(__file__))
 # The Intelligence Brief and the Insights report no longer have pages of their own (2026-10-16):
 # the brief sits on At a glance, and old links to either land on the page that now holds it.
-ALIAS = {"pulse-brain": "pulse-glance", "pulse-insights": "pulse-notes"}
+ALIAS = {"pulse-brain": "pulse-snapshot", "pulse-insights": "pulse-notes"}
 
 # Every Insights report section sits on the page it belongs with. Pages whose id is not a real
 # anchor are "virtual": they only show their embedded report section(s).
 EMBEDS = {
-    "pulse-glance": [["overview", "Summary and overview"]],
+    "pulse-glance": [["overview-a", "Summary"], ["overview", "Overview"]],
     "pulse-snapshot": [["today", "Dana Point today"]],
     "pulse-origins": [["spend", "Visitor spending"]],
     "pulse-who": [["who", "Who visits"]],
@@ -31,6 +31,7 @@ EMBEDS = {
     "pulse-market": [["hotel", "Hotel market"]],
     "pulse-night": [["night", "One more night"]],
     "pulse-forward": [["outlook", "Market outlook"]],
+    "pulse-about": [["overview-i", "About Dana Point"]],
     "pulse-appx": [["appx", "Appendix"]],
     "pulse-sources": [["sources", "Sources"]],
 }
@@ -63,7 +64,7 @@ def mount(links: list[tuple[str, str]]) -> None:
                 pages.append([pid, VIRTUAL[pid][0], VIRTUAL[pid][1]])
             elif pid in real:
                 pages.append([pid, real[pid]])
-        cfg = json.dumps({"pages": pages, "alias": ALIAS, "embeds": EMBEDS, "combine": []})
+        cfg = json.dumps({"pages": pages, "alias": ALIAS, "embeds": EMBEDS, "combine": [], "embedAfter": ["pulse-about"]})
         components.html(f"<script>window.PZ_CFG={cfg};</script><script>{js}</script>", height=0)
     except Exception as exc:  # noqa: BLE001
         print(f"[pulse] pager skipped: {exc}")
