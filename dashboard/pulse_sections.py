@@ -30,7 +30,7 @@ SECTION_LINKS = [
     ("pulse-origins", "Visitors and spend"),
     ("pulse-market", "Market position"),
     ("pulse-forward", "Forward outlook"),
-    ("pulse-brain", "Intelligence brief"),
+    ("pulse-insights", "Insights report"),
     ("pulse-fullreport", "Full report"),
     ("pulse-about", "About this data"),
     ("pulse-notes", "Notes and downloads"),

@@ -1708,8 +1708,8 @@ PERIOD_OPTIONS = {
     "Last 24 months": 24,
 }
 period_label = st.radio(
-    "Data window (drives KPI tiles, charts, and the Intelligence Brief below)",
-    list(PERIOD_OPTIONS.keys()) + ["Custom range"], index=4, horizontal=True, key="pulse_period",
+    "Data window (drives every page: KPI tiles, charts, Insights, and the Intelligence Brief)",
+    list(PERIOD_OPTIONS.keys()) + ["Year to date", "Custom range"], index=4, horizontal=True, key="pulse_period",
 )
 
 range_start_iso, range_end_iso = None, None
@@ -1731,6 +1731,12 @@ if period_label == "Custom range":
     range_end_iso = custom_end_d.isoformat()
     window_months = max((custom_end_d - custom_start_d).days, 1) / 30.0
     period_label_display = f"{range_start_iso} to {range_end_iso}"
+elif period_label == "Year to date":
+    _ytd_start = date(date.today().year, 1, 1)
+    range_start_iso = _ytd_start.isoformat()
+    range_end_iso = date.today().isoformat()
+    window_months = max((date.today() - _ytd_start).days, 7) / 30.4375
+    period_label_display = "Year to date"
 else:
     window_months = PERIOD_OPTIONS[period_label]
     period_label_display = period_label
@@ -1889,9 +1895,9 @@ def _ins_selection() -> tuple:
     """The reader's Insights report choices (2026-10-15). Read from session
     state so the strips above the report follow the same selection; the
     controls themselves sit with the report. Year to date is the default."""
-    mode = st.session_state.get("ins_period", INS_PERIODS[0])
-    if mode not in INS_PERIODS:
-        mode = INS_PERIODS[0]
+    # One set of date filters for the whole app (2026-10-16): the report always
+    # follows the data window at the top. The old Report period choice is retired.
+    mode = INS_PERIODS[1]
     allv = list(getattr(pulse_insights, "VIZ_OPTIONS", {}).keys()) if pulse_insights is not None else []
     viz = st.session_state.get("ins_viz", allv)
     viz = tuple(v for v in allv if v in (viz or []))
@@ -1962,11 +1968,72 @@ def _strip(kind: str) -> None:
         print(f"[pulse] glance strip {kind} failed: {_exc}")
 
 
+def _render_brief_block() -> None:
+    """The Intelligence Brief (generate a read, ask a follow-up). Sits on the At a glance page
+    so the one AI read covers the whole app; every section keeps its own Ask about this section card."""
+    st.markdown('<div id="pulse-brain" class="pulse-anchor"></div>', unsafe_allow_html=True)
+    brain_months = window_months
+
+    st.markdown(
+        f"""
+        <div class="brain-banner" style="background-image:url('{_photo_data_uri("drone_aerial.jpg")}');">
+          <div class="brain-banner-overlay"></div>
+          <div class="brain-banner-content">
+            <div class="brain-eyebrow">Dana Point Intelligence Brief</div>
+            <div class="brain-title">Ask a question about your STR, CoStar &amp; Datafy data</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    brain_col1, brain_col2 = st.columns([1, 1])
+    with brain_col1:
+        latest_intel_clicked = st.button(
+            "\U0001F9E0 Generate Latest Intelligence", use_container_width=True, type="primary",
+        )
+    with brain_col2:
+        st.caption("Synthesizes STR, CoStar, and Datafy history into one plain-language read.")
+
+    if latest_intel_clicked:
+        with st.spinner("Correlating STR, CoStar, and Datafy data..."):
+            brain_answer = ask_hotel_partner_ai(
+                "In plain, non-technical language, synthesize the current story across "
+                "STR hotel performance, CoStar submarket benchmarking, and Datafy visitor "
+                "economy data. Cover: where occupancy/ADR/RevPAR stand and their trend, "
+                "how Dana Point compares to its CoStar submarket, and the one or two most "
+                "important visitor-economy patterns. Keep it to three or four short paragraphs.",
+                months=brain_months, start_date=range_start_iso, end_date=range_end_iso,
+                page_context=PAGE_CONTEXT,
+            )
+        st.markdown(f'<div class="ai-answer-box">{html.escape(brain_answer)}</div>', unsafe_allow_html=True)
+
+    with st.expander("\U0001F50D Ask a follow-up question about this data"):
+        partner_question = st.text_input(
+            "Your question",
+            key="partner_question",
+            placeholder="e.g. How has occupancy trended over the last 12 months?",
+            label_visibility="collapsed",
+        )
+        if st.button("Ask", type="primary", key="ask_followup"):
+            if partner_question.strip():
+                with st.spinner("Reading STR, CoStar, and Datafy history..."):
+                    answer = ask_hotel_partner_ai(
+                        partner_question.strip(), months=brain_months,
+                        start_date=range_start_iso, end_date=range_end_iso,
+                        page_context=PAGE_CONTEXT,
+                    )
+                st.markdown(f'<div class="ai-answer-box">{html.escape(answer)}</div>', unsafe_allow_html=True)
+            else:
+                st.warning("Type a question first.")
+
+
 if pulse_model is None or pulse_sections is None:
     st.info(
         "The live data view is refreshing. The full PDF report, the Intelligence Brief, "
         "and every download below remain available."
     )
+    _render_brief_block()
 else:
     def _anchor(anchor_id: str) -> None:
         st.markdown(f'<div id="{anchor_id}" class="pulse-anchor"></div>', unsafe_allow_html=True)
@@ -2020,7 +2087,7 @@ else:
          lambda: pulse_sections.render_market(pulse_model, _ask, section_visuals, get_connection())),
         (_board_forward if pulse_board else None, lambda: pulse_sections.render_forward(pulse_model, _ask)),
     )
-    for _board_fn, _native_fn in _plan:
+    for _plan_i, (_board_fn, _native_fn) in enumerate(_plan):
         _done = False
         if _board_fn is not None:
             try:
@@ -2034,6 +2101,8 @@ else:
             except Exception as _exc:  # noqa: BLE001
                 print(f"[pulse] section render failed: {_exc}")
                 st.warning("This section could not be drawn from the current data. The rest of the page is unaffected.")
+        if _plan_i == 0:
+            _render_brief_block()
 
 # ---------------------------------------------------------------------------
 # Insights report (added 2026-10-13). Everything above this line is unchanged.
@@ -2049,12 +2118,8 @@ def _render_insights_report() -> None:
         mtime = 0.0
     # Reader choices (2026-10-15): report period and which visuals to show.
     _vopts = getattr(pulse_insights, "VIZ_OPTIONS", {})
-    _c1, _c2 = st.columns([1, 2])
-    with _c1:
-        st.radio("Report period", INS_PERIODS, index=0, key="ins_period",
-                 help="Year to date is the default. Match the data window to follow the selection at the top of the page.")
-    with _c2:
-        if _vopts:
+    if _vopts:
+        with st.expander("Choose the visuals shown in this report", expanded=False):
             st.multiselect("Visuals in the report", list(_vopts.keys()), default=list(_vopts.keys()),
                            format_func=lambda k: _vopts.get(k, k), key="ins_viz",
                            help="Anything switched off keeps its original chart, table or text.")
@@ -2176,64 +2241,6 @@ st.divider()
 # forward-looking insights, so it can answer trend and comparison questions
 # the PDF snapshot alone cannot.
 # ---------------------------------------------------------------------------
-
-st.markdown('<div id="pulse-brain" class="pulse-anchor"></div>', unsafe_allow_html=True)
-brain_months = window_months
-
-st.markdown(
-    f"""
-    <div class="brain-banner" style="background-image:url('{_photo_data_uri("drone_aerial.jpg")}');">
-      <div class="brain-banner-overlay"></div>
-      <div class="brain-banner-content">
-        <div class="brain-eyebrow">Dana Point Intelligence Brief</div>
-        <div class="brain-title">Ask a question about your STR, CoStar &amp; Datafy data</div>
-      </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-brain_col1, brain_col2 = st.columns([1, 1])
-with brain_col1:
-    latest_intel_clicked = st.button(
-        "\U0001F9E0 Generate Latest Intelligence", use_container_width=True, type="primary",
-    )
-with brain_col2:
-    st.caption("Synthesizes STR, CoStar, and Datafy history into one plain-language read.")
-
-if latest_intel_clicked:
-    with st.spinner("Correlating STR, CoStar, and Datafy data..."):
-        brain_answer = ask_hotel_partner_ai(
-            "In plain, non-technical language, synthesize the current story across "
-            "STR hotel performance, CoStar submarket benchmarking, and Datafy visitor "
-            "economy data. Cover: where occupancy/ADR/RevPAR stand and their trend, "
-            "how Dana Point compares to its CoStar submarket, and the one or two most "
-            "important visitor-economy patterns. Keep it to three or four short paragraphs.",
-            months=brain_months, start_date=range_start_iso, end_date=range_end_iso,
-            page_context=PAGE_CONTEXT,
-        )
-    st.markdown(f'<div class="ai-answer-box">{html.escape(brain_answer)}</div>', unsafe_allow_html=True)
-
-with st.expander("\U0001F50D Ask a follow-up question about this data"):
-    partner_question = st.text_input(
-        "Your question",
-        key="partner_question",
-        placeholder="e.g. How has occupancy trended over the last 12 months?",
-        label_visibility="collapsed",
-    )
-    if st.button("Ask", type="primary", key="ask_followup"):
-        if partner_question.strip():
-            with st.spinner("Reading STR, CoStar, and Datafy history..."):
-                answer = ask_hotel_partner_ai(
-                    partner_question.strip(), months=brain_months,
-                    start_date=range_start_iso, end_date=range_end_iso,
-                    page_context=PAGE_CONTEXT,
-                )
-            st.markdown(f'<div class="ai-answer-box">{html.escape(answer)}</div>', unsafe_allow_html=True)
-        else:
-            st.warning("Type a question first.")
-
-st.divider()
 
 st.markdown('<div id="pulse-fullreport" class="pulse-anchor"></div>', unsafe_allow_html=True)
 
