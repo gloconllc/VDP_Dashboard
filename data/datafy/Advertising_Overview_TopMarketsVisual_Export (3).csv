@@ -1,54 +1,55 @@
 DMA,Trip Share,Trips,Visitor Days,Avg Trip Length,Est Impact,Spend Per Visitor
-Nashville,0.06%,0,3,9.32,$0,$166
+Nashville,0.04%,0,3,13.17,$0,$166
 Memphis,0.01%,0,0,1.29,$0,$0
-Madison,0.07%,0,2,5.16,$0,$0
-Phoenix -Prescott,10.29%,61,199,3.23,"$19,455",$319
+Madison,0.1%,1,3,5.16,$0,$0
+Phoenix -Prescott,10.04%,61,199,3.27,"$19,455",$319
 Mobile-Pensacola -Ft Walt,0.01%,0,0,1.96,$0,$0
 Wichita-Hutchinson Plus,0.02%,0,0,2.68,$0,$145
-Las Vegas,3.49%,21,56,2.67,"$9,387",$447
-Cleveland-Akron -Canton,0.04%,0,2,6.68,$0,$121
-Salt Lake City,1.73%,10,35,3.38,"$2,103",$210
-San Francisco-Oak-San Jose,7.39%,44,121,2.74,"$15,531",$353
-Denver,3.9%,23,59,2.52,"$11,464",$498
+Las Vegas,3.45%,21,55,2.65,"$9,387",$447
+Cleveland-Akron -Canton,0.01%,0,0,4.1,$0,$121
+Salt Lake City,1.68%,10,36,3.53,"$2,103",$210
+San Francisco-Oak-San Jose,7.35%,45,123,2.76,"$15,884",$353
+Denver,3.89%,24,61,2.59,"$11,962",$498
 Buffalo,0.02%,0,0,3.91,$0,$229
 Austin,0.01%,0,0,1.3,$0,$288
 Spokane,0.03%,0,0,1.81,$0,$828
 Miami-Ft. Lauderdale,0.01%,0,0,1.3,$0,$192
-New York,0.1%,1,4,6.76,$411,$411
-Bakersfield,1.41%,8,17,2.07,"$2,787",$348
+New York,0.08%,0,1,2.79,$0,$411
+Bakersfield,1.41%,9,17,2.04,"$3,136",$348
 Washington-DC -Hagrstwn,0.06%,0,0,1.37,$0,$200
-Kansas City,0.12%,1,1,1.98,$98,$98
+Kansas City,0.06%,0,1,2.22,$0,$98
 Springfield- MO,0.01%,0,0,2.74,$0,$254
 Philadelphia,0.02%,0,0,1.33,$0,$320
 Monterey-Salinas,0.01%,0,2,17.87,$0,$251
-Sacramnto-Stkton-Modesto,6.63%,40,113,2.86,"$25,452",$636
-San Diego,19.42%,116,231,1.99,"$25,919",$223
+Sacramnto-Stkton-Modesto,6.55%,40,113,2.85,"$25,452",$636
+San Diego,19.52%,118,229,1.93,"$26,366",$223
 Medford-Klamath Falls,0.03%,0,0,1.4,$0,$380
-Los Angeles,36.21%,216,440,2.04,"$47,088",$218
+Los Angeles,37.15%,225,443,1.97,"$49,050",$218
 Houston,0.06%,0,1,3.43,$0,$441
 Wilmington,0.02%,0,0,4.21,$0,$78
 Honolulu,0.06%,0,0,1.31,$0,$231
 Colorado Springs-Pueblo,0.01%,0,0,1.45,$0,$650
 Billings,0.04%,0,1,2.7,$0,$0
-Dallas-Ft. Worth,0.04%,0,1,2.56,$0,$267
-Palm Springs,2.9%,17,39,2.25,"$2,847",$167
+Dallas-Ft. Worth,0.09%,1,4,6.18,$267,$267
+Palm Springs,2.76%,17,36,2.18,"$2,847",$167
 Albuquerque-Santa Fe,0.02%,0,0,1.45,$0,$450
 Atlanta,0%,0,0,12.95,$0,$534
-Boston -Manchester,0.08%,0,2,3.94,$0,$321
-Reno,0.19%,1,2,2.01,$269,$269
+Boston -Manchester,0.1%,1,2,3.42,$321,$321
+Reno,0.18%,1,2,2.01,$269,$269
 Eureka,0.02%,0,0,1.3,$0,$0
 Sioux Falls-Mitchell,0.01%,0,0,4.12,$0,$0
 Montgomery-Selma,0.1%,1,1,1.91,$0,$0
-Huntsville-Decatur -Flor,0.05%,0,1,2.05,$0,$0
+Huntsville-Decatur -Flor,0.02%,0,0,1.45,$0,$0
 Chicago,0.05%,0,0,1.38,$0,$190
-Portland- OR,0.72%,4,13,3.12,"$2,205",$551
-SantaBarbra-SanMar-SanLuob,2.42%,14,39,2.68,"$4,023",$287
+Raleigh-Durham -Fayetvlle,0.05%,0,4,12.24,$0,$109
+Portland- OR,0.69%,4,12,2.89,"$2,205",$551
+SantaBarbra-SanMar-SanLuob,2.3%,14,38,2.75,"$4,023",$287
 Norfolk-Portsmth-Newpt Nws,0.01%,0,0,1.39,$0,$146
-Omaha,0.05%,0,3,8.84,$0,$587
+Omaha,0.03%,0,1,7.49,$0,$587
 Fresno-Visalia,0.04%,0,0,1.64,$0,$453
 Jackson- MS,0.01%,0,0,1.45,$0,$0
 Yuma-El Centro,0.02%,0,0,2.65,$0,$110
 Eugene,0.03%,0,0,1.3,$0,$203
 Jacksonville,0.08%,0,1,1.35,$0,$0
 Hartford & New Haven,0.01%,0,0,1.3,$0,$341
-Seattle-Tacoma,1.81%,11,30,2.77,"$7,672",$697
+Seattle-Tacoma,1.64%,10,26,2.63,"$6,975",$697
