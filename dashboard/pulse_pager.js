@@ -114,7 +114,7 @@
     items.forEach(function (x) {
       if (x.page === null || x.page === undefined) {
         var links = x.el.querySelectorAll('a[href^="#pulse-"]');
-        if (links.length >= 5) x.nav = true;
+        if (links.length >= 5) { x.nav = true; x.pills = true; }   // 2026-11-05: the section pills stay visible (first page matches the loaded page)
         var rd = x.el.querySelector('[data-testid="stRadio"]');
         if (rd && (/data window|date range for the charts/i.test(rd.innerText || "") || (x.el.className || "").indexOf("st-key-pulse_period") > -1)) x.filter = true;
       }
@@ -274,7 +274,7 @@
       if (x.embed) off = all || cur.kind !== "embed" || cur.sec !== x.embed;
       else if (!all && x.hide) off = true;
       else if (!all) {
-        if (x.nav) off = true;
+        if (x.nav) off = !x.pills;
         else if (cur.kind === "embed" && x.page === active && combine.indexOf(active) > -1) off = false;
         else if (cur.kind === "embed" && x.page === active) off = !(x.board && m.cards.length) && !x.filter;
         else if (x.page && x.page !== active) off = true;
