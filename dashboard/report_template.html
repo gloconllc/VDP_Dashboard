@@ -190,10 +190,10 @@
           <div class="exec-cell"><div class="v delta">[[GROUP_DEMAND_SHARE]]</div><div class="l">Group Room Demand Share</div></div>
         </div>
       </div>
-      <div class="panel-cap" style="margin-top:20px;">Group demand share figure is an industry benchmark (STR/CBRE), pending a live STR group-segment export; see Page 8.</div>
+      <div class="panel-cap" style="margin-top:20px;">[[GROUP_SHARE_NOTE]]</div>
       <div class="panel-hd" style="margin-top:22px;">This Week's Headline</div>
 [[EXEC_HEADLINE_CARDS]]
-      <div class="h-source">SOURCE: STR</div>
+      <div class="h-source">SOURCE: COSTAR DAILY; PIPELINE INSIGHTS</div>
       <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
     </div>
     <div class="h-page">1 / 9</div>
@@ -202,7 +202,7 @@
   <!-- PAGE 2 · HOTEL PERFORMANCE OCCUPANCY -->
   <div class="slide">
     <div class="half-full">
-      <div class="h-eyebrow maroon"><span class="line"></span>STR &middot; LAYER 1 TRUTH</div>
+      <div class="h-eyebrow maroon"><span class="line"></span>COSTAR AND STR &middot; LAYER 1 TRUTH</div>
       <div class="h-title maroon">Hotel Performance</div>
       <div class="h-subtitle">Occupancy</div>
       <div class="h-date">Week of [[WEEK_LABEL]]</div>
@@ -214,11 +214,11 @@
         </div>
         <div class="market-col">
           <div class="market-pill alt">6-MARKET COMP SET</div>
-          <div class="market-cap">RevPAR benchmark (STR/CBRE); Dana Point live, others benchmark</div>
+          <div class="market-cap">[[COMPSET_CAP]]</div>
           <img class="chart-img" src="[[CHART_COMPSET]]">
         </div>
       </div>
-      <div class="h-source">SOURCE: STR</div>
+      <div class="h-source">SOURCE: COSTAR DAILY; STR WEEKLY (COMP SET)</div>
       <div class="h-logo maroon"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
     </div>
     <div class="h-page">2 / 9</div>
@@ -227,7 +227,7 @@
   <!-- PAGE 3 · HOTEL PERFORMANCE ADR & COMPRESSION -->
   <div class="slide">
     <div class="half-full">
-      <div class="h-eyebrow maroon"><span class="line"></span>STR &middot; LAYER 1 TRUTH</div>
+      <div class="h-eyebrow maroon"><span class="line"></span>COSTAR AND STR &middot; LAYER 1 TRUTH</div>
       <div class="h-title maroon">Hotel Performance</div>
       <div class="h-subtitle">Average Daily Rate (ADR)</div>
       <div class="h-date">Week of [[WEEK_LABEL]]</div>
@@ -243,7 +243,7 @@
           <img class="chart-img" src="[[CHART_COMPRESSION]]">
         </div>
       </div>
-      <div class="h-source">SOURCE: STR</div>
+      <div class="h-source">SOURCE: COSTAR DAILY</div>
       <div class="h-logo maroon"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
     </div>
     <div class="h-page">3 / 9</div>
@@ -369,18 +369,18 @@
     <div class="half-full">
       <div class="h-eyebrow teal"><span class="line"></span>CROSS-DATASET &amp; GROUP INTELLIGENCE</div>
       <div class="h-title teal">Forward Outlook &amp; Group Business</div>
-      <div class="h-subtitle">Cross-Dataset Insights, Group Demand Estimate &amp; Data Sources</div>
-      <div class="h-date">As of [[LATEST_STR_DATE]] &middot; Benchmark figures pending live STR group-segment export</div>
+      <div class="h-subtitle">Cross-Dataset Insights and Live Group Business</div>
+      <div class="h-date">As of [[LATEST_STR_DATE]] &middot; Group business from the STR weekly report, week of [[STR_WEEK_LABEL]]</div>
       <div style="display:flex; gap:24px; margin-top:16px; height:410px;">
         <div class="panel" style="flex:1;">
-          <div class="panel-hd">Group Business Estimate</div>
-          <div class="panel-cap">Benchmark-based, upper-upscale coastal resort market</div>
-          <div class="stat-row"><div class="stat-label">Market blended ADR / Occupancy</div><div class="stat-value">[[GROUP_ADR_OCC]]</div></div>
-          <div class="stat-row"><div class="stat-label">Estimated group demand share</div><div class="stat-value">[[GROUP_DEMAND_RANGE]]</div></div>
-          <div class="stat-row"><div class="stat-label">Estimated annual group room revenue</div><div class="stat-value">[[GROUP_REVENUE_RANGE]]</div></div>
-          <div class="stat-row"><div class="stat-label">Estimated annual group TBID</div><div class="stat-value">[[GROUP_TBID_RANGE]]</div></div>
-          <div class="stat-row"><div class="stat-label">Estimated annual group TOT</div><div class="stat-value">[[GROUP_TOT_RANGE]]</div></div>
-          <div class="stat-row"><div class="stat-label">Compression days per year (80%+ occ)</div><div class="stat-value">[[COMPRESSION_DAYS_ANNUAL]]</div></div>
+          <div class="panel-hd">Group Business</div>
+          <div class="panel-cap">Dana Point, STR weekly report, week of [[STR_WEEK_LABEL]], vs. same week last year</div>
+          <div class="stat-row"><div class="stat-label">Group share of rooms sold</div><div class="stat-value">[[GRP_SHARE]]</div></div>
+          <div class="stat-row"><div class="stat-label">Group room nights</div><div class="stat-value">[[GRP_RN]]</div></div>
+          <div class="stat-row"><div class="stat-label">Group room revenue</div><div class="stat-value">[[GRP_REV]]</div></div>
+          <div class="stat-row"><div class="stat-label">Group ADR</div><div class="stat-value">[[GRP_ADR]]</div></div>
+          <div class="stat-row"><div class="stat-label">Transient ADR</div><div class="stat-value">[[TR_ADR]]</div></div>
+          <div class="stat-row"><div class="stat-label">Compression days this quarter, [[COMPRESSION_LABEL]] (80%+ occ)</div><div class="stat-value">[[COMPRESSION_DAYS]]</div></div>
         </div>
         <div class="panel" style="flex:1;">
           <div class="panel-hd">Cross-Dataset Insights</div>
@@ -389,9 +389,9 @@
         </div>
       </div>
       <div class="footer-disclaimer" style="margin-top:14px;">
-        STR, CoStar, and Datafy are treated as current-period sources. Zartico (June 2025 snapshot) is historical reference only and is never presented as current data. Group Intelligence figures are industry benchmarks (STR/CBRE 2024) pending a live STR group-segment export; TBID and TOT estimates elsewhere in this report use CoStar-implied room revenue, not reported room revenue. Prepared by GloCon Solutions LLC for Visit Dana Point.
+        STR, CoStar, and Datafy are treated as current-period sources. Zartico (June 2025 snapshot) is historical reference only and is never presented as current data. Group figures come from the STR weekly segment report; TBID and TOT estimates elsewhere in this report use CoStar-implied room revenue, not reported room revenue. Prepared by GloCon Solutions LLC for Visit Dana Point.
       </div>
-      <div class="h-source">SOURCE: CROSS-DATASET, GROUP INTELLIGENCE</div>
+      <div class="h-source">SOURCE: STR WEEKLY; STR, COSTAR AND DATAFY INSIGHTS</div>
       <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
     </div>
     <div class="h-page">8 / 9</div>

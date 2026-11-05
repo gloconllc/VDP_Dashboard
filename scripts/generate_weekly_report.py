@@ -20,6 +20,7 @@ import base64
 import html
 import io
 import os
+import re
 import sqlite3
 from datetime import datetime, timedelta
 
@@ -121,6 +122,60 @@ GROUP_BENCHMARK = {
     "compression_days_annual": "135",
     "demand_share": "60.5%",
 }
+
+
+def _str_weekly_live(con) -> dict:
+    """Latest STR weekly coastal-peer week (fact_str_group_metrics), computed from STR's own
+    supply, demand and revenue for this year and the same week last year. Added 2026-11-05 to
+    replace the STR/CBRE benchmark figures on the comp-set chart and the group panel."""
+    d = pd.read_sql_query(
+        "SELECT as_of_date, market, segment, metric_name, data_period, metric_value FROM fact_str_group_metrics "
+        "WHERE grain='weekly' AND metric_name IN ('supply','demand','revenue') AND data_period IN ('current','prior_year') "
+        "AND as_of_date=(SELECT MAX(as_of_date) FROM fact_str_group_metrics WHERE grain='weekly')", con)
+    if d.empty:
+        return {}
+    p = d.pivot_table(index=["market", "segment"], columns=["metric_name", "data_period"], values="metric_value", aggfunc="last")
+    end = pd.Timestamp(d["as_of_date"].iloc[0]); start = end - timedelta(days=6)
+    lab = (f"{start.strftime('%B %-d')} – {end.strftime('%-d, %Y')}" if start.month == end.month
+           else f"{start.strftime('%B %-d')} – {end.strftime('%B %-d, %Y')}")
+    def g(mk, seg, m, per):
+        try:
+            v = p.loc[(mk, seg), (m, per)]
+            return float(v) if pd.notna(v) else None
+        except KeyError:
+            return None
+    peers = []
+    for mk in sorted({i[0] for i in p.index}):
+        s_, r_ = g(mk, "Total", "supply", "current"), g(mk, "Total", "revenue", "current")
+        if s_ and r_ is not None:
+            peers.append((mk, r_ / s_))
+    peers.sort(key=lambda x: -x[1])
+    out = {"label": lab, "peers": peers}
+    dp_d, dp_dl = g("Dana Point", "Total", "demand", "current"), g("Dana Point", "Total", "demand", "prior_year")
+    gr_d, gr_dl = g("Dana Point", "Grp.", "demand", "current"), g("Dana Point", "Grp.", "demand", "prior_year")
+    gr_r, gr_rl = g("Dana Point", "Grp.", "revenue", "current"), g("Dana Point", "Grp.", "revenue", "prior_year")
+    tr_d, tr_r = g("Dana Point", "Trans.", "demand", "current"), g("Dana Point", "Trans.", "revenue", "current")
+    if dp_d and gr_d is not None:
+        out.update({
+            "grp_share": gr_d / dp_d * 100,
+            "grp_share_ly": (gr_dl / dp_dl * 100) if gr_dl is not None and dp_dl else None,
+            "grp_rn": gr_d, "grp_rn_chg": (gr_d / gr_dl - 1) * 100 if gr_dl else None,
+            "grp_adr": gr_r / gr_d if gr_r and gr_d else None,
+            "grp_rev": gr_r, "grp_rev_chg": (gr_r / gr_rl - 1) * 100 if gr_r and gr_rl else None,
+            "tr_adr": tr_r / tr_d if tr_r and tr_d else None,
+        })
+    return out
+
+
+def _clip_sentences(text: str, limit: int) -> str:
+    """Whole sentences up to `limit` characters (never a cut-off '...')."""
+    parts = re.split(r"(?<=[.!?])\s+", str(text).strip())
+    out = ""
+    for sp in parts:
+        if len(out) + len(sp) + 1 > limit and out:
+            break
+        out = (out + " " + sp).strip()
+    return out
 
 
 def _connect() -> sqlite3.Connection:
@@ -415,16 +470,27 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
     chart_adr_dp = _bar_chart(dow_labels, [("ADR $", adr_by_dow)], [MAROON], "ADR $",
                                figsize=(6.2, 4.6), label_fmt=lambda v: f"${v:.0f}")
 
-    # comp-set chart: Dana Point (live) + 5 benchmark markets
-    compset_labels = ["Dana Pt"] + list(COMPSET_BENCHMARK.keys())
-    compset_vals = [round(revpar_avg, 2)] + list(COMPSET_BENCHMARK.values())
-    compset_colors = [MAROON] + [SLATE] * len(COMPSET_BENCHMARK)
+    # comp-set chart: STR weekly coastal peers (live, 2026-11-05); STR/CBRE benchmark only as a fallback
+    strw = _str_weekly_live(con)
+    _short = {"Dana Point": "Dana Pt", "Newport Beach": "Newport", "La Jolla": "La Jolla", "Santa Barbara": "Sta Barb",
+              "Monterey-Carmel": "Monterey", "Huntington Beach": "Hunt Bch"}
+    if strw.get("peers"):
+        compset_labels = [_short.get(mk, mk) for mk, _ in strw["peers"]]
+        compset_vals = [round(v, 2) for _, v in strw["peers"]]
+        compset_colors = [MAROON if mk == "Dana Point" else SLATE for mk, _ in strw["peers"]]
+        compset_cap = f"RevPAR by market, STR weekly report, week of {strw['label']}"
+    else:
+        compset_labels = ["Dana Pt"] + list(COMPSET_BENCHMARK.keys())
+        compset_vals = [round(revpar_avg, 2)] + list(COMPSET_BENCHMARK.values())
+        compset_colors = [MAROON] + [SLATE] * len(COMPSET_BENCHMARK)
+        compset_cap = "RevPAR benchmark (STR/CBRE); Dana Point live, others benchmark"
     fig, ax = plt.subplots(figsize=(6.2, 4.6))
     compset_bars = ax.bar(compset_labels, compset_vals, color=compset_colors)
     ax.bar_label(compset_bars, labels=[f"${v:,.0f}" for v in compset_vals], fontsize=9,
                  fontweight="bold", color=INK_BODY, padding=2)
     ax.set_ylabel("RevPAR $", fontsize=10.5)
     ax.tick_params(labelsize=9.5)
+    ax.set_xticks(range(len(compset_labels)))
     ax.set_xticklabels(compset_labels, fontsize=10, rotation=30, ha="right")
     ax.set_ylim(0, max(compset_vals) * 1.18)
     ax.spines[["top", "right"]].set_visible(False)
@@ -579,12 +645,12 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
     if not total_kpi.empty:
         d = total_kpi.iloc[0]
         total_trips = f"{int(d['total_trips']):,}"
-        avg_los = f"{d['avg_los_days']:.1f} nights"
+        avg_los = f"{d['avg_los_days']:.1f} days"
         freshest_period = (d["report_period_start"], d["report_period_end"])
     elif not legacy_kpi.empty:
         d = legacy_kpi.iloc[0]
         total_trips = f"{int(d['total_trips']):,}"
-        avg_los = f"{d['avg_length_of_stay_days']:.1f} nights"
+        avg_los = f"{d['avg_length_of_stay_days']:.1f} days"
         freshest_period = (d["report_period_start"], d["report_period_end"])
     else:
         total_trips, avg_los = "N/A", "N/A"
@@ -653,13 +719,20 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
             "WHERE visitor_days_share_pct IS NOT NULL ORDER BY visitor_days_share_pct DESC LIMIT 10", con
         )
     origin_colors = [TEAL_DK, TEAL, "#3F97AC", "#6FB8CB", TEAL_LT, MAROON, "#C97A47", MAROON_LT, "#2A4A54", "#6B5C4E"]
-    chart_origins = _pie_chart(dma["dma"].tolist(), dma["share_pct"].tolist(), origin_colors[: len(dma)])
+    _pv = dma["share_pct"].tolist(); _other = max(0.0, 100.0 - sum(_pv))
+    chart_origins = _pie_chart(dma["dma"].tolist() + (["Other markets"] if _other > 0.5 else []),
+                               _pv + ([_other] if _other > 0.5 else []),
+                               origin_colors[: len(dma)] + (["#D9E2E6"] if _other > 0.5 else []))
     origins_legend = ""
     for i, (_, r) in enumerate(dma.iterrows()):
         origins_legend += (
             f'<div class="origins-legend-row"><div class="dot" style="background:{origin_colors[i % len(origin_colors)]}">'
             f'</div><div style="flex:1;">{r["dma"]}</div><div style="font-weight:700;">{r["share_pct"]:.1f}%</div></div>\n'
         )
+
+    if _other > 0.5:
+        origins_legend += (f'<div class="origins-legend-row"><div class="dot" style="background:#D9E2E6"></div>'
+                           f'<div style="flex:1;">All other markets</div><div style="font-weight:700;">{_other:.1f}%</div></div>\n')
 
     # Real data callouts for the "Why Visitors Choose Dana Point" photo cards
     repeat_row = pd.read_sql_query(
@@ -674,7 +747,7 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
     )
     stat_harbor = f"{float(harbor_row.iloc[0]['visitor_days_share_pct']):.0f}%" if not harbor_row.empty else "N/A"
 
-    stat_los = avg_los.replace(" nights", " nights") if avg_los != "N/A" else "N/A"
+    stat_los = avg_los
 
     # executive headline: top dmo insight(s) for the front page
     exec_insights = pd.read_sql_query(
@@ -686,7 +759,7 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
     for _, r in exec_insights.iterrows():
         tag = r["headline"].split(":")[0].split("→")[0][:44]
         body = r["body"]
-        body = body if len(body) < 200 else body[:197] + "..."
+        body = _clip_sentences(body, 230)
         exec_headline_cards += (
             f'<div class="insight-card"><div class="insight-tag">{tag}</div>'
             f'<div class="insight-body">{body}</div></div>\n'
@@ -704,7 +777,7 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
     for _, r in insights.iterrows():
         tag = r["headline"].split(":")[0].split("→")[0][:40]
         body = r["body"]
-        body = body if len(body) < 220 else body[:217] + "..."
+        body = _clip_sentences(body, 240)
         insight_cards += (
             f'<div class="insight-card"><div class="insight-tag">{tag}</div>'
             f'<div class="insight-body">{body}</div></div>\n'
@@ -736,7 +809,18 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
         "OCC_YOY": _fmt_pct(occ_yoy_avg, sign=True) if occ_yoy_avg is not None else "N/A",
         "ADR_YOY": _fmt_pct(adr_yoy_avg, sign=True) if adr_yoy_avg is not None else "N/A",
         "REVPAR_YOY": _fmt_pct(revpar_yoy_avg, sign=True) if revpar_yoy_avg is not None else "N/A",
-        "GROUP_DEMAND_SHARE": GROUP_BENCHMARK["demand_share"],
+        "GROUP_DEMAND_SHARE": (f"{strw['grp_share']:.1f}%" if strw.get("grp_share") is not None else GROUP_BENCHMARK["demand_share"]),
+        "GROUP_SHARE_NOTE": (f"Group room demand share is STR's live segment figure for Dana Point, week of {strw['label']}"
+                             + (f" (same week last year {strw['grp_share_ly']:.1f}%)." if strw.get('grp_share_ly') is not None else ".")
+                             if strw.get("grp_share") is not None else
+                             "Group demand share figure is an industry benchmark (STR/CBRE), pending a live STR group-segment export; see Page 8."),
+        "COMPSET_CAP": compset_cap,
+        "STR_WEEK_LABEL": strw.get("label", "n/a"),
+        "GRP_SHARE": (f"{strw['grp_share']:.1f}%" + (f" (last year {strw['grp_share_ly']:.1f}%)" if strw.get('grp_share_ly') is not None else "")) if strw.get("grp_share") is not None else "N/A",
+        "GRP_RN": (f"{strw['grp_rn']:,.0f}" + (f" ({strw['grp_rn_chg']:+.1f}%)" if strw.get('grp_rn_chg') is not None else "")) if strw.get("grp_rn") is not None else "N/A",
+        "GRP_ADR": _fmt_usd(strw["grp_adr"]) if strw.get("grp_adr") else "N/A",
+        "TR_ADR": _fmt_usd(strw["tr_adr"]) if strw.get("tr_adr") else "N/A",
+        "GRP_REV": (f"${strw['grp_rev']/1e6:,.2f}M" + (f" ({strw['grp_rev_chg']:+.1f}%)" if strw.get('grp_rev_chg') is not None else "")) if strw.get("grp_rev") else "N/A",
         "CHART_OCC_DP": chart_occ_dp,
         "CHART_COMPSET": chart_compset,
         "CHART_ADR_DP": chart_adr_dp,

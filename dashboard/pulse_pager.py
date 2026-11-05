@@ -22,7 +22,7 @@ ALIAS = {"pulse-brain": "pulse-snapshot", "pulse-insights": "pulse-notes"}
 # anchor are "virtual": they only show their embedded report section(s).
 EMBEDS = {
     "pulse-glance": [["overview-a", "Summary"], ["overview", "Overview"]],
-    "pulse-snapshot": [["today", "Dana Point today"]],
+    "pulse-snapshot": [["today", "Dana Point today"], ["week", "This week"]],   # This week added 2026-11-05
     "pulse-origins": [["spend", "Visitor spending"]],
     "pulse-who": [["who", "Who visits"]],
     "pulse-here": [["here", "Getting here"]],

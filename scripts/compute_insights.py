@@ -305,7 +305,8 @@ def load_datafy_overview(conn: sqlite3.Connection) -> dict[str, Any]:
         try:
             fresh = pd.read_sql_query(
                 "SELECT total_trips, avg_los_days, report_period_start, report_period_end "
-                "FROM datafy_overview_total_kpis ORDER BY report_period_start DESC LIMIT 1",
+                "FROM datafy_overview_total_kpis WHERE report_period_start >= strftime('%Y', report_period_end) || '-01-01' "
+                "ORDER BY report_period_end DESC, report_period_start DESC LIMIT 1",   # newest year-to-date row (2026-11-05)
                 conn,
             )
             if not fresh.empty:
