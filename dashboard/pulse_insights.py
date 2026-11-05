@@ -277,6 +277,205 @@ SRC = {
 # The report
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# This week (added 2026-11-05): STR weekly coastal peer report + CoStar weekday/weekend
+# ---------------------------------------------------------------------------
+def _week_pivot(conn, segment="Total"):
+    d = _q(conn, "SELECT as_of_date, market, metric_name, data_period, metric_value FROM fact_str_group_metrics "
+                 "WHERE grain='weekly' AND segment=? AND metric_name IN ('supply','demand','revenue') "
+                 "AND data_period IN ('current','prior_year')", (segment,))
+    if d is None or d.empty:
+        return pd.DataFrame()
+    p = d.pivot_table(index=["as_of_date", "market"], columns=["metric_name", "data_period"], values="metric_value", aggfunc="last")
+    p.columns = [f"{a}_{'cur' if b == 'current' else 'ly'}" for a, b in p.columns]
+    p = p.reset_index()
+    for k in ("cur", "ly"):
+        s, dm, rv = p.get(f"supply_{k}"), p.get(f"demand_{k}"), p.get(f"revenue_{k}")
+        if dm is None or rv is None:
+            return pd.DataFrame()
+        p[f"adr_{k}"] = rv / dm.where(dm > 0)
+        if s is not None:            # segment rows (Grp., Trans.) carry no supply of their own
+            p[f"occ_{k}"] = dm / s * 100
+            p[f"revpar_{k}"] = rv / s
+    return p
+
+
+def _count_word(n: int) -> str:
+    return ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"][n] if 0 <= n < 10 else f"{n:,}"
+
+
+def _chg(a, b):
+    return (a / b - 1) * 100 if _ok(a) and _ok(b) and b else None
+
+
+def _week_section(conn, dateline):
+    """Latest STR weekly week for Dana Point and its five coastal peers. Every figure is computed
+    from STR's own supply, demand and revenue (current and same week last year), so the
+    percent changes never depend on the stored pct_change rows (negative ones load as NULL)."""
+    tot = _week_pivot(conn, "Total")
+    if tot.empty:
+        return None
+    wk_end = pd.Timestamp(tot["as_of_date"].max())
+    wk_start = wk_end - pd.Timedelta(days=6)
+    wspan = f"{ap_md(wk_start)}–{ap_date(wk_end)}" if wk_start.month != wk_end.month else f"{ap_md(wk_start)}–{wk_end.day}, {wk_end.year}"
+    cur = tot[tot["as_of_date"] == wk_end.strftime("%Y-%m-%d")].set_index("market")
+    if "Dana Point" not in cur.index:
+        return None
+    dp = cur.loc["Dana Point"]
+    occ_pts = dp.occ_cur - dp.occ_ly
+    adr_c, rvp_c, rev_c = _chg(dp.adr_cur, dp.adr_ly), _chg(dp.revpar_cur, dp.revpar_ly), _chg(dp.revenue_cur, dp.revenue_ly)
+    rooms = dp.supply_cur / 7
+    peers = cur.sort_values("revpar_cur", ascending=False)
+    n_mk = len(peers)
+    rank_rvp = list(peers.index).index("Dana Point") + 1
+    rank_adr = list(cur.sort_values("adr_cur", ascending=False).index).index("Dana Point") + 1
+    rank_occ = list(cur.sort_values("occ_cur", ascending=False).index).index("Dana Point") + 1
+    peers_rvp_chg = {mk: _chg(r.revpar_cur, r.revpar_ly) for mk, r in cur.iterrows()}
+    # Last eight weeks, Dana Point
+    hist = tot[tot["market"] == "Dana Point"].sort_values("as_of_date").tail(8)
+    four = hist.tail(4)
+    f_rev, f_rev_ly = four["revenue_cur"].sum(), four["revenue_ly"].sum()
+    f_rvp, f_rvp_ly = f_rev / four["supply_cur"].sum(), f_rev_ly / four["supply_ly"].sum()
+    four_span = f"{ap_md(pd.Timestamp(four['as_of_date'].min()) - pd.Timedelta(days=6))}–{ap_date(wk_end)}"
+    up_weeks = int((hist["revpar_cur"] > hist["revpar_ly"]).sum())
+    # Business mix for the week (group vs. everything else)
+    grp = _week_pivot(conn, "Grp.")
+    g = grp[(grp["as_of_date"] == wk_end.strftime("%Y-%m-%d")) & (grp["market"] == "Dana Point")] if not grp.empty else pd.DataFrame()
+    g_share = g_share_ly = g_adr = None
+    if not g.empty:
+        g = g.iloc[0]
+        g_share = g.demand_cur / dp.demand_cur * 100 if dp.demand_cur else None
+        g_share_ly = g.demand_ly / dp.demand_ly * 100 if dp.demand_ly else None
+        g_adr = g.adr_cur
+    # CoStar weekend vs. weekday, latest month
+    wp = _q(conn, "SELECT report_period, day_part, occupancy_pct, adr_usd, revpar_usd, revpar_yoy_pct FROM costar_weekpart_monthly "
+                  "WHERE report_period=(SELECT MAX(report_period) FROM costar_weekpart_monthly)")
+    we = wd = None
+    wp_m = "n/a"
+    if wp is not None and not wp.empty:
+        wpi = wp.set_index("day_part")
+        we = wpi.loc["weekend"] if "weekend" in wpi.index else None
+        wd = wpi.loc["weekday"] if "weekday" in wpi.index else None
+        wp_m = ap_month(pd.Timestamp(wp["report_period"].iloc[0] + "-01"))
+    wp_src = f"CoStar weekday and weekend export, {wp_m}"
+    src = SRC["str_weekly"]
+    up = rvp_c is not None and rvp_c >= 0
+    s = {
+        "id": "week", "tab": "This week",
+        "question": f"How did Dana Point hotels do the week of {wspan}?",
+        "headline": (f"Revenue per room {'rose' if up else 'fell'} {abs(rvp_c):.1f}% the week of {wspan}" if _ok(rvp_c)
+                     else f"Dana Point hotels, week of {wspan}"),
+        "dek": (f"Occupancy was {pct(dp.occ_cur)} ({'+' if occ_pts >= 0 else ''}{occ_pts:.1f} points) at a {usd(dp.adr_cur)} average rate; "
+                f"Dana Point ranked {ps._ordinal(rank_rvp)} of {_count_word(n_mk)} coastal markets on revenue per room."),
+        "byline_src": f"{src}, week of {wspan}",
+        "lede": (f"{dateline} Dana Point hotels earned {usd(dp.revpar_cur)} per available room the week of {wspan}, "
+                 f"{spct(rvp_c)} from the same week last year. Room revenue was {usd_big(dp.revenue_cur)} ({spct(rev_c)}). "
+                 f"Occupancy was {pct(dp.occ_cur)}, {'up' if occ_pts >= 0 else 'down'} {abs(occ_pts):.1f} points, and the average nightly rate was "
+                 f"{usd(dp.adr_cur)} ({spct(adr_c)})."),
+        "lede_src": f"Source: {src}, week of {wspan}",
+        "key": {"v": spct(rvp_c), "l": f"revenue per room vs. same week last year"},
+        "why": (f"The weekly report is the most current hotel read in PULSE. It shows whether the latest week is ahead of last year "
+                f"and how Dana Point compares with Newport Beach, La Jolla, Santa Barbara, Monterey-Carmel and Huntington Beach."),
+        "strip_title": f"This week: {wspan}",
+        "strip_period": "STR weekly report",
+        "glance": [
+            {"type": "versus", "title": "Revenue per available room, this week vs. last year", "sub": f"Week of {wspan}",
+             "a": {"l": "This year", "v": float(dp.revpar_cur), "fmt": "usd"}, "b": {"l": "Last year", "v": float(dp.revpar_ly), "fmt": "usd"},
+             "src": src},
+        ] + ([{"type": "share", "title": "Group vs. other business, room nights", "sub": f"Week of {wspan}",
+               "parts": [{"v": float(g_share), "l": "Group"}, {"v": float(100 - g_share), "l": "Transient and other"}], "src": src}]
+             if _ok(g_share) else []),
+        "numbers": [
+            _stat(f"Week of {wspan}", usd(dp.revpar_cur), "Revenue per available room", f"{glyph(rvp_c)} {spct(rvp_c)} vs. last year", src),
+            _stat(f"Week of {wspan}", pct(dp.occ_cur), "Occupancy", f"{glyph(occ_pts / 10)} {'+' if occ_pts >= 0 else ''}{occ_pts:.1f} points vs. last year", src),
+            _stat(f"Week of {wspan}", usd(dp.adr_cur), "Average nightly rate", f"{glyph(adr_c)} {spct(adr_c)} vs. last year", src),
+            _stat(f"Week of {wspan}", usd_big(dp.revenue_cur), "Room revenue", f"{glyph(rev_c)} {spct(rev_c)} vs. last year", src),
+            _stat("Latest four weeks", usd(f_rvp), "Revenue per available room", f"{glyph(_chg(f_rvp, f_rvp_ly))} {spct(_chg(f_rvp, f_rvp_ly))}, {four_span}", src),
+        ] + ([_stat(wp_m, pct(we.occupancy_pct), "Weekend occupancy", f"Weekdays {pct(wd.occupancy_pct)}", wp_src)] if we is not None and wd is not None else []),
+        "calc": [
+            ["Revenue per available room", "Room revenue ÷ rooms available", f"{usd(dp.revenue_cur)} ÷ {num(dp.supply_cur)} = {usd(dp.revpar_cur)}", src],
+            ["Same week last year", "Room revenue ÷ rooms available", f"{usd(dp.revenue_ly)} ÷ {num(dp.supply_ly)} = {usd(dp.revpar_ly)}", src],
+            ["Occupancy", "Rooms sold ÷ rooms available", f"{num(dp.demand_cur)} ÷ {num(dp.supply_cur)} = {pct(dp.occ_cur)}", src],
+            ["Average nightly rate", "Room revenue ÷ rooms sold", f"{usd(dp.revenue_cur)} ÷ {num(dp.demand_cur)} = {usd(dp.adr_cur)}", src],
+        ] + ([["Group share", "Group rooms sold ÷ all rooms sold", f"{num(g.demand_cur)} ÷ {num(dp.demand_cur)} = {pct(g_share)}", src]] if _ok(g_share) else []),
+        "details": {
+            "who": _det(f"{num(rooms)} rooms", "a night in the STR sample", "Visit Dana Point hotels reporting to STR.", src),
+            "what": _det(usd(dp.revpar_cur), "revenue per available room", f"{spct(rvp_c)} vs. the same week last year.", src),
+            "when": _det(wspan, "latest STR week", f"{_count_word(up_weeks).capitalize()} of the last {_count_word(len(hist))} weeks were ahead of last year.", src),
+            "where": _det(f"{ps._ordinal(rank_rvp)} of {_count_word(n_mk)}", "coastal markets on revenue per room",
+                          f"{ps._ordinal(rank_adr)} on rate, {ps._ordinal(rank_occ)} on occupancy.", src),
+            "why": _det(pct(g_share) if _ok(g_share) else "n/a", "of rooms sold were group",
+                        f"Same week last year: {pct(g_share_ly)}." if _ok(g_share_ly) else "Group share from the STR segment report.", src),
+            "how": _det("STR", "supply, demand and revenue", "Rates and changes are computed from STR's own counts for both years.", "PULSE calculation"),
+        },
+        "charts": [
+            {"type": "line", "title": f"Revenue per available room, last {_count_word(len(hist))} weeks", "sub": "Dana Point, by week ending date, this year vs. same week last year",
+             "x": [ap_md(pd.Timestamp(d)) for d in hist["as_of_date"]],
+             "series": [{"name": "This year", "kind": "cur", "fmt": "usd", "values": [round(float(v), 2) for v in hist["revpar_cur"]]},
+                        {"name": "Last year", "kind": "prior", "fmt": "usd", "values": [round(float(v), 2) for v in hist["revpar_ly"]]}],
+             "src": src},
+            {"type": "hbar", "title": "Revenue per available room by coastal market", "sub": f"Week of {wspan}",
+             "rows": [{"l": mk, "v": round(float(r.revpar_cur), 2), "fmt": "usd", "hi": mk == "Dana Point"} for mk, r in peers.iterrows()],
+             "src": src},
+        ] + ([{"type": "vbar", "title": "Weekend vs. weekday nights, by month", "sub": "Occupancy, CoStar Dana Point market",
+               "x": [ap_month(pd.Timestamp(p + "-01")).split(" ")[0] for p in wpt["report_period"]],
+               "series": [{"name": "Weekend", "kind": "cur", "fmt": "pct", "values": [float(v) for v in wpt["weekend"]]},
+                          {"name": "Weekday", "kind": "prior", "fmt": "pct", "values": [float(v) for v in wpt["weekday"]]}],
+               "src": "CoStar weekday and weekend export"}] if (wpt := _weekpart_trend(conn)) is not None else []),
+        "table": {"title": "Coastal markets, week of " + wspan, "sub": "STR weekly report; changes vs. same week last year",
+                  "cols": ["Market", "Occupancy", "Average nightly rate", "Revenue per available room", "Change in revenue per room"], "num": [1, 2, 3, 4],
+                  "rows": [[mk, pct(r.occ_cur), usd(r.adr_cur), usd(r.revpar_cur), spct(peers_rvp_chg.get(mk))] for mk, r in peers.iterrows()],
+                  "src": src},
+        "means": {
+            "enh": [{"tag": "Rate", "text": f"Dana Point has the highest average rate of the {_count_word(n_mk)} coastal markets this week ({usd(dp.adr_cur)}).", "src": src}]
+                   if rank_adr == 1 else [],
+            "needs": [{"tag": "Occupancy", "text": f"Dana Point ranks {ps._ordinal(rank_occ)} of {_count_word(n_mk)} on occupancy this week ({pct(dp.occ_cur)}).", "src": src}]
+                     if rank_occ > 1 else []},
+        "cc": [
+            _cc("Gain" if up else "Gap", f"Revenue per room {spct(rvp_c)} vs. the same week last year.", None, src),
+            _cc("Gain" if occ_pts >= 0 else "Gap", f"Occupancy {'+' if occ_pts >= 0 else ''}{occ_pts:.1f} points.", None, src),
+        ] + ([_cc("Explanation", f"Weekends ran {pct(we.occupancy_pct)} full in {wp_m}; weekdays {pct(wd.occupancy_pct)}.", None, wp_src)]
+             if we is not None and wd is not None else []) + [
+            _cc("Data limit", "One week is a short window; holidays and events can move a single week.", None, "PULSE data note"),
+        ],
+        "advice": [],
+        "more": [],
+        "notes": [f"STR weeks run Monday to Sunday. The latest week ends {ap_date(wk_end)}.",
+                  "Prior-year figures are STR's same week last year.",
+                  f"Weekend and weekday figures are CoStar's monthly split for the Dana Point market; latest month {wp_m}."],
+    }
+    s["extra_qa"] = [q for q in [
+        {"q": f"Where did Dana Point rank among coastal markets the week of {wspan}?",
+         "a": (f"{ps._ordinal(rank_rvp).capitalize()} of {_count_word(n_mk)} on revenue per room ({usd(dp.revpar_cur)}), {ps._ordinal(rank_adr)} on average rate "
+               f"({usd(dp.adr_cur)}) and {ps._ordinal(rank_occ)} on occupancy ({pct(dp.occ_cur)})."),
+         "src": src, "v": f"{ps._ordinal(rank_rvp)} of {_count_word(n_mk)}", "l": "on revenue per room"},
+        ({"q": f"How much of the week's hotel business was group?",
+          "a": (f"Group made up {pct(g_share)} of rooms sold the week of {wspan}" +
+                (f", vs. {pct(g_share_ly)} the same week last year." if _ok(g_share_ly) else ".") +
+                (f" Group rooms averaged {usd(g_adr)} a night." if _ok(g_adr) else "")),
+          "src": src, "v": pct(g_share), "l": "group share of rooms sold"} if _ok(g_share) else None),
+        ({"q": "Are weekends or weekdays fuller?",
+          "a": (f"Weekends. In {wp_m}, weekend nights were {pct(we.occupancy_pct)} full at {usd(we.adr_usd)} a night; "
+                f"weekdays were {pct(wd.occupancy_pct)} full at {usd(wd.adr_usd)}."),
+          "src": wp_src, "v": f"{we.occupancy_pct - wd.occupancy_pct:.1f} pts", "l": "weekend occupancy above weekdays"}
+         if we is not None and wd is not None else None),
+        {"q": "How have the last four weeks compared with last year?",
+         "a": (f"Revenue per available room was {usd(f_rvp)} for {four_span}, {spct(_chg(f_rvp, f_rvp_ly))} vs. the same weeks last year; "
+               f"{_count_word(up_weeks)} of the last {_count_word(len(hist))} weeks were ahead of last year."),
+         "src": src, "v": spct(_chg(f_rvp, f_rvp_ly)), "l": "revenue per room, latest four weeks"},
+    ] if q]
+    return s
+
+
+def _weekpart_trend(conn):
+    d = _q(conn, "SELECT report_period, day_part, occupancy_pct FROM costar_weekpart_monthly WHERE day_part IN ('weekend','weekday') "
+                 "ORDER BY report_period")
+    if d is None or d.empty:
+        return None
+    p = d.pivot_table(index="report_period", columns="day_part", values="occupancy_pct").dropna().tail(6).reset_index()
+    return p if not p.empty and {"weekend", "weekday"} <= set(p.columns) else None
+
+
 def build_report(conn, m, dma_coords: dict | None = None, prepared: date | None = None) -> dict:
     """m is a pulse_story.Model built on a year-to-date window."""
     prepared = prepared or date.today()
@@ -636,6 +835,14 @@ def build_report(conn, m, dma_coords: dict | None = None, prepared: date | None 
                                          for r in m.trend.itertuples()],
                                 "src": hotel_src_short})
     sections.append(s_today)
+
+    # ---- 1b. This week (latest STR weekly report), added 2026-11-05 ----
+    try:
+        _wk = _week_section(conn, dateline)
+        if _wk:
+            sections.append(_wk)
+    except Exception as _exc:  # noqa: BLE001
+        print(f"[insights] week section skipped: {_exc}")
 
     # ---- 2. Who visits ------------------------------------------------
     age = demo[demo["dimension"] == "Age"].sort_values("share_pct", ascending=False) if not demo.empty else pd.DataFrame()
@@ -1347,7 +1554,8 @@ def build_report(conn, m, dma_coords: dict | None = None, prepared: date | None 
 
     # ---- link "up next" ------------------------------------------------
     bridges = {
-        "today": "Room revenue starts with visitors. The next section shows who they are and where they come from.",
+        "today": "The next section narrows to the latest STR week and Dana Point's coastal peers.",
+        "week": "Room revenue starts with visitors. The next section shows who they are and where they come from.",
         "who": "Knowing who visits, the next question is how much they spend and where it goes.",
         "spend": "Visitor spending returns to the city through taxes and jobs, measured next.",
         "city": "Most of that revenue starts in hotel rooms. The next section looks at the hotel market night by night.",
@@ -1404,6 +1612,8 @@ def build_report(conn, m, dma_coords: dict | None = None, prepared: date | None 
     takeaways = [{"id": s["id"], "tab": s["tab"], "v": s["key"]["v"], "l": s["key"]["l"], "head": s["headline"], "src": s["byline_src"]} for s in sections]
     qa = [{"id": s["id"], "q": s["question"], "a": s["lede"].replace(dateline + " ", ""), "src": s["lede_src"].replace("Source: ", ""), "v": s["key"]["v"], "l": s["key"]["l"]}
           for s in sections]
+    for _s in sections:   # added 2026-11-05: extra data-backed questions (This week section)
+        qa.extend({"id": _s["id"], **_x} for _x in _s.get("extra_qa", []))
     growth = []
     for lbl, v in (("Revenue per room, latest four weeks", mo.get("revpar_pct")), (f"Revenue per room, {P_TD}", h.get("revpar_pct")),
                    (f"Room revenue, {P_TD}", h.get("revenue_pct")), (f"Average nightly rate, {P_TD}", h.get("adr_pct")),

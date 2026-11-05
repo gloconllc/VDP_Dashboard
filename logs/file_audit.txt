@@ -1,0 +1,55 @@
+Generated 2026-11-05 20:25:47 UTC
+
+FILE AUDIT (latest = date added): 2 need attention, 5 notes, 16 confirmed | NOT_LOADED 13 file(s) in the newest upload; STR_MAIN_FILES_OLDER str_daily.xlsx, str_monthly.xlsx
+
+Needs Attention
+  [Datafy] NOT_LOADED: 13 file(s) in the newest upload
+      Added 2026-11-05 but no loader read them: RepeatVsOneTimeTripsComparison_Export (3).csv; ComparisonTopMarketsVisual_Export (3).csv; DynamicHomePage-Top Categories_Export (1).csv; Spending Correlation by Category_Export (3).csv; TopClusterVisitation_Export (3).csv; TopClusterVisitation_Export (4).csv; DailyVisitorsTrend_Export (4).csv; Enhanced Spend Correlation Insights_Export (5).csv; and 5 more. Each needs a handler (NEW_FILE_HANDLERS in load_datafy_reports.py or load_datafy_extended.py) or an entry in SKIP_STEMS if it is intentionally ignored.
+  [str] STR_MAIN_FILES_OLDER: str_daily.xlsx, str_monthly.xlsx
+      These were last replaced 2026-08-11, 86 days before the newest weekly file (2026-11-05). The STR daily and monthly series stop where those two files stop; drop fresh exports under the same names to extend them.
+
+Notes
+  [Datafy] WINDOW_READ_FROM_UPLOAD: 45 file(s) in the newest upload
+      These exports state no date range and no filter was recorded, so the upload's window (2025-01-01 to 2026-10-17) was read from DailyVisitorsTrend_Export (4).csv in the same upload. Attribution and Advertising can use a narrower filter than the visitation reports, so confirm it against the dashboard or put the range in the file name.
+  [Datafy] DIFFERENT_MEASURE: 3 file(s) in the newest upload
+      Read, but each holds a different measure than the table stores (for example Share of Trips where Share of Visitor Days is expected), so the earlier rows were kept: DynamicHomePage-Top Markets_Export (7).csv; TopPOIs_Export (15).csv; Advanced Spending Overview-Top Markets_Export (7).csv.
+  [Datafy] OLDER_COPY_SKIPPED: 1 file(s) in the newest upload
+      A newer copy of the same report type was read, so these older copies were passed over: Advertising_Shared_TraditionalKPIsVisual_Export (4).csv.
+  [Datafy] NAME_ORDER_WRONG: 67 report type(s)
+      Sorting by name would have chosen an older file than date added does. Date added is used. Examples: Attribution Insights Media Attribution Groups_Export (8).csv (by date) instead of Attribution Insights Media Attribution Groups_Export.csv (by name); Attribution Insights Media Overview Top Markets_Export (8).csv (by date) instead of Attribution Insights Media Overview Top Markets_Export.csv (by name); Attribution Insights Media Overview Totals_Export (9).csv (by date) instead of Attribution Insights Media Overview Totals_Export.csv (by name).
+  [Datafy] TREND_THROUGH: monthly spend and visitor days
+      Newest series file Advanced Spending Overview-Spending By Year_Export (9).csv (added 2026-11-05) has data through October 2026; Datafy lags about 21 days, so October is partial and September 2026 is the last complete month the board trends.
+
+Confirmed
+  [Datafy] NEWEST_BATCH: batch 14 of 14
+      Newest upload added Nov 05, 2026 20:04 UTC (mtime): 83 files, 42 read by load_datafy_reports.py (the advertising and extended loaders read the rest).
+  [Datafy] BOARD_USES_NEWEST: board tables
+      For every Datafy table the board reads, the newest file's period is the one shown.
+  [Visit_California] NEWEST_FILE: data/Visit_California
+      Newest file by date added: State and Regional lodging Forecast -May 2026 (3).xlsx (Jul 30, 2026 06:07 UTC, git); 6 file(s) in that upload.
+  [Zartico] NEWEST_FILE: data/Zartico
+      Newest file by date added: Visualization_ Resources.pdf (Mar 17, 2026 17:43 UTC, git); 16 file(s) in that upload.
+  [bts] NEWEST_FILE: data/bts
+      Newest file by date added: bts_t100_routes.csv (Jun 09, 2026 20:47 UTC, git); 1 file(s) in that upload.
+  [costar] NEWEST_FILE: data/costar
+      Newest file by date added: Newport Beach-Dana Point-Hospitality-Submarket-2026-11-05.pdf (Nov 05, 2026 19:49 UTC, mtime); 8 file(s) in that upload.
+  [inside_airbnb] NEWEST_FILE: data/inside_airbnb
+      Newest file by date added: dana_point_stvr_summary.csv (Jun 09, 2026 20:47 UTC, git); 1 file(s) in that upload.
+  [later] NEWEST_FILE: data/later
+      Newest file by date added: TikTok/TK_Profile_Growth_and_Discovery_01-01-2026_to_29-07-2026.CSV (Jul 30, 2026 06:07 UTC, git); 3 file(s) in that upload. Named in the load log.
+  [str] NEWEST_FILE: data/str
+      Newest file by date added: 2026-10-07_VisitDanaPoint_20260927 (1).xls (Nov 05, 2026 20:08 UTC, mtime); 6 file(s) in that upload.
+  [us_travel] NEWEST_FILE: data/us_travel
+      Newest file by date added: Impact Summary (1).pdf (Jul 30, 2026 06:07 UTC, git); 11 file(s) in that upload.
+  [Database] FRESHNESS: Hotel daily (kpi_daily_summary)
+      Database runs through 2026-10-31; newest str file was added 2026-11-05.
+  [Database] FRESHNESS: STR weekly (fact_str_group_metrics)
+      Database runs through 2026-10-25; newest str file was added 2026-11-05.
+  [Database] FRESHNESS: CoStar market daily
+      Database runs through 2026-10-31; newest costar file was added 2026-11-05.
+  [Database] FRESHNESS: CoStar market monthly
+      Database runs through 2026-09; newest costar file was added 2026-11-05.
+  [Database] FRESHNESS: Datafy advertising snapshot
+      Database runs through 2026-11-05; newest datafy file was added 2026-11-05.
+  [Database] FRESHNESS: Insights
+      Database runs through 2026-11-05.

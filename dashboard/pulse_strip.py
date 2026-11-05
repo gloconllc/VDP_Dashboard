@@ -18,11 +18,13 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 PLAN = {
     # Only what the board does not already show (no repeats of its charts).
     # (cards from section, card indexes, [(report section, infographic type)])
+    "week": ("week", [0, 1, 2, 5], [("week", "versus"), ("week", "share")]),   # added 2026-11-05
     "snapshot": ("city", [0, 1, 2], [("today", "chain")]),
     "visitors": ("mkt", [0, 1, 3], [("who", "waffle"), ("mkt", "funnel")]),
     "forward": ("night", [0, 1, 2], [("night", "funnel")]),
 }
 TITLES = {
+    "week": "This week",
     "snapshot": "City revenue and jobs",
     "visitors": "Trips and marketing reach",
     "forward": "One more night",
@@ -103,7 +105,9 @@ def glance(report: dict, board_section: str) -> dict | None:
     cards = [nums[i] for i in idx if i < len(nums)]
     if not glance_blocks and not cards:
         return None
-    return {"kind": "glance", "title": TITLES.get(board_section, ""), "period": report.get("window_label", "Year to date"),
+    _sec = secs.get(cards_from) or {}
+    return {"kind": "glance", "title": _sec.get("strip_title") or TITLES.get(board_section, ""),
+            "period": _sec.get("strip_period") or report.get("window_label", "Year to date"),
             "cards": cards, "glance": glance_blocks[:2]}
 
 

@@ -80,7 +80,8 @@ def _latest_costar_export(name_regex, legacy_name):
 
 
 DAILY_FILE = _latest_costar_export(r"^daily(?!_?seg).*\.xlsx$", "daily_costar.xlsx")
-MONTHLY_FILE = _latest_costar_export(r"^monthly(?!_?seg).*\.xlsx$", "monhtly_costar.xlsx")
+# CoStar also ships the typo "Monhtly_", so accept both spellings.
+MONTHLY_FILE = _latest_costar_export(r"^mon(?:th|ht)ly(?!_?seg).*\.xlsx$", "monhtly_costar.xlsx")
 
 DDL = """
 CREATE TABLE IF NOT EXISTS costar_market_daily (

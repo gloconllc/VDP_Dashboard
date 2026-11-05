@@ -152,6 +152,8 @@ STEPS = [
     # costar_market_daily_segment / costar_participation, which the CoStar Segmentation page
     # (dashboard/pages.py) and Group tab (dashboard/components_group.py) both read from.
     ("load_costar_segmentation", os.path.join(BASE_DIR, "load_costar_segmentation.py"), False),
+    # CoStar weekday vs. weekend monthly export (Weekend_MM_DD_YY.xlsx) → costar_weekpart_monthly. Added 2026-11-05.
+    ("load_costar_weekpart", os.path.join(BASE_DIR, "load_costar_weekpart.py"), False),
     # U.S. Travel Association national benchmarks (group + business travel + traveler types)
     # Seeds hardcoded 2024 benchmarks + parses any PDFs in data/us_travel/.
     # Download monthly from ustravel.org/state-of-group-travel-report and save to data/us_travel/

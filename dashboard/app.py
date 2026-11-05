@@ -2039,6 +2039,7 @@ else:
         _anchor("pulse-glance")
         pulse_board.mount(pulse_board.brief(pulse_model), key="pb_brief")
         _strip("announce")
+        _strip("week")   # latest STR week, added 2026-11-05
 
     def _board_snapshot() -> None:
         _anchor("pulse-snapshot")

@@ -90,7 +90,7 @@ def _find_latest(regex_pattern: str):
 # Digit-anchored via the MM_DD_YY date so these can never accidentally match
 # each other or the plain Daily_/Monthly_ export from load_costar_market_daily.py.
 DAILY_SEG_FILE = _find_latest(r"daily.?seg.*\.xlsx$")
-MONTHLY_SEG_FILE = _find_latest(r"monthly.?seg.*\.xlsx$")
+MONTHLY_SEG_FILE = _find_latest(r"mon(?:th|ht)ly.?seg.*\.xlsx$")  # also matches the "Monhtly_Seg_" typo
 # CoStar has spelled this "Particpation_MM_DD_YY.xlsx" and "particp_MM_DD_YY.xlsx"
 # in different months — match on the shared "partic" stem, case-insensitive.
 PARTICIPATION_FILE = _find_latest(r"partic.*\.xlsx$")

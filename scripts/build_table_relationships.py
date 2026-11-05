@@ -1072,6 +1072,10 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
     ("costar_market_daily",          "fact_str_metrics",             "cross_ref",     "as_of_date",
      "CoStar's raw daily submarket export cross-referenced against STR daily VDP metrics for third-party rate validation"),
 
+    ("costar_weekpart_monthly",      "costar_market_monthly",        "same_source",   "report_period",
+     "costar_weekpart_monthly splits each costar_market_monthly month into weekend and weekday nights; its 'all' rows match costar_market_monthly"),
+    ("costar_weekpart_monthly",      "kpi_daily_summary",            "cross_ref",     "report_period→as_of_date",
+     "CoStar weekend vs. weekday monthly performance alongside the daily hotel KPIs for the same months"),
     ("costar_market_daily",          "costar_market_monthly",        "same_source",   "as_of_date→report_period",
      "costar_market_daily rolls up into costar_market_monthly — same CoStar submarket export, daily vs. monthly grain"),
 

@@ -987,6 +987,8 @@ def _series_span(path: str):
         return None
     keys = {k.strip().lower(): k for k in rows[0] if k}
     value_key = next((keys[k] for k in keys if "visitor days" in k), None)
+    if value_key is None and "date" in keys:            # DailyVisitorsTrend: Date, Total Trips
+        value_key = next((keys[k] for k in keys if "trips" in k), None)
     if value_key is None:
         return None
     if "date" in keys:                                   # daily: Date, Est. Visitor Days
@@ -1017,7 +1019,7 @@ def _series_span(path: str):
 
 
 # Dated series that travel with an upload, most precise first.
-_WINDOW_ANCHORS = ("clustertrendyoyvisual", "visitationbyyear")
+_WINDOW_ANCHORS = ("clustertrendyoyvisual", "dailyvisitorstrend_export", "visitationbyyear")   # DailyVisitorsTrend added 2026-11-05: daily, so its last live day beats a month end
 
 
 def _batch_window(paths: list):
