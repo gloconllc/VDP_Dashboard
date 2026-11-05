@@ -31,6 +31,8 @@
 
   var active = null, topic = 0, all = false, items = [], bar = null, timer = null, enabled = false, poll = null;
   var model = {};            // page id -> { topics: [{title, kind, idx}], cards: [els], root: shadowRoot, host: item }
+  // 2026-11-05: one section per page again, and the first page is the main page (header, data window,
+  // board brief); see "embedAfter" in pulse_pager.py. "Show all sections" still gives the long scroll.
   try { all = P.sessionStorage.getItem("pzAll") === "1"; } catch (e) {}
 
   var SHADOW_CSS = ".pz-off{display:none !important}.pz-solo{grid-column:1 / -1 !important;max-width:100% !important}";
@@ -299,6 +301,7 @@
   function steps() { var n = 0; pages.forEach(function (p) { n += model[p.id].topics.length; }); return n; }
   function pos() { var n = 0; for (var i = 0; i < pages.length; i++) { if (pages[i].id === active) return n + topic; n += model[pages[i].id].topics.length; } return 0; }
   function stepBy(d) {
+    if (all) return jump((active && known[active]) ? active : pages[0].id, 0);   // from the full page, Next/Back open one section at a time
     var m = model[active], i = idx();
     if (d > 0) {
       if (topic < m.topics.length - 1) return jump(active, topic + 1);
@@ -333,8 +336,8 @@
     bar.querySelector(".pz-n").textContent = all ? "All sections" :
       pages[idx()].label + (multi ? " · " + (topic + 1) + " of " + m.topics.length : "");
     bar.querySelector(".pz-t").textContent = all ? "Long scroll" : ((multi && topic > 0) || t.kind === "embed" ? t.title : pages[idx()].label);
-    bar.querySelector(".pz-b").disabled = all || pos() === 0;
-    bar.querySelector(".pz-f").disabled = all || pos() === steps() - 1;
+    bar.querySelector(".pz-b").disabled = !all && pos() === 0;
+    bar.querySelector(".pz-f").disabled = !all && pos() === steps() - 1;
     bar.querySelector(".pz-q").textContent = all ? "One page at a time" : "Show all sections";
   }
 
