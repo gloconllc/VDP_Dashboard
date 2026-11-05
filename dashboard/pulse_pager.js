@@ -9,8 +9,7 @@
    each question card is its own topic, with an overview first and the extras (At a glance
    strip, Ask about this section, map) last.
 
-   The date window bar is kept at the top, tucks away while reading down the page, and
-   returns when you scroll up. The duplicate row of section pills is hidden because the
+   The date window bar stays where it loads, above the content, on every page (2026-11-05). The duplicate row of section pills is hidden because the
    bar below and the sidebar list the same pages. */
 (function () {
   "use strict";
@@ -40,7 +39,7 @@
   css.textContent =
     ".pz-off{display:none !important}" +
     ".pz-embed{margin:4px 0 110px}.pz-embed iframe{width:100%;border:0;display:block;background:transparent}" +
-    ".pz-filter{position:static;order:90;background:#fff;padding:10px 0 2px;border-top:1px solid #e2e8f0;margin-top:8px}" +
+    ".pz-filter{position:static;background:#fff;padding:6px 0 4px;margin-bottom:6px}" +   /* 2026-11-05: stays where it loads, above the content */
     ".pz-filter.pz-hide{transform:none}" +
     ".pz-filter.pz-stuck{box-shadow:none}" +
     "@media (prefers-reduced-motion: reduce){.pz-filter{transition:none}}" +
@@ -264,7 +263,9 @@
     var cur = m.topics[topic] || { kind: "main" };
     // The date window only shows where the data on the page can be filtered: not on the newspaper
     // (report) pages, and not on the fixed pages (Full report, About this data, Notes and downloads).
-    var hideFilter = !all && (cur.kind === "embed" || NOFILTER.indexOf(active) > -1);
+    // 2026-11-05: the data window stays visible on every page and topic. Hiding it on report pages read as
+    // "the filters disappear after the page loads", so it is no longer hidden anywhere.
+    var hideFilter = false;
     items.forEach(function (x) {
       var off = false;
       if (x.filter) { x.el.classList.toggle("pz-off", hideFilter); x.el.classList.toggle("pz-filter", !hideFilter); return; }
@@ -384,8 +385,7 @@
     var bars = D.querySelectorAll(".pz-filter");
     bars.forEach(function (b) {
       b.classList.toggle("pz-stuck", y > 8);
-      if (y > 120 && y > lastY + 4) b.classList.add("pz-hide");
-      else if (y < lastY - 4 || y <= 120) b.classList.remove("pz-hide");
+      b.classList.remove("pz-hide");   // never tucked away (2026-11-05)
     });
     lastY = y;
   }
