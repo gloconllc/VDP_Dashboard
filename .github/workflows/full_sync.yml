@@ -147,14 +147,18 @@ jobs:
           python scripts/load_str_multiseg.py || true
           python scripts/load_str_response_sheets.py || true
           python scripts/load_str_translation_table.py || true
+          python scripts/qa_normalize_missing.py
           python scripts/compute_kpis.py
           python scripts/load_datafy_reports.py || true
           python scripts/load_costar_reports.py || true
           python scripts/load_costar_market_daily.py || true
           python scripts/seed_group_benchmarks.py || true
+          python scripts/qa_normalize_missing.py
           python scripts/compute_insights.py
           python scripts/optimize_db.py || true
           python scripts/build_table_relationships.py || true
+          # Publish gate: a FAIL stops the job before the commit and push below.
+          python scripts/qa_publish_check.py
 
       # -----------------------------------------------------------------------
       # Commit and push straight to main — Railway auto-redeploys from main,

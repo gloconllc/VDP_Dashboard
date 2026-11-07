@@ -181,6 +181,8 @@ Execution order:
 | 3 | `load_datafy_reports.py` | No — log warning, continue |
 | 4 | `compute_kpis.py` | Yes — abort if fails |
 | 5 | `compute_insights.py` | Yes — runs every pipeline push |
+| QA | `qa_normalize_missing.py` (twice) | No — zero placeholders to NULL before KPIs and insights |
+| Last | `qa_publish_check.py` | Yes — publish gate; FAIL means do not commit or push |
 | 16 | `fetch_eia_gas.py` | No — skip-safe; seeds demo data if no EIA_API_KEY |
 | 17 | `fetch_tsa_data.py` | No — skip-safe; seeds benchmark data if live fetch fails |
 
@@ -453,6 +455,29 @@ After every session or error correction:
 - **The data window must never move or vanish after load.** The Oct. 16 pager hid it on report (embed) topics, moved it to the bottom with `order:90`, and tucked it away on scroll; staff read that as "the filters load, then disappear." Since 2026-11-05 `pulse_pager.js` keeps it where Streamlit draws it (under the header) on every page and topic.
 - **The first page is the main page.** John wants one section per page, starting on the page as it loads: header, data window and board brief. `pulse_pager.py` lists `pulse-glance` in `embedAfter`, so the board topic leads At a glance and the Summary and Overview report pages follow it on Next. Do not default to the long scroll.
 - **The weekly PDF showed STR/CBRE benchmark figures as if they were Dana Point's own.** The comp-set RevPAR chart (Newport $246, La Jolla $216 ...), the 60.5% group share on the Executive Summary and the whole Group Business panel came from hardcoded `COMPSET_BENCHMARK` / `GROUP_BENCHMARK`. Since 2026-11-05 `generate_weekly_report._str_weekly_live()` reads the STR weekly peer and segment report instead; the benchmarks remain only as a fallback when no weekly data exists. Hotel pages are CoStar daily, so their footers now say so.
+- **A label change in a source export can silently become "0% and 0%".** Datafy's newest length-of-stay export ships "1 Day" .. "6+ Days" buckets instead of "Day Trips"/"Overnight Trips"; the report only matched the old labels, got None, and `or 0` turned it into a 0%/0% waffle. Read both label sets through `quality_gate.day_overnight_split()`, and never write `or 0` for a missing value.
+- **A hidden absolutely positioned child escapes an `overflow:auto` row unless an ancestor inside the row is positioned.** That is how the data-window radios widened the whole page on portrait iPhones. Check `stMain.scrollWidth` vs `clientWidth`, not just `document.documentElement`, because Streamlit scrolls `stMain`.
+---
+
+## Standing Rules Added 2026-11-07 (John: "lock that in throughout this entire app")
+
+### Mobile width lock
+- The page is never wider than the screen: iPhone portrait and landscape, tablets, laptops, desktops. No sideways scrolling, ever.
+- Root cause found 2026-11-07: Streamlit hides each radio input with `position:absolute`. In the data-window segmented control (a swipe row on phones), those hidden inputs escaped the row and stretched `stMain` (Streamlit's real scroll container) to ~830 px, so portrait iPhones could swipe right into blank white space. Landscape was fine only because the row fit.
+- Fix: on phones the data window and jump links wrap onto extra rows (`pulse_ui.py`), every `[data-testid="stRadioOption"]` gets `position:relative`, and `html, body, .stApp, stAppViewContainer, stMain, stMainBlockContainer` are locked with `overflow-x:hidden` (`app.py` global styles). Do not bring back `flex-wrap:nowrap; overflow-x:auto` swipe rows.
+- Verify any layout change at 390x844 (portrait) and 844x390 (landscape): `document.querySelector('[data-testid=stMain]').scrollWidth` must equal its `clientWidth` on every pager page.
+
+### Data quality gate (no zeros, no "n/a", no "not available")
+- A value that is missing, unavailable, or zero where zero is impossible is EXCLUDED: never shown, never counted. No "0% and 0%", no "$0", no "N/A", no "not available" text. Leave the card, sentence, row, or chart point out entirely.
+- Formulas: zero placeholders are stored as NULL so AVG/SUM/YoY skip them. The measures where zero means missing are listed once, in `dashboard/quality_gate.py` `ZERO_IS_MISSING`. Counts that can truly be zero (compression days, flags) are not on that list.
+- Pipeline: `qa_normalize_str` (before `compute_kpis`), `qa_normalize_all` (before `compute_insights`), and `qa_publish_check` (FATAL, last step). A `qa_publish_check` FAIL means do not commit or push. Report: `logs/qa_publish_report.json`. The GitHub workflows `str_weekly_sync.yml` and `full_sync.yml` run the same three checks before their push.
+- Rendering: `pulse_insights.build_report()` returns `quality_gate.prune_report(report)`; `generate_weekly_report.py` runs `quality_gate.prune_html()` before writing the PDF. Never add a fallback that invents numbers (the weekly PDF used to draw a made-up 60/40 trip split).
+- When writing new code, return `None`, not `0` or `"n/a"`, when a value is missing, and let the gate remove it.
+
+### Ownership notice (protects GloCon Solutions LLC and John Picou)
+- Every source file in `dashboard/`, `scripts/`, and `tests/` starts with the proprietary header (Copyright (c) 2026 GloCon Solutions LLC, created and owned by John Picou, written permission required, contact john.picou@gloconsolutions.com). New files get the same header. Vendored libraries (`dashboard/static/antv/`, `assets/d3*`, `assets/jszip*`) keep their own licenses.
+- Generated pages carry the notice in their source: `dashboard/ownership.py` (meta tags, HTML comment, hidden `#pulse-ownership` element in the live app), the board logs it to the browser console, and the weekly PDF template has author and copyright meta tags. Full notice: `NOTICE.md`.
+
 ---
 
 ## New Tables (2026-03-17)
@@ -531,3 +556,4 @@ An "Upload Your Data" panel briefly existed in `app.py` (added 2026-08-17, remov
 | 2026-11-05 | Weekly PDF accuracy pass for Heather: live STR weekly comp-set RevPAR chart and group panel (share, room nights, revenue, group and transient ADR) replace the STR/CBRE benchmarks; Executive Summary group share is live (46.2%); hotel page footers say CoStar daily; Visitor Origins pie adds an All other markets slice so slice labels match the legend; Datafy trip length labeled days, not nights; insight cards end on whole sentences. `compute_insights.py` now takes the newest year-to-date Datafy total (2,477,728 trips) instead of an older Jan.–July row. Recap for week ending Oct. 31 built in recaps/2026-11-05. | Claude |
 | 2026-11-05 | This week report section added to the page-by-page path (`pulse_pager.py` EMBEDS, Performance snapshot page 2 of 7); before this it showed only in the long scroll. Checked on the live page with the new config. | Claude |
 | 2026-11-05 | First page now matches the page as it loads: `pulse_pager.js` keeps the section pills row (At a glance, 1 · Performance ... Notes and downloads) visible under the data window instead of hiding it as a duplicate; pills still jump page by page. Checked on the live page at 1440 px. | Claude |
+| 2026-11-07 | Mobile width lock: fixed sideways white space on portrait iPhones (data-window radio inputs escaped their swipe row; rows now wrap, radio options positioned, stMain locked). Data quality gate: new `dashboard/quality_gate.py`, `qa_normalize_missing.py` and fatal `qa_publish_check.py` pipeline steps (also in the two GitHub sync workflows); Insights report and weekly PDF prune every missing, zero, or "n/a" value; Datafy trip mix reads both label sets (was showing 0% and 0%); weekly PDF invented 60/40 fallback removed. Ownership: proprietary header in 121 source files, `NOTICE.md`, `dashboard/ownership.py` notice in page source, console notice. | Claude |

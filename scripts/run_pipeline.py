@@ -1,3 +1,12 @@
+# =============================================================================
+#  Dana Point PULSE  |  Proprietary and Confidential
+#  Copyright (c) 2026 GloCon Solutions LLC. All rights reserved.
+#  Created and owned by John Picou, GloCon Solutions LLC, built for Visit Dana Point.
+#  This code, its design, and the PULSE report are protected. Copying, sharing,
+#  reuse, or redistribution of any part requires written permission.
+#  Contact John Picou, GloCon Solutions LLC: john.picou@gloconsolutions.com
+#  See NOTICE.md in the repository root.
+# =============================================================================
 """
 run_pipeline.py
 ---------------
@@ -130,6 +139,9 @@ STEPS = [
     ("load_str_response",   os.path.join(BASE_DIR, "load_str_response_sheets.py"),   False),
     # Translation Table — holiday calendar TY vs LY (explains YOY variance)
     ("load_str_translation", os.path.join(BASE_DIR, "load_str_translation_table.py"), False),
+    # QUALITY GATE, part 1 (2026-11-07): zero placeholders become NULL so KPI
+    # math never counts a missing number as zero. Rules: dashboard/quality_gate.py
+    ("qa_normalize_str",  os.path.join(BASE_DIR, "qa_normalize_missing.py"),    False),
     ("compute_kpis",      os.path.join(BASE_DIR, "compute_kpis.py"),            True),
     ("load_datafy",       os.path.join(BASE_DIR, "load_datafy_reports.py"),     False),
     # Datafy's separate "Advertising" campaign-performance export family (impressions, clicks,
@@ -163,6 +175,8 @@ STEPS = [
     ("load_us_travel_inbound", os.path.join(BASE_DIR, "load_us_travel_inbound_profiles.py"), False),
     # Group benchmarks must run before compute_insights so group_intelligence data is available
     ("seed_group_benchmarks", os.path.join(BASE_DIR, "seed_group_benchmarks.py"), False),
+    # QUALITY GATE, part 2: same rule after Datafy and CoStar load, before insights.
+    ("qa_normalize_all",      os.path.join(BASE_DIR, "qa_normalize_missing.py"),  False),
     ("compute_insights",      os.path.join(BASE_DIR, "compute_insights.py"),      True),
     ("load_zartico",      os.path.join(BASE_DIR, "load_zartico_reports.py"),    False),
     ("fetch_vdp_events",  os.path.join(BASE_DIR, "fetch_vdp_events.py"),        False),
@@ -232,6 +246,11 @@ STEPS = [
     ("build_relationships", os.path.join(BASE_DIR, "build_table_relationships.py"), False),
     # POST-PIPELINE AUDIT — runs after all steps; non-fatal, logs to logs/audit_report.json
     ("audit_app",           os.path.join(BASE_DIR, "audit_app.py"),                False),
+    # PUBLISH GATE (2026-11-07), FATAL and truly last: rebuilds the report readers
+    # will see and stops the pipeline if any missing, zero, or "n/a" value would
+    # show. A FAIL here means do not commit or push (pushing to main publishes).
+    # Details: logs/qa_publish_report.json, CLAUDE.md "Data quality gate".
+    ("qa_publish_check",    os.path.join(BASE_DIR, "qa_publish_check.py"),         True),
 ]
 
 

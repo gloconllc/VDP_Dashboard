@@ -1,3 +1,12 @@
+# =============================================================================
+#  Dana Point PULSE  |  Proprietary and Confidential
+#  Copyright (c) 2026 GloCon Solutions LLC. All rights reserved.
+#  Created and owned by John Picou, GloCon Solutions LLC, built for Visit Dana Point.
+#  This code, its design, and the PULSE report are protected. Copying, sharing,
+#  reuse, or redistribution of any part requires written permission.
+#  Contact John Picou, GloCon Solutions LLC: john.picou@gloconsolutions.com
+#  See NOTICE.md in the repository root.
+# =============================================================================
 """
 pulse_insights.py, the Dana Point PULSE Insights report.
 
@@ -45,9 +54,11 @@ import os
 from datetime import date
 
 import pandas as pd
+import ownership as _own  # GloCon Solutions LLC ownership notice
 
 import pulse_data as pdx
 import pulse_story as ps
+import quality_gate as qg
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -520,15 +531,29 @@ def build_report(conn, m, dma_coords: dict | None = None, prepared: date | None 
     trips = prof.get("trips")
     los = prof.get("avg_los")
     oos = prof.get("out_of_state_pct")
-    losd = _q(conn, """SELECT length_of_stay, pct_of_trips FROM datafy_overview_los_distribution
-                       WHERE report_period_end=(SELECT MAX(report_period_end) FROM datafy_overview_los_distribution)""")
-    overnight_pct = None
-    day_pct = None
-    if not losd.empty:
-        o = losd[losd["length_of_stay"].str.contains("Overnight", case=False)]
-        d_ = losd[losd["length_of_stay"].str.contains("Day Trips", case=False)]
-        overnight_pct = float(o.iloc[0]["pct_of_trips"]) if not o.empty else None
-        day_pct = float(d_.iloc[0]["pct_of_trips"]) if not d_.empty else None
+    # Trip mix for the same Datafy window as the rest of this section; the
+    # latest export only when that window has none (and then labeled with its
+    # own dates, never the section's).
+    losd = _q(conn, f"""SELECT length_of_stay, pct_of_trips, report_period_start, report_period_end
+                        FROM datafy_overview_los_distribution
+                        WHERE report_period_start='{str(d_start)[:10]}' AND report_period_end='{str(d_end)[:10]}'""") if d_start and d_end else pd.DataFrame()
+    if losd.empty or qg.day_overnight_split(losd) == (None, None):
+        losd = _q(conn, """SELECT length_of_stay, pct_of_trips, report_period_start, report_period_end
+                           FROM datafy_overview_los_distribution
+                           WHERE report_period_end=(SELECT MAX(report_period_end) FROM datafy_overview_los_distribution)
+                             AND report_period_start=(SELECT MAX(report_period_start) FROM datafy_overview_los_distribution
+                               WHERE report_period_end=(SELECT MAX(report_period_end) FROM datafy_overview_los_distribution))""")
+    los_period = dfy_period
+    if not losd.empty and (str(losd.iloc[0]["report_period_start"])[:10], str(losd.iloc[0]["report_period_end"])[:10]) != (str(d_start)[:10], str(d_end)[:10]):
+        try:
+            los_period = span(date.fromisoformat(str(losd.iloc[0]["report_period_start"])[:10]),
+                              date.fromisoformat(str(losd.iloc[0]["report_period_end"])[:10]))
+        except Exception:  # noqa: BLE001
+            los_period = dfy_period
+    # Datafy ships "Day Trips"/"Overnight Trips" or "1 Day".."6+ Days" buckets;
+    # quality_gate reads both. Before 2026-11-07 only the first set was read, so
+    # the newer bucket export showed "0% overnight, 0% day trips".
+    day_pct, overnight_pct = qg.day_overnight_split(losd)
     dfy_spend = dfy.get("spend")
     dfy_months = dfy.get("months")
     dfy_mspan = mspan(dfy["first"], dfy["last"]) if dfy.get("first") is not None else dfy_period
@@ -875,8 +900,9 @@ def build_report(conn, m, dma_coords: dict | None = None, prepared: date | None 
                 f"In Datafy's market table, {_hi_lo_spend(dma_full)}."),
         "glance": [
             {"type": "waffle", "title": "Of every 100 trips to Dana Point",
-             "sub": f"Datafy, {dfy_period}",
-             "parts": [{"v": overnight_pct or 0, "l": "overnight trips"}, {"v": day_pct or 0, "l": "day trips"}],
+             "sub": f"Datafy, {los_period}",
+             # None (never 0) when Datafy has no trip mix: the gate then leaves this card out.
+             "parts": [{"v": overnight_pct, "l": "overnight trips"}, {"v": day_pct, "l": "day trips"}],
              "src": dfy_src},
             {"type": "share", "title": "California vs. out-of-state trips", "sub": f"Share of trips by origin state, {dfy_period}",
              "parts": [{"v": ca_share or 0, "l": "From California"}, {"v": (100 - ca_share) if ca_share is not None else 0, "l": "From other states and countries"}],
@@ -1801,7 +1827,7 @@ def build_report(conn, m, dma_coords: dict | None = None, prepared: date | None 
                    "Add media cost to the annual campaign report to compute its return.",
                ]}
 
-    return {
+    report = {
         "title": "Dana Point PULSE Insights",
         "subtitle": "Prepared for Visit Dana Point · Hotels, visitors, spending, marketing and outlook",
         "period": f"Data through {ap_date(hend)}",
@@ -1812,6 +1838,9 @@ def build_report(conn, m, dma_coords: dict | None = None, prepared: date | None 
         "sections": sections, "appendix": appendix, "sources": sources, "destination": destination,
         "contact": "Powered by GloCon Solutions for Visit Dana Point",
     }
+    # Publish quality gate: nothing missing, zero, or "not available" leaves
+    # this function. See quality_gate.py and CLAUDE.md "Data quality gate".
+    return qg.prune_report(report)
 
 
 # ---------------------------------------------------------------------------
@@ -2200,7 +2229,7 @@ def render_html(report: dict, public_url: str = "https://vdppulse.gloconsolution
         data["deckMap"] = _deck_map(report, ids) if deck else None
     payload = json.dumps(data, default=str).replace("</", "<\\/")
     return (
-        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">" + _own.head_block() + ""
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
         f"<title>{html.escape(report['title'])}</title><style>{css}</style></head>"
         f"<body><div id=\"app\" data-logo=\"{logo}\" data-photo=\"{photo}\" data-photo-site=\"{site_photo}\" data-photo-credit=\"{photo_credit}\"></div>"

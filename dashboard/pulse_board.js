@@ -1,3 +1,21 @@
+/*! ==========================================================================
+ *  Dana Point PULSE  |  Proprietary and Confidential
+ *  Copyright (c) 2026 GloCon Solutions LLC. All rights reserved.
+ *  Created and owned by John Picou, GloCon Solutions LLC, built for Visit Dana Point.
+ *  This code, its design, and the PULSE report are protected. Copying, sharing,
+ *  reuse, or redistribution of any part requires written permission.
+ *  Contact John Picou, GloCon Solutions LLC: john.picou@gloconsolutions.com
+ *  See NOTICE.md in the repository root.
+ * =========================================================================== */
+// Ownership notice for anyone who opens the browser console or copies this code.
+try {
+  if (!window.__pulseOwnerNotice) {
+    window.__pulseOwnerNotice = true;
+    console.info('%cDana Point PULSE', 'font-weight:700;color:#123C4A',
+      '\nCopyright (c) 2026 GloCon Solutions LLC. All rights reserved. Created and owned by John Picou, GloCon Solutions LLC, for Visit Dana Point. Copying, sharing, or reuse requires written permission. Contact john.picou@gloconsolutions.com.');
+  }
+} catch (e) { /* console unavailable */ }
+
 // pulse_board.js: the Dana Point PULSE board view, drawn by hand.
 //
 // Streamlit mounts this as an st.components.v2 component. Python builds every

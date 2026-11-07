@@ -1,3 +1,12 @@
+# =============================================================================
+#  Dana Point PULSE  |  Proprietary and Confidential
+#  Copyright (c) 2026 GloCon Solutions LLC. All rights reserved.
+#  Created and owned by John Picou, GloCon Solutions LLC, built for Visit Dana Point.
+#  This code, its design, and the PULSE report are protected. Copying, sharing,
+#  reuse, or redistribution of any part requires written permission.
+#  Contact John Picou, GloCon Solutions LLC: john.picou@gloconsolutions.com
+#  See NOTICE.md in the repository root.
+# =============================================================================
 """Make something new: companion pieces built from the Insights report.
 
 Added 2026-10-15. Purely additive. Each builder takes the report dict that
@@ -13,6 +22,7 @@ and sources are read from the report as it is. Pieces:
 The slide deck is pulse_insights.build_pptx, unchanged.
 """
 from __future__ import annotations
+import ownership as _own  # GloCon Solutions LLC ownership notice
 
 import html
 import io
@@ -149,7 +159,7 @@ svg text{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Aria
 
 
 def _page(title: str, body: str, extra_css: str = "", script: str = "") -> str:
-    return ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+    return ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">" + _own.head_block() + ""
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
             f"<title>{_e(title)}</title><style>{_BASE_CSS}{extra_css}</style></head><body>{body}"
             + (f"<script>{script}</script>" if script else "") + "</body></html>")

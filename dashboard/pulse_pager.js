@@ -1,3 +1,12 @@
+/*! ==========================================================================
+ *  Dana Point PULSE  |  Proprietary and Confidential
+ *  Copyright (c) 2026 GloCon Solutions LLC. All rights reserved.
+ *  Created and owned by John Picou, GloCon Solutions LLC, built for Visit Dana Point.
+ *  This code, its design, and the PULSE report are protected. Copying, sharing,
+ *  reuse, or redistribution of any part requires written permission.
+ *  Contact John Picou, GloCon Solutions LLC: john.picou@gloconsolutions.com
+ *  See NOTICE.md in the repository root.
+ * =========================================================================== */
 /* Dana Point PULSE: one topic per page (pages added 2026-10-15, topics 2026-10-16).
    Runs inside a zero-height component and works on the Streamlit page around it.
    Nothing is removed or rewritten: whatever is not on the current page is hidden with

@@ -1,3 +1,12 @@
+/*! ==========================================================================
+ *  Dana Point PULSE  |  Proprietary and Confidential
+ *  Copyright (c) 2026 GloCon Solutions LLC. All rights reserved.
+ *  Created and owned by John Picou, GloCon Solutions LLC, built for Visit Dana Point.
+ *  This code, its design, and the PULSE report are protected. Copying, sharing,
+ *  reuse, or redistribution of any part requires written permission.
+ *  Contact John Picou, GloCon Solutions LLC: john.picou@gloconsolutions.com
+ *  See NOTICE.md in the repository root.
+ * =========================================================================== */
 /* Dana Point PULSE Insights: page renderer.
    Reads window.PULSE_DATA (built by pulse_insights.py) and draws every page.
    No numbers are computed here; Python computes, JS draws. */
@@ -226,14 +235,14 @@
   function qaBlock(q, extra) {
     return '<section class="qa-news reveal ' + (extra || "") + '" aria-label="Question and short answer"><div class="kick"><span class="nr">Question and short answer</span></div>' +
       '<h3 class="qa-head">' + esc(q.q) + '</h3><div class="lede-grid"><div class="card"><p class="lede">' + bold(q.a) + '</p><p class="cap">Source: ' + esc(q.src) + '</p></div>' +
-      '<div class="keynum" tabindex="0"><span class="v">' + esc(q.v) + '</span><span class="l">' + esc(q.l) + "</span></div></div></section>";
+      (q.v ? '<div class="keynum" tabindex="0"><span class="v">' + esc(q.v) + '</span><span class="l">' + esc(q.l) + "</span></div>" : "") + "</div></section>";
   }
   function qaNews(id, question) {
     var q = (D.qa || []).filter(function (x) { return x.id === id; })[0];
     if (!q) return '<p class="question">The question: <b>' + esc(question) + "</b></p>";
     return '<section class="qa-news reveal" aria-label="Question and short answer"><div class="kick"><span class="nr">Question and short answer</span></div>' +
       '<h3 class="qa-head">' + esc(q.q) + '</h3><div class="lede-grid"><div class="card"><p class="lede">' + bold(q.a) + '</p><p class="cap">Source: ' + esc(q.src) + '</p></div>' +
-      '<div class="keynum" tabindex="0"><span class="v">' + esc(q.v) + '</span><span class="l">' + esc(q.l) + "</span></div></div></section>";
+      (q.v ? '<div class="keynum" tabindex="0"><span class="v">' + esc(q.v) + '</span><span class="l">' + esc(q.l) + "</span></div>" : "") + "</div></section>";
   }
 
   function sectionPage(s, idx, total) {
@@ -241,13 +250,13 @@
     p.push('<div class="kick"><span class="nr">News report</span><span class="sn">' + esc(s.tab) + "</span></div>");
     p.push('<h2 class="art-head">' + esc(s.headline) + '</h2><p class="art-dek">' + bold(s.dek) + "</p>");
     p.push('<div class="byline"><span>By Dana Point PULSE · ' + esc(D.prepared) + '</span><span class="chip">' + esc(s.byline_src) + "</span></div>");
-    p.push('<div class="lede-grid reveal"><div class="card"><div class="lbl">The lede</div><p class="lede"' + vizSlot("t8", s.lede) + '>' + dateline(s.lede) + '</p><p class="cap">' + esc(s.lede_src) + '</p></div><div class="keynum" data-tip="' + esc(s.key.l) + '" tabindex="0"><span class="v">' + esc(s.key.v) + '</span><span class="l">' + esc(s.key.l) + "</span></div></div>");
+    p.push('<div class="lede-grid reveal"><div class="card"><div class="lbl">The lede</div><p class="lede"' + vizSlot("t8", s.lede) + '>' + dateline(s.lede) + '</p><p class="cap">' + esc(s.lede_src) + '</p></div>' + (s.key && s.key.v ? '<div class="keynum" data-tip="' + esc(s.key.l) + '" tabindex="0"><span class="v">' + esc(s.key.v) + '</span><span class="l">' + esc(s.key.l) + "</span></div>" : "") + "</div>");
     p.push('<div class="mist why reveal"><div class="lbl">Why it matters</div><p>' + bold(s.why) + "</p>" + (s.why_calc ? '<span class="calc-line">Calculation: ' + esc(s.why_calc) + "</span>" : "") + "</div>");
     if (s.glance && s.glance.length) p.push('<div class="block"><h3 class="h2">At a glance</h3><div class="' + (s.glance.length > 1 ? "grid2" : "") + '">' + s.glance.map(ig).join("") + "</div></div>");
     p.push('<div class="block"><h3 class="h2">By the numbers</h3><div class="stats">' + s.numbers.map(function (n) { return '<div class="stat reveal" data-tip="' + esc(n.src) + '" tabindex="0"><span class="k">' + esc(n.k) + '</span><span class="v">' + esc(n.v) + '</span><span class="l">' + esc(n.l) + '</span><span class="p"><span class="' + deltaCls(n.p) + '">' + esc(n.p) + '</span></span><span class="cap" style="margin-top:4px">Source: ' + esc(n.src) + "</span></div>"; }).join("") + "</div></div>");
     p.push(table({ title: "How the key insight is calculated", cols: ["Step", "Calculation", "Result", "Source"], rows: s.calc, num: [], src: "PULSE calculation from the sources named" }));
     var dk = ["who", "what", "when", "where", "why", "how"];
-    p.push('<div class="block"><h3 class="h2">The details</h3><p class="cap" style="margin:0 0 12px">Who, what, when, where, why and how, each with its figure, source and date.</p><div class="det">' + dk.map(function (k) { var d = s.details[k]; return '<div class="dc reveal"><span class="k">' + k + '</span><span class="f">' + esc(d.fig) + '</span><span class="fl">' + esc(d.fig_l) + '</span><span class="tx">' + bold(d.text) + '</span><span class="s">Source: ' + esc(d.src) + "</span></div>"; }).join("") + "</div></div>");
+    if (dk.some(function (k) { return s.details && s.details[k] && s.details[k].fig; })) p.push('<div class="block"><h3 class="h2">The details</h3><p class="cap" style="margin:0 0 12px">Who, what, when, where, why and how, each with its figure, source and date.</p><div class="det">' + dk.filter(function (k) { return s.details && s.details[k] && s.details[k].fig; }).map(function (k) { var d = s.details[k]; return '<div class="dc reveal"><span class="k">' + k + '</span><span class="f">' + esc(d.fig) + '</span><span class="fl">' + esc(d.fig_l) + '</span><span class="tx">' + bold(d.text) + '</span><span class="s">Source: ' + esc(d.src) + "</span></div>"; }).join("") + "</div></div>");
     p.push('<div class="band"><span class="bl">Analysis</span><hr></div>' + qaNews(s.id, s.question));
     if (s.map) p.push(map(s.map));
     if (s.charts && s.charts.length) p.push('<div class="block ' + (s.charts.length > 1 ? "grid2" : "") + '">' + s.charts.map(function (c) { return chart(c, s.charts.length === 1); }).join("") + "</div>");

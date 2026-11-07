@@ -1,3 +1,12 @@
+# =============================================================================
+#  Dana Point PULSE  |  Proprietary and Confidential
+#  Copyright (c) 2026 GloCon Solutions LLC. All rights reserved.
+#  Created and owned by John Picou, GloCon Solutions LLC, built for Visit Dana Point.
+#  This code, its design, and the PULSE report are protected. Copying, sharing,
+#  reuse, or redistribution of any part requires written permission.
+#  Contact John Picou, GloCon Solutions LLC: john.picou@gloconsolutions.com
+#  See NOTICE.md in the repository root.
+# =============================================================================
 """
 generate_weekly_report.py
 --------------------------
@@ -37,6 +46,10 @@ LOGO_PATH = os.path.join(PROJECT_ROOT, "dashboard", "assets", "vdp_logo.svg")
 LOGO_NAV_PATH = os.path.join(PROJECT_ROOT, "dashboard", "assets", "vdp_logo_nav.svg")
 PHOTOS_DIR = os.path.join(PROJECT_ROOT, "dashboard", "assets", "photos")
 LOGS_DIR = os.path.join(PROJECT_ROOT, "logs")
+
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, os.path.join(PROJECT_ROOT, "dashboard"))
+import quality_gate as qg  # noqa: E402
 
 # Same NOTES_DB_PATH convention as dashboard/app.py's notes/annotation layer
 # (render_notes_block) -- deliberately a separate sqlite file from
@@ -655,24 +668,17 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
     else:
         total_trips, avg_los = "N/A", "N/A"
 
-    if not los_dist.empty:
-        day_row = los_dist[los_dist["length_of_stay"].str.contains("Day", case=False, na=False)
-                            & ~los_dist["length_of_stay"].str.contains("Overnight", case=False, na=False)]
-        overnight_row = los_dist[los_dist["length_of_stay"].str.contains("Overnight", case=False, na=False)]
-        day_pct = float(day_row["pct_of_trips"].iloc[0]) if not day_row.empty else None
-        overnight_pct = float(overnight_row["pct_of_trips"].iloc[0]) if not overnight_row.empty else None
-        if day_pct is not None and overnight_pct is not None:
-            chart_trip = _donut_chart(["Overnight Trips", "Day Trips"], [overnight_pct, day_pct], [TEAL_DK, TEAL_LT])
-        else:
-            chart_trip = _donut_chart(["Overnight Trips", "Day Trips"],
-                                       [legacy_kpi.iloc[0]["overnight_trips_pct"], legacy_kpi.iloc[0]["day_trips_pct"]],
-                                       [TEAL_DK, TEAL_LT]) if not legacy_kpi.empty else _donut_chart(
-                                       ["Overnight", "Day"], [60, 40], [TEAL_DK, TEAL_LT])
-    elif not legacy_kpi.empty:
-        d = legacy_kpi.iloc[0]
-        chart_trip = _donut_chart(["Overnight Trips", "Day Trips"], [d["overnight_trips_pct"], d["day_trips_pct"]], [TEAL_DK, TEAL_LT])
-    else:
-        chart_trip = _donut_chart(["Overnight", "Day"], [60, 40], [TEAL_DK, TEAL_LT])
+    # Trip mix: both Datafy label sets ("Day Trips"/"Overnight Trips" and the
+    # "1 Day".."6+ Days" buckets) via the quality gate. If neither the bucket
+    # export nor the legacy KPI row has a real split, the donut is left out
+    # (the old code drew an invented 60/40 split here; removed 2026-11-07).
+    day_pct, overnight_pct = qg.day_overnight_split(los_dist)
+    if (day_pct is None or overnight_pct is None) and not legacy_kpi.empty:
+        _lk = legacy_kpi.iloc[0]
+        if qg.ok(_lk["day_trips_pct"]) and qg.ok(_lk["overnight_trips_pct"]):
+            day_pct, overnight_pct = float(_lk["day_trips_pct"]), float(_lk["overnight_trips_pct"])
+    chart_trip = (_donut_chart(["Overnight Trips", "Day Trips"], [overnight_pct, day_pct], [TEAL_DK, TEAL_LT])
+                  if day_pct is not None and overnight_pct is not None else "")
 
     if not inout_state.empty:
         oos_pct = f"{float(inout_state.iloc[0]['out_of_state_pct']) * 100:.1f}%"
@@ -864,6 +870,10 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
     html = open(TEMPLATE_PATH, encoding="utf-8").read()
     for k, v in tokens.items():
         html = html.replace(f"[[{k}]]", str(v))
+    # Publish quality gate: no "N/A", "$0", or "0%" placeholder reaches the PDF.
+    html, _qa_log = qg.prune_html(html)
+    for _line in _qa_log:
+        print(f"[weekly_report] quality gate: {_line}")
 
     os.makedirs(LOGS_DIR, exist_ok=True)
     html_path = os.path.join(LOGS_DIR, "weekly_report_latest.html")

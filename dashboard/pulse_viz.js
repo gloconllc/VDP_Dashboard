@@ -1,3 +1,12 @@
+/*! ==========================================================================
+ *  Dana Point PULSE  |  Proprietary and Confidential
+ *  Copyright (c) 2026 GloCon Solutions LLC. All rights reserved.
+ *  Created and owned by John Picou, GloCon Solutions LLC, built for Visit Dana Point.
+ *  This code, its design, and the PULSE report are protected. Copying, sharing,
+ *  reuse, or redistribution of any part requires written permission.
+ *  Contact John Picou, GloCon Solutions LLC: john.picou@gloconsolutions.com
+ *  See NOTICE.md in the repository root.
+ * =========================================================================== */
 /* Dana Point PULSE: AntV and D3 visuals for the Insights report (added 2026-10-14).
    Runs after pulse_insights.js. Every slot already holds a working fallback
    (the hand-drawn chart, a table or a list); this file swaps in the richer

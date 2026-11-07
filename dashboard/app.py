@@ -1,3 +1,12 @@
+# =============================================================================
+#  Dana Point PULSE  |  Proprietary and Confidential
+#  Copyright (c) 2026 GloCon Solutions LLC. All rights reserved.
+#  Created and owned by John Picou, GloCon Solutions LLC, built for Visit Dana Point.
+#  This code, its design, and the PULSE report are protected. Copying, sharing,
+#  reuse, or redistribution of any part requires written permission.
+#  Contact John Picou, GloCon Solutions LLC: john.picou@gloconsolutions.com
+#  See NOTICE.md in the repository root.
+# =============================================================================
 """
 Dana Point PULSE Report Viewer
 -----------------------------------------
@@ -40,6 +49,7 @@ except Exception:  # pragma: no cover - defensive on deploy
 # so unlike section_visuals it's imported unguarded, same as pandas/plotly/
 # streamlit are above.
 import brand_tokens as bt
+import ownership as _own  # GloCon Solutions LLC ownership notice (hidden in page source)
 
 # The redesigned board view (2026-09-25): window-aware data layer, the
 # deterministic insight engine that writes every section's answers, and the
@@ -152,10 +162,18 @@ st.markdown("""
     /* Section titles responsive */
     .section-title { font-size: 18px; font-weight: 700; color: #0B2530; margin: 24px 0 12px 0; }
 
-    /* Prevent horizontal scroll on all viewport widths */
-    body, html { overflow-x: hidden; }
-    main { overflow-x: hidden; }
-    .stApp { overflow-x: hidden; }
+    /* Mobile width lock (2026-11-07): the page is never wider than the screen,
+       on phones in portrait or landscape, tablets, laptops, and desktops.
+       stMain is Streamlit's real scroll container, so it is locked as well as
+       html/body (iOS Safari ignores overflow-x on body alone). Radio inputs are
+       visually hidden with position:absolute; giving each option a positioned
+       box keeps them from escaping their row and widening the page. */
+    html, body { overflow-x: hidden !important; max-width: 100% !important;
+                 -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    main, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"],
+    [data-testid="stMainBlockContainer"] { overflow-x: hidden !important; max-width: 100vw !important; }
+    [data-testid="stRadioOption"] { position: relative; }
+    img, svg, video, canvas, iframe, table { max-width: 100%; }
 
     /* Tablet optimization (768px and below) */
     @media (max-width: 768px) {
@@ -198,7 +216,7 @@ st.markdown("""
         }
     }
 </style>
-""", unsafe_allow_html=True)
+""" + _own.HIDDEN_DIV, unsafe_allow_html=True)
 
 
 def _file_data_uri(path: str, mime: str) -> str:

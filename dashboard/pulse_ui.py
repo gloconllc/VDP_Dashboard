@@ -1,3 +1,12 @@
+# =============================================================================
+#  Dana Point PULSE  |  Proprietary and Confidential
+#  Copyright (c) 2026 GloCon Solutions LLC. All rights reserved.
+#  Created and owned by John Picou, GloCon Solutions LLC, built for Visit Dana Point.
+#  This code, its design, and the PULSE report are protected. Copying, sharing,
+#  reuse, or redistribution of any part requires written permission.
+#  Contact John Picou, GloCon Solutions LLC: john.picou@gloconsolutions.com
+#  See NOTICE.md in the repository root.
+# =============================================================================
 """
 pulse_ui.py, HTML components and the stylesheet for the Dana Point PULSE board view.
 
@@ -200,23 +209,25 @@ section[data-testid="stSidebar"] {{ background:var(--surface-1); border-right:1p
   box-shadow:0 6px 14px -8px rgba(18,60,74,.7); }}
 .st-key-pulse_period [data-testid="stRadioOption"]:has(input:checked) p {{ color:#FFFFFF; }}
 
-/* Phones: the header buttons sit in one row, and the data window and jump
-   links become single swipeable rows instead of stacking four rows deep. */
+/* Phones (portrait): the header buttons sit in one row, and the data window
+   and jump links WRAP onto extra rows. They used to be single swipeable rows,
+   but the radio's visually hidden inputs are absolutely positioned and escaped
+   that scroller, widening the whole page to ~830 px, so an iPhone in portrait
+   could swipe sideways into blank white space (fixed 2026-11-07, see
+   CLAUDE.md "Mobile width lock"). Nothing on a phone may scroll sideways. */
 @media (max-width: 640px) {{
   .st-key-pz_head [data-testid="stHorizontalBlock"] {{ flex-wrap:wrap !important; gap:8px !important; }}
   .st-key-pz_head [data-testid="stColumn"]:first-child {{ flex:1 1 100% !important; width:100% !important; }}
   .st-key-pz_head [data-testid="stColumn"]:not(:first-child) {{ flex:1 1 calc(50% - 8px) !important; min-width:0 !important; width:auto !important; }}
   .st-key-pz_head [data-testid="stColumn"]:not(:first-child) button {{ padding-left:4px !important; padding-right:4px !important; }}
   .st-key-pz_head [data-testid="stColumn"]:not(:first-child) button p {{ font-size:12.5px !important; white-space:nowrap; }}
-  .st-key-pulse_period [data-testid="stRadioGroup"] {{ flex-wrap:nowrap; overflow-x:auto; max-width:100%;
-    scrollbar-width:none; -webkit-overflow-scrolling:touch; }}
-  .st-key-pulse_period [data-testid="stRadioGroup"]::-webkit-scrollbar {{ display:none; }}
-  .st-key-pulse_period [data-testid="stRadioOption"] {{ flex:none; padding:7px 12px; }}
+  .st-key-pulse_period [data-testid="stRadioGroup"] {{ display:flex !important; flex-wrap:wrap !important; overflow-x:visible !important;
+    width:100%; max-width:100%; box-sizing:border-box; }}
+  .st-key-pulse_period [data-testid="stRadioOption"] {{ flex:1 1 auto !important; justify-content:center; padding:7px 10px !important; }}
   .st-key-pulse_period [data-testid="stRadioOption"] p {{ white-space:nowrap; }}
-  .pulse-jumpnav {{ flex-wrap:nowrap !important; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch;
-    padding-bottom:4px; }}
-  .pulse-jumpnav::-webkit-scrollbar {{ display:none; }}
-  .pulse-jumpnav a {{ flex:none; white-space:nowrap; }}
+  div.pulse-jumpnav {{ flex-wrap:wrap !important; overflow-x:visible !important; gap:6px !important; padding-bottom:4px; }}
+  div.pulse-jumpnav a {{ flex:0 0 auto !important; max-width:100%; white-space:nowrap !important; word-break:normal !important;
+    padding:6px 11px !important; font-size:12.5px !important; }}
 }}
 
 @media (max-width: 640px) {{
