@@ -13,6 +13,10 @@ build_weekly_recap.py
 Builds the Friday Dana Point PULSE recap for Heather (GloCon Solutions, LLC).
 
 Produces, in recaps/<YYYY-MM-DD>/ (gitignored, never committed to the public repo):
+    Dana_Point_PULSE_Weekly_<date>.gif   motion recap (scripts/build_weekly_motion.py), also copied
+                                         to dashboard/assets/motion/ for the app; built from the
+                                         same database as the PDF, never from typed numbers
+    email.html                           the HTML newsletter (GIF inline in the .eml)
     Dana_Point_PULSE_Weekly_<date>.pdf   the app's weekly report PDF
     email.txt                            plain-text email, filled from the template
     Dana_Point_PULSE_Weekly_<date>.eml   ready-to-send draft with the PDF attached
@@ -51,6 +55,7 @@ import urllib.request
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
+from html import escape as html_escape
 from pathlib import Path
 
 REPO = "gloconllc/VDP_Dashboard"
@@ -179,14 +184,20 @@ def week_kpis(con) -> dict:
 
 
 def month_kpis(con) -> dict:
+    # occupancy_yoy_pp in CoStar exports is a percent change, not points: back last year's
+    # occupancy out of the supply and demand changes and report the change in points.
     row = con.execute(
-        """SELECT report_period, occupancy_pct, occupancy_yoy_pp, adr_usd, adr_yoy_pct,
+        """SELECT report_period, supply, supply_yoy_pct, demand, demand_yoy_pct, adr_usd, adr_yoy_pct,
                   revpar_usd, revpar_yoy_pct, revenue_usd, revenue_yoy_pct
-           FROM costar_market_monthly ORDER BY report_period DESC LIMIT 1""").fetchone()
-    if not row:
+           FROM costar_market_monthly WHERE supply > 0 AND demand > 0
+           ORDER BY report_period DESC LIMIT 1""").fetchone()
+    if not row or None in row:
         return {}
-    keys = ["period", "occ", "occ_chg", "adr", "adr_chg", "revpar", "revpar_chg", "revenue", "revenue_chg"]
-    out = dict(zip(keys, row))
+    per, sup, sy, dem, dy, adr, adr_c, rvp, rvp_c, rev, rev_c = row
+    occ = dem / sup * 100
+    occ_ly = (dem / (1 + dy / 100)) / (sup / (1 + sy / 100)) * 100
+    out = {"period": per, "occ": occ, "occ_chg": occ - occ_ly, "adr": adr, "adr_chg": adr_c,
+           "revpar": rvp, "revpar_chg": rvp_c, "revenue": rev, "revenue_chg": rev_c}
     try:
         out["label"] = datetime.strptime(out["period"], "%Y-%m").strftime("%B %Y")
     except (TypeError, ValueError):
@@ -229,6 +240,8 @@ def main() -> int:
     ap.add_argument("--db", help="use this DB instead of downloading main's")
     ap.add_argument("--dry-run", action="store_true", help="do not update recaps/state.json")
     ap.add_argument("--work", default=str(Path.home() / "vdp_recap_work"))
+    ap.add_argument("--note", default="", help="one-off line for this week's email (plain text)")
+    ap.add_argument("--no-motion", action="store_true", help="skip the motion GIF and HTML email")
     args = ap.parse_args()
 
     today = date.today()
@@ -256,6 +269,9 @@ def main() -> int:
     shutil.copytree(ROOT / "scripts", work / "scripts", ignore=shutil.ignore_patterns("__pycache__", "*.bak"))
     shutil.copy(ROOT / "dashboard" / "report_template.html", work / "dashboard" / "report_template.html")
     shutil.copytree(ROOT / "dashboard" / "assets", work / "dashboard" / "assets")
+    # The report imports dashboard modules (quality_gate since 2026-11-07); copy them too.
+    for mod in (ROOT / "dashboard").glob("*.py"):
+        shutil.copy(mod, work / "dashboard" / mod.name)
     log("Generating PDF")
     proc = subprocess.run([sys.executable, str(work / "scripts" / "generate_weekly_report.py")],
                           cwd=work, capture_output=True, text=True, timeout=900)
@@ -340,6 +356,27 @@ def main() -> int:
     body = body_t.lstrip("\n").format_map(fields)
     body = "\n".join(l.strip() if not l.strip() else l.rstrip() for l in body.splitlines())
     body = re.sub(r"\n{3,}", "\n\n", body).strip() + "\n"   # collapse empty optional lines
+    if args.note:
+        body = body.replace("\nPlease let me know", f"\n{args.note.strip()}\n\nPlease let me know", 1)
+
+    # 4b. Motion GIF + HTML newsletter, every figure computed from the same database
+    motion = None
+    if not args.no_motion:
+        try:
+            sys.path.insert(0, str(ROOT / "scripts"))
+            import build_weekly_motion as bwm  # noqa: E402
+            motion = bwm.build(db, out_dir, dashboard=True)
+        except Exception as exc:  # noqa: BLE001  (quality gate or missing Playwright)
+            warnings.append(f"Motion GIF not built: {exc}")
+    if motion:
+        # Plain-text body from the same figures as the GIF and HTML, so all three agree.
+        subject, _, plain = bwm.newsletter_html(motion["figures"], motion["data"], "", "")
+        parts = [f"Hi {fields['first_name']},",
+                 f"Here is this week's Dana Point PULSE newsletter. The full report is attached, and the live dashboard is here: {fields['app_url']} (this week's motion recap has its own Weekly motion page).",
+                 plain, " ".join(x for x in (updated_line, unchanged_line) if x), args.note.strip(),
+                 "Please let me know if you would like a closer look at anything.",
+                 f"Thank you,\n{fields['signature']}"]
+        body = "\n\n".join(x for x in parts if x) + "\n"
 
     stamp = wk["week_end"].isoformat()
     pdf_name = f"Dana_Point_PULSE_Weekly_{stamp}.pdf"
@@ -355,6 +392,24 @@ def main() -> int:
         msg["Cc"] = cfg["cc"]
     msg["X-Unsent"] = "1"   # Outlook and Apple Mail open this as an editable draft
     msg.set_content(body)
+    if motion:
+        from email.utils import make_msgid
+        cid = make_msgid(domain="gloconsolutions.com")
+        new_line = " ".join(x for x in (updated_line, unchanged_line) if x)
+        note_html = (f'<tr><td style="padding:8px 24px 4px;font-family:Arial,sans-serif;font-size:14px;'
+                     f'line-height:22px;color:#334155;">{html_escape(args.note.strip())}</td></tr>') if args.note else ""
+        intro = ("Here is this week's Dana Point PULSE newsletter. The full report is attached as a PDF, and everything "
+                 "is live on the dashboard, where this week's motion recap now has its own Weekly motion page.")
+        _, html_body, _ = bwm.newsletter_html(motion["figures"], motion["data"], "cid:" + cid[1:-1], intro,
+                                              extra_html=note_html, new_line=html_escape(new_line))
+        html_body = html_body.replace("Thank you,<br>John Picou<br>GloCon Solutions LLC",
+                                      "Thank you,<br>" + html_escape(cfg.get("signature", "John Picou")).replace("\n", "<br>")
+                                      + ("" if "GloCon" in cfg.get("signature", "") else "<br>GloCon Solutions LLC"))
+        msg.add_alternative(html_body, subtype="html")
+        gif_path = out_dir / f"{motion['name']}.gif"
+        msg.get_payload()[1].add_related(gif_path.read_bytes(), maintype="image", subtype="gif",
+                                         cid=cid, filename=gif_path.name)
+        (out_dir / "email.html").write_text(html_body.replace("cid:" + cid[1:-1], gif_path.name))
     msg.add_attachment(pdf_out.read_bytes(), maintype="application", subtype="pdf", filename=pdf_name)
     eml = out_dir / f"Dana_Point_PULSE_Weekly_{stamp}.eml"
     eml.write_bytes(bytes(msg))
@@ -373,6 +428,8 @@ def main() -> int:
     lines += [f"- CoStar last pull: {cur.get('costar_last_pull')}", "", "## Warnings", ""]
     lines += [f"- {w}" for w in warnings] or ["- None"]
     lines += ["", "## Files", "", f"- {pdf_out.name}", f"- {eml.name}", "- email.txt"]
+    if motion:
+        lines += [f"- {motion['name']}.gif (also in dashboard/assets/motion/)", f"- {motion['name']}.json (every figure in the GIF)", "- email.html"]
     (out_dir / "summary.md").write_text("\n".join(l for l in lines if l is not None) + "\n")
 
     if not args.dry_run:

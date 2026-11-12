@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<!-- Dana Point PULSE motion recap. Copyright (c) 2026 GloCon Solutions LLC. Created and owned by John Picou, built for Visit Dana Point.
+     Layout and animation only. Every figure comes from window.PULSE_DATA, which scripts/build_pulse_motion.py builds from data/analytics.sqlite. -->
+<html lang="en"><head><meta charset="utf-8"><title>Dana Point PULSE motion recap</title>
+<style>
+html,body{margin:0;padding:0;background:#0b2530;overflow:hidden}
+svg{display:block;width:100vw;height:100vh}
+text{font-family:"Helvetica Neue",Arial,"DejaVu Sans",sans-serif}
+.serif{font-family:Georgia,"DejaVu Serif",serif;font-style:italic;font-weight:700}
+.tab{font-variant-numeric:tabular-nums}
+</style></head><body>
+<svg id="stage" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs>
+  <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#092028" stop-opacity=".45"/><stop offset="1" stop-color="#092028" stop-opacity=".92"/></linearGradient>
+  <linearGradient id="deep" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0e4b5c"/><stop offset=".55" stop-color="#123c4a"/><stop offset="1" stop-color="#0b2530"/></linearGradient>
+  <linearGradient id="rule" x1="0" x2="1"><stop offset="0" stop-color="#123c4a"/><stop offset=".45" stop-color="#1d6e86"/><stop offset="1" stop-color="#b45309" stop-opacity=".6"/></linearGradient>
+  <linearGradient id="areaCur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d6e86" stop-opacity=".38"/><stop offset="1" stop-color="#1d6e86" stop-opacity="0"/></linearGradient>
+  <linearGradient id="barHi" x1="0" x2="1"><stop offset="0" stop-color="#123c4a"/><stop offset="1" stop-color="#1d6e86"/></linearGradient>
+  <clipPath id="frame"><rect width="1280" height="720"/></clipPath>
+</defs>
+<g id="root" clip-path="url(#frame)"></g>
+</svg>
+<script>
+const D = window.PULSE_DATA || {};
+const W = 1280, H = 720;
+const C = {ink:"#0b2530", ink2:"#334155", ink3:"#64748b", label:"#6b7280", tealDk:"#123c4a", teal:"#1d6e86", tealTx:"#0e7490",
+           tealLt:"#8fc4d6", mist:"#f0f7f9", mistB:"#cbe3ea", rule:"#cbd9de", border:"#e2e8f0", sand:"#9c9186", maroon:"#a8461f",
+           amber:"#b45309", sky:"#a5dde9", white:"#ffffff"};
+const SERIES = ["#1d6e86","#123c4a","#8fc4d6","#b45309","#9c9186","#0e4b5c","#e08a54","#475569"];
+const ON_DARK = ["#3b9bb6","#8fc4d6","#e08a54","#b45309","#a5dde9","#9c9186","#cbd9de","#5c8796"];
+const clamp = (x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const eo = x=>{x=clamp(x);return 1-Math.pow(1-x,3)};
+const eio = x=>{x=clamp(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+const back = x=>{x=clamp(x);const c1=1.4,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)};
+const esc = s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+// Count a formatted figure up to its final text, keeping its prefix, decimals and suffix ("$176.0M", "66.8%", "2,093").
+function roll(str,p){
+  const m=String(str).match(/^([^0-9\-]*)(-?[\d,]*\.?\d+)(.*)$/); if(!m) return str;
+  const raw=m[2].replace(/,/g,""), dec=(raw.split(".")[1]||"").length, v=parseFloat(raw)*eo(clamp(p*1.9));
+  let s=v.toFixed(dec); if(m[2].includes(",")){const [a,b]=s.split(".");s=a.replace(/\B(?=(\d{3})+(?!\d))/g,",")+(b!==undefined?"."+b:"")}
+  return m[1]+s+m[3];
+}
+function txt(x,y,s,o={}){
+  const a=[`x="${x}"`,`y="${y}"`,`font-size="${o.size||20}"`,`fill="${o.fill||C.ink}"`];
+  if(o.anchor)a.push(`text-anchor="${o.anchor}"`); if(o.weight)a.push(`font-weight="${o.weight}"`);
+  if(o.op!=null)a.push(`opacity="${o.op}"`); if(o.ls)a.push(`letter-spacing="${o.ls}"`);
+  return `<text ${a.join(" ")} class="${o.cls||""}">${esc(s)}</text>`;
+}
+function eyebrow(x,y,s,op,dark){return txt(x,y,String(s).toUpperCase(),{size:15,weight:800,ls:"2.6",fill:dark?C.sky:C.tealTx,op})}
+function headTitle(t,dark){
+  const f=dark?C.white:C.ink;
+  if(t.length<=46) return txt(64,124,t,{size:44,cls:"serif",fill:f});
+  const w=t.split(" "); let a="",i=0; while(i<w.length&&(a+" "+w[i]).trim().length<=Math.ceil(t.length/2)+4){a=(a+" "+w[i]).trim();i++}
+  const b=w.slice(i).join(" "), sz=Math.min(36,Math.floor(1150/(Math.max(a.length,b.length)*0.56)));
+  return txt(64,112,a,{size:sz,cls:"serif",fill:f})+txt(64,112+sz*1.15,b,{size:sz,cls:"serif",fill:f});
+}
+function header(p,eb,title,dark){
+  const a=eo(p*3), b=eo(p*3-.25);
+  return `<rect x="0" y="0" width="${W*eo(p*2.2)}" height="5" fill="url(#rule)"/>`+
+    eyebrow(64,72,eb,a,dark)+
+    `<g transform="translate(0,${(1-b)*18})" opacity="${b}">`+headTitle(String(title),dark)+`</g>`;
+}
+function foot(src,op,dark){return txt(64,H-30,src,{size:14,fill:dark?"#cfe3ea":C.ink3,op})+txt(W-64,H-30,"Dana Point PULSE · vdppulse.gloconsolutions.com",{size:14,anchor:"end",fill:dark?"#cfe3ea":C.ink3,op})}
+function chip(x,y,s,fav,op){const col=fav===true?C.tealTx:fav===false?C.maroon:C.ink3;const w=s.length*8.6+26;
+  return `<g opacity="${op}"><rect x="${x}" y="${y-19}" width="${w}" height="28" rx="14" fill="${col}" fill-opacity=".1" stroke="${col}" stroke-opacity=".35"/>`+txt(x+13,y,s,{size:15,weight:800,fill:col})+`</g>`}
+function bgLight(){return `<rect width="${W}" height="${H}" fill="#ffffff"/><rect width="${W}" height="${H}" fill="${C.mist}" opacity=".55"/>`}
+// Soft moving contour lines behind data scenes: slow, low contrast, deterministic.
+function contours(t,dark){let s="";for(let i=0;i<7;i++){const y=520+i*34,ph=t*0.35+i*0.8;let d=`M0,${y}`;
+  for(let x=0;x<=W;x+=40){d+=` L${x},${(y+Math.sin(x/170+ph)*14+Math.cos(x/90-ph*.7)*6).toFixed(1)}`}
+  s+=`<path d="${d}" fill="none" stroke="${dark?C.sky:C.teal}" stroke-opacity="${dark?.10:.07}" stroke-width="1.5"/>`}return s}
+
+/* ---------------- scenes ---------------- */
+const SC = [];
+function photoScene(p,t,lines,dark=true){
+  const z=1.04+0.10*p, ox=-(z-1)*W/2, oy=-(z-1)*H/2;
+  let s=`<image href="${D.photo}" x="${ox}" y="${oy}" width="${W*z}" height="${H*z}" preserveAspectRatio="xMidYMid slice"/>`+
+        `<rect width="${W}" height="${H}" fill="url(#scrim)"/>`+contours(t,true);
+  s+=`<g transform="translate(64,54)" opacity="${eo(p*4)}"><rect width="116" height="66" rx="10" fill="#123c4a"/><image href="${D.logo}" x="8" y="8" width="100" height="50"/></g>`;
+  return s+lines;
+}
+if(D.intro) SC.push({dur:4.2, draw(p,t){
+  const I=D.intro, words=I.title.split(" ");
+  let title="", x=64; // word-by-word rise
+  words.forEach((w,i)=>{const q=eo(p*3.2-.35-i*.12);title+=`<tspan opacity="${q}" dy="0">${esc(w)} </tspan>`});
+  const l=eyebrow(64,372,I.eyebrow,eo(p*3-.2),true)+
+    `<text x="64" y="452" font-size="76" class="serif" fill="#fff">${title}</text>`+
+    txt(64,506,I.sub,{size:24,fill:"#e6f3f6",op:eo(p*3-1.1)})+
+    `<rect x="64" y="540" width="${420*eo(p*2.5-1)}" height="4" fill="url(#rule)"/>`+
+    txt(64,H-30,I.foot,{size:14,fill:"#d7e9ee",op:eo(p*3-1.4)});
+  return photoScene(p,t,l);
+}});
+
+if(D.week) SC.push({dur:5.4, draw(p,t){
+  const K=D.week; let s=bgLight()+contours(t,false)+header(p,K.eyebrow,K.headline);
+  K.kpis.forEach((k,i)=>{const q=eo(p*3-.35-i*.12), x=64+i*292, y=176;
+    s+=`<g transform="translate(${x},${y+(1-q)*26})" opacity="${q}"><rect width="268" height="168" rx="14" fill="#fff" stroke="${C.border}"/><rect width="268" height="5" rx="2" fill="${C.teal}"/>`+
+      txt(22,42,k.l.toUpperCase(),{size:13,weight:800,ls:"1.6",fill:C.label})+txt(22,104,roll(k.v,(p*3-.5-i*.12)/1.1),{size:50,weight:800,cls:"tab"})+
+      `</g>`+chip(x+22,y+146+(1-q)*26,k.d+(k.fav===true?" · Favorable":k.fav===false?" · Unfavorable":""),k.fav,eo(p*3-1.1-i*.1));});
+  // night-by-night: bars draw, last-year ticks fade in, best night lifts
+  const N=K.nights, bx=64, by=630, bw=1152/N.length, mx=100;
+  s+=txt(64,392,K.nights_title,{size:15,weight:800,ls:"1.4",fill:C.label,op:eo(p*3-1.2)});
+  N.forEach((n,i)=>{const q=eo(p*3.2-1.0-i*.06), h=170*n.occ/mx*q, ly=by-170*n.ly/mx, x=bx+i*bw+bw*.18, w=bw*.64, top=i===K.top;
+    s+=`<rect x="${x}" y="${by-h}" width="${w}" height="${h}" rx="6" fill="${top?C.tealDk:C.teal}" opacity="${top?1:.85}"/>`+
+      `<line x1="${x-6}" x2="${x+w+6}" y1="${ly}" y2="${ly}" stroke="${C.sand}" stroke-width="3" stroke-dasharray="7 5" opacity="${q}"/>`+
+      txt(x+w/2,Math.min(by-h,ly)-10,n.occ.toFixed(1)+"%",{size:17,weight:800,anchor:"middle",op:q})+
+      txt(x+w/2,by+24,n.dow,{size:15,weight:700,anchor:"middle",fill:C.ink2})+txt(x+w/2,by+44,"$"+Math.round(n.adr),{size:13,anchor:"middle",fill:C.ink3,op:q});});
+  return s+foot(K.src,eo(p*3-1.4));
+}});
+
+if(D.ytd) SC.push({dur:5.2, draw(p,t){
+  const Y=D.ytd; let s=`<rect width="${W}" height="${H}" fill="url(#deep)"/>`+contours(t,true)+header(p,Y.eyebrow,Y.headline,true);
+  const n=Y.steps.length, gap=1152/n, y=360;
+  // connector with travelling pulses
+  const lp=eo(p*2-.3); s+=`<line x1="${64+gap/2}" x2="${64+gap/2+(gap*(n-1))*lp}" y1="${y}" y2="${y}" stroke="${C.sky}" stroke-opacity=".5" stroke-width="2"/>`;
+  for(let k=0;k<3;k++){const f=((t*0.35+k/3)%1); if(lp>.98) s+=`<circle cx="${64+gap/2+gap*(n-1)*f}" cy="${y}" r="5" fill="${C.sky}" opacity="${.9-f*.5}"/>`;}
+  Y.steps.forEach((st,i)=>{const q=back(p*3-.4-i*.22), cx=64+gap*i+gap/2, last=i===n-1;
+    s+=`<g transform="translate(${cx},${y}) scale(${Math.max(0,q)})"><circle r="${last?58:48}" fill="${last?C.amber:C.teal}" stroke="#fff" stroke-opacity=".25" stroke-width="6"/></g>`+
+      txt(cx,y+(last?118:108),roll(st.v,(p*3-.5-i*.22)),{size:last?40:34,weight:800,anchor:"middle",fill:"#fff",op:clamp(q),cls:"tab"})+
+      wrap(cx,y+(last?150:140),st.l,22,{size:15,anchor:"middle",fill:"#d7e9ee",op:clamp(q)});});
+  return s+foot(Y.src,eo(p*3-1.4),true);
+}});
+function wrap(x,y,s,max,o){const w=String(s).split(" ");let lines=[],cur="";w.forEach(x=>{if((cur+" "+x).trim().length>max){lines.push(cur.trim());cur=x}else cur+=" "+x});lines.push(cur.trim());
+  return lines.slice(0,3).map((l,i)=>txt(x,y+i*(o.size+5),l,o)).join("")}
+
+if(D.revpar) SC.push({dur:5.2, draw(p,t){
+  const R=D.revpar; let s=bgLight()+header(p,R.eyebrow,R.headline);
+  const x0=110,x1=900,y0=600,y1=210, all=R.cur.concat(R.prior).filter(v=>v!=null), mx=Math.max(...all)*1.08, n=R.x.length;
+  const X=i=>x0+(x1-x0)*i/(n-1), Y=v=>y0-(y0-y1)*v/mx;
+  for(let g=0;g<=4;g++){const v=mx*g/4,yy=Y(v);s+=`<line x1="${x0}" x2="${x1}" y1="${yy}" y2="${yy}" stroke="${C.rule}"/>`+txt(x0-14,yy+5,"$"+Math.round(v),{size:13,anchor:"end",fill:C.ink3})}
+  R.x.forEach((m,i)=>s+=txt(X(i),y0+28,m,{size:14,anchor:"middle",fill:C.ink3}));
+  const prog=eio(p*2.2-.1), upto=(n-1)*prog, path=(arr)=>{let d="";arr.forEach((v,i)=>{if(v==null||i>upto+1)return;const xi=Math.min(i,upto);const vv=i<=upto?v:arr[i-1]+(v-arr[i-1])*(upto-(i-1));d+=(d?"L":"M")+X(Math.min(i,upto)).toFixed(1)+","+Y(i<=upto?v:vv).toFixed(1)});return d};
+  const dc=path(R.cur), dp=path(R.prior);
+  if(dc){const lastx=X(Math.min(upto,R.cur.length-1));s+=`<path d="${dc} L${lastx},${y0} L${x0},${y0} Z" fill="url(#areaCur)"/>`;}
+  s+=`<path d="${dp}" fill="none" stroke="${C.sand}" stroke-width="3" stroke-dasharray="8 6"/><path d="${dc}" fill="none" stroke="${C.teal}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const li=Math.floor(Math.min(upto,R.cur.length-1)), lv=R.cur[li]; if(lv!=null) s+=`<circle cx="${X(li)}" cy="${Y(lv)}" r="8" fill="${C.teal}" stroke="#fff" stroke-width="3"/>`;
+  // legend + big figure
+  s+=`<g opacity="${eo(p*3-1)}"><line x1="950" x2="986" y1="236" y2="236" stroke="${C.teal}" stroke-width="5"/>`+txt(996,242,R.cur_name,{size:16,weight:700})+
+     `<line x1="950" x2="986" y1="268" y2="268" stroke="${C.sand}" stroke-width="3" stroke-dasharray="8 6"/>`+txt(996,274,R.prior_name,{size:16,fill:C.ink3})+`</g>`+
+     txt(950,390,roll(R.key_v,p*1.6-.3),{size:64,weight:800,cls:"tab",fill:C.tealTx,op:eo(p*2-.6)})+wrap(950,424,R.key_l,26,{size:16,fill:C.ink2,op:eo(p*2-.7)});
+  return s+foot(R.src,eo(p*3-1.4));
+}});
+
+if(D.peers) SC.push({dur:4.8, draw(p,t){
+  const P=D.peers; let s=`<rect width="${W}" height="${H}" fill="url(#deep)"/>`+contours(t,true)+header(p,P.eyebrow,P.headline,true);
+  const rows=P.rows, mx=Math.max(...rows.map(r=>r.v))*1.1, n=rows.length;
+  // start in alphabetical order, then sort into rank
+  const alpha=rows.map((r,i)=>i).sort((a,b)=>rows[a].l.localeCompare(rows[b].l)); const k=eio(p*3-.75);
+  rows.forEach((r,i)=>{const ai=alpha.indexOf(i), slot=ai+(i-ai)*k, y=196+slot*72, w=760*(r.v/mx)*eo(p*3-.2), hi=r.hi;
+    s+=`<g transform="translate(0,${y})">`+txt(64,38,r.l,{size:22,weight:hi?800:500,fill:hi?"#fff":"#d7e9ee"})+
+      `<rect x="330" y="10" width="${w}" height="40" rx="8" fill="${hi?C.amber:C.teal}" opacity="${hi?1:.9}"/>`+
+      txt(330+w+14,39,"$"+r.v.toFixed(0),{size:22,weight:800,fill:"#fff",op:eo(p*2.4-.6),cls:"tab"})+
+      (hi?txt(330+w+90,39,P.rank,{size:18,weight:800,fill:C.sky,op:eo(p*2.4-1.4)}):"")+`</g>`;});
+  return s+foot(P.src,eo(p*3-1.4),true);
+}});
+
+if(D.map) SC.push({dur:5.8, draw(p,t){
+  const M=D.map; let s=bgLight()+header(p,M.eyebrow,M.headline);
+  const sc=.84, ox=48, oy=168; s+=`<g transform="translate(${ox},${oy}) scale(${sc})">`;
+  const bins=v=>v>=10?C.tealDk:v>=2?C.teal:v>=1?C.tealLt:"#e3edf1";
+  Object.entries(M.paths).forEach(([name,d],i)=>{const v=M.states[name]||0, q=eo(p*2.6-.2-(i%12)*.03);
+    s+=`<path d="${d}" fill="${v?bins(v):"#e9eef0"}" fill-opacity="${v?(.25+.75*q):1}" stroke="#fff" stroke-width="1"/>`;});
+  // arcs from each feeder market to Dana Point
+  M.pins.forEach((pn,i)=>{const q=eo(p*2.2-.8-i*.08), hx=M.home.x, hy=M.home.y, mx=(pn.x+hx)/2, my=Math.min(pn.y,hy)-60-Math.abs(pn.x-hx)*.18;
+    const d=`M${pn.x},${pn.y} Q${mx},${my} ${hx},${hy}`, L=Math.hypot(pn.x-hx,pn.y-hy)*1.4+40;
+    s+=`<path d="${d}" fill="none" stroke="${C.amber}" stroke-width="${1.2+pn.v/5}" stroke-opacity=".8" stroke-dasharray="${L}" stroke-dashoffset="${L*(1-q)}"/>`+
+       `<circle cx="${pn.x}" cy="${pn.y}" r="${(4+Math.sqrt(pn.v)*3.4)*back(p*2.4-.6-i*.08)}" fill="${C.teal}" fill-opacity=".75" stroke="#fff" stroke-width="1.5"/>`;});
+  const pulse=(t*.8)%1; s+=`<circle cx="${M.home.x}" cy="${M.home.y}" r="${8+pulse*26}" fill="none" stroke="${C.amber}" stroke-opacity="${1-pulse}" stroke-width="2"/><circle cx="${M.home.x}" cy="${M.home.y}" r="8" fill="${C.amber}"/>`;
+  s+=`</g>`;
+  // ranked list
+  s+=txt(950,206,M.list_title.toUpperCase(),{size:13,weight:800,ls:"1.6",fill:C.label,op:eo(p*3-.8)});
+  M.pins.slice(0,6).forEach((pn,i)=>{const q=eo(p*3-.8-i*.1);s+=`<g opacity="${q}" transform="translate(${950+(1-q)*20},${248+i*52})">`+txt(0,0,pn.name,{size:18,weight:i?500:800})+txt(270,0,pn.v.toFixed(1)+"%",{size:18,weight:800,anchor:"end",fill:C.tealTx,cls:"tab"})+
+    `<rect x="0" y="12" width="${270*pn.v/M.pins[0].v}" height="5" rx="2" fill="${C.teal}" opacity=".7"/></g>`});
+  s+=txt(950,600,M.note,{size:15,fill:C.ink2,op:eo(p*3-1.8)});
+  return s+foot(M.src,eo(p*3-1.4));
+}});
+
+if(D.spend) SC.push({dur:5.0, draw(p,t){
+  const S=D.spend; let s=`<rect width="${W}" height="${H}" fill="url(#deep)"/>`+contours(t,true)+header(p,S.eyebrow,S.headline,true);
+  const cx=380, cy=420, R=180, r0=108, tot=S.items.reduce((a,b)=>a+b.v,0); let a0=-Math.PI/2; const sweep=eio(p*1.8-.2);
+  S.items.forEach((it,i)=>{const a1=a0+2*Math.PI*it.v/tot*sweep, large=(a1-a0)>Math.PI?1:0, pop=i===0?8*eo(p*3-1.6):0, mid=(a0+a1)/2, dx=Math.cos(mid)*pop, dy=Math.sin(mid)*pop;
+    if(a1-a0>0.001){const P=(ang,rad)=>[cx+dx+Math.cos(ang)*rad,cy+dy+Math.sin(ang)*rad];const [x1,y1]=P(a0,R),[x2,y2]=P(a1,R),[x3,y3]=P(a1,r0),[x4,y4]=P(a0,r0);
+      s+=`<path d="M${x1},${y1} A${R},${R} 0 ${large} 1 ${x2},${y2} L${x3},${y3} A${r0},${r0} 0 ${large} 0 ${x4},${y4} Z" fill="${ON_DARK[i%8]}" stroke="#0b2530" stroke-width="2"/>`;}
+    a0+=2*Math.PI*it.v/tot*sweep;});
+  s+=txt(cx,cy-4,roll(S.total,p*1.6-.2),{size:46,weight:800,anchor:"middle",fill:"#fff",cls:"tab"})+txt(cx,cy+28,S.total_l,{size:15,anchor:"middle",fill:"#d7e9ee"})+
+     txt(cx,cy+54,S.chg,{size:16,weight:800,anchor:"middle",fill:C.sky,op:eo(p*3-1.2)});
+  S.items.forEach((it,i)=>{const q=eo(p*3-.8-i*.1);s+=`<g opacity="${q}" transform="translate(${680+(1-q)*24},${214+i*58})"><rect width="18" height="18" rx="4" y="-15" fill="${ON_DARK[i%8]}"/>`+
+    txt(32,0,it.l,{size:19,fill:"#fff",weight:i?500:800})+txt(530,0,it.v.toFixed(1)+"%",{size:20,weight:800,anchor:"end",fill:C.sky,cls:"tab"})+`</g>`});
+  return s+foot(S.src,eo(p*3-1.4),true);
+}});
+
+if(D.nights) SC.push({dur:5.0, draw(p,t){
+  const N=D.nights; let s=bgLight()+contours(t,false)+header(p,N.eyebrow,N.headline);
+  const rows=N.rows, bx=90, by=590, bw=720/rows.length;
+  for(let g=0;g<=4;g++){const yy=by-330*g/4;s+=`<line x1="${bx}" x2="${bx+720}" y1="${yy}" y2="${yy}" stroke="${C.rule}"/>`+txt(bx-12,yy+5,(25*g)+"%",{size:13,anchor:"end",fill:C.ink3})}
+  rows.forEach((r,i)=>{const q=eo(p*3-.3-i*.06), h=330*r.v/100*q, x=bx+i*bw+bw*.14, w=bw*.72;
+    s+=`<rect x="${x}" y="${by-h}" width="${w}" height="${h}" rx="7" fill="${r.hi?C.amber:C.teal}" opacity="${r.hi?1:.88}"/>`+
+      txt(x+w/2,by-h-10,r.v.toFixed(1)+"%",{size:16,weight:800,anchor:"middle",op:q})+txt(x+w/2,by+26,r.l,{size:16,weight:700,anchor:"middle",fill:C.ink2})});
+  const q=eo(p*3-1.2);
+  s+=`<g opacity="${q}" transform="translate(${880+(1-q)*20},210)"><rect width="336" height="360" rx="14" fill="#fff" stroke="${C.border}"/><rect width="5" height="360" fill="${C.amber}"/>`+
+    txt(28,48,N.gap_l.toUpperCase(),{size:13,weight:800,ls:"1.5",fill:C.label})+txt(28,112,roll(N.gap_v,p*2.5-.5),{size:58,weight:800,cls:"tab"})+
+    wrap(28,152,N.gap_note,30,{size:15,fill:C.ink2})+
+    `<line x1="28" x2="308" y1="214" y2="214" stroke="${C.rule}"/>`+txt(28,252,N.sc_l.toUpperCase(),{size:13,weight:800,ls:"1.5",fill:C.label})+
+    txt(28,312,roll(N.sc_v,p*2.6-.8),{size:52,weight:800,fill:C.tealTx,cls:"tab"})+wrap(28,340,N.sc_note,32,{size:13,fill:C.ink3})+`</g>`;
+  return s+foot(N.src,eo(p*3-1.4));
+}});
+
+if(D.mkt) SC.push({dur:4.8, draw(p,t){
+  const K=D.mkt; let s=`<rect width="${W}" height="${H}" fill="url(#deep)"/>`+contours(t,true)+header(p,K.eyebrow,K.headline,true);
+  const st=K.stages, top=200;
+  st.forEach((g,i)=>{const q=eo(p*2.6-.3-i*.22), w=(900-i*260)*q, x=W/2-w/2-110, y=top+i*118;
+    s+=`<path d="M${x},${y} L${x+w},${y} L${x+w-40*q},${y+96} L${x+40*q},${y+96} Z" fill="${i===st.length-1?C.amber:ON_DARK[i]}" opacity=".95"/>`+
+      txt(W/2-110,y+50,roll(g.v,(p*2.6-.4-i*.22)),{size:38,weight:800,anchor:"middle",fill:"#fff",op:q,cls:"tab"})+txt(W/2-110,y+80,g.l,{size:16,anchor:"middle",fill:"#e6f3f6",op:q});});
+  const q=eo(p*3-1.4);
+  s+=`<g opacity="${q}" transform="translate(1000,${250+(1-q)*20})">`+txt(0,0,K.side_l.toUpperCase(),{size:13,weight:800,ls:"1.5",fill:C.sky})+
+    txt(0,74,roll(K.side_v,p*2.8-1.1),{size:72,weight:800,fill:"#fff",cls:"tab"})+wrap(0,108,K.side_note,22,{size:16,fill:"#d7e9ee"})+`</g>`;
+  return s+foot(K.src,eo(p*3-1.4),true);
+}});
+
+if(D.outlook) SC.push({dur:5.6, draw(p,t){
+  const O=D.outlook; let l=eyebrow(64,250,O.eyebrow,eo(p*3),true)+
+    txt(64,330,roll(O.v,p*1.6-.2),{size:96,weight:800,fill:"#fff",cls:"tab",op:eo(p*3-.2)})+
+    wrap(64,372,O.l,46,{size:22,fill:"#e6f3f6",op:eo(p*3-.5)});
+  if(O.event){const q=eo(p*3-.9), cx=1040, cy=320, rr=92, frac=clamp(1-O.event.days/60), a=-Math.PI/2+2*Math.PI*frac*eo(p*2-.8);
+    l+=`<g opacity="${q}"><circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="12"/>`+
+      `<path d="M${cx},${cy-rr} A${rr},${rr} 0 ${frac>.5?1:0} 1 ${cx+Math.cos(a)*rr},${cy+Math.sin(a)*rr}" fill="none" stroke="${C.amber}" stroke-width="12" stroke-linecap="round"/>`+
+      txt(cx,cy+8,O.event.days_txt,{size:52,weight:800,anchor:"middle",fill:"#fff",cls:"tab"})+txt(cx,cy+40,"days",{size:16,anchor:"middle",fill:"#d7e9ee"})+
+      txt(cx,cy+rr+44,O.event.name,{size:20,weight:800,anchor:"middle",fill:"#fff"})+txt(cx,cy+rr+70,O.event.date,{size:16,anchor:"middle",fill:"#d7e9ee"})+`</g>`;}
+  l+=`<g opacity="${eo(p*2.4-1.3)}"><rect x="64" y="470" width="470" height="58" rx="10" fill="${C.teal}" stroke="#123c4a"/>`+txt(299,507,"vdppulse.gloconsolutions.com",{size:22,weight:800,anchor:"middle",fill:"#fff"})+`</g>`+
+     txt(64,H-30,O.foot,{size:14,fill:"#d7e9ee",op:eo(p*3-1.4)});
+  return photoScene(p,t,l);
+}});
+
+/* ---------------- timeline ---------------- */
+const XF = 0.45; let acc=0; SC.forEach(s=>{s.t0=acc; acc+=s.dur}); const DUR=acc;
+window.DUR = DUR;
+window.renderAt = function(t){
+  let out="";
+  SC.forEach((s,i)=>{const lt=t-s.t0; if(lt<-0.0001||lt>s.dur+XF) return;
+    const fadeIn=i===0?1:eo(lt/XF), fadeOut=(i===SC.length-1)?1:eo((s.dur+XF-lt)/XF), op=Math.min(fadeIn,fadeOut);
+    if(op<=0) return; out+=`<g opacity="${op.toFixed(3)}">${s.draw(clamp(lt/s.dur),t)}</g>`;});
+  document.getElementById("root").innerHTML=out;
+};
+renderAt(0);
+// Live playback when opened in a browser (frame capture calls renderAt directly).
+if(!window.__CAPTURE__){let st=null;const loop=ts=>{if(st==null)st=ts;renderAt(((ts-st)/1000)%DUR);requestAnimationFrame(loop)};requestAnimationFrame(loop);}
+</script></body></html>

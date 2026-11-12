@@ -155,6 +155,9 @@ STEPS = [
     # (AdRevamp market impact, Advertising Destination/Visitor visuals, spend-by-day/stay,
     # visitation heatmap, vendor performance, monthly spend history) → 17 new tables (skip-safe).
     ("load_datafy_extended", os.path.join(BASE_DIR, "load_datafy_extended.py"), False),
+    # Datafy Report Builder monthly recap PDF (data/datafy/recap/) → datafy_recap_metrics +
+    # datafy_recap_visuals. Every printed value, with the window from its own visual. Added 2026-11-12.
+    ("load_datafy_recap",    os.path.join(BASE_DIR, "load_datafy_recap_pdf.py"),  False),
     ("load_costar",          os.path.join(BASE_DIR, "load_costar_reports.py"),     False),
     # CoStar's raw submarket HospitalityDataGrid export (daily_costar.xlsx / monhtly_costar.xlsx)
     # — current, higher-frequency than the PDF-parsed costar_monthly_performance table above.

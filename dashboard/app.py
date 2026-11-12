@@ -1874,6 +1874,7 @@ st.markdown(
     """
     <div class="pulse-jumpnav">
       <a href="#pulse-glance">At a glance</a>
+      <a href="#pulse-motion">Weekly motion</a>
       <a href="#pulse-snapshot">1 &middot; Performance</a>
       <a href="#pulse-origins">2 &middot; Visitors and spend</a>
       <a href="#pulse-market">3 &middot; Market position</a>
@@ -1983,6 +1984,65 @@ def _strip(kind: str) -> None:
         print(f"[pulse] glance strip {kind} failed: {_exc}")
 
 
+MOTION_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "motion")
+
+
+def _weekly_motion_page() -> None:
+    """Weekly motion page (2026-11-12): the latest motion recap built by scripts/build_weekly_motion.py
+    from the PULSE database, with Hide and Download. Its own page so the first page keeps its space.
+    Never raises; with no motion files on disk the page says so plainly."""
+    st.markdown('<div id="pulse-motion" class="pulse-anchor"></div>', unsafe_allow_html=True)
+    paths = {ext: os.path.join(MOTION_DIR, f"weekly_motion_latest.{ext}") for ext in ("mp4", "gif", "jpg", "json")}
+    try:
+        meta = {}
+        if os.path.exists(paths["json"]):
+            with open(paths["json"], encoding="utf-8") as fh:
+                meta = json.load(fh)
+        through = meta.get("data_through")
+        label = ""
+        if through:
+            _d = datetime.strptime(through, "%Y-%m-%d").date()
+            label = f"Week ending {_d.strftime('%B')} {_d.day}, {_d.year}"
+        st.markdown(
+            "<div style='font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#0e7490'>"
+            "Weekly motion</div>"
+            f"<div style='font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:26px;color:#0b2530;"
+            f"margin:4px 0 6px'>This week in Dana Point{(': ' + html.escape(label)) if label else ''}</div>"
+            "<div style='font-size:14px;color:#334155;line-height:1.5;max-width:880px'>The week's hotel results, night by night, "
+            "who visited and what they spent, the coastal peers and the wider view, in under a minute. Every figure is built "
+            "from the PULSE database (CoStar, STR and Datafy) when the data refreshes.</div>",
+            unsafe_allow_html=True,
+        )
+        if not os.path.exists(paths["mp4"]) and not os.path.exists(paths["gif"]):
+            st.caption("The motion recap appears here after the next weekly build.")
+            return
+        show = st.toggle("Show the motion", value=True, key="pulse_motion_show",
+                         help="Turn off to hide the motion on this page; turn on to bring it back.")
+        if show:
+            c1, c2 = st.columns([5, 1])
+            with c1:
+                if os.path.exists(paths["mp4"]):
+                    st.video(paths["mp4"], autoplay=True, loop=True, muted=True)
+                else:
+                    st.image(paths["gif"], use_container_width=True)
+        else:
+            st.caption("Motion hidden. Turn on Show the motion to see it again.")
+        d1, d2, _sp = st.columns([1, 1, 3])
+        stamp = through or "latest"
+        if os.path.exists(paths["mp4"]):
+            with open(paths["mp4"], "rb") as fh:
+                d1.download_button("Download video (MP4)", fh.read(), file_name=f"Dana_Point_PULSE_Weekly_{stamp}.mp4",
+                                   mime="video/mp4", key="dl_motion_mp4", use_container_width=True)
+        if os.path.exists(paths["gif"]):
+            with open(paths["gif"], "rb") as fh:
+                d2.download_button("Download GIF", fh.read(), file_name=f"Dana_Point_PULSE_Weekly_{stamp}.gif",
+                                   mime="image/gif", key="dl_motion_gif", use_container_width=True)
+        st.caption("Sources: CoStar daily and monthly (Dana Point market), STR weekly coastal peer report, Datafy visitor "
+                   "economy dashboard. Hotel weeks compare with the same weekdays last year.")
+    except Exception as _exc:  # noqa: BLE001
+        print(f"[pulse] weekly motion page failed: {_exc}")
+
+
 def _render_brief_block() -> None:
     """The Intelligence Brief (generate a read, ask a follow-up). Sits on the At a glance page
     so the one AI read covers the whole app; every section keeps its own Ask about this section card."""
@@ -2058,6 +2118,7 @@ else:
         pulse_board.mount(pulse_board.brief(pulse_model), key="pb_brief")
         _strip("announce")
         _strip("week")   # latest STR week, added 2026-11-05
+        _weekly_motion_page()  # Weekly motion page, its own page in the pager (2026-11-12)
 
     def _board_snapshot() -> None:
         _anchor("pulse-snapshot")

@@ -160,6 +160,26 @@ then `find` "Export as CSV" and click it by ref. Close with Cancel.
 Traditional KPIs and Line Item Performance pages; Spending Correlation and
 Peak Spending sub-tabs (no loaders); the GA visuals that error out.
 
+### Datafy monthly recap PDF (Report Builder), added 2026-11-12
+
+One Report Builder export replaces most of the per-card CSV pulls for a monthly read.
+
+1. Datafy apps grid > Report Builder > "Monthly Pull Deep Dive Visitation Report (Copy)".
+2. Before exporting, set the report's Geolocation and Advanced Spending dates to the month you want.
+   The 2026-11-12 export still carried old windows (Geolocation Feb. 1 to 28, 2025; Advanced
+   Spending Jan. 1 to 31, 2026; Airport Jan. 1, 2018 to Sept. 1, 2025), so its numbers are history, not this month.
+3. Export goes straight to a PDF download (there is no CSV option). Save it into
+   `data/datafy/recap/` as `Datafy_Recap_<YYYY-MM>.pdf` (new name per month; never overwrite).
+4. `scripts/load_datafy_recap_pdf.py` (pipeline step `load_datafy_recap`, after `load_datafy_extended`)
+   reads every PDF there into `datafy_recap_metrics` (one row per printed value, with the window printed
+   on its own visual) and `datafy_recap_visuals` (one row per visual, `status` ok or chart_only).
+5. What the PDF cannot give: values drawn only as charts (Visitor Days by Month, Spending by Month,
+   Top Cluster Visitation and Merchant Category Trends lines). Pull those as card CSVs when needed.
+   Values Datafy prints garbled (for example "24Days", "230%") are stored as `quality='unreadable'`
+   with no value, so the quality gate never shows them.
+6. The recap tables do not yet feed the app's `datafy_overview_*` tables. Mapping them in is the next
+   step once a recap with current windows exists.
+
 ## 3. Load
 
 After fetching, run `./scripts/refresh_all.sh` (or `--no-push`). It runs the

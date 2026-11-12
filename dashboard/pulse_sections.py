@@ -35,6 +35,7 @@ CFG = pc.CONFIG
 
 SECTION_LINKS = [
     ("pulse-glance", "At a glance"),
+    ("pulse-motion", "Weekly motion"),
     ("pulse-snapshot", "Performance snapshot"),
     ("pulse-origins", "Visitors and spend"),
     ("pulse-who", "Who visits"),

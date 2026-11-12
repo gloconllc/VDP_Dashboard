@@ -55,7 +55,7 @@ VIRTUAL = {
     "pulse-appx": ("Appendix", "pulse-about"),
     "pulse-sources": ("Sources", "pulse-about"),
 }
-ORDER = ["pulse-glance", "pulse-snapshot", "pulse-origins", "pulse-who", "pulse-here", "pulse-mkt",
+ORDER = ["pulse-glance", "pulse-motion", "pulse-snapshot", "pulse-origins", "pulse-who", "pulse-here", "pulse-mkt",
          "pulse-city", "pulse-market", "pulse-night", "pulse-forward", "pulse-fullreport",
          "pulse-about", "pulse-appx", "pulse-sources", "pulse-notes"]
 
@@ -73,7 +73,7 @@ def mount(links: list[tuple[str, str]]) -> None:
                 pages.append([pid, VIRTUAL[pid][0], VIRTUAL[pid][1]])
             elif pid in real:
                 pages.append([pid, real[pid]])
-        cfg = json.dumps({"pages": pages, "alias": ALIAS, "embeds": EMBEDS, "combine": [], "embedAfter": ["pulse-glance", "pulse-about"], "nofilter": ["pulse-fullreport", "pulse-about", "pulse-notes"]})
+        cfg = json.dumps({"pages": pages, "alias": ALIAS, "embeds": EMBEDS, "combine": [], "embedAfter": ["pulse-glance", "pulse-about"], "nofilter": ["pulse-motion", "pulse-fullreport", "pulse-about", "pulse-notes"]})
         components.html(f"<script>window.PZ_CFG={cfg};</script><script>{js}</script>", height=0)
     except Exception as exc:  # noqa: BLE001
         print(f"[pulse] pager skipped: {exc}")

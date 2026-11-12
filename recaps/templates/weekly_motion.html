@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<!-- Dana Point PULSE weekly motion. Copyright (c) 2026 GloCon Solutions LLC. Created and owned by John Picou, built for Visit Dana Point.
+     Illustrated style chosen by John on Nov. 12, 2026: pale sky, teal sea, gray cliff, hotel whose windows light up with occupancy, cream cards.
+     Layout and animation only: every figure and line of text comes from window.PULSE_DATA, built by scripts/build_weekly_motion.py
+     from data/analytics.sqlite. Fonts: Plus Jakarta Sans (SIL Open Font License, dashboard/assets/fonts/OFL.txt). -->
+<html lang="en"><head><meta charset="utf-8"><title>Dana Point PULSE weekly motion</title>
+<style>
+@font-face{font-family:"PJS";src:url(FONT_REG) format("woff2");font-weight:200 800;font-style:normal}
+@font-face{font-family:"PJS";src:url(FONT_ITA) format("woff2");font-weight:200 800;font-style:italic}
+html,body{margin:0;padding:0;background:#e3eeee;overflow:hidden}
+svg{display:block;width:100vw;height:100vh}
+text{font-family:"PJS","Plus Jakarta Sans",Arial,sans-serif}
+.h{font-style:italic;font-weight:800;letter-spacing:-.4px}
+.tab{font-variant-numeric:tabular-nums}
+</style></head><body>
+<svg id="stage" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2eeee"/><stop offset="1" stop-color="#eef3ef"/></linearGradient>
+  <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f6c6f"/><stop offset="1" stop-color="#175a5d"/></linearGradient>
+  <linearGradient id="wave" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a7f80"/><stop offset="1" stop-color="#16585b"/></linearGradient>
+  <filter id="soft" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0b2530" flood-opacity=".12"/></filter>
+</defs>
+<g id="root"></g>
+</svg>
+<script>
+const D = window.PULSE_DATA || {};
+const C = {ink:"#123c4a", head:"#17595c", headLt:"#8db9b6", body:"#334155", muted:"#5f7076", card:"#f6f5ef", white:"#ffffff",
+           roof:"#17595c", wall:"#f3f1e8", wallSide:"#d9d6cc", winOff:"#1f3b3d", winOn:"#b9e0e3", cliff:"#b6b3ad", cliffDk:"#8d8a85",
+           sea:"#1f6c6f", seaLine:"#8cc3c4", palm:"#1d5c5f", fav:"#0e7490", unf:"#a8461f", amber:"#b45309", grass:"#1d5c5f"};
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const eo=x=>{x=clamp(x);return 1-Math.pow(1-x,3)};
+const eio=x=>{x=clamp(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function T(x,y,s,o={}){const a=[`x="${x}"`,`y="${y}"`,`font-size="${o.size||12}"`,`fill="${o.fill||C.ink}"`];
+  if(o.anchor)a.push(`text-anchor="${o.anchor}"`);if(o.weight)a.push(`font-weight="${o.weight}"`);if(o.op!=null)a.push(`opacity="${o.op}"`);
+  if(o.ls)a.push(`letter-spacing="${o.ls}"`);return `<text ${a.join(" ")} class="${o.cls||""}">${esc(s)}</text>`}
+function roll(str,p){const m=String(str).match(/^([^0-9\-]*)(-?[\d,]*\.?\d+)(.*)$/);if(!m)return str;
+  const raw=m[2].replace(/,/g,""),dec=(raw.split(".")[1]||"").length,v=parseFloat(raw)*eo(clamp(p));
+  let s=v.toFixed(dec);if(m[2].includes(",")){const [a,b]=s.split(".");s=a.replace(/\B(?=(\d{3})+(?!\d))/g,",")+(b!==undefined?"."+b:"")}return m[1]+s+m[3]}
+// Headline that writes itself in word by word: written words are dark teal, the next ones wait in light teal.
+function headline(x,y,text,p,size,maxw){const words=String(text).split(" "),n=words.length,shown=p*n;let lines=[[]],w=0,cw=size*.56;
+  words.forEach((wd,i)=>{const l=(wd.length+1)*cw;if(w+l>maxw&&lines[lines.length-1].length){lines.push([]);w=0}lines[lines.length-1].push(i);w+=l});
+  let s="";lines.forEach((ln,li)=>{let sp="";ln.forEach(i=>{const k=clamp(shown-i);sp+=`<tspan fill="${k>=1?C.head:C.headLt}" opacity="${k>0?(.35+.65*k):0}">${esc(words[i])} </tspan>`});
+    s+=`<text x="${x}" y="${y+li*size*1.08}" font-size="${size}" class="h">${sp}</text>`});return {svg:s,lines:lines.length}}
+function eyebrow(x,y,s,op=1){return T(x,y,String(s).toUpperCase(),{size:7.2,weight:800,ls:"1.1",fill:C.head,op})}
+function src(x,y,s,op=1,fill){return T(x,y,s,{size:5.6,fill:fill||C.muted,op})}
+
+/* ---------------- scenery ---------------- */
+function sky(){return `<rect width="640" height="360" fill="url(#sky)"/>`}
+function seaBand(y,t){let s=`<rect x="0" y="${y}" width="640" height="${360-y}" fill="url(#sea)"/>`;
+  for(let i=0;i<9;i++){const yy=y+14+i*16,off=((t*14+i*37)%120);for(let k=-1;k<6;k++){const x=k*120+off+(i%2)*40;s+=`<line x1="${x}" x2="${x+38+(i*7)%26}" y1="${yy}" y2="${yy}" stroke="${C.seaLine}" stroke-opacity="${.35-i*.025}" stroke-width="1"/>`}}return s}
+function hills(y){return `<path d="M0,${y} C60,${y-12} 140,${y-10} 220,${y-4} L220,${y} Z" fill="#c9ccc6" opacity=".7"/>`}
+function palm(x,y,h,sway){const tx=x+sway,ty=y-h;let s=`<path d="M${x},${y} Q${x+sway*.4},${y-h*.55} ${tx},${ty}" stroke="${C.palm}" stroke-width="2" fill="none"/>`;
+  for(let k=0;k<6;k++){const a=-2.8+k*.62+sway*.01,len=13;s+=`<path d="M${tx},${ty} q${Math.cos(a)*len*.6},${Math.sin(a)*len*.5-4} ${Math.cos(a)*len},${Math.sin(a)*len+3}" stroke="${C.palm}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`}return s}
+// The hotel: columns are nights, rows are floors; a column lights from the bottom up to that night's occupancy.
+function hotel(x,y,w,h,cols,rows,lit,opt={}){const pad=w*.08,gw=(w-pad*2)/cols,gh=(h-pad*1.6)/rows;
+  let s=`<rect x="${x+w}" y="${y+4}" width="${w*.035}" height="${h-4}" fill="${C.wallSide}"/><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${C.wall}"/>`+
+        `<rect x="${x-3}" y="${y-6}" width="${w+6+w*.035}" height="7" fill="${C.roof}"/>`;
+  for(let c=0;c<cols;c++){const frac=lit?lit[c]:0;for(let r=0;r<rows;r++){const fromBottom=(rows-r-.5)/rows,on=fromBottom<=frac;
+    s+=`<rect x="${x+pad+c*gw+gw*.16}" y="${y+pad*.9+r*gh+gh*.22}" width="${gw*.68}" height="${gh*.5}" rx="1" fill="${on?C.winOn:C.winOff}"/>`}
+    if(opt.hi===c&&opt.hiOp>0)s+=`<rect x="${x+pad+c*gw+gw*.04}" y="${y+pad*.5}" width="${gw*.92}" height="${h-pad*1.2}" rx="3" fill="none" stroke="${C.head}" stroke-width="1.6" opacity="${opt.hiOp}"/>`}
+  s+=`<rect x="${x+w/2-w*.07}" y="${y+h-8}" width="${w*.14}" height="8" fill="${C.roof}"/>`;return s}
+function cliffScene(t,litFrac,cx=0,cy=0,sc=1){return `<g transform="translate(${cx},${cy}) scale(${sc})">`+
+  `<path d="M352,360 C356,300 380,232 432,200 C470,180 560,172 640,168 L640,360 Z" fill="${C.cliff}"/>`+
+  `<path d="M352,360 C356,300 380,232 432,200 C420,232 402,282 396,360 Z" fill="${C.cliffDk}"/>`+
+  `<path d="M405,186 C430,176 520,170 640,166 L640,174 C540,178 450,184 410,196 Z" fill="${C.grass}"/>`+
+  [[420,248,452,244],[416,272,456,266],[420,300,470,292],[440,226,500,220]].map(l=>`<line x1="${l[0]}" y1="${l[1]}" x2="${l[2]}" y2="${l[3]}" stroke="${C.cliffDk}" stroke-width="1.2" opacity=".8"/>`).join("")+
+  hotel(442,82,112,92,7,9,litFrac)+palm(438,180,42,Math.sin(t*1.3)*3)+palm(612,170,58,Math.sin(t*1.1+1)*3)+`</g>`}
+function card(x,y,w,h,inner,op=1,dy=0){return `<g opacity="${op}" transform="translate(0,${dy})"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${C.card}" filter="url(#soft)"/>${inner}</g>`}
+function kpi(x,y,w,h,k,p){return `<g opacity="${eo(p*3)}" transform="translate(0,${(1-eo(p*3))*8})"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="#fff" filter="url(#soft)"/><rect x="${x}" y="${y}" width="${w}" height="2.4" rx="1" fill="${C.head}"/>`+
+  T(x+10,y+16,k.l.toUpperCase(),{size:6.2,weight:800,ls:"1",fill:C.head})+T(x+10,y+44,roll(k.v,p*2.2-.2),{size:24,cls:"h tab",fill:C.head})+
+  T(x+10,y+57,`${k.glyph} ${k.d} · ${k.word}`,{size:6.6,weight:800,fill:k.fav===true?C.fav:k.fav===false?C.unf:C.muted,op:eo(p*3-1)})+T(x+10,y+68,k.note,{size:6,fill:C.muted,op:eo(p*3-1.2)})+`</g>`}
+
+/* ---------------- scenes ---------------- */
+const SC=[];
+SC.push({dur:5.2,draw(p,t){const I=D.intro, lit=D.nights.map(n=>n.occ/100*eo(p*1.4));
+  const hd=headline(30,86,I.title,eio(p*1.5),23,240);
+  return sky()+hills(204)+seaBand(204,t)+cliffScene(t,lit)+
+    card(18,40,230,140,eyebrow(30,58,I.eyebrow)+hd.svg+T(30,86+hd.lines*25+4,I.sub,{size:7.4,fill:C.body,op:eo(p*2.4-1.2)})+T(30,86+hd.lines*25+14,I.sub2,{size:7.4,fill:C.body,op:eo(p*2.4-1.3)}),eo(p*4))+
+    src(30,330,I.src,eo(p*3-1.5),"#d7e9ea")}});
+
+SC.push({dur:5.6,draw(p,t){const K=D.week,hd=headline(24,62,K.headline,eio(p*2.2),20,600);
+  let s=sky()+seaBand(318,t)+eyebrow(24,36,K.eyebrow)+hd.svg;
+  K.kpis.forEach((k,i)=>{const col=i%2,row=Math.floor(i/2);s+=kpi(24+col*302,96+row*94,290,82,k,p*1.15-.15-i*.06)});
+  return s+src(24,298,K.src,eo(p*3-1.4))}});
+
+SC.push({dur:6.8,draw(p,t){const N=D.nights,top=D.top,lit=N.map((n,i)=>n.occ/100*eio(p*2.2-.25-i*.05)),hd=headline(26,80,D.night_headline,eio(p*2.4),18,150);
+  const hx=186,hw=300,hy=72,hh=176;
+  let s=sky()+seaBand(208,t)+`<rect x="0" y="252" width="640" height="108" fill="#dfddd5"/>`+hotel(hx,hy,hw,hh,7,10,lit,{hi:top,hiOp:eo(p*3-2)});
+  s+=card(14,42,160,164,eyebrow(26,58,"Night by night")+hd.svg+T(26,80+hd.lines*19.4+6,"Lit windows show the share of rooms",{size:6.6,fill:C.body,op:eo(p*3-1.3)})+T(26,80+hd.lines*19.4+15,"sold each night; the rate sits under it",{size:6.6,fill:C.body,op:eo(p*3-1.3)}),eo(p*4));
+  const gw=(hw-hw*.16)/7;N.forEach((n,i)=>{const cx=hx+hw*.08+gw*i+gw/2,q=eo(p*2.6-.6-i*.08);
+    s+=T(cx,268,n.dow,{size:7,weight:700,anchor:"middle",fill:C.body,op:q})+T(cx,279,n.occ.toFixed(1)+"%",{size:7.6,weight:800,anchor:"middle",fill:C.head,op:q,cls:"tab"})+T(cx,289,"$"+Math.round(n.adr),{size:6.6,anchor:"middle",fill:C.muted,op:q,cls:"tab"})});
+  return s+src(26,330,D.night_src,eo(p*3-1.4))}});
+
+SC.push({dur:5.6,draw(p,t){const N=D.nights,R=D.rate,hd=headline(24,62,R.headline,eio(p*2.2),20,560);
+  const x0=58,x1=600,yb=318,lo=Math.floor((Math.min(...N.map(n=>n.adr))-40)/50)*50,hi=Math.ceil((Math.max(...N.map(n=>n.adr))+10)/50)*50;
+  const X=i=>x0+(x1-x0)*i/(N.length-1),Y=v=>yb-(yb-118)*(v-lo)/(hi-lo),g=eio(p*1.9-.1);
+  let s=sky()+eyebrow(24,36,R.eyebrow)+hd.svg;
+  for(let v=lo;v<=hi;v+=50){s+=`<line x1="${x0-8}" x2="${x1+20}" y1="${Y(v)}" y2="${Y(v)}" stroke="#c6d6d6" stroke-width=".6"/>`+T(24,Y(v)+2,"$"+v,{size:6,fill:C.muted})}
+  // smooth sea-like curve through each night's rate, rising from the water
+  const pts=N.map((n,i)=>[X(i),yb-(yb-Y(n.adr))*g]);let d=`M0,${yb+8} L${pts[0][0]-58},${pts[0][1]+4} L${pts[0][0]},${pts[0][1]}`;
+  for(let i=1;i<pts.length;i++){const [ax,ay]=pts[i-1],[bx,by]=pts[i],mx=(ax+bx)/2;d+=` C${mx},${ay} ${mx},${by} ${bx},${by}`}
+  d+=` L640,${pts[pts.length-1][1]-6} L640,360 L0,360 Z`;
+  s+=`<path d="${d}" fill="url(#wave)"/>`;
+  for(let i=0;i<5;i++){const yy=yb+10+i*9;s+=`<line x1="${(t*20+i*90)%640}" x2="${(t*20+i*90)%640+40}" y1="${yy}" y2="${yy}" stroke="${C.seaLine}" stroke-opacity=".3"/>`}
+  pts.forEach(([x,y],i)=>{const q=eo(p*2.6-.6-i*.07),n=N[i];s+=`<circle cx="${x}" cy="${y}" r="3.2" fill="#fff" stroke="${C.head}" stroke-width="1.4" opacity="${q}"/>`+
+    T(x,y-8,"$"+Math.round(n.adr),{size:7.6,weight:800,anchor:"middle",fill:C.ink,op:q,cls:"tab"})+T(x,yb+20,n.dow,{size:7,weight:700,anchor:"middle",fill:"#e6f3f3"})});
+  return s+src(470,350,R.src,eo(p*3-1.2),"#d7e9ea")}});
+
+// Datafy: who visits and what they spend
+if(D.visitors)SC.push({dur:6.4,draw(p,t){const V=D.visitors,hd=headline(24,62,V.headline,eio(p*2.2),19,600);
+  let s=sky()+seaBand(318,t)+eyebrow(24,36,V.eyebrow)+hd.svg;
+  V.stats.forEach((k,i)=>{const y=104+i*66,q=eo(p*3-.4-i*.15);
+    s+=`<g opacity="${q}" transform="translate(${(1-q)*-10},0)"><rect x="24" y="${y}" width="196" height="58" rx="6" fill="#fff" filter="url(#soft)"/><rect x="24" y="${y}" width="3" height="58" fill="${C.head}"/>`+
+      T(36,y+15,k.l.toUpperCase(),{size:6,weight:800,ls:".9",fill:C.head})+`<text x="36" y="${y+40}" font-size="21" class="h tab" fill="${C.head}">${esc(roll(k.v,p*2.4-.4-i*.15))}<tspan dx="6" font-size="7" font-style="normal" font-weight="800" fill="${k.fav===true?C.fav:k.fav===false?C.unf:C.muted}">${esc(k.p)}</tspan></text>`+`</g>`});
+  // top markets as piers reaching into the water
+  s+=T(250,112,V.markets_title.toUpperCase(),{size:6.4,weight:800,ls:".9",fill:C.head,op:eo(p*3-.6)});
+  const mx=V.markets[0].v;V.markets.forEach((m,i)=>{const y=126+i*30,q=eo(p*2.6-.7-i*.1),w=200*m.v/mx*q;
+    s+=T(250,y+11,m.l,{size:8,weight:i?600:800,fill:C.ink,op:q})+`<rect x="370" y="${y+2}" width="${w}" height="12" rx="3" fill="${i?C.head:C.roof}" opacity="${i?.7:1}"/>`+
+      `<line x1="${370+w}" x2="${370+w}" y1="${y+14}" y2="${y+19}" stroke="${C.roof}" stroke-width="1.4" opacity="${q}"/>`+T(376+w,y+11,m.v.toFixed(1)+"%",{size:8,weight:800,fill:C.head,op:q,cls:"tab"})});
+  return s+src(24,338,V.src,eo(p*3-1.4),"#d7e9ea")}});
+
+// STR: the coastal skyline, one building per market, height = revenue per available room
+if(D.peers)SC.push({dur:5.6,draw(p,t){const P=D.peers,hd=headline(24,62,P.headline,eio(p*2.2),19,600);
+  let s=sky()+eyebrow(24,36,P.eyebrow)+hd.svg+`<rect x="0" y="286" width="640" height="74" fill="#dfddd5"/>`+seaBand(306,t);
+  const n=P.rows.length,gap=592/n,mx=Math.max(...P.rows.map(r=>r.v));
+  P.rows.forEach((r,i)=>{const q=eio(p*2.2-.3-i*.08),h=170*r.v/mx*q,x=36+i*gap,w=gap*.62,y=286-h,hi=r.hi;
+    s+=`<rect x="${x+w}" y="${y+3}" width="4" height="${h-3}" fill="${C.wallSide}"/><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${hi?C.wall:"#ece9df"}"/>`+
+      `<rect x="${x-2}" y="${y-5}" width="${w+8}" height="6" fill="${hi?C.amber:C.roof}"/>`;
+    const rows=Math.max(1,Math.floor(h/14));for(let r2=0;r2<rows;r2++)for(let c=0;c<3;c++)s+=`<rect x="${x+w*.12+c*w*.29}" y="${y+8+r2*14}" width="${w*.18}" height="6" rx="1" fill="${hi?C.winOn:"#9fb9bb"}"/>`;
+    s+=T(x+w/2,y-10,"$"+Math.round(r.v),{size:9,weight:800,anchor:"middle",fill:hi?C.amber:C.head,op:eo(p*3-1-i*.08),cls:"tab"})+
+      T(x+w/2,298,r.l,{size:7,weight:hi?800:600,anchor:"middle",fill:C.ink,op:eo(p*3-.8)})});
+  return s+src(24,350,P.src,eo(p*3-1.4),"#d7e9ea")}});
+
+if(D.wide&&D.wide.cards.length)SC.push({dur:5.2,draw(p,t){const W=D.wide,hd=headline(24,62,W.headline,eio(p*2.2),20,600);
+  let s=sky()+seaBand(300,t)+cliffScene(t,D.nights.map(n=>n.occ/100),150,150,.68)+eyebrow(24,36,W.eyebrow)+hd.svg;
+  const n=W.cards.length,cw=n===1?300:286;
+  W.cards.forEach((c,i)=>{const x=24+i*(cw+12),q=eo(p*2.6-.4-i*.18);
+    s+=`<g opacity="${q}" transform="translate(0,${(1-q)*8})"><rect x="${x}" y="106" width="${cw}" height="104" rx="6" fill="#fff" filter="url(#soft)"/><rect x="${x}" y="106" width="${cw}" height="2.4" fill="${C.head}"/>`+
+      T(x+10,120,c.label.toUpperCase(),{size:6,weight:800,ls:".9",fill:C.head})+`<text x="${x+10}" y="150" font-size="25" class="h tab" fill="${C.head}">${esc(roll(c.v,p*2.2-.3-i*.18))}<tspan dx="5" font-size="7.6" font-style="normal" font-weight="700" fill="${C.ink}">${esc(c.unit)}</tspan></text>`+
+      T(x+10,162,`${c.glyph} ${c.d} · ${c.word}`,{size:6.6,weight:800,fill:c.fav===true?C.fav:c.fav===false?C.unf:C.muted})+
+      c.lines.map((l,j)=>T(x+10,175+j*9.5,l,{size:6.4,fill:C.body})).join("")+`</g>`});
+  return s+src(24,338,W.src,eo(p*3-1.4),"#d7e9ea")}});
+
+SC.push({dur:4.6,draw(p,t){const O=D.outro,hd=headline(30,82,O.title,eio(p*2.4),21,200);
+  return sky()+hills(204)+seaBand(204,t)+cliffScene(t,D.nights.map(n=>n.occ/100))+
+    card(18,40,250,148,eyebrow(30,58,O.eyebrow)+hd.svg+`<g opacity="${eo(p*3-1.2)}"><rect x="30" y="${82+hd.lines*22.6}" width="150" height="18" rx="9" fill="${C.head}"/>`+
+      T(105,82+hd.lines*22.6+12.2,O.url,{size:7.6,weight:800,anchor:"middle",fill:"#fff"})+`</g>`,eo(p*4))+src(30,330,O.foot,eo(p*3-1.4),"#d7e9ea")}});
+
+const XF=.4;let acc=0;SC.forEach(s=>{s.t0=acc;acc+=s.dur});const DUR=acc;window.DUR=DUR;
+window.renderAt=function(t){let out="";SC.forEach((s,i)=>{const lt=t-s.t0;if(lt<0||lt>s.dur+XF)return;
+  const op=Math.min(i===0?1:eo(lt/XF),i===SC.length-1?1:eo((s.dur+XF-lt)/XF));if(op<=0)return;
+  out+=`<g opacity="${op.toFixed(3)}">${s.draw(clamp(lt/s.dur),t)}</g>`});document.getElementById("root").innerHTML=out};
+renderAt(0);
+if(!window.__CAPTURE__){let st=null;const loop=ts=>{if(st==null)st=ts;renderAt(((ts-st)/1000)%DUR);requestAnimationFrame(loop)};requestAnimationFrame(loop)}
+</script></body></html>
