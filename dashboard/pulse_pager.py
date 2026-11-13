@@ -55,12 +55,12 @@ VIRTUAL = {
     "pulse-appx": ("Appendix", "pulse-about"),
     "pulse-sources": ("Sources", "pulse-about"),
 }
-ORDER = ["pulse-glance", "pulse-motion", "pulse-snapshot", "pulse-origins", "pulse-who", "pulse-here", "pulse-mkt",
+ORDER = ["pulse-motion", "pulse-glance", "pulse-snapshot", "pulse-origins", "pulse-who", "pulse-here", "pulse-mkt",
          "pulse-city", "pulse-market", "pulse-night", "pulse-forward", "pulse-fullreport",
          "pulse-about", "pulse-appx", "pulse-sources", "pulse-notes"]
 
 # The page the app opens on when the link names no page (John, 2026-11-12: Weekly motion is the default).
-# At a glance stays first in the page order; Back from Weekly motion opens it.
+# Weekly motion is also first in the page order and on the page, so Next from it opens At a glance.
 START = "pulse-motion"
 
 

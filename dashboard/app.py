@@ -2114,11 +2114,13 @@ else:
         st.markdown(f'<div id="{anchor_id}" class="pulse-anchor"></div>', unsafe_allow_html=True)
 
     def _board_brief() -> None:
+        # Weekly motion renders first (2026-11-12): it is the opening page, so drawing it above At a glance
+        # means the first paint already shows it instead of flashing At a glance until the pager loads.
+        _weekly_motion_page()
         _anchor("pulse-glance")
         pulse_board.mount(pulse_board.brief(pulse_model), key="pb_brief")
         _strip("announce")
         _strip("week")   # latest STR week, added 2026-11-05
-        _weekly_motion_page()  # Weekly motion page, its own page in the pager (2026-11-12)
 
     def _board_snapshot() -> None:
         _anchor("pulse-snapshot")
