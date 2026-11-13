@@ -59,6 +59,10 @@ ORDER = ["pulse-glance", "pulse-motion", "pulse-snapshot", "pulse-origins", "pul
          "pulse-city", "pulse-market", "pulse-night", "pulse-forward", "pulse-fullreport",
          "pulse-about", "pulse-appx", "pulse-sources", "pulse-notes"]
 
+# The page the app opens on when the link names no page (John, 2026-11-12: Weekly motion is the default).
+# At a glance stays first in the page order; Back from Weekly motion opens it.
+START = "pulse-motion"
+
 
 def mount(links: list[tuple[str, str]]) -> None:
     if os.environ.get("PULSE_PAGER", "1") == "0" or not links:
@@ -73,7 +77,7 @@ def mount(links: list[tuple[str, str]]) -> None:
                 pages.append([pid, VIRTUAL[pid][0], VIRTUAL[pid][1]])
             elif pid in real:
                 pages.append([pid, real[pid]])
-        cfg = json.dumps({"pages": pages, "alias": ALIAS, "embeds": EMBEDS, "combine": [], "embedAfter": ["pulse-glance", "pulse-about"], "nofilter": ["pulse-motion", "pulse-fullreport", "pulse-about", "pulse-notes"]})
+        cfg = json.dumps({"pages": pages, "alias": ALIAS, "embeds": EMBEDS, "combine": [], "embedAfter": ["pulse-glance", "pulse-about"], "start": START, "nofilter": ["pulse-motion", "pulse-fullreport", "pulse-about", "pulse-notes"]})
         components.html(f"<script>window.PZ_CFG={cfg};</script><script>{js}</script>", height=0)
     except Exception as exc:  # noqa: BLE001
         print(f"[pulse] pager skipped: {exc}")

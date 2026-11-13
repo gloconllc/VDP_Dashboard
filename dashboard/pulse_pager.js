@@ -36,6 +36,8 @@
   var embeds = CFG.embeds || {};   // page id -> [[report section id, label], ...]
   var known = {}; allPages.forEach(function (p) { known[p.id] = true; });
   function pageOf(id) { var t = alias[id] || id; return known[t] ? t : null; }
+  // 2026-11-12: the opening page comes from CFG.start (Weekly motion); falls back to the first page.
+  function startPage() { return (CFG.start && known[CFG.start]) ? CFG.start : pages[0].id; }
   var REDUCE = P.matchMedia && P.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var active = null, topic = 0, all = false, items = [], bar = null, timer = null, enabled = false, poll = null;
@@ -267,7 +269,7 @@
       return;
     }
     enabled = true;
-    if (!active || !known[active]) active = (hashPage() || pages[0].id);
+    if (!active || !known[active]) active = (hashPage() || startPage());
     var m = model[active] || { topics: [{ kind: "main" }] };
     if (topic >= m.topics.length) topic = m.topics.length - 1;
     if (topic < 0) topic = 0;
@@ -310,7 +312,7 @@
   function steps() { var n = 0; pages.forEach(function (p) { n += model[p.id].topics.length; }); return n; }
   function pos() { var n = 0; for (var i = 0; i < pages.length; i++) { if (pages[i].id === active) return n + topic; n += model[pages[i].id].topics.length; } return 0; }
   function stepBy(d) {
-    if (all) return jump((active && known[active]) ? active : pages[0].id, 0);   // from the full page, Next/Back open one section at a time
+    if (all) return jump((active && known[active]) ? active : startPage(), 0);   // from the full page, Next/Back open one section at a time
     var m = model[active], i = idx();
     if (d > 0) {
       if (topic < m.topics.length - 1) return jump(active, topic + 1);
