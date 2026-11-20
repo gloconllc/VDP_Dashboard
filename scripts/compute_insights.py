@@ -3676,6 +3676,77 @@ def gen_dmo_content_attribution_funnel(
 # Main orchestrator
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# CoStar day-of-week and calendar-year exports (added 2026-11-19)
+# ---------------------------------------------------------------------------
+_DOW_NAMES = {"mon": "Monday", "tue": "Tuesday", "wed": "Wednesday", "thu": "Thursday",
+              "fri": "Friday", "sat": "Saturday", "sun": "Sunday"}
+
+
+def gen_dmo_costar_night_of_week(conn: sqlite3.Connection) -> dict:
+    """Latest CoStar month by night of the week (costar_dow_monthly). Empty dict when missing."""
+    try:
+        d = pd.read_sql_query(
+            "SELECT report_period, day_of_week, occupancy_pct, occupancy_yoy_pct, adr_usd FROM costar_dow_monthly "
+            "WHERE day_of_week <> 'all' AND occupancy_pct IS NOT NULL AND report_period = "
+            "(SELECT MAX(report_period) FROM costar_dow_monthly)", conn)
+    except Exception:
+        return {}
+    if len(d) < 7:
+        return {}
+    d = d.set_index("day_of_week")
+    month = datetime.strptime(d["report_period"].iloc[0], "%Y-%m").strftime("%B %Y")
+    hi, lo = d["occupancy_pct"].idxmax(), d["occupancy_pct"].idxmin()
+    hv, lv = float(d.loc[hi, "occupancy_pct"]), float(d.loc[lo, "occupancy_pct"])
+    wk = d.loc[["sun", "mon", "tue", "wed", "thu"], "occupancy_pct"].mean()
+    we = d.loc[["fri", "sat"], "occupancy_pct"].mean()
+    headline = f"{month}: {_DOW_NAMES[hi]} nights ran {hv:.1f}% full, {_DOW_NAMES[lo]} {lv:.1f}% (CoStar submarket)"
+    body = (f"CoStar's day-of-week export for the Newport Beach/Dana Point submarket shows {_DOW_NAMES[hi]} as the fullest night in "
+            f"{month} at {hv:.1f}% occupancy and {_DOW_NAMES[lo]} as the emptiest at {lv:.1f}%, a {hv - lv:.1f}-point spread. "
+            f"Friday and Saturday averaged {we:.1f}% against {wk:.1f}% for Sunday through Thursday. "
+            + (f"OPPORTUNITY: Sunday follows the fullest night and sits {float(d.loc['sat', 'occupancy_pct']) - float(d.loc['sun', 'occupancy_pct']):.1f} points "
+               f"below Saturday, so a second weekend night is where longer stays would fill the most rooms."
+               if hi == "sat" and lo == "sun" else f"OPPORTUNITY: {_DOW_NAMES[lo]} nights hold the most rooms to fill.")
+            + _5wh("Submarket hotels and the Visit Dana Point sales team",
+                   f"{hv - lv:.1f}-point spread between the fullest and emptiest night",
+                   f"{month}, the latest month in the CoStar export",
+                   "Newport Beach/Dana Point submarket",
+                   "The open rooms sit on specific nights of the week",
+                   "Compare the same night across months in the Hotel market section heat grid"))
+    return dict(headline=headline, body=body, priority=3, horizon_days=30, data_sources="costar_dow_monthly",
+                metric_basis={"month": month, "high_night": hi, "high_occ": hv, "low_night": lo, "low_occ": lv,
+                              "fri_sat_occ": round(float(we), 1), "sun_thu_occ": round(float(wk), 1)})
+
+
+def gen_dmo_costar_decade_trend(conn: sqlite3.Connection) -> dict:
+    """Full calendar years from costar_yearly (2016 onward). Empty dict when missing."""
+    try:
+        y = pd.read_sql_query("SELECT year, occupancy_pct, adr_usd, revpar_usd, revpar_yoy_pct FROM costar_yearly "
+                              "WHERE revpar_usd IS NOT NULL AND year >= 2016 ORDER BY year", conn)
+    except Exception:
+        return {}
+    if len(y) < 2:
+        return {}
+    a, b = y.iloc[0], y.iloc[-1]
+    chg = (float(b.revpar_usd) / float(a.revpar_usd) - 1) * 100
+    adr_chg = (float(b.adr_usd) / float(a.adr_usd) - 1) * 100
+    headline = (f"Submarket revenue per room: ${float(a.revpar_usd):,.2f} in {int(a.year)} to "
+                f"${float(b.revpar_usd):,.2f} in {int(b.year)} ({chg:+.1f}%)")
+    body = (f"CoStar's calendar-year export for the Newport Beach/Dana Point submarket shows revenue per available room rising "
+            f"{chg:+.1f}% from {int(a.year)} to {int(b.year)}, driven by rate: average nightly rate moved {adr_chg:+.1f}% "
+            f"(${float(a.adr_usd):,.2f} to ${float(b.adr_usd):,.2f}) while occupancy went from {float(a.occupancy_pct):.1f}% "
+            f"to {float(b.occupancy_pct):.1f}%."
+            + _5wh("Submarket hotels, Visit Dana Point and city finance",
+                   f"{chg:+.1f}% revenue per room over {int(b.year) - int(a.year)} years",
+                   f"Full calendar years {int(a.year)} to {int(b.year)}",
+                   "Newport Beach/Dana Point submarket",
+                   "Long-run growth has come from rate more than occupancy",
+                   "See the ten-year chart and table in the Hotel market section"))
+    return dict(headline=headline, body=body, priority=4, horizon_days=90, data_sources="costar_yearly",
+                metric_basis={"start_year": int(a.year), "end_year": int(b.year), "revpar_start": float(a.revpar_usd),
+                              "revpar_end": float(b.revpar_usd), "revpar_chg_pct": round(chg, 1), "adr_chg_pct": round(adr_chg, 1)})
+
+
 def main() -> None:
     print("=== compute_insights.py ===\n")
     conn = get_connection()
@@ -3765,6 +3836,8 @@ def main() -> None:
             ("visitor", "booking_timing"): lambda: gen_visitor_booking_timing(kpi_recent),
 
             # Resident
+            ("dmo", "costar_night_of_week"): lambda: gen_dmo_costar_night_of_week(conn),
+            ("dmo", "costar_decade_trend"):  lambda: gen_dmo_costar_decade_trend(conn),
             ("resident", "peak_alert"):   lambda: gen_resident_peak_alert(comp),
             ("resident", "economic_benefit"): lambda: gen_resident_economic_benefit(str_rev, overview),
             ("resident", "quiet_windows"): lambda: gen_resident_quiet_windows(kpi_all),

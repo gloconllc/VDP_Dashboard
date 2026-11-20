@@ -123,6 +123,31 @@ def _month(con) -> dict | None:
     return out
 
 
+def _dow_month(con) -> dict | None:
+    """Latest CoStar month by night of the week (DOW_ export, added 2026-11-19). None if incomplete."""
+    try:
+        per = con.execute("SELECT MAX(report_period) FROM costar_dow_monthly").fetchone()[0]
+        rows = con.execute("""SELECT day_of_week, occupancy_pct, adr_usd FROM costar_dow_monthly
+                              WHERE report_period = ? AND day_of_week <> 'all' AND occupancy_pct > 0
+                              ORDER BY dow_order""", (per,)).fetchall()
+    except sqlite3.Error:
+        return None
+    if len(rows) != 7:
+        return None
+    return {"period": per, "label": datetime.strptime(per, "%Y-%m").strftime("%B %Y"),
+            "nights": [{"dow": r[0].title(), "occ": r[1], "adr": r[2]} for r in rows]}
+
+
+def _years(con) -> list | None:
+    """Full calendar years of submarket RevPAR from 2016 (Yearly_ export, added 2026-11-19)."""
+    try:
+        rows = con.execute("""SELECT year, revpar_usd, occupancy_pct, adr_usd FROM costar_yearly
+                              WHERE year >= 2016 AND revpar_usd > 0 AND adr_usd > 0 ORDER BY year""").fetchall()
+    except sqlite3.Error:
+        return None
+    return [{"y": r[0], "revpar": r[1], "occ": r[2], "adr": r[3]} for r in rows] if len(rows) >= 2 else None
+
+
 def figures(db: Path) -> dict:
     con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     try:
@@ -137,11 +162,13 @@ def figures(db: Path) -> dict:
                 raise GateError(f"week figure {k} is missing or zero")
         last28 = _window(con, end, 28)
         month = _month(con)
+        dowm = _dow_month(con)
+        years = _years(con)
     finally:
         con.close()
     return {"built": date.today().isoformat(), "data_through": end,
-            "week": week, "last28": last28, "month": month,
-            "sources": {"week": "costar_market_daily", "last28": "costar_market_daily",
+            "week": week, "last28": last28, "month": month, "dow_month": dowm, "years": years,
+            "sources": {"dow_month": "costar_dow_monthly", "years": "costar_yearly","week": "costar_market_daily", "last28": "costar_market_daily",
                         "month": "costar_market_monthly, costar_weekpart_monthly"}}
 
 
@@ -178,7 +205,8 @@ def var(v, pts=False, digits=1):
     if r == 0:
         return "▶", f"{abs(r):.{digits}f}{' pts' if pts else '%'}", "No change", "ink"
     glyph = "▲" if r > 0 else "▼"
-    return glyph, f"{abs(r):.{digits}f}{' pts' if pts else '%'}", ("Favorable" if r > 0 else "Unfavorable"), (
+    # John, 2026-11-19: facts only; a decline is stated as the room to grow, never judged.
+    return glyph, f"{abs(r):.{digits}f}{' pts' if pts else '%'}", ("Favorable" if r > 0 else "Room to grow"), (
         "fav" if r > 0 else "unf")
 
 
@@ -187,16 +215,27 @@ def direction(v, digits=1):
     return "held" if r == 0 else ("rose" if r > 0 else "fell")
 
 
+def _open_nights(w) -> str:
+    """The two nights with the most open rooms this week, e.g. 'Monday and Tuesday'."""
+    names = {"Mon": "Monday", "Tue": "Tuesday", "Wed": "Wednesday", "Thu": "Thursday",
+             "Fri": "Friday", "Sat": "Saturday", "Sun": "Sunday"}
+    low = sorted(w["nights"], key=lambda n: n["occ"])[:2]
+    low = sorted(low, key=lambda n: DOW.index(n["dow"]))
+    return " and ".join(names[n["dow"]] for n in low)
+
+
 def headline(w) -> str:
+    """Facts only (John, 2026-11-19): gains are stated plainly; a decline is paired with the
+    opportunity the same data shows (the nights with the most open rooms)."""
     rate, occ = direction(w["adr_chg"]), direction(w["occ_pts"])
-    if rate == "rose" and occ == "fell":
-        return "Rates rose; fewer rooms filled"
-    if rate == "fell" and occ == "rose":
-        return "More rooms filled; rates fell"
     if rate == "rose" and occ == "rose":
         return "Rates and occupancy both rose"
+    if rate == "fell" and occ == "rose":
+        return "More rooms filled, with rate as the room to grow"
+    if rate == "rose" and occ == "fell":
+        return f"Rates rose; open rooms on {_open_nights(w)} are the room to grow"
     if rate == "fell" and occ == "fell":
-        return "Rates and occupancy both fell"
+        return f"Occupancy at {w['occ']:.1f}%, with {_open_nights(w)} nights holding the most rooms to fill"
     return f"Rates {rate}; occupancy {occ}"
 
 
@@ -264,6 +303,30 @@ def motion_data(f, report, clean) -> dict:
                   "title": "Explore the live Dana Point PULSE dashboard", "url": "vdppulse.gloconsolutions.com",
                   "foot": f"© {b.year} GloCon Solutions LLC · Prepared by John Picou for Visit Dana Point · Hotel data through {ap_date(b)}"},
     }
+    # CoStar day-of-week export: the latest month, night by night (added 2026-11-19)
+    dm = f.get("dow_month")
+    if dm:
+        ns = dm["nights"]
+        hi_i = max(range(7), key=lambda i: ns[i]["occ"])
+        lo_i = min(range(7), key=lambda i: ns[i]["occ"])
+        out["dowmonth"] = {"eyebrow": f"New from CoStar · {dm['label']} by night of the week",
+                           "headline": (f"{names[ns[hi_i]['dow']]} nights ran {ns[hi_i]['occ']:.1f}% full in {dm['label'].split()[0]}; "
+                                        f"{names[ns[lo_i]['dow']]}, at {ns[lo_i]['occ']:.1f}%, has the most rooms to fill"),
+                           "nights": [{"dow": n_["dow"], "occ": round(n_["occ"], 1), "adr": round(n_["adr"], 2) if n_["adr"] else None} for n_ in ns],
+                           "top": hi_i, "low": lo_i,
+                           "src": f"Source: CoStar day-of-week export, Newport Beach/Dana Point submarket, {dm['label']}"}
+    # CoStar calendar-year export: ten years of revenue per available room (added 2026-11-19)
+    ys = f.get("years")
+    if ys:
+        a_, b_ = ys[0], ys[-1]
+        chg = (b_["revpar"] / a_["revpar"] - 1) * 100
+        out["decade"] = {"eyebrow": f"New from CoStar · Full years {a_['y']} to {b_['y']}",
+                         "headline": (f"Submarket RevPAR grew {chg:.1f}% from {a_['y']} to {b_['y']}" if chg > 0 else
+                                      f"Submarket RevPAR fell {abs(chg):.1f}% from {a_['y']} to {b_['y']}")
+                                     + (", led by rate" if b_["adr"] > a_["adr"] and b_["occ"] < a_["occ"] else ""),
+                         "rows": [{"l": str(y_["y"]), "v": round(y_["revpar"], 2), "hi": y_ is b_} for y_ in ys],
+                         "note": f"ADR {money(a_['adr'])} to {money(b_['adr'])}; occupancy {a_['occ']:.1f}% to {b_['occ']:.1f}%",
+                         "src": "Source: CoStar calendar-year export, Newport Beach/Dana Point submarket"}
     S = {s_["id"]: s_ for s_ in (report or {}).get("sections", [])}
     # Datafy: visitors and spending, exactly as the app's Insights report states them
     sp, who, today = S.get("spend"), S.get("who"), S.get("today")
@@ -296,7 +359,8 @@ def motion_data(f, report, clean) -> dict:
         rows = sorted(hb["rows"], key=lambda r_: -r_["v"])
         rank = next(i for i, r_ in enumerate(rows) if r_.get("hi")) + 1
         out["peers"] = {"eyebrow": f"Coastal peers · {clean(hb['sub'])}",
-                        "headline": f"Dana Point ranked #{rank} of {len(rows)} coastal markets on revenue per available room",
+                        "headline": (f"Dana Point led {len(rows)} coastal markets on revenue per available room" if rank == 1 else
+                                     f"Dana Point at ${rows[rank - 1]['v']:.0f} revenue per room, ${rows[0]['v'] - rows[rank - 1]['v']:.0f} of room to grow to the top coastal market"),
                         "rows": [{"l": r_["l"], "v": r_["v"], "hi": bool(r_.get("hi"))} for r_ in rows],
                         "src": "Source: " + clean(hb["src"])}
     # The wider view: latest four weeks as the app states them, plus the latest CoStar month
@@ -326,7 +390,7 @@ def motion_data(f, report, clean) -> dict:
         ahead.append(round(m["revpar_chg"], 1) > 0)
     if cards:
         hl = ("Four weeks and the latest month ran ahead of last year" if all(ahead) else
-              "Four weeks and the latest month ran behind last year" if not any(ahead) else
+              "Four weeks and the latest month set the room to grow against last year" if not any(ahead) else
               "The latest four weeks and the latest full month")
         out["wide"] = {"eyebrow": "The wider view", "headline": hl, "cards": cards,
                        "src": "Source: STR and CoStar daily (four weeks, as on the dashboard); CoStar monthly, Dana Point market"}
@@ -410,7 +474,7 @@ def newsletter_html(f, data: dict, gif_src: str, intro: str, extra_html: str = "
     for i, k in enumerate(data["week"]["kpis"]):
         pad = "10px 8px 10px 0" if i == 0 else ("10px 0 10px 8px" if i == 3 else "10px 8px")
         color = "#0e7490" if k["fav"] is True else ("#a8461f" if k["fav"] is False else "#334155")
-        cells.append(f'<td width="25%" valign="top" style="padding:{pad};border-top:3px solid #17595c;font-family:Arial,sans-serif;">'
+        cells.append(f'<td width="25%" valign="top" style="padding:{pad};border-top:3px solid #1d6e86;font-family:Arial,sans-serif;">'
                      f'<div style="font-size:11px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#6b7280;">{html.escape(k["l"])}</div>'
                      f'<div style="font-size:22px;font-weight:bold;color:#0b2530;padding-top:4px;">{html.escape(k["v"])}</div>'
                      f'<div style="font-size:12px;font-weight:bold;color:{color};">{html.escape(k["glyph"])} {html.escape(k["d"])}</div></td>')
@@ -428,6 +492,11 @@ def newsletter_html(f, data: dict, gif_src: str, intro: str, extra_html: str = "
     blocks.append(block(f"Night by night · {ap_range(a, b)}", data["night_headline"],
                         f"{html.escape(adr_up_nights(w['nights']))} {html.escape(rate['headline'])}.", data["night_src"]))
     text.append(f"Night by night: {data['night_headline']} ({money(top['adr'], False)} rate). {adr_up_nights(w['nights'])} {rate['headline']}.")
+    dm = data.get("dowmonth")
+    if dm:
+        ns = ", ".join(f"{n_['dow']} {n_['occ']:.1f}%" for n_ in dm["nights"])
+        blocks.append(block(dm["eyebrow"], dm["headline"], f"Occupancy by night: {html.escape(ns)}.", dm["src"]))
+        text.append(f"New from CoStar, {dm['eyebrow'].split('· ')[-1]}: {dm['headline']}. {ns}.")
     v = data.get("visitors")
     if v:
         stats = "; ".join(f"{s_['l']}: <b>{html.escape(s_['v'])}</b>" + (f" ({html.escape(s_['p'])})" if s_["p"] else "") for s_ in v["stats"])
@@ -439,6 +508,11 @@ def newsletter_html(f, data: dict, gif_src: str, intro: str, extra_html: str = "
         rows = ", ".join(f"{r_['l']} ${r_['v']:.0f}" for r_ in pr["rows"])
         blocks.append(block(pr["eyebrow"], pr["headline"], f"Revenue per available room: {html.escape(rows)}.", pr["src"]))
         text.append(f"Coastal peers (STR, {pr['eyebrow'].split('· ')[-1]}): {pr['headline']}. {rows}.")
+    dc = data.get("decade")
+    if dc:
+        yrs = ", ".join(f"{r_['l']} ${r_['v']:.0f}" for r_ in dc["rows"])
+        blocks.append(block(dc["eyebrow"], dc["headline"], f"Revenue per available room by year: {html.escape(yrs)}. {html.escape(dc['note'])}.", dc["src"]))
+        text.append(f"New from CoStar, ten-year history: {dc['headline']}. {yrs}. {dc['note']}.")
     wd = data.get("wide")
     if wd:
         parts_h, parts_t = [], []

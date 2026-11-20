@@ -35,7 +35,7 @@ try:
 except Exception:  # pragma: no cover
     FD = None
 
-NAME_RE = re.compile(r"^(weekend|weekday_weekend).*\.xlsx$", re.IGNORECASE)
+NAME_RE = re.compile(r"^(weekend|weekday_weekend|wdwk).*\.xlsx$", re.IGNORECASE)  # WDWK_ added 2026-11-19
 PERIOD_RE = re.compile(r"^(?:(Weekend|Weekday)\s+)?([A-Za-z]{3})\s+(\d{4})$")
 
 DDL = """

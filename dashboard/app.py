@@ -1401,12 +1401,14 @@ SECTIONS = [
      "desc": "CoStar chain-scale occupancy and RevPAR by tier for the Newport Beach/Dana Point submarket.", "page": 5},
     {"icon": "🏬", "title": "Chain-Scale Segment Detail",
      "desc": "Segment-level performance and the TBID/TOT tax estimate.", "page": 6},
+    {"icon": "🗓️", "title": "Nights of the Week & Ten-Year History",
+     "desc": "CoStar submarket occupancy by night of the week, month by month, and full-year RevPAR since 2016.", "page": 7},
     {"icon": "🧳", "title": "Visitor Profile & Spend",
-     "desc": "Datafy visitor demographics, category spend, and length of stay.", "page": 7},
+     "desc": "Datafy visitor demographics, category spend, and length of stay.", "page": 8},
     {"icon": "📈", "title": "Forward Outlook & Group Business",
-     "desc": "What's ahead for compression, group bookings, and travel trends.", "page": 8},
+     "desc": "What's ahead for compression, group bookings, and travel trends.", "page": 9},
     {"icon": "📝", "title": "Notes & Commentary",
-     "desc": "Team commentary added live in the dashboard, carried into the report automatically.", "page": 9},
+     "desc": "Team commentary added live in the dashboard, carried into the report automatically.", "page": 10},
 ]
 
 

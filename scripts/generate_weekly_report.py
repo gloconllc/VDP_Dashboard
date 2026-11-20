@@ -392,6 +392,72 @@ def _spark_svg(values, color: str = "#1D6E86", w: int = 86, h: int = 20) -> str:
             f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="2.2" fill="{color}"/></svg>')
 
 
+def _costar_dow_yearly(con) -> dict:
+    """CoStar exports first delivered 2026-11-19: night-of-week by month (costar_dow_monthly) and
+    calendar years (costar_yearly), Newport Beach/Dana Point submarket. Returns {} when either is
+    missing; the page then keeps only what exists (quality gate prunes empty tokens)."""
+    import numpy as np
+    out = {}
+    try:
+        d = pd.read_sql_query(
+            "SELECT report_period, day_of_week, dow_order, occupancy_pct FROM costar_dow_monthly "
+            "WHERE day_of_week <> 'all' AND occupancy_pct IS NOT NULL AND report_period IN "
+            "(SELECT DISTINCT report_period FROM costar_dow_monthly ORDER BY report_period DESC LIMIT 12)", con)
+    except Exception:
+        d = pd.DataFrame()
+    if not d.empty:
+        grid = d.pivot_table(index="report_period", columns="dow_order", values="occupancy_pct").sort_index()
+        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        months = [datetime.strptime(m, "%Y-%m").strftime("%b %Y") for m in grid.index]
+        from matplotlib.colors import BoundaryNorm, ListedColormap
+        cmap = ListedColormap(["#F8FAFC", "#CBE3EA", TEAL_LT, TEAL, TEAL_DK])
+        norm = BoundaryNorm([0, 60, 70, 80, 90, 101], cmap.N)
+        fig, ax = plt.subplots(figsize=(5.2, 5.4))
+        vals = grid.reindex(columns=range(1, 8)).values
+        ax.imshow(np.ma.masked_invalid(vals), cmap=cmap, norm=norm, aspect="auto")
+        for i in range(vals.shape[0]):
+            for j in range(vals.shape[1]):
+                v = vals[i, j]
+                if pd.notna(v):
+                    ax.text(j, i, f"{int(v + 0.5)}%", ha="center", va="center", fontsize=8.5, fontweight="bold",
+                            color="white" if v >= 80 else INK_BODY)
+        ax.set_xticks(range(7)); ax.set_xticklabels(days, fontsize=9.5)
+        ax.set_yticks(range(len(months))); ax.set_yticklabels(months, fontsize=9)
+        ax.xaxis.tick_top()
+        ax.set_xticks([x - 0.5 for x in range(1, 7)], minor=True); ax.set_yticks([y - 0.5 for y in range(1, len(months))], minor=True)
+        ax.grid(which="minor", color="white", linewidth=2.5); ax.tick_params(which="both", length=0)
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+        fig.tight_layout()
+        out["chart_dow"] = _fig_to_b64(fig)
+        last = d[d["report_period"] == grid.index[-1]].set_index("day_of_week")["occupancy_pct"]
+        names = {"mon": "Monday", "tue": "Tuesday", "wed": "Wednesday", "thu": "Thursday", "fri": "Friday", "sat": "Saturday", "sun": "Sunday"}
+        hi, lo = last.idxmax(), last.idxmin()
+        out["dow_span"] = f"{months[0]} to {months[-1]}"
+        out["dow_note"] = (f"In {months[-1]}, {names[hi]} nights ran {last[hi]:.1f}% full and {names[lo]} nights "
+                           f"{last[lo]:.1f}%, a {last[hi] - last[lo]:.1f}-point spread.")
+    try:
+        y = pd.read_sql_query("SELECT year, occupancy_pct, adr_usd, revpar_usd, revpar_yoy_pct FROM costar_yearly "
+                              "WHERE revpar_usd IS NOT NULL AND year >= 2016 ORDER BY year", con)
+    except Exception:
+        y = pd.DataFrame()
+    if len(y) >= 2:
+        labels = [str(int(v)) for v in y["year"]]
+        out["chart_years"] = _bar_chart(labels, [("RevPAR", y["revpar_usd"].tolist())], [TEAL], "RevPAR (USD)",
+                                        figsize=(5.4, 2.9), label_fmt=lambda v: f"${v:,.0f}")
+        rows = []
+        for r in y.iloc[::-1].head(5).itertuples():
+            chg = "" if pd.isna(r.revpar_yoy_pct) else f"{'&#9650;' if r.revpar_yoy_pct > 0 else '&#9660;' if r.revpar_yoy_pct < 0 else '&#9654;'} {r.revpar_yoy_pct:+.1f}%"
+            rows.append(f"<tr><td>{int(r.year)}</td><td class=\"num\">{r.occupancy_pct:.1f}%</td><td class=\"num\">${r.adr_usd:,.2f}</td>"
+                        f"<td class=\"num\">${r.revpar_usd:,.2f}</td><td class=\"num\">{chg}</td></tr>")
+        out["year_rows"] = "\n".join(rows)
+        a, b = y.iloc[0], y.iloc[-1]
+        out["year_span"] = f"{int(a.year)} to {int(b.year)}"
+        out["year_note"] = (f"RevPAR moved from ${a.revpar_usd:,.2f} in {int(a.year)} to ${b.revpar_usd:,.2f} in {int(b.year)} "
+                            f"({(b.revpar_usd / a.revpar_usd - 1) * 100:+.1f}%).")
+    return out
+
+
 def build_report(date_range: tuple[str, str] | None = None) -> str:
     """Returns path to the generated PDF.
 
@@ -799,9 +865,17 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
             "Notes added there under “General Notes” will appear here on the next report.</div>"
         )
 
+    cdy = _costar_dow_yearly(con)
     con.close()
 
     tokens = {
+        "CHART_DOW": cdy.get("chart_dow", ""),
+        "DOW_SPAN": cdy.get("dow_span", ""),
+        "DOW_NOTE": cdy.get("dow_note", ""),
+        "CHART_YEARS": cdy.get("chart_years", ""),
+        "YEAR_ROWS": cdy.get("year_rows", ""),
+        "YEAR_SPAN": cdy.get("year_span", ""),
+        "YEAR_NOTE": cdy.get("year_note", ""),
         "WEEK_LABEL": week_label,
         "GEN_TIMESTAMP": datetime.now().strftime("%b %-d, %Y %-I:%M %p"),
         "OCC_PCT": _fmt_pct(occ_avg),
@@ -819,7 +893,7 @@ def build_report(date_range: tuple[str, str] | None = None) -> str:
         "GROUP_SHARE_NOTE": (f"Group room demand share is STR's live segment figure for Dana Point, week of {strw['label']}"
                              + (f" (same week last year {strw['grp_share_ly']:.1f}%)." if strw.get('grp_share_ly') is not None else ".")
                              if strw.get("grp_share") is not None else
-                             "Group demand share figure is an industry benchmark (STR/CBRE), pending a live STR group-segment export; see Page 8."),
+                             "Group demand share figure is an industry benchmark (STR/CBRE), pending a live STR group-segment export; see Page 9."),
         "COMPSET_CAP": compset_cap,
         "STR_WEEK_LABEL": strw.get("label", "n/a"),
         "GRP_SHARE": (f"{strw['grp_share']:.1f}%" + (f" (last year {strw['grp_share_ly']:.1f}%)" if strw.get('grp_share_ly') is not None else "")) if strw.get("grp_share") is not None else "N/A",

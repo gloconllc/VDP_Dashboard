@@ -459,3 +459,7 @@ svg.cal rect[data-tip]:hover,svg.cal rect[data-tip]:focus{stroke:#0B2530;stroke-
 .dest-i .ic{flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--teal);color:var(--teal);display:inline-flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:14px}
 .dest-i[open] .ic{background:var(--teal);color:#fff}
 .dest-i .dest-list{margin-bottom:16px}
+
+/* CoStar day-of-week heat grid (added 2026-11-19): scales to the column, never wider than the screen */
+.dow-wrap{width:100%;max-width:640px}
+.dow-grid{display:block;width:100%;height:auto}

@@ -1,0 +1,782 @@
+{
+  "built": "2026-11-19",
+  "data_through": "2026-11-14",
+  "scenes": [
+    "intro",
+    "week",
+    "nights",
+    "top",
+    "night_headline",
+    "night_src",
+    "rate",
+    "outro",
+    "dowmonth",
+    "decade",
+    "visitors",
+    "peers",
+    "wide"
+  ],
+  "figures": {
+    "intro": {
+      "eyebrow": "Dana Point PULSE weekly",
+      "title": "This week in Dana Point hotels",
+      "sub": "Nov. 8 to 14, 2026, compared with the same seven",
+      "sub2": "days of 2025",
+      "src": "Source: CoStar daily, Dana Point market"
+    },
+    "week": {
+      "eyebrow": "This week \u00b7 Nov. 8 to 14, 2026",
+      "headline": "Occupancy at 52.6%, with Monday and Sunday nights holding the most rooms to fill",
+      "kpis": [
+        {
+          "l": "Occupancy",
+          "v": "52.6%",
+          "glyph": "\u25bc",
+          "d": "7.6 pts",
+          "word": "Room to grow",
+          "fav": false,
+          "note": "Share of rooms sold"
+        },
+        {
+          "l": "ADR",
+          "v": "$345.67",
+          "glyph": "\u25bc",
+          "d": "2.8%",
+          "word": "Room to grow",
+          "fav": false,
+          "note": "Price paid per room sold"
+        },
+        {
+          "l": "RevPAR",
+          "v": "$181.74",
+          "glyph": "\u25bc",
+          "d": "15.1%",
+          "word": "Room to grow",
+          "fav": false,
+          "note": "Room revenue per available room"
+        },
+        {
+          "l": "Room revenue",
+          "v": "$2,387,904",
+          "glyph": "\u25bc",
+          "d": "15.3%",
+          "word": "Room to grow",
+          "fav": false,
+          "note": "Room revenue for the seven days"
+        }
+      ],
+      "src": "Each figure compared with Nov. 9 to 15, 2025. Source: CoStar daily, Dana Point market"
+    },
+    "nights": [
+      {
+        "dow": "Sun",
+        "occ": 41.0,
+        "adr": 371.98
+      },
+      {
+        "dow": "Mon",
+        "occ": 44.2,
+        "adr": 337.47
+      },
+      {
+        "dow": "Tue",
+        "occ": 52.0,
+        "adr": 319.48
+      },
+      {
+        "dow": "Wed",
+        "occ": 54.5,
+        "adr": 358.31
+      },
+      {
+        "dow": "Thu",
+        "occ": 54.7,
+        "adr": 331.09
+      },
+      {
+        "dow": "Fri",
+        "occ": 60.2,
+        "adr": 345.22
+      },
+      {
+        "dow": "Sat",
+        "occ": 61.3,
+        "adr": 358.52
+      }
+    ],
+    "top": 6,
+    "night_headline": "Saturday was the strongest night at 61.3%",
+    "night_src": "Source: CoStar daily, Dana Point market, Nov. 8 to 14, 2026",
+    "rate": {
+      "eyebrow": "Nightly rate, Nov. 8 to 14, 2026",
+      "headline": "Sunday's rate, $372, topped Tuesday's by $52",
+      "src": "Source: CoStar daily, Dana Point market"
+    },
+    "outro": {
+      "eyebrow": "Visit Dana Point \u00b7 See the full picture",
+      "title": "Explore the live Dana Point PULSE dashboard",
+      "url": "vdppulse.gloconsolutions.com",
+      "foot": "\u00a9 2026 GloCon Solutions LLC \u00b7 Prepared by John Picou for Visit Dana Point \u00b7 Hotel data through Nov. 14, 2026"
+    },
+    "dowmonth": {
+      "eyebrow": "New from CoStar \u00b7 October 2026 by night of the week",
+      "headline": "Saturday nights ran 76.5% full in October; Sunday, at 50.2%, has the most rooms to fill",
+      "nights": [
+        {
+          "dow": "Mon",
+          "occ": 59.6,
+          "adr": 389.14
+        },
+        {
+          "dow": "Tue",
+          "occ": 64.1,
+          "adr": 397.92
+        },
+        {
+          "dow": "Wed",
+          "occ": 63.0,
+          "adr": 399.46
+        },
+        {
+          "dow": "Thu",
+          "occ": 61.2,
+          "adr": 408.03
+        },
+        {
+          "dow": "Fri",
+          "occ": 72.7,
+          "adr": 443.11
+        },
+        {
+          "dow": "Sat",
+          "occ": 76.5,
+          "adr": 475.92
+        },
+        {
+          "dow": "Sun",
+          "occ": 50.2,
+          "adr": 386.1
+        }
+      ],
+      "top": 5,
+      "low": 6,
+      "src": "Source: CoStar day-of-week export, Newport Beach/Dana Point submarket, October 2026"
+    },
+    "decade": {
+      "eyebrow": "New from CoStar \u00b7 Full years 2016 to 2025",
+      "headline": "Submarket RevPAR grew 28.6% from 2016 to 2025, led by rate",
+      "rows": [
+        {
+          "l": "2016",
+          "v": 191.82,
+          "hi": false
+        },
+        {
+          "l": "2017",
+          "v": 195.3,
+          "hi": false
+        },
+        {
+          "l": "2018",
+          "v": 200.5,
+          "hi": false
+        },
+        {
+          "l": "2019",
+          "v": 199.4,
+          "hi": false
+        },
+        {
+          "l": "2020",
+          "v": 122.68,
+          "hi": false
+        },
+        {
+          "l": "2021",
+          "v": 184.33,
+          "hi": false
+        },
+        {
+          "l": "2022",
+          "v": 244.32,
+          "hi": false
+        },
+        {
+          "l": "2023",
+          "v": 247.87,
+          "hi": false
+        },
+        {
+          "l": "2024",
+          "v": 250.51,
+          "hi": false
+        },
+        {
+          "l": "2025",
+          "v": 246.65,
+          "hi": true
+        }
+      ],
+      "note": "ADR $280.82 to $392.52; occupancy 68.3% to 62.8%",
+      "src": "Source: CoStar calendar-year export, Newport Beach/Dana Point submarket"
+    },
+    "visitors": {
+      "eyebrow": "Visitors \u00b7 Datafy",
+      "headline": "Visitors spent $69.8M with lodging and dining taking 59.2%",
+      "stats": [
+        {
+          "l": "Visitor spending, January to September 2026",
+          "v": "$69.8M",
+          "p": "\u25b2 +2.9%",
+          "fav": true
+        },
+        {
+          "l": "Visitor trips, Jan. 1 to Sept. 19, 2026",
+          "v": "2.48M",
+          "p": "",
+          "fav": null
+        },
+        {
+          "l": "Overnight share of trips",
+          "v": "21.2%",
+          "p": "Day trips 78.8%",
+          "fav": null
+        }
+      ],
+      "markets": [
+        {
+          "l": "Los Angeles",
+          "v": 20.1
+        },
+        {
+          "l": "San Francisco Bay Area",
+          "v": 9.0
+        },
+        {
+          "l": "San Diego",
+          "v": 7.1
+        },
+        {
+          "l": "Phoenix",
+          "v": 6.7
+        },
+        {
+          "l": "Las Vegas",
+          "v": 5.0
+        }
+      ],
+      "markets_title": "Share of visitor spending by market",
+      "src": "Source: Datafy, Jan. 1 to Sept. 19, 2026"
+    },
+    "peers": {
+      "eyebrow": "Coastal peers \u00b7 Week of Nov. 2 to 8, 2026",
+      "headline": "Dana Point at $186 revenue per room, $23 of room to grow to the top coastal market",
+      "rows": [
+        {
+          "l": "Santa Barbara",
+          "v": 208.61,
+          "hi": false
+        },
+        {
+          "l": "La Jolla",
+          "v": 207.64,
+          "hi": false
+        },
+        {
+          "l": "Newport Beach",
+          "v": 204.04,
+          "hi": false
+        },
+        {
+          "l": "Huntington Beach",
+          "v": 195.96,
+          "hi": false
+        },
+        {
+          "l": "Dana Point",
+          "v": 186.09,
+          "hi": true
+        },
+        {
+          "l": "Monterey-Carmel",
+          "v": 136.19,
+          "hi": false
+        }
+      ],
+      "src": "Source: STR weekly coastal peer report"
+    },
+    "wide": {
+      "eyebrow": "The wider view",
+      "headline": "The latest four weeks and the latest full month",
+      "cards": [
+        {
+          "label": "Latest four weeks \u00b7 Oct. 18 to Nov. 14, 2026",
+          "v": "$209.74",
+          "unit": "RevPAR",
+          "glyph": "\u25bc",
+          "d": "4.6%",
+          "word": "Room to grow",
+          "fav": false,
+          "lines": [
+            "Occupancy 56.0%",
+            "Same weeks last year: $219.93 RevPAR"
+          ]
+        },
+        {
+          "label": "October 2026 \u00b7 latest full month",
+          "v": "$270.73",
+          "unit": "RevPAR",
+          "glyph": "\u25b2",
+          "d": "7.4%",
+          "word": "Favorable",
+          "fav": true,
+          "lines": [
+            "ADR $422.13 (\u25b2 8.5%), occupancy 64.1% (\u25bc 0.6 pts)",
+            "Weekends 74.6% full, weekdays 59.7%"
+          ]
+        }
+      ],
+      "src": "Source: STR and CoStar daily (four weeks, as on the dashboard); CoStar monthly, Dana Point market"
+    }
+  },
+  "week_figures": {
+    "built": "2026-11-19",
+    "data_through": "2026-11-14",
+    "week": {
+      "days": 7,
+      "start": "2026-11-08",
+      "end": "2026-11-14",
+      "supply": 13139.0,
+      "demand": 6908.0,
+      "revenue": 2387903.96,
+      "occ": 52.576299566177035,
+      "occ_pts": -7.637625185237205,
+      "adr": 345.6722582513028,
+      "adr_chg": -2.7684309840523835,
+      "revpar": 181.74168201537407,
+      "revpar_chg": -15.101430093181046,
+      "revenue_chg": -15.271227232994677,
+      "nights": [
+        {
+          "date": "2026-11-08",
+          "dow": "Sun",
+          "occ": 41.0,
+          "occ_ly": 56.006652639373435,
+          "adr": 371.98,
+          "adr_chg": 11.354309165526665
+        },
+        {
+          "date": "2026-11-09",
+          "dow": "Mon",
+          "occ": 44.2,
+          "occ_ly": 56.65538592596345,
+          "adr": 337.47,
+          "adr_chg": 9.12596401028274
+        },
+        {
+          "date": "2026-11-10",
+          "dow": "Tue",
+          "occ": 52.0,
+          "occ_ly": 58.43904639855625,
+          "adr": 319.48,
+          "adr_chg": -5.855855855855852
+        },
+        {
+          "date": "2026-11-11",
+          "dow": "Wed",
+          "occ": 54.5,
+          "occ_ly": 66.15556610008862,
+          "adr": 358.31,
+          "adr_chg": 0.12150668286756705
+        },
+        {
+          "date": "2026-11-12",
+          "dow": "Thu",
+          "occ": 54.7,
+          "occ_ly": 62.12234443290827,
+          "adr": 331.09,
+          "adr_chg": -12.059158134243475
+        },
+        {
+          "date": "2026-11-13",
+          "dow": "Fri",
+          "occ": 60.2,
+          "occ_ly": 62.65072556600037,
+          "adr": 345.22,
+          "adr_chg": -11.574556830031291
+        },
+        {
+          "date": "2026-11-14",
+          "dow": "Sat",
+          "occ": 61.3,
+          "occ_ly": 59.46775219700927,
+          "adr": 358.52,
+          "adr_chg": -4.271844660194168
+        }
+      ]
+    },
+    "last28": {
+      "days": 28,
+      "start": "2026-10-18",
+      "end": "2026-11-14",
+      "supply": 52556.0,
+      "demand": 29450.0,
+      "revenue": 11022883.27,
+      "occ": 56.035466930512214,
+      "occ_pts": -2.583600280825735,
+      "adr": 374.2914522920204,
+      "adr_chg": 1.6606829637357157,
+      "revpar": 209.735962972829,
+      "revpar_chg": -2.8199507540803026,
+      "revenue_chg": -3.0143108525721662,
+      "nights": [
+        {
+          "date": "2026-10-18",
+          "dow": "Sun",
+          "occ": 41.5,
+          "occ_ly": 48.500459774990986,
+          "adr": 355.62,
+          "adr_chg": -6.557377049180335
+        },
+        {
+          "date": "2026-10-19",
+          "dow": "Mon",
+          "occ": 47.3,
+          "occ_ly": 62.785794443373874,
+          "adr": 364.7,
+          "adr_chg": -6.64893617021276
+        },
+        {
+          "date": "2026-10-20",
+          "dow": "Tue",
+          "occ": 50.6,
+          "occ_ly": 70.47246438063831,
+          "adr": 370.31,
+          "adr_chg": -1.3966480446927165
+        },
+        {
+          "date": "2026-10-21",
+          "dow": "Wed",
+          "occ": 48.1,
+          "occ_ly": 54.49920085242408,
+          "adr": 327.74,
+          "adr_chg": -10.681818181818182
+        },
+        {
+          "date": "2026-10-22",
+          "dow": "Thu",
+          "occ": 60.7,
+          "occ_ly": 69.23044100023286,
+          "adr": 371.69,
+          "adr_chg": -6.407322654462244
+        },
+        {
+          "date": "2026-10-23",
+          "dow": "Fri",
+          "occ": 75.3,
+          "occ_ly": 72.2212413067432,
+          "adr": 418.14,
+          "adr_chg": 3.746397694524517
+        },
+        {
+          "date": "2026-10-24",
+          "dow": "Sat",
+          "occ": 80.1,
+          "occ_ly": 74.75625625151694,
+          "adr": 471.58,
+          "adr_chg": 16.838166510757734
+        },
+        {
+          "date": "2026-10-25",
+          "dow": "Sun",
+          "occ": 55.9,
+          "occ_ly": 40.32919718123758,
+          "adr": 403.18,
+          "adr_chg": 10.629067245119295
+        },
+        {
+          "date": "2026-10-26",
+          "dow": "Mon",
+          "occ": 63.5,
+          "occ_ly": 46.32937342468229,
+          "adr": 401.14,
+          "adr_chg": 2.046783625731008
+        },
+        {
+          "date": "2026-10-27",
+          "dow": "Tue",
+          "occ": 56.4,
+          "occ_ly": 49.08709360393708,
+          "adr": 352.69,
+          "adr_chg": -17.015706806282715
+        },
+        {
+          "date": "2026-10-28",
+          "dow": "Wed",
+          "occ": 59.5,
+          "occ_ly": 48.958470700559666,
+          "adr": 367.92,
+          "adr_chg": 14.851485148514843
+        },
+        {
+          "date": "2026-10-29",
+          "dow": "Thu",
+          "occ": 46.7,
+          "occ_ly": 35.85594918922511,
+          "adr": 350.04,
+          "adr_chg": 10.392609699769073
+        },
+        {
+          "date": "2026-10-30",
+          "dow": "Fri",
+          "occ": 48.9,
+          "occ_ly": 41.22467566127663,
+          "adr": 348.42,
+          "adr_chg": 2.0270270270270396
+        },
+        {
+          "date": "2026-10-31",
+          "dow": "Sat",
+          "occ": 50.7,
+          "occ_ly": 59.83190821831024,
+          "adr": 379.81,
+          "adr_chg": 4.373522458628831
+        },
+        {
+          "date": "2026-11-01",
+          "dow": "Sun",
+          "occ": 42.7,
+          "occ_ly": 38.59031814028837,
+          "adr": 338.4,
+          "adr_chg": -2.4434389140271406
+        },
+        {
+          "date": "2026-11-02",
+          "dow": "Mon",
+          "occ": 50.0,
+          "occ_ly": 63.29113581722643,
+          "adr": 357.0,
+          "adr_chg": -3.5532994923857864
+        },
+        {
+          "date": "2026-11-03",
+          "dow": "Tue",
+          "occ": 59.5,
+          "occ_ly": 63.712761407481885,
+          "adr": 334.59,
+          "adr_chg": -8.574490889603425
+        },
+        {
+          "date": "2026-11-04",
+          "dow": "Wed",
+          "occ": 62.7,
+          "occ_ly": 67.13205092845587,
+          "adr": 370.4,
+          "adr_chg": 7.395498392282951
+        },
+        {
+          "date": "2026-11-05",
+          "dow": "Thu",
+          "occ": 62.2,
+          "occ_ly": 63.57513733984296,
+          "adr": 382.66,
+          "adr_chg": 13.627049180327845
+        },
+        {
+          "date": "2026-11-06",
+          "dow": "Fri",
+          "occ": 63.8,
+          "occ_ly": 69.01148706096669,
+          "adr": 421.4,
+          "adr_chg": 13.976164680390045
+        },
+        {
+          "date": "2026-11-07",
+          "dow": "Sat",
+          "occ": 75.0,
+          "occ_ly": 80.44099197415231,
+          "adr": 442.69,
+          "adr_chg": 13.655913978494617
+        },
+        {
+          "date": "2026-11-08",
+          "dow": "Sun",
+          "occ": 41.0,
+          "occ_ly": 56.006652639373435,
+          "adr": 371.98,
+          "adr_chg": 11.354309165526665
+        },
+        {
+          "date": "2026-11-09",
+          "dow": "Mon",
+          "occ": 44.2,
+          "occ_ly": 56.65538592596345,
+          "adr": 337.47,
+          "adr_chg": 9.12596401028274
+        },
+        {
+          "date": "2026-11-10",
+          "dow": "Tue",
+          "occ": 52.0,
+          "occ_ly": 58.43904639855625,
+          "adr": 319.48,
+          "adr_chg": -5.855855855855852
+        },
+        {
+          "date": "2026-11-11",
+          "dow": "Wed",
+          "occ": 54.5,
+          "occ_ly": 66.15556610008862,
+          "adr": 358.31,
+          "adr_chg": 0.12150668286756705
+        },
+        {
+          "date": "2026-11-12",
+          "dow": "Thu",
+          "occ": 54.7,
+          "occ_ly": 62.12234443290827,
+          "adr": 331.09,
+          "adr_chg": -12.059158134243475
+        },
+        {
+          "date": "2026-11-13",
+          "dow": "Fri",
+          "occ": 60.2,
+          "occ_ly": 62.65072556600037,
+          "adr": 345.22,
+          "adr_chg": -11.574556830031291
+        },
+        {
+          "date": "2026-11-14",
+          "dow": "Sat",
+          "occ": 61.3,
+          "occ_ly": 59.46775219700927,
+          "adr": 358.52,
+          "adr_chg": -4.271844660194168
+        }
+      ]
+    },
+    "month": {
+      "period": "2026-10",
+      "label": "October 2026",
+      "occ": 64.13340435402671,
+      "occ_pts": -0.6491235258504702,
+      "adr": 422.13,
+      "adr_chg": 8.5,
+      "revpar": 270.73,
+      "revpar_chg": 7.4,
+      "weekend_occ": 74.6,
+      "weekday_occ": 59.699999999999996
+    },
+    "dow_month": {
+      "period": "2026-10",
+      "label": "October 2026",
+      "nights": [
+        {
+          "dow": "Mon",
+          "occ": 59.6,
+          "adr": 389.14
+        },
+        {
+          "dow": "Tue",
+          "occ": 64.1,
+          "adr": 397.92
+        },
+        {
+          "dow": "Wed",
+          "occ": 63.0,
+          "adr": 399.46
+        },
+        {
+          "dow": "Thu",
+          "occ": 61.2,
+          "adr": 408.03
+        },
+        {
+          "dow": "Fri",
+          "occ": 72.7,
+          "adr": 443.11
+        },
+        {
+          "dow": "Sat",
+          "occ": 76.5,
+          "adr": 475.92
+        },
+        {
+          "dow": "Sun",
+          "occ": 50.2,
+          "adr": 386.1
+        }
+      ]
+    },
+    "years": [
+      {
+        "y": 2016,
+        "revpar": 191.82,
+        "occ": 68.3,
+        "adr": 280.82
+      },
+      {
+        "y": 2017,
+        "revpar": 195.3,
+        "occ": 68.0,
+        "adr": 287.13
+      },
+      {
+        "y": 2018,
+        "revpar": 200.5,
+        "occ": 66.1,
+        "adr": 303.49
+      },
+      {
+        "y": 2019,
+        "revpar": 199.4,
+        "occ": 67.0,
+        "adr": 297.65
+      },
+      {
+        "y": 2020,
+        "revpar": 122.68,
+        "occ": 40.6,
+        "adr": 301.93
+      },
+      {
+        "y": 2021,
+        "revpar": 184.33,
+        "occ": 46.6,
+        "adr": 395.93
+      },
+      {
+        "y": 2022,
+        "revpar": 244.32,
+        "occ": 62.4,
+        "adr": 391.57
+      },
+      {
+        "y": 2023,
+        "revpar": 247.87,
+        "occ": 64.4,
+        "adr": 385.01
+      },
+      {
+        "y": 2024,
+        "revpar": 250.51,
+        "occ": 64.1,
+        "adr": 390.6
+      },
+      {
+        "y": 2025,
+        "revpar": 246.65,
+        "occ": 62.8,
+        "adr": 392.52
+      }
+    ],
+    "sources": {
+      "dow_month": "costar_dow_monthly",
+      "years": "costar_yearly",
+      "week": "costar_market_daily",
+      "last28": "costar_market_daily",
+      "month": "costar_market_monthly, costar_weekpart_monthly"
+    }
+  }
+}

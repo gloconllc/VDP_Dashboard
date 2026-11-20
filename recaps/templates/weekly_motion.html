@@ -81,8 +81,9 @@ SC.push({dur:5.2,draw(p,t){const I=D.intro, lit=D.nights.map(n=>n.occ/100*eo(p*1
 
 SC.push({dur:5.6,draw(p,t){const K=D.week,hd=headline(24,62,K.headline,eio(p*2.2),20,600);
   let s=sky()+seaBand(318,t)+eyebrow(24,36,K.eyebrow)+hd.svg;
-  K.kpis.forEach((k,i)=>{const col=i%2,row=Math.floor(i/2);s+=kpi(24+col*302,96+row*94,290,82,k,p*1.15-.15-i*.06)});
-  return s+src(24,298,K.src,eo(p*3-1.4))}});
+  const o=(hd.lines-1)*18;  // a two-line headline pushes the cards down
+  K.kpis.forEach((k,i)=>{const col=i%2,row=Math.floor(i/2);s+=kpi(24+col*302,96+o+row*(94-o/2),290,82,k,p*1.15-.15-i*.06)});
+  return s+src(24,298+o/2,K.src,eo(p*3-1.4))}});
 
 SC.push({dur:6.8,draw(p,t){const N=D.nights,top=D.top,lit=N.map((n,i)=>n.occ/100*eio(p*2.2-.25-i*.05)),hd=headline(26,80,D.night_headline,eio(p*2.4),18,150);
   const hx=186,hw=300,hy=72,hh=176;
@@ -106,6 +107,15 @@ SC.push({dur:5.6,draw(p,t){const N=D.nights,R=D.rate,hd=headline(24,62,R.headlin
   pts.forEach(([x,y],i)=>{const q=eo(p*2.6-.6-i*.07),n=N[i];s+=`<circle cx="${x}" cy="${y}" r="3.2" fill="#fff" stroke="${C.head}" stroke-width="1.4" opacity="${q}"/>`+
     T(x,y-8,"$"+Math.round(n.adr),{size:7.6,weight:800,anchor:"middle",fill:C.ink,op:q,cls:"tab"})+T(x,yb+20,n.dow,{size:7,weight:700,anchor:"middle",fill:"#e6f3f3"})});
   return s+src(470,350,R.src,eo(p*3-1.2),"#d7e9ea")}});
+
+// CoStar day-of-week export (added Nov. 19, 2026): the latest month, one hotel column per night of the week
+if(D.dowmonth)SC.push({dur:5.8,draw(p,t){const M=D.dowmonth,N=M.nights,lit=N.map((n,i)=>n.occ/100*eio(p*2.2-.25-i*.05)),hd=headline(26,78,M.headline,eio(p*2.4),13.5,150);
+  const hx=186,hw=300,hy=72,hh=176;
+  let s=sky()+seaBand(208,t)+`<rect x="0" y="252" width="640" height="108" fill="#dfddd5"/>`+hotel(hx,hy,hw,hh,7,10,lit,{hi:M.top,hiOp:eo(p*3-2)});
+  s+=card(14,42,160,164,eyebrow(26,58,"A month, night by night")+hd.svg+T(26,78+hd.lines*14.6+4,"Lit windows show each night's",{size:6.6,fill:C.body,op:eo(p*3-1.3)})+T(26,78+hd.lines*14.6+13,"average share of rooms sold",{size:6.6,fill:C.body,op:eo(p*3-1.3)}),eo(p*4));
+  const gw=(hw-hw*.16)/7;N.forEach((n,i)=>{const cx=hx+hw*.08+gw*i+gw/2,q=eo(p*2.6-.6-i*.08);
+    s+=T(cx,268,n.dow,{size:7,weight:700,anchor:"middle",fill:C.body,op:q})+T(cx,279,n.occ.toFixed(1)+"%",{size:7.6,weight:800,anchor:"middle",fill:i===M.top?C.amber:C.head,op:q,cls:"tab"})+(n.adr?T(cx,289,"$"+Math.round(n.adr),{size:6.6,anchor:"middle",fill:C.muted,op:q,cls:"tab"}):"")});
+  return s+eyebrow(196,36,M.eyebrow,eo(p*3))+src(26,330,M.src,eo(p*3-1.4))}});
 
 // Datafy: who visits and what they spend
 if(D.visitors)SC.push({dur:6.4,draw(p,t){const V=D.visitors,hd=headline(24,62,V.headline,eio(p*2.2),19,600);
@@ -131,6 +141,18 @@ if(D.peers)SC.push({dur:5.6,draw(p,t){const P=D.peers,hd=headline(24,62,P.headli
     s+=T(x+w/2,y-10,"$"+Math.round(r.v),{size:9,weight:800,anchor:"middle",fill:hi?C.amber:C.head,op:eo(p*3-1-i*.08),cls:"tab"})+
       T(x+w/2,298,r.l,{size:7,weight:hi?800:600,anchor:"middle",fill:C.ink,op:eo(p*3-.8)})});
   return s+src(24,350,P.src,eo(p*3-1.4),"#d7e9ea")}});
+
+// CoStar calendar-year export (added Nov. 19, 2026): ten years as a row of hotels, height = RevPAR
+if(D.decade)SC.push({dur:5.6,draw(p,t){const Y=D.decade,hd=headline(24,62,Y.headline,eio(p*2.2),19,600);
+  let s=sky()+eyebrow(24,36,Y.eyebrow)+hd.svg+`<rect x="0" y="286" width="640" height="74" fill="#dfddd5"/>`+seaBand(306,t);
+  const n=Y.rows.length,gap=592/n,mx=Math.max(...Y.rows.map(r=>r.v));
+  Y.rows.forEach((r,i)=>{const q=eio(p*2.2-.3-i*.06),h=160*r.v/mx*q,x=30+i*gap,w=gap*.64,y=286-h,hi=r.hi;
+    s+=`<rect x="${x+w}" y="${y+3}" width="3" height="${Math.max(0,h-3)}" fill="${C.wallSide}"/><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${hi?C.wall:"#ece9df"}"/>`+
+      `<rect x="${x-2}" y="${y-4}" width="${w+6}" height="5" fill="${hi?C.amber:C.roof}"/>`;
+    const rows=Math.max(1,Math.floor(h/13));for(let r2=0;r2<rows;r2++)for(let c=0;c<2;c++)s+=`<rect x="${x+w*.16+c*w*.4}" y="${y+7+r2*13}" width="${w*.26}" height="5.5" rx="1" fill="${hi?C.winOn:"#9fb9bb"}"/>`;
+    s+=T(x+w/2,y-9,"$"+Math.round(r.v),{size:8,weight:800,anchor:"middle",fill:hi?C.amber:C.head,op:eo(p*3-1-i*.06),cls:"tab"})+
+      T(x+w/2,298,r.l,{size:7,weight:hi?800:600,anchor:"middle",fill:C.ink,op:eo(p*3-.8)})});
+  return s+T(24,82+hd.lines*20,Y.note,{size:7.4,fill:C.body,op:eo(p*3-1.2)})+src(24,350,Y.src,eo(p*3-1.4),"#d7e9ea")}});
 
 if(D.wide&&D.wide.cards.length)SC.push({dur:5.2,draw(p,t){const W=D.wide,hd=headline(24,62,W.headline,eio(p*2.2),20,600);
   let s=sky()+seaBand(300,t)+cliffScene(t,D.nights.map(n=>n.occ/100),150,150,.68)+eyebrow(24,36,W.eyebrow)+hd.svg;

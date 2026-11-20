@@ -51,7 +51,7 @@ import io
 import json
 import math
 import os
-from datetime import date
+from datetime import date, datetime
 
 import pandas as pd
 import ownership as _own  # GloCon Solutions LLC ownership notice
@@ -269,6 +269,8 @@ SRC = {
     "costar_daily": "CoStar daily export, same Visit Dana Point hotels",
     "costar_rpt": "CoStar Newport Beach/Dana Point submarket, Orange County and U.S. reports",
     "costar_seg": "CoStar daily segmentation export",
+    "costar_dow": "CoStar Newport Beach/Dana Point submarket, day-of-week monthly export",
+    "costar_year": "CoStar Newport Beach/Dana Point submarket, calendar-year export",
     "str_weekly": "STR weekly coastal peer report",
     "datafy": "Datafy visitor economy dashboard",
     "datafy_ads": "Datafy paid-media attribution",
@@ -1606,6 +1608,12 @@ def build_report(conn, m, dma_coords: dict | None = None, prepared: date | None 
             }
     except Exception as _exc:  # noqa: BLE001
         print(f"[insights] calendar skipped: {_exc}")
+    # ---- added 2026-11-19: CoStar day-of-week by month (D3 heat grid) and ten calendar years ----
+    try:
+        if "hotel" in _sec:
+            _add_costar_dow_yearly(conn, _sec["hotel"])
+    except Exception as _exc:  # noqa: BLE001
+        print(f"[insights] CoStar day-of-week / yearly skipped: {_exc}")
     try:
         _d, _dp = h.get("demand"), hp.get("demand")
         _a, _ap = h.get("adr"), hp.get("adr")
@@ -2185,6 +2193,85 @@ def _b64(p):
     return base64.b64encode(_read(p, "rb")).decode()
 
 
+_DOW_LABELS = {"mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun"}
+_DOW_LONG = {"mon": "Monday", "tue": "Tuesday", "wed": "Wednesday", "thu": "Thursday", "fri": "Friday", "sat": "Saturday", "sun": "Sunday"}
+
+
+def _add_costar_dow_yearly(conn, sec: dict) -> None:
+    """CoStar exports first delivered 2026-11-19 (costar_dow_monthly, costar_yearly).
+
+    Adds to the Hotel market section: a D3 heat grid of submarket occupancy by night of the
+    week for the latest 12 months (table fallback), a ten-year revenue-per-room chart, a table
+    of every calendar year, and two sourced findings. Missing values are left out, never zero.
+    """
+    def _tbl(name):
+        return bool(_q(conn, "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (name,)).shape[0])
+
+    if _tbl("costar_dow_monthly"):
+        d = _q(conn, "SELECT report_period, day_of_week, dow_order, occupancy_pct, occupancy_yoy_pct, adr_usd, revpar_usd "
+                     "FROM costar_dow_monthly WHERE day_of_week <> 'all' AND occupancy_pct IS NOT NULL "
+                     "AND report_period IN (SELECT DISTINCT report_period FROM costar_dow_monthly ORDER BY report_period DESC LIMIT 12) "
+                     "ORDER BY report_period, dow_order")
+        if not d.empty:
+            months = sorted(d["report_period"].unique())
+            mlab = {m: datetime.strptime(m, "%Y-%m").strftime("%b %Y") for m in months}
+            span = f"{mlab[months[0]]} to {mlab[months[-1]]}"
+            cells = [[mlab[r.report_period], _DOW_LABELS[r.day_of_week], round(float(r.occupancy_pct), 1),
+                      round(float(r.adr_usd)) if pd.notna(r.adr_usd) else None,
+                      round(float(r.occupancy_yoy_pct), 1) if pd.notna(r.occupancy_yoy_pct) else None] for r in d.itertuples()]
+            sec["dowheat"] = {
+                "title": "Which nights fill, month by month",
+                "sub": f"Submarket hotel occupancy by night of the week, {span}. Darker is fuller; hover a cell for its figures.",
+                "months": [mlab[m] for m in months], "days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                "cells": cells, "src": SRC["costar_dow"],
+            }
+            last = d[d["report_period"] == months[-1]].set_index("day_of_week")
+            if {"sat", "sun"} <= set(last.index):
+                hi = last["occupancy_pct"].idxmax()
+                lo = last["occupancy_pct"].idxmin()
+                gap = float(last.loc[hi, "occupancy_pct"]) - float(last.loc[lo, "occupancy_pct"])
+                sec.setdefault("numbers", []).append(_stat(
+                    f"Submarket, {mlab[months[-1]]}", f"{float(last.loc[hi, 'occupancy_pct']):.1f}%",
+                    f"{_DOW_LONG[hi]} occupancy, the fullest night",
+                    f"{_DOW_LONG[lo]} {float(last.loc[lo, 'occupancy_pct']):.1f}%, a {gap:.1f}-point spread", SRC["costar_dow"]))
+                if isinstance(sec.get("means"), dict):
+                    sec["means"].setdefault("enh", []).append({"tag": "Longer stays", "text": (
+                        f"In {mlab[months[-1]]}, Sunday nights ran {float(last.loc['sun', 'occupancy_pct']):.1f}% full, "
+                        f"{float(last.loc['sat', 'occupancy_pct']) - float(last.loc['sun', 'occupancy_pct']):.1f} points below Saturday: "
+                        f"the second weekend night has the most rooms to fill in the submarket."), "src": SRC["costar_dow"]})
+                sec.setdefault("notes", []).append(
+                    f"In {mlab[months[-1]]}, {_DOW_LONG[hi]} nights in the Newport Beach/Dana Point submarket ran "
+                    f"{float(last.loc[hi, 'occupancy_pct']):.1f}% full and {_DOW_LONG[lo]} nights {float(last.loc[lo, 'occupancy_pct']):.1f}% (CoStar).")
+
+    if _tbl("costar_yearly"):
+        y = _q(conn, "SELECT year, occupancy_pct, adr_usd, revpar_usd, revpar_yoy_pct, supply, demand, revenue_usd "
+                     "FROM costar_yearly WHERE revpar_usd IS NOT NULL AND year >= 2016 ORDER BY year")
+        if len(y) >= 2:
+            yrs = [str(int(v)) for v in y["year"]]
+            sec.setdefault("charts", []).append({
+                "type": "vbar", "title": "Ten years of submarket revenue per available room",
+                "sub": f"Newport Beach/Dana Point submarket, full calendar years {yrs[0]} to {yrs[-1]}",
+                "x": yrs,
+                "series": [{"name": "Revenue per available room", "kind": "cur", "fmt": "usd",
+                            "values": [round(float(v), 2) for v in y["revpar_usd"]]}],
+                "src": SRC["costar_year"]})
+            sec.setdefault("more", []).append({
+                "kind": "table", "title": "Submarket hotel performance by calendar year",
+                "sub": f"Full years {yrs[0]} to {yrs[-1]}; the current year is not complete and is not shown",
+                "cols": ["Year", "Occupancy", "Average nightly rate", "Revenue per available room", "Change in revenue per room", "Room revenue"],
+                "num": [1, 2, 3, 4, 5], "hl": len(y) - 1,
+                "rows": [[str(int(r.year)), f"{float(r.occupancy_pct):.1f}%", f"${float(r.adr_usd):,.2f}", f"${float(r.revpar_usd):,.2f}",
+                          (f"{'▲' if r.revpar_yoy_pct > 0 else '▼' if r.revpar_yoy_pct < 0 else '▶'} {r.revpar_yoy_pct:+.1f}%" if pd.notna(r.revpar_yoy_pct) else ""),
+                          f"${float(r.revenue_usd) / 1e6:,.1f}M" if pd.notna(r.revenue_usd) else ""]
+                         for r in y.iloc[::-1].itertuples()],
+                "src": SRC["costar_year"]})
+            first, lastr = y.iloc[0], y.iloc[-1]
+            chg = (float(lastr.revpar_usd) / float(first.revpar_usd) - 1) * 100
+            sec.setdefault("notes", []).append(
+                f"Submarket revenue per available room rose from ${float(first.revpar_usd):,.2f} in {int(first.year)} to "
+                f"${float(lastr.revpar_usd):,.2f} in {int(lastr.year)} ({chg:+.1f}%), with occupancy at {float(lastr.occupancy_pct):.1f}% in {int(lastr.year)} (CoStar).")
+
+
 # Visual add-ons a reader can switch on or off in the app (added 2026-10-15).
 # Keys match pulse_viz.js renderers; anything switched off keeps its original
 # chart, table or text.
@@ -2193,6 +2280,7 @@ VIZ_OPTIONS = {
     "g2": "Interactive charts",
     "waterfall": "What moved room revenue (waterfall)",
     "calendar": "Every night by occupancy (calendar)",
+    "dowheat": "Which nights fill, month by month (heat grid)",
     "graph": "Which source feeds which section (map)",
     "pipeline": "How data reaches PULSE (diagram)",
     "info": "About Dana Point (cards)",

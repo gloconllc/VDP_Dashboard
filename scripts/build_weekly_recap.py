@@ -70,6 +70,12 @@ CONFIG = RECAPS / "recap_config.json"
 STATE = RECAPS / "state.json"
 
 # marker -> (plain-language label, cadence)
+# Heather is the reader (John, 2026-11-19): frame the results around Visit Dana Point's tourism and
+# hospitality work, facts only, no judgment.
+INTRO = ("Here is this week's Dana Point PULSE newsletter: the latest CoStar, STR and Datafy results for the hotels, "
+         "visitors and markets that Visit Dana Point's tourism and hospitality work serves. New this week from CoStar: "
+         "hotel occupancy by night of the week for each month, and ten full years of submarket performance.")
+
 SOURCES = {
     "costar_daily_end": ("Weekly hotel performance (CoStar daily)", "weekly"),
     "costar_monthly_period": ("Monthly hotel performance (CoStar monthly)", "monthly"),
@@ -77,6 +83,8 @@ SOURCES = {
     "str_daily_end": ("STR weekly file (Dropbox)", "weekly"),
     "str_monthly_end": ("STR monthly file (Dropbox)", "monthly"),
     "datafy_files": ("Datafy visitor and spending data", "monthly"),
+    "costar_dow_period": ("CoStar night-of-week by month", "monthly"),
+    "costar_years": ("CoStar calendar-year history", "monthly"),
 }
 
 
@@ -116,8 +124,12 @@ def markers(con) -> dict:
         "costar_daily_end": _one(con, "SELECT MAX(as_of_date) FROM costar_market_daily"),
         "costar_monthly_period": _one(con, "SELECT MAX(report_period) FROM costar_market_monthly"),
         "costar_participation": _one(con, "SELECT MAX(snapshot_date) FROM costar_participation"),
-        "str_daily_end": _one(con, "SELECT MAX(as_of_date) FROM fact_str_metrics WHERE grain='daily'"),
-        "str_monthly_end": _one(con, "SELECT MAX(as_of_date) FROM fact_str_metrics WHERE grain='monthly'"),
+        # STR's weekly and monthly multi-segment files feed fact_str_group_metrics (2026-11-19: the old
+        # fact_str_metrics markers only moved with the retired str_daily.xlsx / str_monthly.xlsx files).
+        "str_daily_end": _one(con, "SELECT MAX(as_of_date) FROM fact_str_group_metrics WHERE grain='weekly'"),
+        "str_monthly_end": _one(con, "SELECT MAX(as_of_date) FROM fact_str_group_metrics WHERE grain='monthly'"),
+        "costar_dow_period": _one(con, "SELECT MAX(report_period) FROM costar_dow_monthly"),
+        "costar_years": _one(con, "SELECT MAX(year) FROM costar_yearly WHERE revpar_usd IS NOT NULL"),
     }
     # Datafy: a new export is a new file name or a file with a new date added. load_log keeps only
     # glob patterns for Datafy (data/datafy/*/*.csv), so it cannot see a new upload; the per-file
@@ -311,7 +323,7 @@ def main() -> int:
     if not first_run and cur.get("costar_daily_end") == prev_m.get("costar_daily_end"):
         warnings.append("CoStar daily coverage did not advance since the last recap. Review before sending.")
     if cur.get("str_daily_end") and cur.get("costar_daily_end") and cur["str_daily_end"] < cur["costar_daily_end"]:
-        warnings.append(f"STR Dropbox daily data ends {cur['str_daily_end']}, behind CoStar daily "
+        warnings.append(f"STR weekly peer data ends {cur['str_daily_end']}, behind CoStar daily "
                         f"({cur['costar_daily_end']}). Weekly KPIs use CoStar.")
     if commit.get("date"):
         try:
@@ -372,7 +384,7 @@ def main() -> int:
         # Plain-text body from the same figures as the GIF and HTML, so all three agree.
         subject, _, plain = bwm.newsletter_html(motion["figures"], motion["data"], "", "")
         parts = [f"Hi {fields['first_name']},",
-                 f"Here is this week's Dana Point PULSE newsletter. The full report is attached, and the live dashboard is here: {fields['app_url']} (this week's motion recap has its own Weekly motion page).",
+                 INTRO + f" The full report is attached, and the live dashboard is here: {fields['app_url']} (this week's motion recap has its own Weekly motion page).",
                  plain, " ".join(x for x in (updated_line, unchanged_line) if x), args.note.strip(),
                  "Please let me know if you would like a closer look at anything.",
                  f"Thank you,\n{fields['signature']}"]
@@ -398,8 +410,8 @@ def main() -> int:
         new_line = " ".join(x for x in (updated_line, unchanged_line) if x)
         note_html = (f'<tr><td style="padding:8px 24px 4px;font-family:Arial,sans-serif;font-size:14px;'
                      f'line-height:22px;color:#334155;">{html_escape(args.note.strip())}</td></tr>') if args.note else ""
-        intro = ("Here is this week's Dana Point PULSE newsletter. The full report is attached as a PDF, and everything "
-                 "is live on the dashboard, where this week's motion recap now has its own Weekly motion page.")
+        intro = (INTRO + " The full report is attached as a PDF, and everything "
+                 "is live on the dashboard, where this week's motion recap has its own Weekly motion page.")
         _, html_body, _ = bwm.newsletter_html(motion["figures"], motion["data"], "cid:" + cid[1:-1], intro,
                                               extra_html=note_html, new_line=html_escape(new_line))
         html_body = html_body.replace("Thank you,<br>John Picou<br>GloCon Solutions LLC",

@@ -247,6 +247,55 @@
     return Promise.resolve();
   }
 
+  /* ---------- D3: which nights fill, month by month (CoStar DOW export, added 2026-11-19) ---------- */
+  function dowheat(el, h) {
+    var d3 = window.d3;
+    if (!d3 || !h.cells || !h.cells.length) return Promise.resolve();
+    var fallback = el.innerHTML;
+    try {
+      el.innerHTML = "";
+      var bins = [60, 70, 80, 90], fills = ["#F8FAFC", "#CBE3EA", "#8FC4D6", "#1D6E86", "#123C4A"];
+      var color = d3.scaleThreshold().domain(bins).range(fills);
+      var months = h.months.slice(), days = h.days.slice();
+      var left = 64, top = 26, cw = 54, ch = 26, gap = 3;
+      var W = left + days.length * (cw + gap) + 4, H = top + months.length * (ch + gap) + 34;
+      var x = d3.scaleBand().domain(days).range([left, left + days.length * (cw + gap)]).paddingInner(gap / (cw + gap));
+      var y = d3.scaleBand().domain(months).range([top, top + months.length * (ch + gap)]).paddingInner(gap / (ch + gap));
+      var wrap = d3.select(el).append("div").attr("class", "dow-wrap");
+      var svg = wrap.append("svg").attr("viewBox", "0 0 " + W + " " + H).attr("class", "dow-grid").attr("role", "img")
+        .attr("aria-label", "Submarket occupancy by night of the week, " + months[0] + " to " + months[months.length - 1]);
+      days.forEach(function (dd) { svg.append("text").attr("x", x(dd) + x.bandwidth() / 2).attr("y", top - 9).attr("text-anchor", "middle").attr("class", "cal-ax").text(dd); });
+      months.forEach(function (m) { svg.append("text").attr("x", left - 8).attr("y", y(m) + y.bandwidth() / 2 + 4).attr("text-anchor", "end").attr("class", "cal-ax").text(m); });
+      var cells = h.cells.slice().sort(function (a, b) { return months.indexOf(a[0]) - months.indexOf(b[0]) || days.indexOf(a[1]) - days.indexOf(b[1]); });
+      var g = svg.append("g").selectAll("g").data(cells).join("g");
+      g.append("rect").attr("x", function (c) { return x(c[1]); }).attr("y", function (c) { return y(c[0]); })
+        .attr("width", x.bandwidth()).attr("height", y.bandwidth()).attr("rx", 4)
+        .attr("fill", function (c) { return color(c[2]); })
+        .attr("stroke", function (c) { return c[2] < 60 ? "#E2E8F0" : "none"; })
+        .attr("tabindex", 0)
+        .attr("data-tip", function (c) {
+          return c[1] + " nights, " + c[0] + ": " + c[2].toFixed(1) + "% occupancy" + (c[3] != null ? ", $" + c[3] + " average rate" : "") +
+            (c[4] != null ? ", " + (c[4] > 0 ? "▲ +" : c[4] < 0 ? "▼ " : "▶ ") + c[4].toFixed(1) + "% vs. last year" : "");
+        });
+      g.append("text").attr("x", function (c) { return x(c[1]) + x.bandwidth() / 2; }).attr("y", function (c) { return y(c[0]) + y.bandwidth() / 2 + 4; })
+        .attr("text-anchor", "middle").attr("class", "cal-ax").attr("pointer-events", "none")
+        .style("fill", function (c) { return c[2] >= 80 ? "#FFFFFF" : "#0B2530"; }).style("font-weight", 700)
+        .text(function (c) { return Math.round(c[2]) + "%"; });
+      var lg = svg.append("g").attr("transform", "translate(" + left + "," + (H - 18) + ")");
+      ["Under 60%", "60 to 70%", "70 to 80%", "80 to 90%", "90% and up"].forEach(function (lab, i) {
+        var lgi = lg.append("g").attr("transform", "translate(" + (i % 3) * 112 + "," + (i < 3 ? -2 : 14) + ")");
+        lgi.append("rect").attr("width", 12).attr("height", 12).attr("rx", 3).attr("fill", fills[i]).attr("stroke", i ? "none" : "#E2E8F0");
+        lgi.append("text").attr("x", 17).attr("y", 10.5).attr("class", "cal-ax").text(lab);
+      });
+      svg.attr("viewBox", "0 0 " + W + " " + (H + 16));
+      el.classList.add("viz-on");
+    } catch (err) {
+      el.innerHTML = fallback;
+      if (window.console) console.warn("[pulse viz] dowheat", err);
+    }
+    return Promise.resolve();
+  }
+
   /* ---------- G6: which source feeds which section ---------- */
   function graph(el, gdata) {
     // 22 labeled nodes stay legible only on a wide screen; phones keep the table.
@@ -323,7 +372,7 @@
     });
   }
 
-  var RENDER = { g2: g2, t8: t8, waterfall: waterfall, calendar: calendar, graph: graph, pipeline: pipeline, info: infographic };
+  var RENDER = { g2: g2, t8: t8, waterfall: waterfall, calendar: calendar, dowheat: dowheat, graph: graph, pipeline: pipeline, info: infographic };
   function run(el) {
     if (el.getAttribute("data-viz-done")) return;
     el.setAttribute("data-viz-done", "1");
